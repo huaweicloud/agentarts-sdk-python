@@ -6,7 +6,6 @@ import pytest
 import requests
 from requests.exceptions import Timeout, RequestException, ConnectionError
 from unittest.mock import MagicMock, patch, call
-from dataclasses import dataclass, field
 
 from agentarts.wrapper.service import (
     BaseHTTPClient,
