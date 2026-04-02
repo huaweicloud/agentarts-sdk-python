@@ -88,6 +88,7 @@ monitoring = [
 huaweicloud = [
     "huaweicloudsdkcore>=3.1.0",
     "huaweicloudsdkmodelarts>=3.1.0",
+    "huaweicloudsdkiam>=3.1.0",
 ]
 dev = [
     "pytest>=7.4.0",
@@ -190,6 +191,7 @@ module = [
     "pymilvus.*",
     "huaweicloudsdkcore.*",
     "huaweicloudsdkmodelarts.*",
+    "huaweicloudsdkiam.*",
 ]
 ignore_missing_imports = true
 

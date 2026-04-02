@@ -4,6 +4,7 @@ AgentArts CLI Entry Point
 
 import click
 from typing import Optional
+from agentarts.toolkit.cli.mcp_gateway import mcp_gateway
 
 
 @click.group()
@@ -200,6 +201,10 @@ def list():
         agentarts config list
     """
     click.echo("Listing all configuration values")
+
+
+# Register MCP Gateway commands
+cli.add_command(mcp_gateway, "mcp-gateway")
 
 
 if __name__ == '__main__':
