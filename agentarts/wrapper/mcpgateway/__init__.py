@@ -4,4 +4,6 @@ AgentArts MCP Gateway Module
 Provides MCP (Model Context Protocol) gateway support.
 """
 
-__all__ = []
+from .mcp_gateway_client import MCPGatewayClient
+
+__all__ = ["MCPGatewayClient"]
