@@ -9,9 +9,15 @@ from agentarts.wrapper.service.http_client import (
     RequestConfig,
     RequestResult,
 )
+from agentarts.wrapper.service.tools_http import (
+    ControlToolsHttpClient,
+    DataToolsHttpClient,
+)
 
 __all__ = [
     "BaseHTTPClient",
     "RequestConfig",
     "RequestResult",
+    "ControlToolsHttpClient",
+    "DataToolsHttpClient",
 ]
