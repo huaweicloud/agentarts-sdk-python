@@ -1,89 +1,44 @@
-"""Config command implementation"""
+"""Config command definitions"""
 
-import os
-import json
-from pathlib import Path
-from typing import Optional
-import click
-import yaml
+from typing import Annotated, Optional
 
+import typer
 
-CONFIG_FILE = Path.home() / ".agentarts" / "config.yaml"
+from agentarts.toolkit.operations.runtime import config as config_op
 
 
-def ensure_config_dir():
-    """Ensure config directory exists"""
-    CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-
-
-def load_config() -> dict:
-    """Load configuration"""
-    if CONFIG_FILE.exists():
-        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
-            return yaml.safe_load(f) or {}
-    return {}
-
-
-def save_config(config: dict):
-    """Save configuration"""
-    ensure_config_dir()
-    with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-        yaml.dump(config, f, default_flow_style=False)
-
-
-def set_config(key: str, value: str):
+def set(
+    key: Annotated[str, typer.Argument(help="Configuration key")],
+    value: Annotated[str, typer.Argument(help="Configuration value")],
+):
     """
-    Set configuration value
-    
-    Args:
-        key: Configuration key
-        value: Configuration value
+    Set configuration value.
+
+    Examples:
+        agentarts config set region cn-north-4
     """
-    config = load_config()
-    
-    keys = key.split('.')
-    current = config
-    for k in keys[:-1]:
-        if k not in current:
-            current[k] = {}
-        current = current[k]
-    
-    current[keys[-1]] = value
-    save_config(config)
-    
-    click.echo(f"✓ Set {key} = {value}")
+    config_op.set_config(key, value)
 
 
-def get_config(key: Optional[str]):
+def get(
+    key: Annotated[Optional[str], typer.Argument(help="Configuration key")] = None,
+):
     """
-    Get configuration value
-    
-    Args:
-        key: Configuration key (optional)
+    Get configuration value.
+
+    Examples:
+        agentarts config get region
     """
-    config = load_config()
-    
-    if key is None:
-        list_config()
-        return
-    
-    keys = key.split('.')
-    current = config
-    try:
-        for k in keys:
-            current = current[k]
-        click.echo(f"{key} = {current}")
-    except (KeyError, TypeError):
-        click.echo(f"Config key '{key}' not found", err=True)
+    success = config_op.get_config(key)
+    if not success:
+        raise typer.Exit(1)
 
 
-def list_config():
-    """List all configuration values"""
-    config = load_config()
-    
-    if not config:
-        click.echo("No configuration found")
-        return
-    
-    click.echo("\n📋 Configuration:")
-    click.echo(yaml.dump(config, default_flow_style=False))
+def list():
+    """
+    List all configuration values.
+
+    Examples:
+        agentarts config list
+    """
+    config_op.list_config()
