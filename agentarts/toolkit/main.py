@@ -6,11 +6,9 @@ It only handles command registration. Command definitions are in cli/
 and implementation logic is in operations/.
 """
 
-<<<<<<< HEAD
-import click
+
 from typing import Optional
 from agentarts.toolkit.cli.mcp_gateway import mcp_gateway
-=======
 from typing import Annotated
 
 import typer
@@ -37,7 +35,6 @@ app = typer.Typer(
 
 config_app = typer.Typer(help="Configuration management")
 app.add_typer(config_app, name="config")
->>>>>>> 0561c36 (feat(cli): replace click with typer framework)
 
 
 @app.callback(invoke_without_command=True)
@@ -88,42 +85,12 @@ config_app.command(name="set")(config_set)
 config_app.command(name="get")(config_get)
 config_app.command(name="list")(config_list)
 
+# Register MCP Gateway commands
+app.add_typer(mcp_gateway, name="mcp-gateway")
 
 def cli():
     """CLI entry point."""
     app()
 
-
-<<<<<<< HEAD
-@config.command()
-@click.argument('key', required=False)
-def get(key: Optional[str]):
-    """
-    Get configuration value
-    
-    Examples:
-        agentarts config get region
-    """
-    click.echo(f"Getting config: {key or 'all'}")
-
-
-@config.command()
-def list():
-    """
-    List all configuration values
-    
-    Examples:
-        agentarts config list
-    """
-    click.echo("Listing all configuration values")
-
-
-# Register MCP Gateway commands
-cli.add_command(mcp_gateway, "mcp-gateway")
-
-
 if __name__ == '__main__':
-=======
-if __name__ == "__main__":
->>>>>>> 0561c36 (feat(cli): replace click with typer framework)
     cli()

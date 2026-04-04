@@ -45,7 +45,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route, WebSocket, WebSocketRoute
 from starlette.types import Lifespan
-from starlette.websockets import WebSocketDisconnect
+from starlette.websockets import WebSocketDisconnect, WebSocket
 
 from .context import AgentArtsRuntimeContext, RequestContext
 from .model import ACCESS_TOKEN_HEADER, PingStatus, SESSION_HEADER, USER_ID_HEADER

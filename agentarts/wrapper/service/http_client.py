@@ -139,7 +139,6 @@ class BaseHTTPClient:
                 else:
                     print(result.data)
     """
-<<<<<<< HEAD
     
     def __init__(self, config: Optional[RequestConfig] = None, open_ak_sk: bool = False):
         self._config = config or RequestConfig()
@@ -238,13 +237,6 @@ class BaseHTTPClient:
             print(f"Signature failed: {e}")
         
         return kwargs
-=======
-
-    def __init__(self, config: Optional[RequestConfig] = None):
-        self._config = config or RequestConfig()
-        self._session = requests.Session()
-        self._session.headers.update(self._config.headers)
->>>>>>> fd9d305 (feat(http): add auto-detect streaming response support)
 
     def _request(self, method: str, url: str, **kwargs) -> RequestResult:
         """
@@ -272,15 +264,11 @@ class BaseHTTPClient:
             A RequestResult with status, headers, and parsed/streaming body.
         """
         full_url = self._config.base_url + url
-<<<<<<< HEAD
         
         # 处理签名
         if self._open_ak_sk:
             kwargs = self._sign_request(method, full_url, **kwargs)
         
-=======
-
->>>>>>> fd9d305 (feat(http): add auto-detect streaming response support)
         try:
             response = self._session.request(
                 method,
