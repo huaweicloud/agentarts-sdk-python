@@ -53,6 +53,7 @@ app.command(name="dev")(dev)
 app.command(name="build")(build)
 app.command(name="deploy")(deploy)
 app.add_typer(config_app, name="config")
+app.add_typer(config_app, name="configure", hidden=True)
 app.add_typer(mcp_gateway, name="mcp")
 
 
