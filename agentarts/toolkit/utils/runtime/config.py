@@ -38,6 +38,10 @@ class BaseConfig(BaseModel):
         default=None,
         description="Entrypoint of the AgentArts runtime",
     )
+    dependency_file: Optional[str] = Field(
+        default=None,
+        description="Path to dependency file (e.g., requirements.txt, pyproject.toml)",
+    )
     platform: str = Field(
         default="linux/amd64",
         description="Platform of the AgentArts runtime",
