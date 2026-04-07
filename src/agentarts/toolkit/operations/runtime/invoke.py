@@ -127,7 +127,7 @@ def invoke_agent(
         return False
 
 
-def ping_agent(
+def status_agent(
     agent_name: Optional[str] = None,
     mode: InvokeMode = InvokeMode.CLOUD,
     region: Optional[str] = None,
@@ -135,7 +135,7 @@ def ping_agent(
     bearer_token: Optional[str] = None,
 ) -> bool:
     """
-    Ping agent to check health.
+    Check agent health status.
 
     Args:
         agent_name: Agent name (for cloud mode)
@@ -152,7 +152,7 @@ def ping_agent(
             local_port = port or 8080
             client = LocalRuntimeClient(port=local_port)
 
-            console.print(f"\n[bold]Pinging local agent:[/bold] [cyan]localhost:{local_port}[/cyan]")
+            console.print(f"\n[bold]Checking local agent status:[/bold] [cyan]localhost:{local_port}[/cyan]")
 
             result = client.ping_agent(
                 bearer_token=bearer_token,
@@ -180,7 +180,7 @@ def ping_agent(
 
             actual_region = region or "cn-north-4"
 
-            console.print(f"\n[bold]Pinging cloud agent:[/bold] [cyan]{agent_name}[/cyan]")
+            console.print(f"\n[bold]Checking cloud agent status:[/bold] [cyan]{agent_name}[/cyan]")
 
             from agentarts.sdk.utils.constant import get_data_plane_endpoint
 

@@ -14,7 +14,7 @@ from agentarts.toolkit.operations.runtime.deploy import (
 from agentarts.toolkit.operations.runtime.invoke import (
     InvokeMode,
     invoke_agent,
-    ping_agent,
+    status_agent,
 )
 from agentarts.toolkit.operations.runtime.config import (
     get_config_file_path,
@@ -43,7 +43,7 @@ __all__ = [
     "create_agentarts_runtime",
     "InvokeMode",
     "invoke_agent",
-    "ping_agent",
+    "status_agent",
     "get_config_file_path",
     "load_config",
     "save_config",
