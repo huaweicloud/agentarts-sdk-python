@@ -31,40 +31,25 @@ class IAMClient:
         """
         # Import modules here to avoid dependency issues
         from huaweicloudsdkiam.v5 import IamClient
-        from huaweicloudsdkiam.v5.region.iam_region import IamRegion
-        from huaweicloudsdkcore.auth.credentials import BasicCredentials
+        from huaweicloudsdkcore.region import Region
         from huaweicloudsdkcore.http.http_config import HttpConfig
-        from agentarts.sdk.utils.constant import (
-            HUAWEICLOUD_SDK_AK,
-            HUAWEICLOUD_SDK_SK,
-            HUAWEICLOUD_SDK_PROJECT_ID,
-            get_region
-        )
-        
-        # Get credentials from constant
-        ak = HUAWEICLOUD_SDK_AK
-        sk = HUAWEICLOUD_SDK_SK
-        project_id = HUAWEICLOUD_SDK_PROJECT_ID
-        region_id = get_region()
+        from agentarts.sdk.utils.metadata import get_credentials
+        from agentarts.sdk.utils.constant import get_region, get_iam_endpoint
         
         # Create credentials
-        credentials = BasicCredentials(
-            ak=ak,
-            sk=sk,
-            project_id=project_id
-        )
+        credentials = get_credentials()
         
         # Create HTTP config with ignore_ssl_verification=True
         http_config = HttpConfig.get_default_config()
         http_config.ignore_ssl_verification = True
         
-        # Create Region object using IamRegion.value_of
-        region = IamRegion.value_of(region_id)
-        
+        # Create region object
+        final_region = Region(id=get_region(), endpoint=get_iam_endpoint())
+
         # Create IamClient using builder pattern
         builder = IamClient.new_builder()\
             .with_credentials(credentials)\
-            .with_region(region)\
+            .with_region(final_region)\
             .with_http_config(http_config)
         
         # Build and return the client
