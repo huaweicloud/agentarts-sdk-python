@@ -125,7 +125,7 @@ Changelog = "https://github.com/huaweicloud/agentarts-sdk-python/blob/main/CHANG
 agentarts = "agentarts.toolkit.main:cli"
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
 include = ["agentarts*"]
 
 [tool.setuptools.package-data]
@@ -223,7 +223,7 @@ omit = [
 ]
 
 [tool.coverage.paths]
-source = ["agentarts"]
+source = ["src/agentarts"]
 
 [tool.coverage.report]
 exclude_lines = [

@@ -33,8 +33,8 @@ try:
 except Exception:
     _HAS_WS = False
 
-from agentarts.wrapper.runtime.app import AgentArtsRuntimeApp
-from agentarts.wrapper.runtime.model import PingStatus
+from agentarts.sdk.runtime.app import AgentArtsRuntimeApp
+from agentarts.sdk.runtime.model import PingStatus
 
 
 # ---------------------------------------------------------------------------
