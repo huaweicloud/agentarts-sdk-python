@@ -239,15 +239,13 @@ def list_mcp_gateways(
 
 
 # Target commands
-
-
 @mcp_gateway.command("create-mcp-gateway-target")
 def create_mcp_gateway_target(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     name: Annotated[Optional[str], typer.Option("--name", "-n", help="Target name")] = None,
     description: Annotated[Optional[str], typer.Option("--description", "-d", help="Target description")] = None,
     target_configuration: Annotated[Optional[str], typer.Option("--target-configuration", help="Target configuration (JSON format)")] = None,
-    credential_configuration: Annotated[Optional[str], typer.Option("--credential-configuration", help="Credential configuration (JSON format)")] = None,
+    credential_provider_configuration: Annotated[Optional[str], typer.Option("--credential-provider-configuration", help="Credential provider configuration (JSON format)")] = None,
 ):
     """
     Create a new MCP gateway target
@@ -257,7 +255,7 @@ def create_mcp_gateway_target(
     """
     try:
         target_config = _parse_json(target_configuration)
-        credential_config = _parse_json(credential_configuration)
+        credential_config = _parse_json(credential_provider_configuration)
 
         client = _get_mcp_gateway_client()
         result = client.create_mcp_gateway_target(
@@ -265,7 +263,7 @@ def create_mcp_gateway_target(
             name=name,
             description=description,
             target_configuration=target_config,
-            credential_configuration=credential_config,
+            credential_provider_configuration=credential_config,
         )
 
         if result.success:
@@ -286,7 +284,7 @@ def update_mcp_gateway_target(
     name: Annotated[Optional[str], typer.Option("--name", "-n", help="Target name")] = None,
     description: Annotated[Optional[str], typer.Option("--description", "-d", help="Target description")] = None,
     target_configuration: Annotated[Optional[str], typer.Option("--target-configuration", help="Target configuration (JSON format)")] = None,
-    credential_configuration: Annotated[Optional[str], typer.Option("--credential-configuration", help="Credential configuration (JSON format)")] = None,
+    credential_provider_configuration: Annotated[Optional[str], typer.Option("--credential-provider-configuration", help="Credential provider configuration (JSON format)")] = None,
 ):
     """
     Update an existing MCP gateway target
@@ -296,7 +294,7 @@ def update_mcp_gateway_target(
     """
     try:
         target_config = _parse_json(target_configuration)
-        credential_config = _parse_json(credential_configuration)
+        credential_config = _parse_json(credential_provider_configuration)
 
         client = _get_mcp_gateway_client()
         result = client.update_mcp_gateway_target(
@@ -305,7 +303,7 @@ def update_mcp_gateway_target(
             name=name,
             description=description,
             target_configuration=target_config,
-            credential_configuration=credential_config,
+            credential_provider_configuration=credential_config,
         )
 
         if result.success:
