@@ -5,7 +5,7 @@ Unit tests for MCP Gateway CLI commands
 import pytest
 from unittest.mock import Mock, patch
 from agentarts.toolkit.cli.mcp_gateway.mcp_gateway import _parse_json, _format_output
-from agentarts.wrapper.service.http_client import RequestResult
+from agentarts.sdk.service.http_client import RequestResult
 
 
 class TestMCPGatewayCLI:
