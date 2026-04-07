@@ -1,6 +1,14 @@
 """与代码解释器沙箱服务交互的客户端
 
 此模块用于提供一个客户端给华为与代码解释器，支持应用在一个受管理的沙箱环境中启动，停止，调用代码等操作
+
+控制面
+管理代码解释器的全生命周期
+（创建、列表、更新、获取、删除）
+
+数据面
+管理代码解释器会话的全生命周期
+（创建、停止、获取、调用）
 """
 import base64
 import logging
@@ -113,7 +121,7 @@ class CodeInterpreter:
             api_key_name (str): API Key 的名称
             description (Optional[str]): 代码解释器的描述信息
             auth_type (Optional[str]): 认证类型，例如 "API_KEY"
-            execution_agency_name (Optional[str]): 执行机构的名称
+            execution_agency_name (Optional[str]): IAM委托名
             observability (Optional[Dict]): 可观测性配置，例如日志和监控设置
             network_config (Optional[Dict]): 网络配置，例如 VPC 和安全组设置
             agent_gateway_id (Optional[str]): 关联的 Agent Gateway ID
