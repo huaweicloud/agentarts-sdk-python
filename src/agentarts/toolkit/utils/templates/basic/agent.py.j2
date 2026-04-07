@@ -1,0 +1,46 @@
+"""
+{{ name }} - Basic Agent Implementation
+
+A simple agent that processes user queries.
+"""
+
+from typing import Dict, Any
+
+
+class Agent:
+    """Basic Agent implementation."""
+
+    def __init__(self):
+        self.name = "{{ name }}"
+
+    async def run(self, query: str, **kwargs) -> Dict[str, Any]:
+        """
+        Process a query and return a response.
+
+        Args:
+            query: User input query
+            **kwargs: Additional parameters
+
+        Returns:
+            Response dictionary
+        """
+        # TODO: Implement your agent logic here
+
+        return {
+            "response": f"Processed: {query}",
+            "status": "success",
+            "agent": self.name,
+        }
+
+
+def create_agent():
+    """Create agent instance for runtime."""
+    return Agent()
+
+
+if __name__ == "__main__":
+    import asyncio
+
+    agent = create_agent()
+    result = asyncio.run(agent.run("Hello, World!"))
+    print(result)

@@ -2,4 +2,9 @@
 AgentArts Project Templates
 """
 
-__all__ = []
+from agentarts.toolkit.utils.templates.manager import (
+    TemplateManager,
+    template_manager,
+)
+
+__all__ = ["TemplateManager", "template_manager"]
