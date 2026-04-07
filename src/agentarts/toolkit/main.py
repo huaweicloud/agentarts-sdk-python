@@ -14,6 +14,7 @@ from rich.console import Console
 from agentarts.toolkit.cli.runtime import init, dev, deploy
 from agentarts.toolkit.cli.runtime.config import config_app
 from agentarts.toolkit.cli.runtime.invoke import console as invoke_app, status
+from agentarts.toolkit.cli.runtime.destroy import destroy
 from agentarts.toolkit.cli.mcp_gateway import mcp_gateway
 from agentarts.toolkit.cli.memory.commands import memory_app
 
@@ -55,6 +56,7 @@ app.command(name="dev")(dev)
 app.command(name="deploy", help="Deploy agent to Huawei Cloud or run locally. (alias: launch)")(deploy)
 app.command(name="launch", help="Alias for 'deploy' command.")(deploy)
 app.command(name="status", help="Check agent health status.")(status)
+app.command(name="destroy", help="Destroy agent from Huawei Cloud.")(destroy)
 app.add_typer(config_app, name="config", help="Configuration management. (alias: configure)")
 app.add_typer(config_app, name="configure", hidden=True)
 app.add_typer(invoke_app, name="invoke")
