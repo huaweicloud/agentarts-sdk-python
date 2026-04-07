@@ -8,7 +8,7 @@ import typer
 from agentarts.toolkit.operations.runtime.invoke import (
     InvokeMode,
     invoke_agent,
-    ping_agent,
+    status_agent,
 )
 
 console = typer.Typer(help="Invoke agent locally or on cloud")
@@ -99,8 +99,8 @@ def invoke(
         raise typer.Exit(1)
 
 
-@console.command(name="ping")
-def ping(
+@console.command(name="status")
+def status(
     agent: Annotated[
         Optional[str],
         typer.Option("--agent", "-a", help="Agent name (uses default if not specified for cloud mode)"),
@@ -110,7 +110,7 @@ def ping(
         typer.Option(
             "--mode",
             "-m",
-            help="Ping mode: 'local' for Docker container, 'cloud' for AgentArts runtime (default)",
+            help="Status mode: 'local' for Docker container, 'cloud' for AgentArts runtime (default)",
         ),
     ] = "cloud",
     region: Annotated[
@@ -127,31 +127,31 @@ def ping(
     ] = None,
 ):
     """
-    Ping agent to check health status.
+    Check agent health status.
 
-    Two ping modes are supported:
-    - cloud (default): Ping AgentArts runtime on Huawei Cloud
-    - local: Ping local Docker container
+    Two status modes are supported:
+    - cloud (default): Check AgentArts runtime on Huawei Cloud
+    - local: Check local Docker container
 
     Examples:
-        agentarts invoke ping
-        agentarts invoke ping --agent my-agent
-        agentarts invoke ping --mode local --port 8080
+        agentarts invoke status
+        agentarts invoke status --agent my-agent
+        agentarts invoke status --mode local --port 8080
     """
     from rich.console import Console as RichConsole
 
     rich_console = RichConsole()
 
-    ping_mode = InvokeMode.CLOUD
+    status_mode = InvokeMode.CLOUD
     if mode.lower() == "local":
-        ping_mode = InvokeMode.LOCAL
+        status_mode = InvokeMode.LOCAL
     elif mode.lower() != "cloud":
         rich_console.print(f"[red]Error: Invalid mode '{mode}'. Use 'local' or 'cloud'.[/red]")
         raise typer.Exit(1)
 
-    success = ping_agent(
+    success = status_agent(
         agent_name=agent,
-        mode=ping_mode,
+        mode=status_mode,
         region=region,
         port=port,
         bearer_token=bearer_token,
