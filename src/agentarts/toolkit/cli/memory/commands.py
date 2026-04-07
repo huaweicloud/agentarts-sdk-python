@@ -8,7 +8,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from ..common import _handle_error, _print_success
+from agentarts.toolkit.utils.common import echo_error, echo_success
+
 from ...operations.memory import (
     create_space,
     delete_space,
@@ -55,24 +56,24 @@ def create_space_cmd(
     """
     # Input validation
     if not name or not isinstance(name, str) or not name.strip():
-        _handle_error("Space name cannot be empty")
+        echo_error("Space name cannot be empty")
 
     if len(name.strip()) > 128:
-        _handle_error("Space name cannot exceed 128 characters")
+        echo_error("Space name cannot exceed 128 characters")
 
     # Validate TTL values
     if message_ttl_hours <= 0 or message_ttl_hours > 8760:
-        _handle_error("Message TTL must be between 1 and 8760 hours")
+        echo_error("Message TTL must be between 1 and 8760 hours")
 
     # Validate VPC and subnet combination
     if (vpc_id is None and subnet_id is not None) or (vpc_id is not None and subnet_id is None):
-        _handle_error("Both VPC ID and subnet ID must be provided for private access")
+        echo_error("Both VPC ID and subnet ID must be provided for private access")
 
     if vpc_id and not vpc_id.strip():
-        _handle_error("VPC ID cannot be empty if provided")
+        echo_error("VPC ID cannot be empty if provided")
 
     if subnet_id and not subnet_id.strip():
-        _handle_error("Subnet ID cannot be empty if provided")
+        echo_error("Subnet ID cannot be empty if provided")
 
     # Parse memory strategies
     memory_strategies_list = None
@@ -80,7 +81,7 @@ def create_space_cmd(
         try:
             memory_strategies_list = [s.strip() for s in memory_strategies.split(",")]
         except Exception:
-            _handle_error("Invalid memory strategies format, use comma-separated values")
+            echo_error("Invalid memory strategies format, use comma-separated values")
 
     # Parse tags
     tags_list = None
@@ -89,11 +90,11 @@ def create_space_cmd(
             tags_list = []
             for tag_pair in tags.split(","):
                 if "=" not in tag_pair:
-                    _handle_error("Invalid tag format, use 'key=value' pairs separated by commas")
+                    echo_error("Invalid tag format, use 'key=value' pairs separated by commas")
                 key, value = tag_pair.split("=", 1)
                 tags_list.append({"key": key.strip(), "value": value.strip()})
         except Exception:
-            _handle_error("Invalid tags format, use 'key1=value1,key2=value2'")
+            echo_error("Invalid tags format, use 'key1=value1,key2=value2'")
 
     result = create_space(
         name=name,
@@ -111,16 +112,16 @@ def create_space_cmd(
     )
 
     if not result.success:
-        _handle_error(f"Failed to create space: {result.error}")
+        echo_error(f"Failed to create space: {result.error}")
 
     if output == "json":
         try:
             serialized_data = json.dumps(result.space, indent=2, default=str)
             console.print_json(serialized_data)
         except (TypeError, ValueError) as e:
-            _handle_error(f"Failed to serialize space data to JSON: {e}")
+            echo_error(f"Failed to serialize space data to JSON: {e}")
     else:
-        _print_success(f"Space created successfully!")
+        echo_success(f"Space created successfully!")
         console.print(f"  Space ID: [bold]{result.space_id}[/bold]")
         if result.space:
             console.print(f"  Status: {result.space.get('status', 'N/A')}")
@@ -138,7 +139,7 @@ def get_space_cmd(
     """
     # Input validation
     if not space_id or not isinstance(space_id, str) or not space_id.strip():
-        _handle_error("Space ID cannot be empty")
+        echo_error("Space ID cannot be empty")
 
     # Clean up the space_id for display
     display_space_id = space_id.strip()
@@ -148,14 +149,14 @@ def get_space_cmd(
     )
 
     if not result.success:
-        _handle_error(f"Failed to get space: {result.error}")
+        echo_error(f"Failed to get space: {result.error}")
 
     if output == "json":
         try:
             serialized_data = json.dumps(result.space, indent=2, default=str)
             console.print_json(serialized_data)
         except (TypeError, ValueError) as e:
-            _handle_error(f"Failed to serialize space data to JSON: {e}")
+            echo_error(f"Failed to serialize space data to JSON: {e}")
     else:
         space = result.space or {}
         console.print(Panel(
@@ -182,13 +183,13 @@ def list_spaces_cmd(
     """
     # Validate pagination parameters
     if limit <= 0:
-        _handle_error("Limit must be greater than 0")
+        echo_error("Limit must be greater than 0")
 
     if limit > 100:
-        _handle_error("Limit cannot exceed 100")
+        echo_error("Limit cannot exceed 100")
 
     if offset < 0:
-        _handle_error("Offset must be greater than or equal to 0")
+        echo_error("Offset must be greater than or equal to 0")
 
     result = list_spaces(
         limit=limit,
@@ -197,7 +198,7 @@ def list_spaces_cmd(
     )
 
     if not result.success:
-        _handle_error(f"Failed to list spaces: {result.error}")
+        echo_error(f"Failed to list spaces: {result.error}")
 
     if output == "json":
         try:
@@ -208,7 +209,7 @@ def list_spaces_cmd(
             serialized_data = json.dumps(output_data, indent=2, default=str)
             console.print_json(serialized_data)
         except (TypeError, ValueError) as e:
-            _handle_error(f"Failed to serialize spaces data to JSON: {e}")
+            echo_error(f"Failed to serialize spaces data to JSON: {e}")
     else:
         table = Table(title=f"Spaces (Total: {result.total})")
         table.add_column("Space ID", style="cyan")
@@ -255,7 +256,7 @@ def update_space_cmd(
     """
     # Input validation
     if not space_id or not isinstance(space_id, str) or not space_id.strip():
-        _handle_error("Space ID cannot be empty")
+        echo_error("Space ID cannot be empty")
 
     # Clean up the space_id
     clean_space_id = space_id.strip()
@@ -263,11 +264,11 @@ def update_space_cmd(
     # Validate TTL if provided
     if message_ttl_hours is not None:
         if message_ttl_hours <= 0 or message_ttl_hours > 8760:
-            _handle_error("Message TTL must be between 1 and 8760 hours")
+            echo_error("Message TTL must be between 1 and 8760 hours")
 
     # Validate VPC and subnet combination
     if (vpc_id is None and subnet_id is not None) or (vpc_id is not None and subnet_id is None):
-        _handle_error("Both VPC ID and subnet ID must be provided for private access")
+        echo_error("Both VPC ID and subnet ID must be provided for private access")
 
     # Parse memory strategies
     memory_strategies_list = None
@@ -275,7 +276,7 @@ def update_space_cmd(
         try:
             memory_strategies_list = [s.strip() for s in memory_strategies.split(",")]
         except Exception:
-            _handle_error("Invalid memory strategies format, use comma-separated values")
+            echo_error("Invalid memory strategies format, use comma-separated values")
 
     # Parse tags
     tags_list = None
@@ -284,11 +285,11 @@ def update_space_cmd(
             tags_list = []
             for tag_pair in tags.split(","):
                 if "=" not in tag_pair:
-                    _handle_error("Invalid tag format, use 'key=value' pairs separated by commas")
+                    echo_error("Invalid tag format, use 'key=value' pairs separated by commas")
                 key, value = tag_pair.split("=", 1)
                 tags_list.append({"key": key.strip(), "value": value.strip()})
         except Exception:
-            _handle_error("Invalid tags format, use 'key1=value1,key2=value2'")
+            echo_error("Invalid tags format, use 'key1=value1,key2=value2'")
 
     result = update_space(
         space_id=clean_space_id,
@@ -306,7 +307,7 @@ def update_space_cmd(
     )
 
     if not result.success:
-        _handle_error(f"Failed to update space: {result.error}")
+        echo_error(f"Failed to update space: {result.error}")
 
     if output == "json":
         try:
@@ -317,9 +318,9 @@ def update_space_cmd(
             serialized_data = json.dumps(output_data, indent=2, default=str)
             console.print_json(serialized_data)
         except (TypeError, ValueError) as e:
-            _handle_error(f"Failed to serialize space data to JSON: {e}")
+            echo_error(f"Failed to serialize space data to JSON: {e}")
     else:
-        _print_success(f"Space updated successfully!")
+        echo_success(f"Space updated successfully!")
         console.print(f"  Space ID: [bold]{clean_space_id}[/bold]")
 
         # Show more details if available
@@ -356,7 +357,7 @@ def delete_space_cmd(
     """
     # Validate space_id
     if not space_id or not isinstance(space_id, str) or not space_id.strip():
-        _handle_error("Space ID cannot be empty")
+        echo_error("Space ID cannot be empty")
 
     # Clean up the space_id for display
     display_space_id = space_id.strip()
@@ -373,9 +374,9 @@ def delete_space_cmd(
     )
 
     if not result.success:
-        _handle_error(f"Failed to delete space: {result.error}")
+        echo_error(f"Failed to delete space: {result.error}")
 
-    _print_success(f"Space deleted successfully!")
+    echo_success(f"Space deleted successfully!")
     console.print(f"  Space ID: [bold]{display_space_id}[/bold]")
 
 
@@ -396,7 +397,7 @@ def space_status_cmd(
     """
     # Input validation
     if not space_id or not isinstance(space_id, str) or not space_id.strip():
-        _handle_error("Space ID cannot be empty")
+        echo_error("Space ID cannot be empty")
 
     # Clean up the space_id for display
     display_space_id = space_id.strip()
@@ -407,7 +408,7 @@ def space_status_cmd(
     )
 
     if not result.success:
-        _handle_error(f"Failed to get space status: {result.error}")
+        echo_error(f"Failed to get space status: {result.error}")
 
     # Format output based on user preference
     if output == "json":
@@ -453,7 +454,7 @@ def space_status_cmd(
             serialized_data = json.dumps(output_data, indent=2, default=str)
             console.print_json(serialized_data)
         except (TypeError, ValueError) as e:
-            _handle_error(f"Failed to serialize space status to JSON: {e}")
+            echo_error(f"Failed to serialize space status to JSON: {e}")
     else:
         # Table format - focus on status
         status_info = result.space.get("status", "unknown") if result.space else "unknown"

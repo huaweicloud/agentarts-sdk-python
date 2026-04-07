@@ -57,7 +57,7 @@ app.command(name="launch", help="Alias for 'deploy' command.")(deploy)
 app.add_typer(config_app, name="config", help="Configuration management. (alias: configure)")
 app.add_typer(config_app, name="configure", hidden=True)
 app.add_typer(invoke_app, name="invoke")
-app.add_typer(mcp_gateway, name="mcp")
+app.add_typer(mcp_gateway, name="mcp-gateway")
 app.add_typer(memory_app, name="memory")
 
 

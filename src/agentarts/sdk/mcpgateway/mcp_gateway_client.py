@@ -249,7 +249,7 @@ class MCPGatewayClient(BaseHTTPClient):
         name: Optional[str] = None,
         description: Optional[str] = None,
         target_configuration: Optional[Dict[str, Any]] = None,
-        credential_configuration: Optional[Dict[str, Any]] = None
+        credential_provider_configuration: Optional[Dict[str, Any]] = None
     ) -> RequestResult:
         """
         Create a new MCP gateway target.
@@ -259,7 +259,7 @@ class MCPGatewayClient(BaseHTTPClient):
             name: Target name, default is TestGatewayTarget-<random-string>
             description: Target description
             target_configuration: Target configuration
-            credential_configuration: Credential configuration
+            credential_provider_configuration: Credential provider configuration
             
         Returns:
             RequestResult: Result of the API call
@@ -268,15 +268,15 @@ class MCPGatewayClient(BaseHTTPClient):
         if name is None:
             name = f"TestGatewayTarget-{generate_random_string()}"
         
-        # Set default credential configuration if not provided
-        if credential_configuration is None:
-            credential_configuration = {"credential_provider_type": "none"}
+        # Set default credential provider configuration if not provided
+        if credential_provider_configuration is None:
+            credential_provider_configuration = {"credential_provider_type": "none"}
         
         payload = {
             "name": name,
             "description": description,
             "target_configuration": target_configuration,
-            "credential_configuration": credential_configuration
+            "credential_provider_configuration": credential_provider_configuration
         }
         
         # Remove None values
@@ -291,7 +291,7 @@ class MCPGatewayClient(BaseHTTPClient):
         name: Optional[str] = None,
         description: Optional[str] = None,
         target_configuration: Optional[Dict[str, Any]] = None,
-        credential_configuration: Optional[Dict[str, Any]] = None
+        credential_provider_configuration: Optional[Dict[str, Any]] = None
     ) -> RequestResult:
         """
         Update an existing MCP gateway target.
@@ -302,7 +302,7 @@ class MCPGatewayClient(BaseHTTPClient):
             name: Target name
             description: Target description
             target_configuration: Target configuration
-            credential_configuration: Credential configuration
+            credential_provider_configuration: Credential provider configuration
             
         Returns:
             RequestResult: Result of the API call
@@ -315,13 +315,13 @@ class MCPGatewayClient(BaseHTTPClient):
             name,
             description,
             target_configuration,
-            credential_configuration
+            credential_provider_configuration
         ]):
             updateable_fields = [
                 "name",
                 "description",
                 "target_configuration",
-                "credential_configuration"
+                "credential_provider_configuration"
             ]
             raise ValueError(f"At least one parameter must be provided for update. Available fields: {', '.join(updateable_fields)}")
         
@@ -329,7 +329,7 @@ class MCPGatewayClient(BaseHTTPClient):
             "name": name,
             "description": description,
             "target_configuration": target_configuration,
-            "credential_configuration": credential_configuration
+            "credential_provider_configuration": credential_provider_configuration
         }
         # Remove None values
         payload = {k: v for k, v in payload.items() if v is not None}
