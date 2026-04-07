@@ -18,8 +18,9 @@ export AGENTARTS_MEMORY_DATA_ENDPOINT="http://100.85.223.199"
 export HUAWEICLOUD_SDK_AK="你的AK"
 export HUAWEICLOUD_SDK_SK="你的SK"
 
-# 创建space后，会返回HW_API_KEY，请将其设置为环境变量，用于调用数据面接口认证
-export HW_API_KEY="你的数据面API密钥"
+# 创建space后，会返回API Key，请将其设置为环境变量，用于调用数据面接口认证
+# 也可以通过 api_key 参数直接传入
+export HUAWEICLOUD_SDK_MEMORY_API_KEY="你的数据面API密钥"
 ```
 
 ## 🏗️ SDK 架构
@@ -274,10 +275,11 @@ if __name__ == "__main__":
 
 #### 初始化方法
 
-**`__init__(region_name="cn-north-4")`**
+**`__init__(region_name="cn-north-4", api_key=None)`**
 - **功能**: 初始化MemoryClient客户端
 - **入参**:
   - `region_name` (str, 可选, 默认"cn-north-4"): 华为云区域名称
+  - `api_key` (str, 可选): 数据面API密钥，如果不传入则从环境变量 `HUAWEICLOUD_SDK_MEMORY_API_KEY` 读取
 - **出参**: 无 (初始化实例)
 - **环境要求**: 需设置HUAWEICLOUD_SDK_AK和HUAWEICLOUD_SDK_SK环境变量
 
@@ -488,17 +490,18 @@ if __name__ == "__main__":
 
 #### 初始化方法
 
-**`__init__(space_id, actor_id, session_id=None, region_name=None)`**
+**`__init__(space_id, actor_id, session_id=None, region_name=None, api_key=None)`**
 - **功能**: 初始化MemorySession对象
 - **入参**:
   - `space_id` (str, 必填): Space ID
   - `actor_id` (str, 必填): 参与者ID
   - `session_id` (str, 可选): Session ID，不提供时自动调用API创建
   - `region_name` (str, 可选): 区域名称，默认"cn-north-4"
+  - `api_key` (str, 可选): 数据面API密钥，如果不传入则从环境变量 `HUAWEICLOUD_SDK_MEMORY_API_KEY` 读取
 - **出参**: 无 (初始化实例)
 - **特点**: 创建时自动绑定space_id和session_id
 
-**`of(space_id, actor_id, session_id=None, region_name=None)` (classmethod)**
+**`of(space_id, actor_id, session_id=None, region_name=None, api_key=None)` (classmethod)**
 - **功能**: 工厂方法创建MemorySession
 - **入参**: 同`__init__`方法
 - **出参**: MemorySession实例
@@ -637,7 +640,9 @@ except Exception as e:
 
 ### 认证信息
 - **管理面（控制面）**：使用 AK/SK 认证，通过 `HUAWEICLOUD_SDK_AK` 和 `HUAWEICLOUD_SDK_SK` 环境变量
-- **数据面**：使用 HW_API_KEY 认证，SDK 内部自动处理
+- **数据面**：使用 API Key 认证，可通过以下两种方式提供：
+  - 通过 `api_key` 参数直接传入
+  - 通过 `HUAWEICLOUD_SDK_MEMORY_API_KEY` 环境变量提供
 
 ### 请求流程
 1. 使用 AK/SK 创建 Space（控制面）
@@ -683,7 +688,7 @@ SDK 提供类型化的请求对象用于构建参数：
 
 ### 1. 环境变量重要性
 - **AK/SK**：用于管理Space的创建和操作
-- **HW_API_KEY**：用于数据面的消息和记忆操作，必须在创建Space后从响应中获取并设置
+- **HUAWEICLOUD_SDK_MEMORY_API_KEY**：用于数据面的消息和记忆操作，必须在创建Space后从响应中获取并设置，也可以通过 `api_key` 参数直接传入
 - **端点配置**：开发环境需要设置自定义端点，生产环境使用华为云默认端点
 
 ### 2. 参数验证
