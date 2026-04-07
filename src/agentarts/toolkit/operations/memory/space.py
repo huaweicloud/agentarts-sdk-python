@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from hw_agentrun_wrapper.memory import (
+from agentarts.sdk.memory import (
     MemoryClient,
     SpaceInfo,
 )

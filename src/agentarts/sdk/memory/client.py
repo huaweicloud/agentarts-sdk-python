@@ -748,7 +748,7 @@ class MemoryClient:
 
         Examples:
             >>> # 基本语义搜索
-            >>> from hw_agentrun_wrapper.memory.inner.config import MemorySearchFilter
+            >>> from agentarts.sdk.memory.inner.config import MemorySearchFilter
             >>> filters = MemorySearchFilter(query="用户偏好", top_k=3)
             >>> result = client.search_memories("space-123", filters)
             >>> for mem in result.records:

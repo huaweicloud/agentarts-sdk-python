@@ -10,10 +10,9 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Union
 
 import requests
-from huaweicloudsdkcore.auth.provider import CredentialProviderChain
 
-from .http_client_base import APIException, BaseHttpService
-from ..utils.constants import get_memory_endpoint
+from .http_client import APIException
+from ..utils.constant import get_memory_endpoint
 
 logger = logging.getLogger(__name__)
 
@@ -88,8 +87,15 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
     def setup_credentials(self, region_name: str):
         """设置 AK/SK 凭据"""
         try:
+            from huaweicloudsdkcore.auth.provider import CredentialProviderChain
             self.credentials = CredentialProviderChain.get_basic_credential_provider_chain().get_credentials()
             logger.info(f"Successfully loaded AK/SK credentials for region {region_name}")
+        except ImportError as e:
+            raise ValueError(
+                f"huaweicloudsdkcore is required for control plane operations. "
+                f"Install it with: pip install huaweicloudsdkcore. "
+                f"Error: {e}"
+            )
         except Exception as e:
             raise ValueError(
                 f"Failed to load AK/SK credentials for control plane. "
@@ -127,7 +133,7 @@ class MemoryAPIException(APIException):
     pass
 
 
-class MemoryHttpService(BaseHttpService):
+class MemoryHttpService:
     """HTTP client for Huawei Memory API operations with AK/SK authentication.
     
     Compatible with HttpClient interface from memory/inner/httpclient.py
@@ -147,9 +153,11 @@ class MemoryHttpService(BaseHttpService):
         """
         self.region_name = region_name
         self._endpoint = endpoint
+        self.timeout = timeout
+        self.verify_ssl = True
 
-        # Initialize base HTTP service
-        super().__init__(base_url="")
+        # Create session
+        self.session = requests.Session()
 
         # Create authentication strategy based on endpoint type
         self._auth_strategy = self._create_authentication_strategy(endpoint_type)
@@ -158,7 +166,7 @@ class MemoryHttpService(BaseHttpService):
         self._auth_strategy.setup_credentials(region_name)
         self.credentials = self._auth_strategy.credentials
         
-        # Setup session with authentication hooks (use base class session)
+        # Setup session with authentication hooks
         self._auth_strategy.setup_session_hooks(self.session)
         
         # 将 client_request_id 属性传递给策略（如果存在）
