@@ -18,7 +18,7 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Any
 
-from hw_agentrun_wrapper.services.memory_http import MemoryHttpService
+from ...service.memory_service import MemoryHttpService
 from .config import (
     SessionCreateRequest,
     SessionInfo,

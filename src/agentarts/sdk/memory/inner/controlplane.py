@@ -7,7 +7,7 @@ Agent Memory SDK - Control Plane
 import logging
 from typing import Optional
 
-from hw_agentrun_wrapper.services.memory_http import MemoryHttpService
+from ...service.memory_service import MemoryHttpService
 from .config import (
     SpaceCreateRequest,
     SpaceUpdateRequest,

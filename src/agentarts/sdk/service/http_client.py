@@ -21,6 +21,16 @@ import requests
 _STREAM_CONTENT_TYPES = {"text/event-stream", "application/x-ndjson"}
 
 
+class APIException(Exception):
+    """Exception for API errors."""
+
+    def __init__(self, status_code: int, error_code: str, error_msg: str):
+        self.status_code = status_code
+        self.error_code = error_code
+        self.error_msg = error_msg
+        super().__init__(f"[{error_code}] HTTP {status_code}: {error_msg}")
+
+
 @dataclass
 class RequestConfig:
     """Configuration for HTTP requests."""
