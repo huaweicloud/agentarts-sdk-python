@@ -6,7 +6,6 @@ import pytest
 import requests
 from requests.exceptions import Timeout, RequestException, ConnectionError
 from unittest.mock import MagicMock, patch, call
-from dataclasses import dataclass, field
 
 from agentarts.wrapper.service import (
     BaseHTTPClient,
@@ -273,6 +272,7 @@ class TestBaseHTTPClientRequests:
             "https://api.example.com/users/1",
             timeout=30.0,
             verify=True,
+            stream=True,
         )
 
     @patch("agentarts.wrapper.service.http_client.requests.Session.request")
@@ -597,16 +597,17 @@ class TestBaseHTTPClientConfigPropagation:
 class TestBaseHTTPClientLifecycle:
     """Tests for client lifecycle (context manager, close)."""
 
-    def test_close(self):
+    @patch("agentarts.wrapper.service.http_client.requests.Session")
+    def test_close(self, mock_session_cls):
         """Test that close() closes the session."""
+        mock_session = mock_session_cls.return_value
         client = BaseHTTPClient()
-        session = client._session
-        assert session is not None
+        assert client._session is mock_session
 
         client.close()
 
         assert client._session is None
-        session.close.assert_called_once()
+        mock_session.close.assert_called_once()
 
     def test_close_idempotent(self):
         """Test that calling close() twice does not raise."""
@@ -634,6 +635,107 @@ class TestBaseHTTPClientLifecycle:
         with client:
             assert client._session is not None
         assert client._session is None
+
+
+class TestRequestResultStreaming:
+    """Tests for RequestResult streaming capabilities."""
+
+    def test_streaming_flag_default_false(self):
+        """Test that streaming flag defaults to False."""
+        result = RequestResult(success=True, status_code=200)
+        assert result.streaming is False
+
+    def test_streaming_flag_explicit_true(self):
+        """Test that streaming flag can be set to True."""
+        result = RequestResult(success=True, status_code=200, streaming=True)
+        assert result.streaming is True
+
+    def test_iter_lines_raises_on_non_streaming(self):
+        """Test that iter_lines() raises RuntimeError on non-streaming result."""
+        result = RequestResult(success=True, status_code=200, data={"key": "val"})
+        with pytest.raises(RuntimeError, match="iter_lines"):
+            list(result.iter_lines())
+
+    def test_iter_bytes_raises_on_non_streaming(self):
+        """Test that iter_bytes() raises RuntimeError on non-streaming result."""
+        result = RequestResult(success=True, status_code=200, data={"key": "val"})
+        with pytest.raises(RuntimeError, match="iter_bytes"):
+            list(result.iter_bytes())
+
+    def test_iter_lines_yields_lines(self):
+        """Test that iter_lines() yields decoded text lines from raw response."""
+        mock_resp = MagicMock()
+        mock_resp.iter_lines.return_value = iter(["event: start", "data: hello", "", "data: world"])
+        result = RequestResult(
+            success=True,
+            status_code=200,
+            streaming=True,
+            _raw_response=mock_resp,
+        )
+        lines = list(result.iter_lines())
+        assert lines == ["event: start", "data: hello", "", "data: world"]
+
+    def test_iter_bytes_yields_chunks(self):
+        """Test that iter_bytes() yields raw byte chunks."""
+        mock_resp = MagicMock()
+        mock_resp.iter_content.return_value = iter([b"chunk1", b"chunk2", b"chunk3"])
+        result = RequestResult(
+            success=True,
+            status_code=200,
+            streaming=True,
+            _raw_response=mock_resp,
+        )
+        chunks = list(result.iter_bytes())
+        assert chunks == [b"chunk1", b"chunk2", b"chunk3"]
+
+    def test_iter_bytes_skips_empty_chunks(self):
+        """Test that iter_bytes() skips empty chunks."""
+        mock_resp = MagicMock()
+        mock_resp.iter_content.return_value = iter([b"data", b"", b"more"])
+        result = RequestResult(
+            success=True,
+            status_code=200,
+            streaming=True,
+            _raw_response=mock_resp,
+        )
+        chunks = list(result.iter_bytes())
+        assert chunks == [b"data", b"more"]
+
+    def test_close_closes_raw_response(self):
+        """Test that close() closes the underlying raw response."""
+        mock_resp = MagicMock()
+        result = RequestResult(
+            success=True,
+            status_code=200,
+            streaming=True,
+            _raw_response=mock_resp,
+        )
+        result.close()
+        mock_resp.close.assert_called_once()
+        assert result._raw_response is None
+
+    def test_close_idempotent(self):
+        """Test that calling close() twice does not raise."""
+        mock_resp = MagicMock()
+        result = RequestResult(
+            success=True,
+            status_code=200,
+            streaming=True,
+            _raw_response=mock_resp,
+        )
+        result.close()
+        result.close()
+        assert result._raw_response is None
+
+    def test_close_on_non_streaming_no_error(self):
+        """Test that close() on a non-streaming result does nothing."""
+        result = RequestResult(success=True, status_code=200)
+        result.close()
+
+    def test_streaming_result_data_is_none(self):
+        """Test that streaming result has data=None by default."""
+        result = RequestResult(success=True, status_code=200, streaming=True)
+        assert result.data is None
 
 
 # ============================================================
@@ -683,4 +785,156 @@ class TestBaseHTTPClientInheritance:
             "https://api.example.com/users/123",
             timeout=30.0,
             verify=True,
+            stream=True,
         )
+
+
+# ============================================================
+# BaseHTTPClient Streaming Request Tests
+# ============================================================
+
+class TestBaseHTTPClientStreaming:
+    """Tests for auto-detected streaming based on Content-Type."""
+
+    @patch("agentarts.wrapper.service.http_client.requests.Session.request")
+    def test_stream_always_passed_to_requests(self, mock_request):
+        """Test that stream=True is always forwarded to requests.Session.request."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.ok = True
+        mock_resp.json.return_value = {}
+        mock_resp.headers = {"Content-Type": "application/json"}
+        mock_request.return_value = mock_resp
+
+        client = BaseHTTPClient(RequestConfig(base_url="https://api.example.com"))
+        client._request("GET", "/test")
+
+        call_kwargs = mock_request.call_args[1]
+        assert call_kwargs["stream"] is True
+
+    @patch("agentarts.wrapper.service.http_client.requests.Session.request")
+    def test_sse_content_type_returns_streaming_result(self, mock_request):
+        """Test that text/event-stream Content-Type auto-detects as streaming."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.ok = True
+        mock_resp.headers = {"Content-Type": "text/event-stream; charset=utf-8"}
+        mock_request.return_value = mock_resp
+
+        client = BaseHTTPClient(RequestConfig(base_url="https://api.example.com"))
+        result = client._request("GET", "/events")
+
+        assert result.success is True
+        assert result.streaming is True
+        assert result.data is None
+        assert result._raw_response is mock_resp
+        assert result.headers["Content-Type"] == "text/event-stream; charset=utf-8"
+
+    @patch("agentarts.wrapper.service.http_client.requests.Session.request")
+    def test_ndjson_content_type_returns_streaming_result(self, mock_request):
+        """Test that application/x-ndjson Content-Type auto-detects as streaming."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.ok = True
+        mock_resp.headers = {"Content-Type": "application/x-ndjson"}
+        mock_request.return_value = mock_resp
+
+        client = BaseHTTPClient(RequestConfig(base_url="https://api.example.com"))
+        result = client._request("GET", "/stream")
+
+        assert result.streaming is True
+        assert result.data is None
+
+    @patch("agentarts.wrapper.service.http_client.requests.Session.request")
+    def test_json_content_type_returns_regular_result(self, mock_request):
+        """Test that application/json Content-Type returns regular parsed result."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.ok = True
+        mock_resp.json.return_value = {"message": "hello"}
+        mock_resp.headers = {"Content-Type": "application/json"}
+        mock_request.return_value = mock_resp
+
+        client = BaseHTTPClient(RequestConfig(base_url="https://api.example.com"))
+        result = client._request("GET", "/api")
+
+        assert result.success is True
+        assert result.streaming is False
+        assert result.data == {"message": "hello"}
+
+    @patch("agentarts.wrapper.service.http_client.requests.Session.request")
+    def test_text_plain_content_type_returns_regular_result(self, mock_request):
+        """Test that text/plain Content-Type returns regular text result."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.ok = True
+        mock_resp.json.side_effect = ValueError("Not JSON")
+        mock_resp.text = "plain text"
+        mock_resp.content = b"plain text"
+        mock_resp.headers = {"Content-Type": "text/plain"}
+        mock_request.return_value = mock_resp
+
+        client = BaseHTTPClient(RequestConfig(base_url="https://api.example.com"))
+        result = client._request("GET", "/text")
+
+        assert result.streaming is False
+        assert result.data == "plain text"
+
+    @patch("agentarts.wrapper.service.http_client.requests.Session.request")
+    def test_no_content_type_returns_regular_result(self, mock_request):
+        """Test that missing Content-Type defaults to regular (non-streaming)."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.ok = True
+        mock_resp.json.return_value = {"ok": True}
+        mock_resp.headers = {}
+        mock_request.return_value = mock_resp
+
+        client = BaseHTTPClient(RequestConfig(base_url="https://api.example.com"))
+        result = client._request("GET", "/test")
+
+        assert result.streaming is False
+        assert result.data == {"ok": True}
+
+    @patch("agentarts.wrapper.service.http_client.requests.Session.request")
+    def test_streaming_result_error_still_returned(self, mock_request):
+        """Test that streaming result with non-ok status is still returned."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 500
+        mock_resp.ok = False
+        mock_resp.headers = {"Content-Type": "text/event-stream"}
+        mock_request.return_value = mock_resp
+
+        client = BaseHTTPClient(RequestConfig(base_url="https://api.example.com"))
+        result = client._request("GET", "/events")
+
+        assert result.success is False
+        assert result.status_code == 500
+        assert result.streaming is True
+
+    @patch("agentarts.wrapper.service.http_client.requests.Session.request")
+    def test_regular_response_closed_after_parsing(self, mock_request):
+        """Test that non-streaming response is closed after body is consumed."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.ok = True
+        mock_resp.json.return_value = {"ok": True}
+        mock_resp.headers = {"Content-Type": "application/json"}
+        mock_request.return_value = mock_resp
+
+        client = BaseHTTPClient(RequestConfig(base_url="https://api.example.com"))
+        result = client._request("GET", "/test")
+
+        mock_resp.close.assert_called_once()
+
+    @patch("agentarts.wrapper.service.http_client.requests.Session.request")
+    def test_connection_error_returns_non_streaming(self, mock_request):
+        """Test that connection errors return a non-streaming failed result."""
+        mock_request.side_effect = ConnectionError("Connection refused")
+
+        client = BaseHTTPClient(RequestConfig(base_url="https://api.example.com"))
+        result = client._request("GET", "/events")
+
+        assert result.success is False
+        assert result.status_code == 0
+        assert result.streaming is False

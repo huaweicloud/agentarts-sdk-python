@@ -32,6 +32,8 @@ HUAWEICLOUD_SDK_SECURITY_TOKEN: str = os.getenv("HUAWEICLOUD_SDK_SECURITY_TOKEN"
 """Security token for temporary credentials (STS). Required when using
 temporary AK/SK obtained from the Security Token Service."""
 
+HUAWEICLOUD_SDK_REGION: str = os.getenv("HUAWEICLOUD_SDK_REGION", "")
+"""Huawei Cloud region for API requests. Defaults to "cn-southwest-2"."""
 
 # ============================================================
 # Huawei Cloud Identity Provider (IDP) Settings
@@ -109,9 +111,8 @@ def get_region() -> str:
     Returns:
         The region string (e.g., "cn-southwest-2"), or empty string if not set.
     """
-    region_env = os.getenv("HUAWEICLOUD_SDK_REGION") or os.getenv("HUAWEICLOUD_REGION")
-    if region_env:
-        return region_env
+    if HUAWEICLOUD_SDK_REGION:
+        return HUAWEICLOUD_SDK_REGION
     os_region = os.getenv("OS_REGION_NAME")
     if os_region:
         return os_region
@@ -136,9 +137,8 @@ def get_control_plane_endpoint(region: str = None) -> str:
         >>> get_control_plane_endpoint("cn-southwest-2")
         "https://agentarts.cn-southwest-2.myhuaweicloud.com"
     """
-    control_endpoint = os.getenv("AGENTARTS_CONTROL_ENDPOINT", "")
-    if control_endpoint:
-        return control_endpoint
+    if AGENTARTS_CONTROL_ENDPOINT:
+        return AGENTARTS_CONTROL_ENDPOINT
     region = region or get_region()
     return f"https://agentarts.{region}.myhuaweicloud.com"
 
@@ -194,7 +194,7 @@ def get_memory_endpoint(
     if endpoint_type == "control":
         return get_control_plane_endpoint(region)
     elif endpoint_type == "data":
-        memory_endpoint = os.getenv("AGENTARTS_MEMEORY_DATA_ENDPOINT", "")
+        memory_endpoint = os.getenv("AGENTARTS_MEMEORY_DATA_ENDPOINT")
         if memory_endpoint:
             return memory_endpoint
         if not space_id:
@@ -203,3 +203,27 @@ def get_memory_endpoint(
         return f"https://{space_id}.memory.{region}.agentarts.myhuaweicloud.com"
     else:
         raise ValueError(f"Invalid endpoint type: {endpoint_type}")
+
+
+def get_iam_endpoint(region: str = None) -> str:
+    """
+    Get the Huawei Cloud IAM (Identity and Access Management) endpoint URL.
+
+    If HUAWEICLOUD_SDK_IAM_ENDPOINT is set, returns that value directly.
+    Otherwise, constructs the endpoint from the region.
+
+    Args:
+        region: Huawei Cloud region (e.g., "cn-southwest-2").
+                 If not provided, auto-detected from environment.
+
+    Returns:
+        The IAM endpoint URL.
+
+    Example:
+        >>> get_iam_endpoint("cn-southwest-2")
+        "https://iam.cn-southwest-2.myhuaweicloud.com"
+    """
+    if HUAWEICLOUD_SDK_IAM_ENDPOINT:
+        return HUAWEICLOUD_SDK_IAM_ENDPOINT
+    region = region or get_region()
+    return f"https://iam.{region}.myhuaweicloud.com"

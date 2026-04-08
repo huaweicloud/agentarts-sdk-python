@@ -1,127 +1,31 @@
-"""Init command implementation"""
+"""Init command definition"""
 
-import os
-from pathlib import Path
-from typing import Optional
+from typing import Annotated
+
 import click
+import typer
+
+from agentarts.toolkit.operations.runtime import init as init_op
 
 
-TEMPLATES = {
-    "basic": "basic_agent",
-    "langchain": "langchain_agent",
-    "langgraph": "langgraph_agent",
-    "autogen": "autogen_agent",
-    "crewai": "crewai_agent"
-}
-
-
-def init_project(template: str, name: str, path: str):
+def init(
+    name: Annotated[str, typer.Option("--name", "-n", help="Project name")] = ...,
+    template: Annotated[
+        str,
+        typer.Option(
+            "--template", "-t",
+            help="Project template",
+            click_type=click.Choice(["basic", "langgraph", "langchain", "autogen", "crewai"]),
+        ),
+    ] = "basic",
+    path: Annotated[str, typer.Option("--path", "-p", help="Project path")] = ".",
+):
     """
-    Initialize a new project
-    
-    Args:
-        template: Template type
-        name: Project name
-        path: Project path
+    Initialize a new project.
+
+    Examples:
+        agentarts init -n my_agent -t langgraph
     """
-    project_path = Path(path) / name
-    
-    if project_path.exists():
-        click.echo(f"Error: Directory '{name}' already exists", err=True)
-        return
-    
-    project_path.mkdir(parents=True, exist_ok=True)
-    
-    create_config_file(project_path, name)
-    create_agent_file(project_path, template)
-    create_requirements_file(project_path, template)
-    
-    click.echo(f"\n✓ Project '{name}' created successfully!")
-    click.echo(f"\nNext steps:")
-    click.echo(f"  cd {name}")
-    click.echo(f"  pip install -e .")
-    click.echo(f"  agentarts dev")
-
-
-def create_config_file(project_path: Path, name: str):
-    """Create configuration file"""
-    config_content = f"""# agentarts.yaml
-project:
-  name: {name}
-  version: 1.0.0
-  description: AgentArts Agent Project
-
-runtime:
-  region: cn-north-4
-  environment: development
-  
-memory:
-  short_term:
-    enabled: true
-    max_size: 100
-  long_term:
-    enabled: true
-    vector_store: huaweicloud_vector_db
-    
-tools:
-  code_interpreter:
-    enabled: true
-    timeout: 30
-    
-server:
-  host: 0.0.0.0
-  port: 8000
-  
-logging:
-  level: INFO
-"""
-    
-    config_path = project_path / "agentarts.yaml"
-    config_path.write_text(config_content, encoding='utf-8')
-
-
-def create_agent_file(project_path: Path, template: str):
-    """Create agent file"""
-    agent_content = '''"""Agent implementation"""
-
-from agentarts import AgentRuntime, Context
-
-
-class MyAgent:
-    """Custom Agent implementation"""
-    
-    async def run(self, context: Context):
-        """Run the agent"""
-        query = context.get("query", "")
-        
-        # TODO: Implement your agent logic here
-        
-        return {
-            "response": f"Processed: {query}",
-            "status": "success"
-        }
-
-
-def create_agent():
-    """Create agent instance"""
-    return MyAgent()
-
-
-def create_runtime(config: dict):
-    """Create runtime instance"""
-    return AgentRuntime(config=config)
-'''
-    
-    agent_path = project_path / "agent.py"
-    agent_path.write_text(agent_content, encoding='utf-8')
-
-
-def create_requirements_file(project_path: Path, template: str):
-    """Create requirements file"""
-    requirements = """huaweicloud-agentarts-sdk
-
-# Add your additional dependencies here
-"""
-    
-    req_path = project_path / "requirements.txt"
-    req_path.write_text(requirements, encoding='utf-8')
+    success = init_op.init_project(template=template, name=name, path=path)
+    if not success:
+        raise typer.Exit(1)
