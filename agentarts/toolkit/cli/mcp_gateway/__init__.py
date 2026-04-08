@@ -2,4 +2,6 @@
 AgentArts MCP Gateway CLI Commands
 """
 
-__all__ = []
+from .mcp_gateway import mcp_gateway
+
+__all__ = ["mcp_gateway"]
