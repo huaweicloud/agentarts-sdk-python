@@ -41,6 +41,7 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
+#    "huaweicloudsdkagentidentity",
     "fastapi>=0.104.0",
     "uvicorn[standard]>=0.24.0",
     "pydantic>=2.0.0",
@@ -289,3 +290,6 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["ARG", "S101"]
 "__init__.py" = ["F401"]
+
+[tool.uv.sources]
+huaweicloudsdkagentidentity = { path = "libs/huaweicloudsdkagentidentity-3.1.184-py3-none-any.whl" }
