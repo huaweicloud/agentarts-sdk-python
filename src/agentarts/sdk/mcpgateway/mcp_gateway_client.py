@@ -108,6 +108,12 @@ class MCPGatewayClient(BaseHTTPClient):
                         f"Error: {str(e)}"
                     )
         
+        if log_delivery_configuration is None:
+            log_delivery_configuration = { "enabled": False }
+
+        if outbound_network_configuration is None:
+            outbound_network_configuration = {"network_mode": "public"}
+
         payload = {
             "name": name,
             "description": description,
