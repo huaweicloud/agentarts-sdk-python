@@ -3,7 +3,7 @@
 from typing import Any, Dict, Optional
 
 from .http_client import BaseHTTPClient, RequestConfig
-from agentarts.wrapper.utils.constant import HUAWEICLOUD_SDK_AK, HUAWEICLOUD_SDK_SK
+from src.agentarts.sdk.utils.constant import HUAWEICLOUD_SDK_AK, HUAWEICLOUD_SDK_SK
 
 class ToolsAPIError(BaseException):
     
@@ -20,13 +20,12 @@ class ToolsAPIError(BaseException):
         super().__init__(f"Tools API Error: {error_msg}")
 
 class ControlToolsHttpClient(BaseHTTPClient):
-    def __init__(self, region_name: str, endpoint_url: str, credentials: Dict[str, str]):
+    def __init__(self, region_name: str, endpoint_url: str):
         request_config = RequestConfig(base_url=endpoint_url, verify_ssl=False)
+        if not HUAWEICLOUD_SDK_AK or not HUAWEICLOUD_SDK_SK:
+            raise RuntimeError("HUAWEICLOUD_SDK_AK and HUAWEICLOUD_SDK_SK are required")
         super().__init__(request_config, open_ak_sk=True)
         self.region_name = region_name
-        
-        # if not HUAWEICLOUD_SDK_AK or not HUAWEICLOUD_SDK_SK:
-        #     raise RuntimeError("HUAWEICLOUD_SDK_AK and HUAWEICLOUD_SDK_SK are required")
     
     def create_code_interpreter(self, params: Dict) -> Dict[Any, Any]:
         """POST v1/core/code-interpreters/
