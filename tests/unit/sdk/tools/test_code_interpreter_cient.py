@@ -9,16 +9,20 @@ from unittest.mock import patch
 
 import pytest
 
-from agentarts.wrapper.tools.code_interpreter import CodeInterpreter
-from agentarts.wrapper.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
+from src.agentarts.sdk.tools.code_interpreter import CodeInterpreter
+from src.agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
 
 class TestCodeInterpreterClient(unittest.TestCase):
-    @patch("agentarts.wrapper.utils.constant.get_control_plane_endpoint")
-    @patch("agentarts.wrapper.utils.constant.get_data_plane_endpoint")
-    def setUp(self, mock_get_data_plane_endpoint, mock_get_control_plane_endpoint):
+    @patch("src.agentarts.sdk.service.tools_http.HUAWEICLOUD_SDK_AK")
+    @patch("src.agentarts.sdk.service.tools_http.HUAWEICLOUD_SDK_SK")
+    @patch("src.agentarts.sdk.utils.constant.get_control_plane_endpoint")
+    @patch("src.agentarts.sdk.utils.constant.get_data_plane_endpoint")
+    def setUp(self, mock_get_data_plane_endpoint, mock_get_control_plane_endpoint, mock_sk, mock_ak):
         """在每个测试方法前调用"""
         mock_get_control_plane_endpoint.return_value = "https://control-plane.example.com"
         mock_get_data_plane_endpoint.return_value = "https://data-plane.example.com"
+        mock_ak.return_value = "test_ak"
+        mock_sk.return_value = "test-sk"
         self.code_interpreter_client = CodeInterpreter(region="test-region")
     
     @patch.object(ControlToolsHttpClient, "create_code_interpreter")
