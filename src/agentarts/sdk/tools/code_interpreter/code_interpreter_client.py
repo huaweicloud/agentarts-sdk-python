@@ -17,8 +17,8 @@ import re
 from contextlib import contextmanager
 from typing import Any, Dict, Generator, List, Optional, Union
 
-from agentarts.wrapper.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
-from agentarts.wrapper.utils.constant import get_control_plane_endpoint, get_data_plane_endpoint, get_region
+from src.agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
+from src.agentarts.sdk.utils.constant import get_control_plane_endpoint, get_data_plane_endpoint, get_region
 
 
 DEFAULT_TIMEOUT = 900  # 默认15分
@@ -37,12 +37,11 @@ class CodeInterpreter:
         data_plane_client : 用于与数据面API交互
     """
     
-    def __init__(self, region: str, credentials = None) -> None:
+    def __init__(self, region: str) -> None:
         """支持在指定的region中初始化代码解释器客户端
 
         Args:
             region: 指定的区域
-            credentials: 认证信息
 
         """
         if not region:
@@ -51,8 +50,7 @@ class CodeInterpreter:
         # 管理代码解释器的控制面客户端
         self.control_plane_client = ControlToolsHttpClient(
             region_name=region,
-            endpoint_url=get_control_plane_endpoint(),
-            credentials=credentials
+            endpoint_url=get_control_plane_endpoint()
         )
 
         # 管理代码解释器的数据面客户端

@@ -1,14 +1,17 @@
 import unittest
 from unittest.mock import patch
 
-from agentarts.wrapper.service import ControlToolsHttpClient, DataToolsHttpClient
-from agentarts.wrapper.service.http_client import RequestResult
+from src.agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
+from src.agentarts.sdk.service.http_client import RequestResult
 
 class TestToolsHttpClient(unittest.TestCase):
-
-    def setUp(self):
+    @patch("src.agentarts.sdk.service.tools_http.HUAWEICLOUD_SDK_AK")
+    @patch("src.agentarts.sdk.service.tools_http.HUAWEICLOUD_SDK_SK")
+    def setUp(self, mock_ak, mock_sk):
+        mock_ak = "test_ak"
+        mock_sk = "test_sk"
+        self.control_client = ControlToolsHttpClient(region_name="test-region", endpoint_url="https://test.com")
         self.data_client = DataToolsHttpClient(region_name="test-region", endpoint_url="https://test.com")
-        self.control_client = ControlToolsHttpClient(region_name="test-region", endpoint_url="https://test.com", credentials={})
 
     @patch.object(ControlToolsHttpClient, "post")
     def test_create_code_interpreter(self, mock_post):
