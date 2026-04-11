@@ -33,7 +33,7 @@ class ControlToolsHttpClient(BaseHTTPClient):
         创建代码解释器
 
         """
-        endpoint = f"v1/core/code-interpreters/"
+        endpoint = f"/v1/core/code-interpreters"
         response = self.post(url=endpoint, data=params)
         if not response.success:
             raise ToolsAPIError(response.status_code, response.error)
@@ -46,7 +46,7 @@ class ControlToolsHttpClient(BaseHTTPClient):
         列出所有代码解释器
 
         """
-        endpoint = f"v1/core/code-interpreters/"
+        endpoint = f"/v1/core/code-interpreters"
         response = self.get(url=endpoint, params=params)
         if not response.success:
             raise ToolsAPIError(response.status_code, response.error)
@@ -59,7 +59,7 @@ class ControlToolsHttpClient(BaseHTTPClient):
         更新代码解释器
 
         """
-        endpoint = f"v1/core/code-interpreters/{code_interpreter_id}"
+        endpoint = f"/v1/core/code-interpreters/{code_interpreter_id}"
         response = self.put(url=endpoint, data=request_params)
         if not response.success:
             raise ToolsAPIError(response.status_code, response.error)
@@ -72,7 +72,7 @@ class ControlToolsHttpClient(BaseHTTPClient):
         获取代码解释器详情
 
         """ 
-        endpoint = f"v1/core/code-interpreters/{code_interpreter_id}"
+        endpoint = f"/v1/core/code-interpreters/{code_interpreter_id}"
         response = self.get(url=endpoint)
         if not response.success:
             raise ToolsAPIError(response.status_code, response.error)

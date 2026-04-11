@@ -90,15 +90,10 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
     def setup_credentials(self, region_name: str):
         """Setup AK/SK credentials."""
         try:
-            from huaweicloudsdkcore.auth.provider import CredentialProviderChain
-            self.credentials = CredentialProviderChain.get_basic_credential_provider_chain().get_credentials()
+            from agentarts.sdk.utils.metadata import create_credential
+            credentials = create_credential()
+            self.credentials = credentials
             logger.info(f"Successfully loaded AK/SK credentials for region {region_name}")
-        except ImportError as e:
-            raise ValueError(
-                f"huaweicloudsdkcore is required for control plane operations. "
-                f"Install it with: pip install huaweicloudsdkcore. "
-                f"Error: {e}"
-            )
         except Exception as e:
             raise ValueError(
                 f"Failed to load AK/SK credentials for control plane. "
