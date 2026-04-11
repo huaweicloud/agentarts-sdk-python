@@ -62,6 +62,7 @@ from huaweicloudsdkcore.exceptions.exceptions import (
     SdkException,
     ServiceResponseException,
 )
+from huaweicloudsdkcore.region.region import Region
 from huaweicloudsdkcore.http.http_config import HttpConfig
 from huaweicloudsdkcore.retry.backoff_strategy import BackoffStrategies
 from huaweicloudsdkcore.sdk_response import SdkResponse
@@ -77,6 +78,7 @@ from agentarts.sdk.identity.types import (
     OAuth2Vendor,
     StsCredentials,
 )
+from agentarts.sdk.utils.constant import get_identity_endpoint
 
 
 class IdentityClient:
@@ -101,9 +103,10 @@ class IdentityClient:
         # Determine SSL verification behavior
         if ignore_ssl_verification is None:
             ignore_ssl_verification = False
-
-        sdk_region = AgentIdentityRegion.value_of(region or "ap-southeast-4")
-
+        try:
+            sdk_region = AgentIdentityRegion.value_of(region)
+        except Exception:
+            sdk_region = Region(id=region, endpoint = get_identity_endpoint())
         # Set HTTP configuration
         http_config = HttpConfig.get_default_config()
         http_config.ignore_ssl_verification = ignore_ssl_verification
@@ -112,10 +115,13 @@ class IdentityClient:
         if client is not None:
             self.client = client
         else:
+            from agentarts.sdk.utils.metadata import create_credential
+            credentials = create_credential()
             self.client = (
                 AgentIdentityClient.new_builder()
                 .with_region(sdk_region)
                 .with_http_config(http_config)
+                .with_credentials(credentials)
                 .build()
             )
 

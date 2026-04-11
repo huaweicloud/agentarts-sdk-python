@@ -18,6 +18,7 @@ from agentarts.sdk.runtime.context import (
 )
 from agentarts.sdk.service.identity.identity_client import IdentityClient
 from agentarts.sdk.service.identity.polling.token_poller import TokenPoller
+from agentarts.sdk.utils.constant import get_region
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ def require_access_token(
         Decorator function
     """
     client = IdentityClient(
-        region=_get_region(), ignore_ssl_verification=ignore_ssl_verification
+        region=get_region(), ignore_ssl_verification=ignore_ssl_verification
     )
 
     def decorator(func: Callable) -> Callable:
@@ -113,7 +114,7 @@ def require_api_key(
         Decorator function
     """
     client = IdentityClient(
-        region=_get_region(), ignore_ssl_verification=ignore_ssl_verification
+        region=get_region(), ignore_ssl_verification=ignore_ssl_verification
     )
 
     def decorator(func: Callable) -> Callable:
@@ -189,7 +190,7 @@ def require_sts_token(
         ...     print(f"SK: {sts_credentials.secret_access_key}")
     """
     client = IdentityClient(
-        region=_get_region(), ignore_ssl_verification=ignore_ssl_verification
+        region=get_region(), ignore_ssl_verification=ignore_ssl_verification
     )
 
     def decorator(func: Callable) -> Callable:
@@ -301,19 +302,3 @@ def _set_up_local_auth(client: IdentityClient) -> str:
 
     return client.create_workload_access_token(workload_identity_name, user_id=user_id)
 
-
-def _get_region() -> str:
-    # 1. Check for standard Huawei Cloud environment variables
-    # HUAWEICLOUD_SDK_REGION is the convention used in many Huawei tools
-    region_env = os.getenv("HUAWEICLOUD_SDK_REGION") or os.getenv("HUAWEICLOUD_REGION")
-    if region_env:
-        return region_env
-
-    # 2. Check for OpenStack compatibility
-    # (Huawei Cloud is built on OpenStack, so this is often set in containerized environments)
-    os_region = os.getenv("OS_REGION_NAME")
-    if os_region:
-        return os_region
-
-    # 3. Default to a primary region
-    return "ap-southeast-4"

@@ -8,6 +8,8 @@ from typing import Optional
 import yaml
 from rich.console import Console
 
+from agentarts.toolkit.utils.common import echo_error, echo_info, echo_step
+
 console = Console()
 
 
@@ -33,18 +35,19 @@ def run_dev_server(
 
     agent_file = Path("agent.py")
     if not agent_file.exists():
-        console.print("[red]Error: agent.py not found[/red]")
-        console.print("Please run 'agentarts init' first")
+        echo_error("agent.py not found")
+        console.print("[dim]Please run 'agentarts init' first[/dim]")
         return False
 
     os.environ["AGENTARTS_ENV"] = "development"
     os.environ["AGENTARTS_CONFIG"] = config_path or "agentarts.yaml"
 
-    console.print(f"\n[bold cyan]Starting development server on {host}:{port}[/bold cyan]")
-    console.print(f"Config: [yellow]{config_path or 'agentarts.yaml'}[/yellow]")
-    console.print(f"Auto-reload: {'[green]enabled[/green]' if reload else '[dim]disabled[/dim]'}")
-    console.print(f"\nAPI Documentation: [link]http://{host}:{port}/docs[/link]")
-    console.print(f"Health Check: [link]http://{host}:{port}/health[/link]\n")
+    console.print()
+    echo_info("Development Server", f"[cyan]Host:[/cyan] [white]{host}[/white]\n[cyan]Port:[/cyan] [white]{port}[/white]\n[cyan]Config:[/cyan] [yellow]{config_path or 'agentarts.yaml'}[/yellow]\n[cyan]Auto-reload:[/cyan] [green]{'enabled' if reload else 'disabled'}[/green]")
+    console.print()
+    console.print(f"[cyan]API Documentation:[/cyan] [link]http://{host}:{port}/docs[/link]")
+    console.print(f"[cyan]Health Check:[/cyan] [link]http://{host}:{port}/health[/link]")
+    console.print()
 
     try:
         import uvicorn
@@ -61,8 +64,8 @@ def run_dev_server(
         )
         return True
     except ImportError as e:
-        console.print(f"[red]Error: Failed to start server - {e}[/red]")
-        console.print("Make sure all dependencies are installed: [yellow]pip install -e .[/yellow]")
+        echo_error(f"Failed to start server - {e}")
+        console.print("[dim]Make sure all dependencies are installed: [yellow]pip install -e .[/yellow]")
         return False
 
 

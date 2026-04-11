@@ -17,8 +17,9 @@ import re
 from contextlib import contextmanager
 from typing import Any, Dict, Generator, List, Optional, Union
 
+from agentarts.sdk.utils.constant import get_code_interpreter_data_plane_endpoint
 from src.agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
-from src.agentarts.sdk.utils.constant import get_control_plane_endpoint, get_data_plane_endpoint, get_region
+from src.agentarts.sdk.utils.constant import get_control_plane_endpoint, get_runtime_data_plane_endpoint, get_region
 
 
 DEFAULT_TIMEOUT = 900  # 默认15分
@@ -56,7 +57,7 @@ class CodeInterpreter:
         # 管理代码解释器的数据面客户端
         self.data_plane_client = DataToolsHttpClient(
             region_name=region,
-            endpoint_url=get_data_plane_endpoint()
+            endpoint_url=get_code_interpreter_data_plane_endpoint()
         )
         
         self._code_interpreter_name = None

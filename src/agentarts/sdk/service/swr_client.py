@@ -29,6 +29,10 @@ import base64
 import logging
 from typing import Any, Dict, Optional, Tuple
 
+from huaweicloudsdkcore.region.region import Region
+
+from agentarts.sdk.utils.constant import get_swr_endpoint
+
 log = logging.getLogger(__name__)
 
 
@@ -84,7 +88,10 @@ class SWRClient:
             http_config = HttpConfig.get_default_config()
             http_config.ignore_ssl_verification = True
 
-            swr_region = SwrRegion.value_of(self._region)
+            try:
+                swr_region = SwrRegion.value_of(self._region)
+            except Exception:
+                swr_region = Region(id=self._region, endpoint=get_swr_endpoint())
 
             self._client = SwrClient.new_builder() \
                 .with_credentials(credentials) \

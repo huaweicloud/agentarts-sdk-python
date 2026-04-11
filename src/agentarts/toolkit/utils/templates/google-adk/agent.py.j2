@@ -1,0 +1,155 @@
+"""
+{{ name }} - Google ADK Agent Implementation
+
+An agent built using Google ADK framework, wrapped with AgentArts SDK runtime.
+"""
+
+from typing import Dict, Any, Optional
+
+from agentarts.sdk.runtime import AgentArtsRuntimeApp, RequestContext
+
+app = AgentArtsRuntimeApp()
+
+
+class GoogleADKAgent:
+    """Google ADK-based Agent implementation."""
+
+    def __init__(self, model: str = "gemini-2.0-flash"):
+        self.name = "{{ name }}"
+        self.model = model
+        self._agent = None
+
+    def _setup_agent(self):
+        """Set up the Google ADK agent."""
+        try:
+            from google.adk.agents import Agent
+        except ImportError:
+            raise ImportError(
+                "google-adk is required. Install it with: pip install google-adk"
+            )
+
+        agent = Agent(
+            name=self.name,
+            model=self.model,
+            description="A helpful AI assistant.",
+            instruction="You are a helpful AI assistant. "
+                        "Provide clear and accurate responses to user queries.",
+        )
+
+        return agent
+
+    def _get_agent(self):
+        """Get or create the agent."""
+        if self._agent is None:
+            self._agent = self._setup_agent()
+        return self._agent
+
+    async def run(
+        self,
+        query: str,
+        system_instruction: Optional[str] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """
+        Process a query using Google ADK.
+
+        Args:
+            query: User input query
+            system_instruction: Optional system instruction
+            **kwargs: Additional parameters
+
+        Returns:
+            Response dictionary
+        """
+        try:
+            from google.adk.runners import Runner
+            from google.adk.sessions import InMemorySessionService
+            from google.genai import types
+        except ImportError:
+            raise ImportError(
+                "google-adk is required. Install it with: pip install google-adk"
+            )
+
+        agent = self._get_agent()
+
+        session_service = InMemorySessionService()
+        runner = Runner(
+            agent=agent,
+            app_name=self.name,
+            session_service=session_service,
+        )
+
+        session = session_service.create_session(
+            app_name=self.name,
+            user_id="default_user",
+        )
+
+        content = types.Content(
+            role="user",
+            parts=[types.Part(text=query)],
+        )
+
+        events = runner.run(
+            user_id="default_user",
+            session_id=session.id,
+            new_message=content,
+        )
+
+        response_text = ""
+        for event in events:
+            if event.is_final_response():
+                if event.content and event.content.parts:
+                    response_text = event.content.parts[0].text
+                break
+
+        return {
+            "response": response_text,
+            "status": "success",
+            "agent": self.name,
+            "model": self.model,
+        }
+
+
+_agent: Optional[GoogleADKAgent] = None
+
+
+def _get_agent() -> GoogleADKAgent:
+    """Get or create the agent instance."""
+    global _agent
+    if _agent is None:
+        _agent = GoogleADKAgent()
+    return _agent
+
+
+@app.ping
+def ping():
+    """Health check endpoint."""
+    return "healthy"
+
+
+@app.entrypoint
+async def handler(payload: Dict[str, Any], context: RequestContext = None) -> Dict[str, Any]:
+    """
+    Process a query using Google ADK.
+
+    Args:
+        payload: User input payload containing query
+        context: Request context with session info (optional)
+
+    Returns:
+        Response dictionary
+    """
+    query = payload.get("query", payload.get("input", ""))
+    system_instruction = payload.get("system_instruction")
+    
+    agent = _get_agent()
+    return await agent.run(query, system_instruction=system_instruction)
+
+
+def create_agent():
+    """Create agent instance for runtime."""
+    return app
+
+
+if __name__ == "__main__":
+    app.run()

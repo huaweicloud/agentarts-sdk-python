@@ -1,7 +1,7 @@
 """
 Agent Memory SDK - Control Plane
-控制面：管理Space资源的创建、查询、更新、删除以及策略管理
 
+Control plane: manages Space resource creation, query, update, deletion and policy management.
 """
 
 import logging
@@ -21,19 +21,19 @@ logger = logging.getLogger(__name__)
 
 class _ControlPlane:
     """
-    控制面API - Space资源管理
+    Control Plane API - Space resource management.
 
-    使用方式:
-        >>> # 一般通过 MemoryClient 使用，不直接实例化 ControlPlane
-        >>> # 此类由 MemoryClient 内部使用
+    Usage:
+        >>> # Generally used through MemoryClient, do not instantiate ControlPlane directly
+        >>> # This class is used internally by MemoryClient
     """
 
     def __init__(self, region_name: Optional[str] = None):
         """
-        初始化控制面
+        Initialize control plane.
 
         Args:
-            region_name: 华为云区域名称（可选）
+            region_name: Huawei Cloud region name (optional)
         """
         self.client = MemoryHttpService(
             region_name=region_name,
@@ -43,38 +43,34 @@ class _ControlPlane:
 
     def _create_api_key(self) -> ApiKeyInfo:
         """
-        创建API Key
+        Create API Key.
         
         Returns:
-            API Key信息，包含id和api_key字段
+            API Key information, containing id and api_key fields
             
         Raises:
-            Exception: 如果API Key创建失败
+            Exception: If API Key creation fails
         """
         logger.info("Creating API Key")
 
-        # 调用API创建API Key
-        # 如果不需要请求体，直接向 /v1/core/spaces/key 发送POST请求
         result = self.client.create_api_key()
         logger.info(f"API Key created successfully. ID: {result.get('id')}")
         return ApiKeyInfo.from_dict(result)
 
-    # ==================== Space 管理 ====================
-
     def create_space(self, request: SpaceCreateRequest) -> SpaceInfo:
         """
-        创建Space
+        Create Space.
 
         Args:
-            request: Space创建请求，包含必填字段:
-                - name: Space名称
-                - message_ttl_hours: 消息TTL（小时）
+            request: Space creation request, containing required fields:
+                - name: Space name
+                - message_ttl_hours: Message TTL (hours)
 
         Returns:
-            创建的Space信息，包含id和自动生成的api_key等字段
+            Created Space information, containing id and auto-generated api_key fields
 
         Example:
-            >>> # 基本创建（默认开启公网访问）
+            >>> # Basic creation (public access enabled by default)
             >>> request = SpaceCreateRequest(
             ...     name="my-space",
             ...     message_ttl_hours=168
@@ -82,7 +78,7 @@ class _ControlPlane:
             >>> space = cp.create_space(request)
             >>> print(space['id'])
             
-            >>> # 创建带有内网访问的Space
+            >>> # Create Space with private network access
             >>> request = SpaceCreateRequest(
             ...     name="private-space",
             ...     message_ttl_hours=168,
@@ -91,21 +87,19 @@ class _ControlPlane:
             ... )
             >>> space = cp.create_space(request)
             
-            >>> # 禁用公网访问
+            >>> # Disable public access
             >>> request = SpaceCreateRequest(
             ...     name="no-public-space",
             ...     message_ttl_hours=168,
             ...     public_access_enable=False
             ... )
         """
-        # 自动创建API Key并获取其ID
         api_key_info = self._create_api_key()
         api_key_id = api_key_info.id
         api_key = api_key_info.api_key
 
         logger.info(f"Creating space: {request.name}")
 
-        # 直接使用用户请求的to_dict()方法，并在结果中添加api_key_id
         api_request_dict = request.to_dict()
         api_request_dict["api_key_id"] = api_key_id
 
@@ -118,13 +112,13 @@ class _ControlPlane:
 
     def get_space(self, space_id: str) -> SpaceInfo:
         """
-        获取Space详情
+        Get Space details.
 
         Args:
             space_id: Space ID
 
         Returns:
-            Space详细信息
+            Space detailed information
         """
         logger.info(f"Getting space: {space_id}")
         result = self.client.get_space(space_id)
@@ -136,14 +130,14 @@ class _ControlPlane:
             offset: int = 0
     ) -> SpaceListResponse:
         """
-        列出Spaces
+        List Spaces.
 
         Args:
-            limit: 每页数量 (1-100)
-            offset: 偏移量
+            limit: Number per page (1-100)
+            offset: Offset
 
         Returns:
-            包含items和total的字典
+            Dictionary containing items and total
 
         Example:
             >>> result = cp.list_spaces()
@@ -156,14 +150,14 @@ class _ControlPlane:
 
     def update_space(self, space_id: str, request: SpaceUpdateRequest) -> SpaceInfo:
         """
-        更新Space配置
+        Update Space configuration.
 
         Args:
             space_id: Space ID
-            request: Space更新请求
+            request: Space update request
 
         Returns:
-            更新后的Space信息
+            Updated Space information
 
         Example:
             >>> request = SpaceUpdateRequest(
@@ -179,7 +173,7 @@ class _ControlPlane:
 
     def delete_space(self, space_id: str) -> None:
         """
-        删除Space
+        Delete Space.
 
         Args:
             space_id: Space ID
