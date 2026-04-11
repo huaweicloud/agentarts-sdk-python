@@ -4,6 +4,7 @@ import json
 from typing import Annotated, Optional
 
 import typer
+from rich.console import Console
 
 from agentarts.toolkit.operations.runtime.invoke import (
     InvokeMode,
@@ -11,7 +12,7 @@ from agentarts.toolkit.operations.runtime.invoke import (
     status_agent,
 )
 
-console = typer.Typer(help="Invoke agent locally or on cloud")
+rich_console = Console()
 
 
 def status(
@@ -52,10 +53,6 @@ def status(
         agentarts status --agent my-agent
         agentarts status --mode local --port 8080
     """
-    from rich.console import Console as RichConsole
-
-    rich_console = RichConsole()
-
     status_mode = InvokeMode.CLOUD
     if mode.lower() == "local":
         status_mode = InvokeMode.LOCAL
@@ -75,11 +72,10 @@ def status(
         raise typer.Exit(1)
 
 
-@console.command(name="invoke")
 def invoke(
     payload: Annotated[
         str,
-        typer.Argument(help="JSON payload to send to the agent"),
+        typer.Argument(help="JSON payload to send to the agent (e.g., '{\"input\": \"hello\"}')"),
     ],
     agent: Annotated[
         Optional[str],
@@ -115,7 +111,7 @@ def invoke(
     ] = None,
     timeout: Annotated[
         int,
-        typer.Option("--timeout", help="Request timeout in seconds"),
+        typer.Option("--timeout", help="Request timeout in seconds (default: 900)"),
     ] = 900,
 ):
     """
@@ -133,10 +129,6 @@ def invoke(
         agentarts invoke '{"input": "hello"}' --mode local --port 8080
         agentarts invoke '{"query": "test"}' --session my-session-123
     """
-    from rich.console import Console as RichConsole
-
-    rich_console = RichConsole()
-
     invoke_mode = InvokeMode.CLOUD
     if mode.lower() == "local":
         invoke_mode = InvokeMode.LOCAL

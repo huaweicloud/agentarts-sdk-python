@@ -18,6 +18,13 @@ from agentarts.toolkit.utils.runtime.container import (
     login_to_registry,
     run_container,
 )
+from agentarts.toolkit.utils.common import (
+    echo_error,
+    echo_success,
+    echo_info,
+    echo_step,
+    echo_key_value,
+)
 from agentarts.sdk.service.swr_client import SWRClient
 from agentarts.sdk.service.runtime_client import RuntimeClient
 
@@ -53,7 +60,8 @@ def create_agentarts_runtime(
     Returns:
         Agent ID if successful, None otherwise
     """
-    console.print(f"\n[bold]Creating AgentArts runtime:[/bold] [cyan]{agent_name}[/cyan]")
+    console.print()
+    echo_step(6, f"Creating AgentArts runtime: [cyan]{agent_name}[/cyan]")
 
     try:
         from agentarts.sdk.utils.constant import get_control_plane_endpoint
@@ -127,15 +135,15 @@ def create_agentarts_runtime(
 
         agent_id = agent.get("agent_id")
         if agent_id:
-            console.print(f"[green]Done:[/green] Runtime created/updated successfully")
-            console.print(f"[dim]Agent ID: {agent_id}[/dim]")
+            echo_success(f"Runtime created/updated successfully")
+            console.print(f"  [dim]Agent ID: {agent_id}[/dim]")
             return agent_id
         else:
             console.print("[yellow]Warning: Agent created but no agent_id returned[/yellow]")
             return agent.get("name")
 
     except Exception as e:
-        console.print(f"[red]Error creating runtime: {e}[/red]")
+        echo_error(f"Failed to create runtime: {e}")
         return None
 
 
@@ -167,27 +175,27 @@ def deploy_project(
     """
     config_path = get_config_file_path()
     if not config_path.exists():
-        console.print("[red]Error: Configuration file not found[/red]")
+        echo_error("Configuration file not found")
         console.print("[dim]Run 'agentarts config' to create configuration first[/dim]")
         return False
 
     agent_config = get_agent(agent_name)
     if agent_config is None:
-        console.print(f"[red]Error: Agent '{agent_name or 'default'}' not found in configuration[/red]")
+        echo_error(f"Agent '{agent_name or 'default'}' not found in configuration")
         return False
 
     actual_agent_name = agent_config.base.name or agent_name or "agent"
 
-    console.print(f"\n[bold cyan]Deploying Agent: {actual_agent_name}[/bold cyan]")
-    console.print(f"Mode: [yellow]{mode.value}[/yellow]")
+    console.print()
+    echo_info("Deploy Configuration", f"[cyan]Agent:[/cyan] [white]{actual_agent_name}[/white]\n[cyan]Mode:[/cyan] [yellow]{mode.value}[/yellow]")
 
     if not check_docker_available():
-        console.print("[red]Error: Docker is not available or not running[/red]")
+        echo_error("Docker is not available or not running")
         console.print("[dim]Please start Docker and try again[/dim]")
         return False
 
     if not check_dockerfile_exists():
-        console.print("[red]Error: Dockerfile not found in current directory[/red]")
+        echo_error("Dockerfile not found in current directory")
         console.print("[dim]Run 'agentarts config' to generate Dockerfile first[/dim]")
         return False
 
@@ -197,11 +205,15 @@ def deploy_project(
     local_image_name = f"{actual_agent_name}"
     local_full_image = f"{local_image_name}:{image_tag}"
 
+    console.print()
+    echo_step(1, "Building Docker image")
     if not build_docker_image(local_image_name, image_tag):
         return False
 
     if mode == DeployMode.LOCAL:
         local_service_port = local_port or service_port
+        console.print()
+        echo_step(2, "Starting local container")
         return run_container(
             image_name=local_image_name,
             image_tag=image_tag,
@@ -213,73 +225,78 @@ def deploy_project(
     final_swr_repo = swr_repo or agent_config.swr_config.repository
 
     if not final_swr_org or not final_swr_repo:
-        console.print("[red]Error: SWR organization and repository must be configured[/red]")
+        echo_error("SWR organization and repository must be configured")
         console.print("[dim]Specify via --swr-org and --swr-repo options, or configure in yaml[/dim]")
         return False
 
-    console.print(f"\n[bold]Deploying to SWR:[/bold] [cyan]{final_swr_org}/{final_swr_repo}[/cyan]")
+    console.print()
+    echo_step(2, f"Deploying to SWR: [cyan]{final_swr_org}/{final_swr_repo}[/cyan]")
 
     try:
         swr_client = SWRClient(region=region)
 
-        console.print(f"\n[bold]Setting up SWR resources...[/bold]")
+        console.print()
+        echo_step(3, "Setting up SWR resources")
 
         if agent_config.swr_config.organization_auto_create:
             org_result = swr_client.create_or_get_organization(final_swr_org)
             if org_result is None:
-                console.print(f"[red]Error: Failed to create/get organization '{final_swr_org}'[/red]")
+                echo_error(f"Failed to create/get organization '{final_swr_org}'")
                 return False
-            console.print(f"[green]Done:[/green] Organization [cyan]{final_swr_org}[/cyan] ready")
+            echo_success(f"Organization [cyan]{final_swr_org}[/cyan] ready")
         else:
             org_result = swr_client.get_organization(final_swr_org)
             if org_result is None:
-                console.print(f"[red]Error: Organization '{final_swr_org}' not found[/red]")
+                echo_error(f"Organization '{final_swr_org}' not found")
                 console.print("[dim]Set organization_auto_create: true in config to auto-create[/dim]")
                 return False
-            console.print(f"[green]Done:[/green] Using existing organization [cyan]{final_swr_org}[/cyan]")
+            echo_success(f"Using existing organization [cyan]{final_swr_org}[/cyan]")
 
         if agent_config.swr_config.repository_auto_create:
             repo_result = swr_client.create_or_get_repository(final_swr_org, final_swr_repo)
             if repo_result is None:
-                console.print(f"[red]Error: Failed to create/get repository '{final_swr_org}/{final_swr_repo}'[/red]")
+                echo_error(f"Failed to create/get repository '{final_swr_org}/{final_swr_repo}'")
                 return False
-            console.print(f"[green]Done:[/green] Repository [cyan]{final_swr_org}/{final_swr_repo}[/cyan] ready")
+            echo_success(f"Repository [cyan]{final_swr_org}/{final_swr_repo}[/cyan] ready")
         else:
             repo_result = swr_client.get_repository(final_swr_org, final_swr_repo)
             if repo_result is None:
-                console.print(f"[red]Error: Repository '{final_swr_org}/{final_swr_repo}' not found[/red]")
+                echo_error(f"Repository '{final_swr_org}/{final_swr_repo}' not found")
                 console.print("[dim]Set repository_auto_create: true in config to auto-create[/dim]")
                 return False
-            console.print(f"[green]Done:[/green] Using existing repository [cyan]{final_swr_org}/{final_swr_repo}[/cyan]")
+            echo_success(f"Using existing repository [cyan]{final_swr_org}/{final_swr_repo}[/cyan]")
 
-        console.print(f"\n[bold]Getting SWR credentials...[/bold]")
+        console.print()
+        echo_step(4, "Getting SWR credentials")
         login_server, username, password = swr_client.create_swr_secret()
         if not username or not password:
-            console.print("[red]Error: Failed to get SWR credentials[/red]")
+            echo_error("Failed to get SWR credentials")
             return False
 
         if not login_to_registry(login_server, username, password):
-            console.print("[red]Error: Failed to login to SWR[/red]")
+            echo_error("Failed to login to SWR")
             return False
 
         swr_image = swr_client.get_full_image_name(final_swr_org, final_swr_repo, image_tag)
 
+        console.print()
+        echo_step(5, "Tagging and pushing image")
         if not tag_image(local_full_image, swr_image):
-            console.print("[red]Error: Failed to tag image[/red]")
+            echo_error("Failed to tag image")
             return False
 
         if not push_image(swr_image):
-            console.print("[red]Error: Failed to push image to SWR[/red]")
+            echo_error("Failed to push image to SWR")
             return False
 
-        console.print(f"[green]Done:[/green] Image deployed to [cyan]{swr_image}[/cyan]")
+        echo_success(f"Image deployed to [cyan]{swr_image}[/cyan]")
 
     except ImportError:
-        console.print("[red]Error: Huawei Cloud SDK not installed[/red]")
+        echo_error("Huawei Cloud SDK not installed")
         console.print("[dim]Install huaweicloudsdkswr for SWR deployment functionality.[/dim]")
         return False
     except Exception as e:
-        console.print(f"[red]Error: SWR deployment failed: {e}[/red]")
+        echo_error(f"SWR deployment failed: {e}")
         return False
 
     runtime_id = create_agentarts_runtime(
@@ -294,12 +311,16 @@ def deploy_project(
     if runtime_id is None:
         return False
 
-    console.print(f"\n[bold green]Deployment successful![/bold green]")
-    console.print(f"\n[bold]Runtime Details:[/bold]")
-    console.print(f"  Agent Name: [cyan]{actual_agent_name}[/cyan]")
-    console.print(f"  Runtime ID: [cyan]{runtime_id}[/cyan]")
-    console.print(f"  Image: [cyan]{swr_image}[/cyan]")
-    console.print(f"  Region: [yellow]{region}[/yellow]")
-    console.print(f"\nDashboard: [link]https://console.huaweicloud.com/agentarts[/link]")
+    console.print()
+    echo_success("Deployment successful!")
+    console.print()
+    summary = (
+        f"[cyan]Agent Name:[/cyan] [white]{actual_agent_name}[/white]\n"
+        f"[cyan]Runtime ID:[/cyan] [white]{runtime_id}[/white]\n"
+        f"[cyan]Image:[/cyan] [white]{swr_image}[/white]\n"
+        f"[cyan]Region:[/cyan] [yellow]{region}[/yellow]\n"
+        f"\n[cyan]Dashboard:[/cyan] [link]https://console.huaweicloud.com/agentarts[/link]"
+    )
+    console.print()
 
     return True

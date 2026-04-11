@@ -5,6 +5,7 @@ from typing import Optional
 from rich.console import Console
 
 from agentarts.toolkit.operations.runtime.config import get_agent, get_config_file_path
+from agentarts.toolkit.utils.common import echo_error, echo_success, echo_info
 
 console = Console()
 
@@ -33,13 +34,13 @@ def destroy_agent(
                     region = region or agent_config.base.region
 
             if agent_name is None:
-                console.print("[red]Error: No agent specified[/red]")
+                echo_error("No agent specified")
                 return False
 
         actual_region = region or "cn-north-4"
 
-        console.print(f"\n[bold]Destroying agent:[/bold] [cyan]{agent_name}[/cyan]")
-        console.print(f"[yellow]Region: {actual_region}[/yellow]")
+        console.print()
+        echo_info("Destroy Agent", f"[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Region:[/cyan] [yellow]{actual_region}[/yellow]")
 
         from agentarts.sdk.service import RuntimeClient
         from agentarts.sdk.utils.constant import get_control_plane_endpoint
@@ -50,12 +51,13 @@ def destroy_agent(
         result = client.delete_agent_by_name(agent_name=agent_name)
 
         if result:
-            console.print(f"[green]✓ Agent '{agent_name}' destroyed successfully[/green]")
+            console.print()
+            echo_success(f"Agent '{agent_name}' destroyed successfully")
             return True
         else:
-            console.print(f"[red]✗ Failed to destroy agent '{agent_name}'[/red]")
+            echo_error(f"Failed to destroy agent '{agent_name}'")
             return False
 
     except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
+        echo_error(str(e))
         return False

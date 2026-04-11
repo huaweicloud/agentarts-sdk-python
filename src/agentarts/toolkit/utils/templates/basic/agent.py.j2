@@ -1,46 +1,49 @@
 """
 {{ name }} - Basic Agent Implementation
 
-A simple agent that processes user queries.
+A simple agent that processes user queries using AgentArts SDK runtime.
 """
 
 from typing import Dict, Any
 
+from agentarts.sdk.runtime import AgentArtsRuntimeApp, RequestContext
 
-class Agent:
-    """Basic Agent implementation."""
+app = AgentArtsRuntimeApp()
 
-    def __init__(self):
-        self.name = "{{ name }}"
 
-    async def run(self, query: str, **kwargs) -> Dict[str, Any]:
-        """
-        Process a query and return a response.
+@app.ping
+def ping():
+    """Health check endpoint."""
+    return "healthy"
 
-        Args:
-            query: User input query
-            **kwargs: Additional parameters
 
-        Returns:
-            Response dictionary
-        """
-        # TODO: Implement your agent logic here
+@app.entrypoint
+def handler(payload: Dict[str, Any], context: RequestContext = None) -> Dict[str, Any]:
+    """
+    Process a query and return a response.
 
-        return {
-            "response": f"Processed: {query}",
-            "status": "success",
-            "agent": self.name,
-        }
+    Args:
+        payload: User input payload containing query
+        context: Request context with session info (optional)
+
+    Returns:
+        Response dictionary
+    """
+    query = payload.get("query", payload.get("input", ""))
+    
+    # TODO: Implement your agent logic here
+    
+    return {
+        "response": f"Processed: {query}",
+        "status": "success",
+        "agent": "{{ name }}",
+    }
 
 
 def create_agent():
     """Create agent instance for runtime."""
-    return Agent()
+    return app
 
 
 if __name__ == "__main__":
-    import asyncio
-
-    agent = create_agent()
-    result = asyncio.run(agent.run("Hello, World!"))
-    print(result)
+    app.run()

@@ -1,13 +1,17 @@
 """
 {{ name }} - Google ADK Agent Implementation
 
-An agent built using Google Agent Development Kit (ADK).
+An agent built using Google ADK framework, wrapped with AgentArts SDK runtime.
 """
 
 from typing import Dict, Any, Optional
 
+from agentarts.sdk.runtime import AgentArtsRuntimeApp, RequestContext
 
-class Agent:
+app = AgentArtsRuntimeApp()
+
+
+class GoogleADKAgent:
     """Google ADK-based Agent implementation."""
 
     def __init__(self, model: str = "gemini-2.0-flash"):
@@ -16,10 +20,9 @@ class Agent:
         self._agent = None
 
     def _setup_agent(self):
-        """Setup Google ADK agent."""
+        """Set up the Google ADK agent."""
         try:
             from google.adk.agents import Agent
-            from google.genai import types
         except ImportError:
             raise ImportError(
                 "google-adk is required. Install it with: pip install google-adk"
@@ -107,14 +110,46 @@ class Agent:
         }
 
 
+_agent: Optional[GoogleADKAgent] = None
+
+
+def _get_agent() -> GoogleADKAgent:
+    """Get or create the agent instance."""
+    global _agent
+    if _agent is None:
+        _agent = GoogleADKAgent()
+    return _agent
+
+
+@app.ping
+def ping():
+    """Health check endpoint."""
+    return "healthy"
+
+
+@app.entrypoint
+async def handler(payload: Dict[str, Any], context: RequestContext = None) -> Dict[str, Any]:
+    """
+    Process a query using Google ADK.
+
+    Args:
+        payload: User input payload containing query
+        context: Request context with session info (optional)
+
+    Returns:
+        Response dictionary
+    """
+    query = payload.get("query", payload.get("input", ""))
+    system_instruction = payload.get("system_instruction")
+    
+    agent = _get_agent()
+    return await agent.run(query, system_instruction=system_instruction)
+
+
 def create_agent():
     """Create agent instance for runtime."""
-    return Agent()
+    return app
 
 
 if __name__ == "__main__":
-    import asyncio
-
-    agent = create_agent()
-    result = asyncio.run(agent.run("Hello, World!"))
-    print(result)
+    app.run()

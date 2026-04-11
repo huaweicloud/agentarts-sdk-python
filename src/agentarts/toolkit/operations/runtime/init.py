@@ -4,7 +4,14 @@ from pathlib import Path
 from typing import Optional
 
 from rich.console import Console
+from rich.panel import Panel
 
+from agentarts.toolkit.utils.common import (
+    echo_success,
+    echo_info,
+    echo_step,
+    echo_key_value,
+)
 from agentarts.toolkit.utils.templates.manager import template_manager
 
 console = Console()
@@ -37,7 +44,7 @@ def init_project(
         swr_repo: SWR repository
 
     Returns:
-        True if successful, False otherwise
+        bool: True if successful, False otherwise
     """
     project_path = Path(path) / name
 
@@ -45,29 +52,39 @@ def init_project(
         console.print(f"[red]Error: Directory '{name}' already exists[/red]")
         return False
 
-    project_path.mkdir(parents=True, exist_ok=True)
-
-    console.print(f"\n[bold]Creating project:[/bold] [cyan]{name}[/cyan]")
-    console.print(f"[dim]Template: {template}[/dim]")
+    try:
+        project_path.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        console.print(f"[red]Error creating directory: {e}[/red]")
+        return False
 
     create_agent_file(project_path, template, name)
     create_requirements_file(project_path, template)
     create_config_file(project_path, name, region, swr_org, swr_repo)
     create_dockerfile(project_path, template)
 
-    console.print(f"\n[green]Success:[/green] Project '{name}' created successfully!")
-    console.print("\n[bold]Project structure:[/bold]")
-    console.print(f"  {name}/")
-    console.print(f"  ├── agent.py              # Agent implementation")
-    console.print(f"  ├── requirements.txt      # Dependencies")
-    console.print(f"  ├── .agentarts_config.yaml # Configuration")
-    console.print(f"  └── Dockerfile            # Docker build file")
+    echo_success(f"Project '{name}' created successfully!")
+    
+    echo_info(
+        "Project structure",
+        f"[cyan]{name}/[/cyan]\n"
+        f"  ├── [green]agent.py[/green]              # Agent implementation\n"
+        f"  ├── [green]requirements.txt[/green]      # Dependencies\n"
+        f"  ├── [green].agentarts_config.yaml[/green] # Configuration\n"
+        f"  └── [green]Dockerfile[/green]            # Docker build file"
+    )
 
-    console.print("\n[bold]Next steps:[/bold]")
-    console.print(f"  [cyan]cd {name}[/cyan]")
-    console.print(f"  [cyan]pip install -r requirements.txt[/cyan]")
-    console.print(f"  [cyan]# Edit agent.py to implement your agent logic[/cyan]")
-    console.print(f"  [cyan]agentarts deploy[/cyan]  # Deploy to Huawei Cloud")
+    console.print()
+    echo_step(1, "Navigate to project directory")
+    console.print(f"    [cyan]cd {name}[/cyan]")
+    
+    echo_step(2, "Install dependencies")
+    console.print(f"    [cyan]pip install -r requirements.txt[/cyan]")
+    
+    echo_step(3, "Edit agent.py to implement your agent logic")
+    
+    echo_step(4, "Deploy to Huawei Cloud")
+    console.print(f"    [cyan]agentarts deploy[/cyan]")
 
     return True
 
@@ -82,7 +99,7 @@ def create_agent_file(project_path: Path, template: str, name: str) -> None:
 
     agent_path = project_path / "agent.py"
     agent_path.write_text(agent_content, encoding="utf-8")
-    console.print(f"  [green]Created:[/green] agent.py")
+    echo_key_value("Created", "agent.py")
 
 
 def create_requirements_file(project_path: Path, template: str) -> None:
@@ -93,9 +110,9 @@ def create_requirements_file(project_path: Path, template: str) -> None:
         console.print(f"[yellow]Warning: Template '{template}' not found, using basic template[/yellow]")
         requirements = template_manager.render_requirements_template("basic")
 
-    req_path = project_path / "requirements.txt"
-    req_path.write_text(requirements.strip() + "\n", encoding="utf-8")
-    console.print(f"  [green]Created:[/green] requirements.txt")
+    requirements_path = project_path / "requirements.txt"
+    requirements_path.write_text(requirements, encoding="utf-8")
+    echo_key_value("Created", "requirements.txt")
 
 
 def create_config_file(
@@ -140,7 +157,7 @@ agents:
 
     config_path = project_path / ".agentarts_config.yaml"
     config_path.write_text(config_content, encoding="utf-8")
-    console.print(f"  [green]Created:[/green] .agentarts_config.yaml")
+    echo_key_value("Created", ".agentarts_config.yaml")
 
 
 def create_dockerfile(project_path: Path, template: str) -> None:
@@ -156,4 +173,4 @@ def create_dockerfile(project_path: Path, template: str) -> None:
 
     dockerfile_path = project_path / "Dockerfile"
     dockerfile_path.write_text(dockerfile_content, encoding="utf-8")
-    console.print(f"  [green]Created:[/green] Dockerfile")
+    echo_key_value("Created", "Dockerfile")
