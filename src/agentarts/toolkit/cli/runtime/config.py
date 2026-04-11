@@ -92,7 +92,7 @@ def main(
         existing_config = config_op.get_agent(agent_name)
         default_region = existing_config.base.region if existing_config else "cn-north-4"
         console.print(f"\n[bold]Region [cyan]({default_region})[/cyan]:[/bold]")
-        console.print("[dim]  Common regions: cn-north-4, cn-southwest-2, cn-east-3[/dim]")
+        console.print("[dim]  Common regions: cn-southwest-2, cn-north-4, cn-east-3[/dim]")
         agent_region = Prompt.ask("  Region", default=default_region)
 
     agent_dependency_file = dependency_file

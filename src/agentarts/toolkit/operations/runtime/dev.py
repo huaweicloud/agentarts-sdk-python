@@ -10,7 +10,7 @@ from rich.console import Console
 
 from agentarts.toolkit.utils.common import echo_error, echo_info, echo_step
 
- console = Console()
+console = Console()
 
 
 def run_dev_server(

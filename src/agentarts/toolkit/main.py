@@ -60,7 +60,6 @@ app.command(name="destroy", help="Destroy agent from Huawei Cloud.")(destroy)
 app.command(name="invoke", help="Invoke agent with JSON payload.")(invoke)
 app.add_typer(config_app, name="config", help="Configuration management. (alias: configure)")
 app.add_typer(config_app, name="configure", hidden=True)
-app.add_typer(invoke_app, name="invoke")
 app.add_typer(mcp_gateway, name="mcp-gateway")
 app.add_typer(memory_app, name="memory")
 
