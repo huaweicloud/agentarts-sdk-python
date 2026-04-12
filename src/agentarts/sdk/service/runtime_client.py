@@ -252,7 +252,7 @@ class RuntimeClient(BaseHTTPClient):
         if tags_config is not None:
             payload["tags_config"] = tags_config
 
-        result = self._control("POST", "/v1/agents", json=payload)
+        result = self._control("POST", "/v1/core/runtimes", json=payload)
         return self._check(result, "create_agent")
 
     def update_agent(
@@ -288,7 +288,7 @@ class RuntimeClient(BaseHTTPClient):
         Returns:
             The updated agent object.
         """
-        payload: Dict[str, Any] = {"agent_id": agent_id, **extra}
+        payload: Dict[str, Any] = {**extra}
         if description is not None:
             payload["description"] = description
         if artifact_source_config is not None:
@@ -308,7 +308,7 @@ class RuntimeClient(BaseHTTPClient):
         if tags_config is not None:
             payload["tags_config"] = tags_config
 
-        result = self._control("PUT", f"/v1/agents/{agent_id}", json=payload)
+        result = self._control("PUT", f"/v1/core/runtimes/{agent_id}", json=payload)
         return self._check(result, "update_agent")
 
     def create_or_update_agent(
@@ -429,7 +429,7 @@ class RuntimeClient(BaseHTTPClient):
         if agent_name:
             params["agent_name"] = agent_name
 
-        result = self._control("GET", "/v1/agents", params=params)
+        result = self._control("GET", "/v1/core/runtimes", params=params)
         data = self._check(result, "get_agents")
         if isinstance(data, dict):
             return data.get("items", data.get("agents", []))
@@ -452,7 +452,7 @@ class RuntimeClient(BaseHTTPClient):
         """
         params: Dict[str, Any] = {"name": agent_name}
 
-        result = self._control("GET", "/v1/agents/find", params=params)
+        result = self._control("GET", "/v1/core/runtimes", params=params)
         return self._check(result, "find_agent_by_name")
 
     def find_agent_by_id(self, agent_id: str) -> Optional[Dict[Any, Any]]:
@@ -465,7 +465,7 @@ class RuntimeClient(BaseHTTPClient):
         Returns:
             The agent object.
         """
-        result = self._control("GET", f"/v1/agents/{agent_id}")
+        result = self._control("GET", f"/v1/core/runtimes/{agent_id}")
         return self._check(result, "find_agent_by_id")
 
     def delete_agent_by_name(
@@ -481,9 +481,13 @@ class RuntimeClient(BaseHTTPClient):
         Returns:
             True if the agent was deleted successfully.
         """
-        params: Dict[str, Any] = {"name": agent_name}
+        existing = self.find_agent_by_name(agent_name)
+        agent_id = existing.get("agent_id")
+        if not agent_id:
+            log.warning("Agent '%s' not found, nothing to delete", agent_name)
+            return False
 
-        result = self._control("DELETE", "/v1/agents", params=params)
+        result = self._control("DELETE", f"/v1/core/runtimes/{agent_id}")
         self._check(result, "delete_agent_by_name")
         return True
 
@@ -518,7 +522,7 @@ class RuntimeClient(BaseHTTPClient):
             payload["config"] = config
 
         result = self._control(
-            "POST", f"/v1/agents/{agent_id}/endpoints", json=payload
+            "POST", f"/v1/core/runtimes/{agent_id}/endpoints", json=payload
         )
         return self._check(result, "create_agent_endpoint")
 
@@ -546,7 +550,7 @@ class RuntimeClient(BaseHTTPClient):
             payload["config"] = config
 
         result = self._control(
-            "PUT", f"/v1/agents/{agent_id}/endpoints/{endpoint_name}", json=payload
+            "PUT", f"/v1/core/runtimes/{agent_id}/endpoints/{endpoint_name}", json=payload
         )
         return self._check(result, "update_agent_endpoint")
 
@@ -566,7 +570,7 @@ class RuntimeClient(BaseHTTPClient):
             The deletion response.
         """
         result = self._control(
-            "DELETE", f"/v1/agents/{agent_id}/endpoints/{endpoint_name}"
+            "DELETE", f"/v1/core/runtimes/{agent_id}/endpoints/{endpoint_name}"
         )
         return self._check(result, "delete_agent_endpoint")
 
@@ -586,7 +590,7 @@ class RuntimeClient(BaseHTTPClient):
             The endpoint object.
         """
         result = self._control(
-            "GET", f"/v1/agents/{agent_id}/endpoints/{endpoint_name}"
+            "GET", f"/v1/core/runtimes/{agent_id}/endpoints/{endpoint_name}"
         )
         return self._check(result, "find_agent_endpoint")
 
