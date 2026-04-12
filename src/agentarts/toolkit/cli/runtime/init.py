@@ -20,21 +20,11 @@ class TemplateType(str, Enum):
     google_adk = "google-adk"
 
 
-class RegionType(str, Enum):
-    """Available Huawei Cloud regions"""
-    cn_southwest_2 = "cn-southwest-2"
-
-
 TEMPLATE_DESCRIPTIONS = {
     TemplateType.basic: "Basic agent template with minimal setup",
     TemplateType.langgraph: "LangGraph-based agent with state management",
     TemplateType.langchain: "LangChain-based agent with tool integration",
     TemplateType.google_adk: "Google ADK agent template",
-}
-
-
-REGION_NAMES = {
-    RegionType.cn_southwest_2: "CN Southwest 2 (Guiyang)",
 }
 
 
@@ -67,26 +57,10 @@ def prompt_for_name() -> str:
 
 
 def prompt_for_region() -> str:
-    """Prompt user to select a region interactively"""
-    console.print("\n[bold cyan]Region:[/bold cyan]\n")
-    
-    for i, region in enumerate(RegionType, 1):
-        name = REGION_NAMES.get(region, region.value)
-        console.print(f"  [yellow]{i}[/yellow]. [green]{region.value:<18}[/green] - {name}")
-    
-    console.print()
-    
-    choices = [str(i) for i in range(1, len(RegionType) + 1)]
-    choice_map = {str(i): t.value for i, t in enumerate(RegionType, 1)}
-    
-    selection = Prompt.ask(
-        "[bold]Select a region[/bold]",
-        choices=choices,
-        default="1",
-        show_choices=False,
-    )
-    
-    return choice_map[selection]
+    """Prompt user to enter region"""
+    console.print("\n[bold]Region:[/bold]")
+    console.print("[dim]  Default: cn-southwest-2[/dim]")
+    return Prompt.ask("  Region", default="cn-southwest-2")
 
 
 def init(
