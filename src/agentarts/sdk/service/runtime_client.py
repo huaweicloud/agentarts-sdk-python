@@ -40,7 +40,7 @@ from typing import Any, Dict, Iterator, List, Optional, Union
 from agentarts.sdk.service.http_client import BaseHTTPClient, RequestConfig, RequestResult
 from agentarts.sdk.utils.constant import (
     get_control_plane_endpoint,
-    get_data_plane_endpoint,
+    get_runtime_data_plane_endpoint,
 )
 
 log = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class RuntimeClient(BaseHTTPClient):
         timeout: float = 30.0,
     ) -> None:
         self._control_base = control_endpoint or get_control_plane_endpoint()
-        self._data_base = data_endpoint or get_data_plane_endpoint()
+        self._data_base = data_endpoint or get_runtime_data_plane_endpoint()
 
         super().__init__(RequestConfig(base_url=self._control_base, timeout=timeout))
 
