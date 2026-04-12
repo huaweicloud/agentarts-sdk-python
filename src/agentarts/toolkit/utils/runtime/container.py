@@ -14,6 +14,7 @@ from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
 from rich.text import Text
+from rich import markup
 
 console = Console()
 
@@ -99,29 +100,29 @@ def build_docker_image(
                 step_desc = match.group(3)
                 current_step = f"Step {step_num}/{total_steps}: {step_desc}"
                 
-                console.print(f"\n[bold yellow]▶[/bold yellow] [cyan]Step {step_num}/{total_steps}[/cyan]: [white]{step_desc}[/white]")
+                console.print(f"\n[bold yellow]▶[/bold yellow] [cyan]Step {step_num}/{total_steps}[/cyan]: [white]{markup.escape(step_desc)}[/white]")
             elif line.startswith(" ---> "):
-                console.print(f"  [dim]{line}[/dim]")
+                console.print(f"  [dim]{markup.escape(line)}[/dim]")
             elif "Running in" in line:
-                console.print(f"  [green]✓[/green] {line.strip()}")
+                console.print(f"  [green]✓[/green] {markup.escape(line.strip())}")
             elif "Successfully built" in line:
-                console.print(f"  [green]✓[/green] [bold]{line.strip()}[/bold]")
+                console.print(f"  [green]✓[/green] [bold]{markup.escape(line.strip())}[/bold]")
             elif "Successfully tagged" in line:
-                console.print(f"  [green]✓[/green] [bold cyan]{line.strip()}[/bold]")
+                console.print(f"  [green]✓[/green] [bold cyan]{markup.escape(line.strip())}[/bold]")
             elif line.strip():
                 if "error" in line.lower() or "error:" in line.lower():
-                    console.print(f"  [red]{line}[/red]")
+                    console.print(f"  [red]{markup.escape(line)}[/red]")
                 elif "warning" in line.lower():
-                    console.print(f"  [yellow]{line}[/yellow]")
+                    console.print(f"  [yellow]{markup.escape(line)}[/yellow]")
                 else:
-                    console.print(f"  [dim]{line}[/dim]")
+                    console.print(f"  [dim]{markup.escape(line)}[/dim]")
 
         process.wait()
 
         if process.returncode != 0:
             console.print(f"\n[red]Error building image:[/red]")
             for line in output_lines[-20:]:
-                console.print(f"  [red]{line}[/red]")
+                console.print(f"  [red]{markup.escape(line)}[/red]")
             return False
 
         console.print(f"\n[green]✓ Done:[/green] Image [cyan]{full_image_name}[/cyan] built successfully")
@@ -206,19 +207,19 @@ def push_image(image: str) -> bool:
             output_lines.append(line)
             
             if "Pushed" in line or "Layer already exists" in line:
-                console.print(f"  [green]✓[/green] {line}")
+                console.print(f"  [green]✓[/green] {markup.escape(line)}")
             elif digest_pattern.search(line):
                 match = digest_pattern.search(line)
                 console.print(f"  [green]✓[/green] Digest: [cyan]{match.group(1)}[/cyan]")
             elif line.strip():
-                console.print(f"  [dim]{line}[/dim]")
+                console.print(f"  [dim]{markup.escape(line)}[/dim]")
 
         process.wait()
 
         if process.returncode != 0:
             console.print(f"\n[red]Error pushing image:[/red]")
             for line in output_lines[-10:]:
-                console.print(f"  [red]{line}[/red]")
+                console.print(f"  [red]{markup.escape(line)}[/red]")
             return False
 
         console.print(f"\n[green]✓ Done:[/green] Image pushed successfully")
