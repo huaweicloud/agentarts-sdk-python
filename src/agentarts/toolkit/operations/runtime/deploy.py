@@ -186,6 +186,8 @@ def deploy_project(
         return False
 
     actual_agent_name = agent_config.base.name or agent_name or "agent"
+    region = agent_config.base.region or "cn-southwest-2"
+    service_port = port or (agent_config.runtime.invoke_config.port if agent_config.runtime.invoke_config else 8080)
 
     console.print()
     echo_info("Deploy Configuration", f"[cyan]Agent:[/cyan] [white]{actual_agent_name}[/white]\n[cyan]Mode:[/cyan] [yellow]{mode.value}[/yellow]\n[cyan]Region:[/cyan] [yellow]{region}[/yellow]")
@@ -199,9 +201,6 @@ def deploy_project(
         echo_error("Dockerfile not found in current directory")
         console.print("[dim]Run 'agentarts config' to generate Dockerfile first[/dim]")
         return False
-
-    region = agent_config.base.region or "cn-southwest-2"
-    service_port = port or (agent_config.runtime.invoke_config.port if agent_config.runtime.invoke_config else 8080)
 
     local_image_name = f"{actual_agent_name}"
     local_full_image = f"{local_image_name}:{image_tag}"
