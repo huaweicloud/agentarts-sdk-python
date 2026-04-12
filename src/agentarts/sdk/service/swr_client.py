@@ -88,10 +88,7 @@ class SWRClient:
             http_config = HttpConfig.get_default_config()
             http_config.ignore_ssl_verification = True
 
-            try:
-                swr_region = SwrRegion.value_of(self._region)
-            except Exception:
-                swr_region = Region(id=self._region, endpoint=get_swr_endpoint())
+            swr_region = Region(id=self._region, endpoint=self._endpoint)
 
             self._client = SwrClient.new_builder() \
                 .with_credentials(credentials) \

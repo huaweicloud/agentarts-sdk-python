@@ -103,10 +103,9 @@ class IdentityClient:
         # Determine SSL verification behavior
         if ignore_ssl_verification is None:
             ignore_ssl_verification = False
-        try:
-            sdk_region = AgentIdentityRegion.value_of(region)
-        except Exception:
-            sdk_region = Region(id=region, endpoint = get_identity_endpoint())
+
+        sdk_region = Region(id=region, endpoint=get_identity_endpoint(region))
+
         # Set HTTP configuration
         http_config = HttpConfig.get_default_config()
         http_config.ignore_ssl_verification = ignore_ssl_verification
