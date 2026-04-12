@@ -63,6 +63,7 @@ class RuntimeClient(BaseHTTPClient):
         access_token: Bearer token for API authentication.
             Can also be set later via :meth:`set_auth_token`.
         timeout: Default request timeout in seconds.
+        verify_ssl: Whether to verify SSL certificates.
     """
 
     def __init__(
@@ -71,11 +72,16 @@ class RuntimeClient(BaseHTTPClient):
         data_endpoint: Optional[str] = None,
         access_token: Optional[str] = None,
         timeout: float = 30.0,
+        verify_ssl: bool = True,
     ) -> None:
         self._control_base = control_endpoint or get_control_plane_endpoint()
         self._data_base = data_endpoint or get_runtime_data_plane_endpoint()
 
-        super().__init__(RequestConfig(base_url=self._control_base, timeout=timeout))
+        super().__init__(RequestConfig(
+            base_url=self._control_base,
+            timeout=timeout,
+            verify_ssl=verify_ssl,
+        ))
 
         if access_token:
             self.set_auth_token(access_token)
