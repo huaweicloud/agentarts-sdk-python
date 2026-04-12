@@ -22,14 +22,7 @@ class TemplateType(str, Enum):
 
 class RegionType(str, Enum):
     """Available Huawei Cloud regions"""
-    cn_north_4 = "cn-north-4"
-    cn_north_1 = "cn-north-1"
-    cn_east_3 = "cn-east-3"
-    cn_east_2 = "cn-east-2"
-    cn_south_1 = "cn-south-1"
     cn_southwest_2 = "cn-southwest-2"
-    ap_southeast_1 = "ap-southeast-1"
-    ap_southeast_3 = "ap-southeast-3"
 
 
 TEMPLATE_DESCRIPTIONS = {
@@ -41,14 +34,7 @@ TEMPLATE_DESCRIPTIONS = {
 
 
 REGION_NAMES = {
-    RegionType.cn_north_4: "CN North 4 (Beijing)",
-    RegionType.cn_north_1: "CN North 1 (Beijing)",
-    RegionType.cn_east_3: "CN East 3 (Shanghai)",
-    RegionType.cn_east_2: "CN East 2 (Shanghai)",
-    RegionType.cn_south_1: "CN South 1 (Guangzhou)",
     RegionType.cn_southwest_2: "CN Southwest 2 (Guiyang)",
-    RegionType.ap_southeast_1: "AP Southeast 1 (Hong Kong)",
-    RegionType.ap_southeast_3: "AP Southeast 3 (Singapore)",
 }
 
 
@@ -82,13 +68,11 @@ def prompt_for_name() -> str:
 
 def prompt_for_region() -> str:
     """Prompt user to select a region interactively"""
-    console.print("\n[bold cyan]Available Regions:[/bold cyan]\n")
+    console.print("\n[bold cyan]Region:[/bold cyan]\n")
     
-    default_idx = 6  # cn-southwest-2
     for i, region in enumerate(RegionType, 1):
         name = REGION_NAMES.get(region, region.value)
-        marker = " (default)" if i == default_idx else ""
-        console.print(f"  [yellow]{i}[/yellow]. [green]{region.value:<18}[/green] - {name}{marker}")
+        console.print(f"  [yellow]{i}[/yellow]. [green]{region.value:<18}[/green] - {name}")
     
     console.print()
     
@@ -98,7 +82,7 @@ def prompt_for_region() -> str:
     selection = Prompt.ask(
         "[bold]Select a region[/bold]",
         choices=choices,
-        default=str(default_idx),
+        default="1",
         show_choices=False,
     )
     

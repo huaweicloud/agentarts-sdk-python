@@ -153,6 +153,40 @@ agents:
       invoke_config:
         protocol: HTTP
         port: 8080
+
+      network_config:
+        network_mode: PUBLIC
+        vpc_config:
+          vpc_id: null
+          subnet_id: null
+          security_group_id: []
+
+      identity_configuration:
+        auth_type: IAM
+        authorizer_configuration:
+          custom_jwt:
+            discovery_url: null
+            allowed_audience: []
+            allowed_clients: []
+            allowed_scopes: []
+          key_auth:
+            api_keys: []
+
+      observability:
+        tracing:
+          enabled: false
+        metrics:
+          enabled: false
+        logs:
+          enabled: false
+
+      artifact_source:
+        url: null
+        commands: []
+
+      environment_variables: []
+
+      tags: []
 """
 
     config_path = project_path / ".agentarts_config.yaml"
