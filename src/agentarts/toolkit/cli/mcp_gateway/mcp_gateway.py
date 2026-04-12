@@ -149,9 +149,9 @@ def delete_mcp_gateway(
         agentarts mcp delete-mcp-gateway 123
     """
     try:
-        warning_message = f"Are you sure you want to delete gateway {gateway_id}? This action cannot be undone."
-        if not typer.confirm(warning_message):
-            echo_warning("Deletion cancelled")
+        echo_warning(f"Are you sure you want to delete gateway {gateway_id}? This action cannot be undone.")
+        if not typer.confirm("Do you want to proceed?"):
+            echo_success("Deletion cancelled")
             return
 
         client = _get_mcp_gateway_client()
@@ -329,9 +329,9 @@ def delete_mcp_gateway_target(
         agentarts mcp delete-mcp-gateway-target 123 456
     """
     try:
-        warning_message = f"Are you sure you want to delete target {target_id} from gateway {gateway_id}? This action cannot be undone."
-        if not typer.confirm(warning_message):
-            echo_warning("Deletion cancelled")
+        echo_warning(f"Are you sure you want to delete target {target_id} from gateway {gateway_id}? This action cannot be undone.")
+        if not typer.confirm("Do you want to proceed?"):
+            echo_success("Deletion cancelled")
             return
 
         client = _get_mcp_gateway_client()

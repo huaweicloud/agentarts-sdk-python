@@ -6,11 +6,13 @@ from enum import Enum
 from typing import Any, Dict, Iterator, Optional, Union
 
 from rich.console import Console
+from rich.panel import Panel
 
 from agentarts.toolkit.operations.runtime.config import (
     get_agent,
     get_config_file_path,
 )
+from agentarts.toolkit.utils.common import echo_error, echo_success, echo_info, echo_key_value
 from agentarts.sdk.service.runtime_client import LocalRuntimeClient, RuntimeClient
 
 console = Console()
@@ -54,7 +56,7 @@ def invoke_agent(
     try:
         json.loads(payload)
     except json.JSONDecodeError:
-        console.print("[red]Error: Payload must be valid JSON[/red]")
+        echo_error("Payload must be valid JSON")
         return False
 
     try:
@@ -62,7 +64,8 @@ def invoke_agent(
             local_port = port or 8080
             client = LocalRuntimeClient(port=local_port)
 
-            console.print(f"\n[bold]Invoking local agent:[/bold] [cyan]localhost:{local_port}[/cyan]")
+            console.print()
+            echo_info("Invoke Request", f"[cyan]Mode:[/cyan] [yellow]Local[/yellow]\n[cyan]Endpoint:[/cyan] [white]localhost:{local_port}[/white]")
 
             result = client.invoke_agent(
                 payload=payload,
@@ -81,15 +84,15 @@ def invoke_agent(
                         region = region or agent_config.base.region
 
                 if agent_name is None:
-                    console.print("[red]Error: No agent specified and no default agent configured[/red]")
+                    echo_error("No agent specified and no default agent configured")
                     console.print("[dim]Specify --agent or set a default agent in config[/dim]")
                     return False
 
             actual_region = region or "cn-north-4"
             actual_session_id = session_id or str(uuid.uuid4())
 
-            console.print(f"\n[bold]Invoking cloud agent:[/bold] [cyan]{agent_name}[/cyan]")
-            console.print(f"[dim]Session ID: {actual_session_id}[/dim]")
+            console.print()
+            echo_info("Invoke Request", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]")
 
             from agentarts.sdk.utils.constant import get_data_plane_endpoint
 
@@ -107,27 +110,29 @@ def invoke_agent(
 
         if isinstance(result, dict):
             if "error" in result:
-                console.print(f"[red]Error: {result.get('error')}[/red]")
+                echo_error(str(result.get("error")))
                 return False
 
-            console.print("\n[bold green]Response:[/bold green]")
+            console.print()
+            console.print("[bold green]Response:[/bold green]")
             console.print_json(json.dumps(result, indent=2, ensure_ascii=False))
             return True
         else:
-            console.print("\n[bold green]Streaming Response:[/bold green]")
+            console.print()
+            console.print("[bold green]Streaming Response:[/bold green]")
             for event in result:
                 console.print(f"[dim]{event}[/dim]")
             return True
 
     except RuntimeError as e:
-        console.print(f"[red]Error: {e}[/red]")
+        echo_error(str(e))
         return False
     except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
+        echo_error(str(e))
         return False
 
 
-def ping_agent(
+def status_agent(
     agent_name: Optional[str] = None,
     mode: InvokeMode = InvokeMode.CLOUD,
     region: Optional[str] = None,
@@ -135,7 +140,7 @@ def ping_agent(
     bearer_token: Optional[str] = None,
 ) -> bool:
     """
-    Ping agent to check health.
+    Check agent health status.
 
     Args:
         agent_name: Agent name (for cloud mode)
@@ -152,7 +157,8 @@ def ping_agent(
             local_port = port or 8080
             client = LocalRuntimeClient(port=local_port)
 
-            console.print(f"\n[bold]Pinging local agent:[/bold] [cyan]localhost:{local_port}[/cyan]")
+            console.print()
+            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Local[/yellow]\n[cyan]Endpoint:[/cyan] [white]localhost:{local_port}[/white]")
 
             result = client.ping_agent(
                 bearer_token=bearer_token,
@@ -160,10 +166,10 @@ def ping_agent(
 
             status = result.get("status", "Unknown")
             if status.lower() in ("healthy", "ok", "running"):
-                console.print(f"[green]Status: {status}[/green]")
+                echo_success(f"Status: {status}")
                 return True
             else:
-                console.print(f"[red]Status: {status}[/red]")
+                echo_error(f"Status: {status}")
                 return False
         else:
             if agent_name is None:
@@ -175,12 +181,13 @@ def ping_agent(
                         region = region or agent_config.base.region
 
                 if agent_name is None:
-                    console.print("[red]Error: No agent specified[/red]")
+                    echo_error("No agent specified")
                     return False
 
             actual_region = region or "cn-north-4"
 
-            console.print(f"\n[bold]Pinging cloud agent:[/bold] [cyan]{agent_name}[/cyan]")
+            console.print()
+            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]")
 
             from agentarts.sdk.utils.constant import get_data_plane_endpoint
 
@@ -195,18 +202,18 @@ def ping_agent(
             if isinstance(result, dict):
                 status = result.get("status", "Unknown")
                 if status.lower() in ("healthy", "ok", "running"):
-                    console.print(f"[green]Status: {status}[/green]")
+                    echo_success(f"Status: {status}")
                     return True
                 else:
                     console.print(f"[yellow]Status: {status}[/yellow]")
                     return True
             else:
-                console.print("[green]Status: Healthy (streaming)[/green]")
+                echo_success("Status: Healthy (streaming)")
                 return True
 
     except RuntimeError as e:
-        console.print(f"[red]Error: {e}[/red]")
+        echo_error(str(e))
         return False
     except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
+        echo_error(str(e))
         return False

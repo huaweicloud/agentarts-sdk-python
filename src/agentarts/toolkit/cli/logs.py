@@ -1,6 +1,8 @@
 """Logs command implementation"""
 
-import click
+from rich.console import Console
+
+console = Console()
 
 
 def view_logs(follow: bool, tail: int, level: str):
@@ -12,19 +14,19 @@ def view_logs(follow: bool, tail: int, level: str):
         tail: Number of lines to show
         level: Log level
     """
-    click.echo(f"\n📋 Viewing logs")
-    click.echo(f"  Level: {level}")
-    click.echo(f"  Tail: {tail}")
-    click.echo(f"  Follow: {follow}")
-    click.echo("\n" + "="*60)
+    console.print("\n📋 Viewing logs")
+    console.print(f"  Level: {level}")
+    console.print(f"  Tail: {tail}")
+    console.print(f"  Follow: {follow}")
+    console.print("\n" + "="*60)
     
     if follow:
-        click.echo("Following logs... (Press Ctrl+C to stop)")
+        console.print("Following logs... (Press Ctrl+C to stop)")
         try:
             import time
             while True:
                 time.sleep(1)
         except KeyboardInterrupt:
-            click.echo("\n\nStopped following logs.")
+            console.print("\n\nStopped following logs.")
     else:
-        click.echo("Recent log entries will appear here...")
+        console.print("Recent log entries will appear here...")

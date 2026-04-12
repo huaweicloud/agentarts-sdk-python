@@ -1,0 +1,143 @@
+"""
+{{ name }} - LangGraph Agent Implementation
+
+An agent built using LangGraph for stateful workflows, wrapped with AgentArts SDK runtime.
+"""
+
+from typing import Dict, Any, TypedDict, Annotated, Optional
+from operator import add
+
+from agentarts.sdk.runtime import AgentArtsRuntimeApp, RequestContext
+
+app = AgentArtsRuntimeApp()
+
+
+class State(TypedDict):
+    """Agent state definition."""
+    messages: Annotated[list, add]
+    query: str
+    response: str
+    status: str
+
+
+class LangGraphAgent:
+    """LangGraph-based Agent implementation."""
+
+    def __init__(self, model_name: str = "gpt-4o-mini"):
+        self.name = "{{ name }}"
+        self.model_name = model_name
+        self._graph = None
+
+    def _build_graph(self):
+        """Build the LangGraph workflow."""
+        from langgraph.graph import StateGraph, END
+        from langchain_core.messages import HumanMessage, AIMessage
+
+        try:
+            from langchain_openai import ChatOpenAI
+            llm = ChatOpenAI(model=self.model_name)
+        except ImportError:
+            raise ImportError(
+                "langchain-openai is required. Install it with: pip install langchain-openai"
+            )
+
+        async def process_node(state: State) -> Dict[str, Any]:
+            """Process the query using LLM."""
+            query = state.get("query", "")
+            messages = state.get("messages", [])
+
+            if not messages:
+                messages = [HumanMessage(content=query)]
+
+            response = await llm.ainvoke(messages)
+
+            return {
+                "messages": [AIMessage(content=response.content)],
+                "response": response.content,
+                "status": "completed",
+            }
+
+        workflow = StateGraph(State)
+        workflow.add_node("process", process_node)
+        workflow.set_entry_point("process")
+        workflow.add_edge("process", END)
+
+        return workflow.compile()
+
+    def _get_graph(self):
+        """Get or create the graph."""
+        if self._graph is None:
+            self._graph = self._build_graph()
+        return self._graph
+
+    async def run(self, query: str, **kwargs) -> Dict[str, Any]:
+        """
+        Process a query using LangGraph workflow.
+
+        Args:
+            query: User input query
+            **kwargs: Additional parameters
+
+        Returns:
+            Response dictionary
+        """
+        graph = self._get_graph()
+
+        initial_state: State = {
+            "messages": [],
+            "query": query,
+            "response": "",
+            "status": "pending",
+        }
+
+        result = await graph.ainvoke(initial_state)
+
+        return {
+            "response": result.get("response", ""),
+            "status": result.get("status", "success"),
+            "agent": self.name,
+            "model": self.model_name,
+        }
+
+
+_agent: Optional[LangGraphAgent] = None
+
+
+def _get_agent() -> LangGraphAgent:
+    """Get or create the agent instance."""
+    global _agent
+    if _agent is None:
+        _agent = LangGraphAgent()
+    return _agent
+
+
+@app.ping
+def ping():
+    """Health check endpoint."""
+    return "healthy"
+
+
+@app.entrypoint
+async def handler(payload: Dict[str, Any], context: RequestContext = None) -> Dict[str, Any]:
+    """
+    Process a query using LangGraph workflow.
+
+    Args:
+        payload: User input payload containing query
+        context: Request context with session info (optional)
+
+    Returns:
+        Response dictionary
+    """
+    query = payload.get("query", payload.get("input", ""))
+    agent = _get_agent()
+    return await agent.run(query)
+
+
+def create_agent():
+    """Create agent instance for runtime."""
+    return app
+
+
+if __name__ == "__main__":
+    app.run()

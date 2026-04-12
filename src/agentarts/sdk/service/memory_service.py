@@ -18,57 +18,60 @@ logger = logging.getLogger(__name__)
 
 
 class AuthenticationStrategy(ABC):
-    """抽象认证策略接口"""
+    """Abstract authentication strategy interface."""
     
     @abstractmethod
     def setup_credentials(self, region_name: str):
-        """设置认证凭据"""
+        """Setup authentication credentials."""
         pass
     
     @abstractmethod
     def setup_session_hooks(self, session: requests.Session):
-        """设置会话钩子"""
+        """Setup session hooks."""
         pass
     
     @abstractmethod
     def get_headers(self) -> Dict[str, str]:
-        """获取请求头"""
+        """Get request headers."""
         pass
     
     @abstractmethod
     def get_endpoint_type(self) -> str:
-        """获取端点类型"""
+        """Get endpoint type."""
         pass
 
 
 class DataPlaneAuthenticationStrategy(AuthenticationStrategy):
-    """数据面认证策略"""
+    """Data plane authentication strategy."""
     
-    def __init__(self):
+    def __init__(self, api_key: Optional[str] = None):
         self.credentials = None
+        self._api_key = api_key
     
     def setup_credentials(self, region_name: str):
-        """数据面不需要 AK/SK 凭据"""
+        """Data plane does not require AK/SK credentials."""
         self.credentials = None
         logger.info("Data plane endpoint: credentials will be handled via API_KEY in headers")
     
     def setup_session_hooks(self, session: requests.Session):
-        """数据面不需要特殊会话钩子"""
+        """Data plane does not require special session hooks."""
         session.hooks = {}
     
     def get_headers(self) -> Dict[str, str]:
-        """获取 API_KEY 认证的请求头"""
+        """Get headers with API_KEY authentication."""
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "hw-agentrun-sdk/0.0.1",
+            "User-Agent": "huaweicloud-agentarts-sdk-python/0.0.1",
         }
         
-        api_key = os.getenv('HW_API_KEY')
+        api_key = self._api_key or os.getenv('HUAWEICLOUD_SDK_MEMORY_API_KEY')
         if not api_key:
-            raise ValueError("HW_API_KEY environment variable is required for data plane operations")
+            raise ValueError(
+                "API Key is required for data plane operations. "
+                "Either pass api_key parameter or set HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable."
+            )
         headers["X-Auth-Token"] = api_key
         
-        # Add X-Client-Request-ID if available
         if hasattr(self, 'client_request_id'):
             headers["X-Client-Request-ID"] = self.client_request_id
             
@@ -79,23 +82,18 @@ class DataPlaneAuthenticationStrategy(AuthenticationStrategy):
 
 
 class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
-    """管理面认证策略"""
+    """Control plane authentication strategy."""
     
     def __init__(self):
         self.credentials = None
     
     def setup_credentials(self, region_name: str):
-        """设置 AK/SK 凭据"""
+        """Setup AK/SK credentials."""
         try:
-            from huaweicloudsdkcore.auth.provider import CredentialProviderChain
-            self.credentials = CredentialProviderChain.get_basic_credential_provider_chain().get_credentials()
+            from agentarts.sdk.utils.metadata import create_credential
+            credentials = create_credential()
+            self.credentials = credentials
             logger.info(f"Successfully loaded AK/SK credentials for region {region_name}")
-        except ImportError as e:
-            raise ValueError(
-                f"huaweicloudsdkcore is required for control plane operations. "
-                f"Install it with: pip install huaweicloudsdkcore. "
-                f"Error: {e}"
-            )
         except Exception as e:
             raise ValueError(
                 f"Failed to load AK/SK credentials for control plane. "
@@ -104,21 +102,20 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
             )
     
     def setup_session_hooks(self, session: requests.Session):
-        """设置管理面认证钩子"""
+        """Setup control plane authentication hooks."""
         session.hooks = {'response': self._add_authentication}
     
     def _add_authentication(self, response, *args, **kwargs):
-        """管理面通过华为云SDK自动添加 AK/SK 认证头"""
+        """Control plane automatically adds AK/SK authentication headers via Huawei Cloud SDK."""
         pass
     
     def get_headers(self) -> Dict[str, str]:
-        """管理面不需要额外设置请求头（通过SDK自动处理）"""
+        """Control plane does not require additional headers (handled by SDK automatically)."""
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "hw-agentrun-sdk/0.0.1",
+            "User-Agent": "huaweicloud-agentarts-sdk/0.0.1",
         }
         
-        # Add X-Client-Request-ID if available
         if hasattr(self, 'client_request_id'):
             headers["X-Client-Request-ID"] = self.client_request_id
             
@@ -139,14 +136,16 @@ class MemoryHttpService:
     Compatible with HttpClient interface from memory/inner/httpclient.py
     """
 
-    def __init__(self, region_name: str = "cn-north-4", endpoint: Optional[str] = None, endpoint_type: str = "manager",
-                 timeout: int = 30):
+    def __init__(self, region_name: str = "cn-north-4", endpoint: Optional[str] = None, 
+                 endpoint_type: str = "manager", timeout: int = 30, api_key: Optional[str] = None):
         """Initialize Memory HTTP service with region and authentication strategy.
         
         Args:
             region_name: Huawei Cloud region name
             endpoint: Custom endpoint URL (for development/testing)
             endpoint_type: "manager" for control plane, "data" for data plane
+            timeout: Request timeout in seconds
+            api_key: API Key for data plane authentication (optional, falls back to environment variable)
             
         Raises:
             ValueError: If required credentials are not available
@@ -155,28 +154,24 @@ class MemoryHttpService:
         self._endpoint = endpoint
         self.timeout = timeout
         self.verify_ssl = True
+        self._api_key = api_key
 
-        # Create session
         self.session = requests.Session()
 
-        # Create authentication strategy based on endpoint type
         self._auth_strategy = self._create_authentication_strategy(endpoint_type)
 
-        # Setup credentials using strategy
         self._auth_strategy.setup_credentials(region_name)
         self.credentials = self._auth_strategy.credentials
         
-        # Setup session with authentication hooks
         self._auth_strategy.setup_session_hooks(self.session)
         
-        # 将 client_request_id 属性传递给策略（如果存在）
         if hasattr(self, 'client_request_id'):
             self._auth_strategy.client_request_id = self.client_request_id
 
     def _create_authentication_strategy(self, endpoint_type: str) -> AuthenticationStrategy:
-        """创建认证策略实例"""
+        """Create authentication strategy instance."""
         if endpoint_type == "data":
-            return DataPlaneAuthenticationStrategy()
+            return DataPlaneAuthenticationStrategy(api_key=self._api_key)
         else:
             return ControlPlaneAuthenticationStrategy()
 
@@ -217,16 +212,13 @@ class MemoryHttpService:
         Raises:
             MemoryAPIException: If API request fails
         """
-        # Build full URL using the authentication strategy
         base_url = self._get_base_url(space_id)
         url = f"{base_url}{path}"
 
-        # Prepare headers
         final_headers = self._get_headers()
         if headers:
             final_headers.update(headers)
 
-        # Prepare data
         json_data = None
         text_data = None
         if data is not None:
@@ -235,7 +227,6 @@ class MemoryHttpService:
             else:
                 text_data = data
 
-        # Make HTTP request
         try:
             response = self.session.request(
                 method=method,
@@ -248,28 +239,24 @@ class MemoryHttpService:
                 timeout=60
             )
 
-            # Handle response
             if response.status_code == 200:
                 if response.headers.get("content-type", "").startswith("application/json"):
                     return response.json()
                 else:
                     return {"response": response.text}
             elif response.status_code == 201:
-                # Created resource
                 if response.headers.get("content-type", "").startswith("application/json"):
                     return response.json()
                 else:
                     return {"response": response.text}
             elif response.status_code == 204:
-                return {}  # No content
+                return {}
             else:
-                # Handle error responses
                 try:
                     error_data = response.json()
                     error_code = error_data.get("error_code", "UNKNOWN_ERROR")
                     error_msg = error_data.get("error_msg", str(error_data))
                 except (ValueError, AttributeError):
-                    # If response is not JSON
                     error_code = "UNKNOWN_ERROR"
                     error_msg = response.text or f"HTTP {response.status_code}"
 
@@ -280,17 +267,14 @@ class MemoryHttpService:
                 )
 
         except Exception as e:
-            # Handle network errors
             if isinstance(e, MemoryAPIException):
-                raise  # Re-raise MemoryAPIException as-is
+                raise
             logger.error(f"HTTP request failed: {e}")
             raise MemoryAPIException(
                 status_code=503,
                 error_code="NETWORK_ERROR",
                 error_msg=str(e)
             )
-
-    # ==================== Management Plane Methods ====================
 
     def create_space(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new memory space.
@@ -354,8 +338,6 @@ class MemoryHttpService:
         """
         params = {"limit": limit, "offset": offset}
         return self._make_request(method="GET", path="/v1/core/spaces", params=params)
-
-    # ==================== Data Plane Methods ====================
 
     def create_session(self, space_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new memory session.
@@ -433,13 +415,11 @@ class MemoryHttpService:
         Returns:
             List of messages with pagination info
         """
-        # Build query parameters
         params = {}
         if isinstance(limit, int) and limit > 0:
             params['limit'] = limit
         if isinstance(offset, int) and offset >= 0:
             params['offset'] = offset
-        # Add filters as query parameters
         if filters:
             for key, value in filters.items():
                 if value is not None:
@@ -508,8 +488,6 @@ class MemoryHttpService:
             space_id=space_id
         )
 
-    
-
     def update_memory(
             self,
             space_id: str,
@@ -571,21 +549,18 @@ class MemoryHttpService:
             space_id: Space ID
             limit: Number of items per page (1-20)
             offset: Offset for pagination
-            filters: 过滤条件
+            filters: Filter conditions
 
         Returns:
             List of memories
         """
-        # 构建查询参数
         params = {}
         if limit is not None:
             params['limit'] = limit
         if offset is not None:
             params['offset'] = offset
 
-        # 处理过滤条件
         if filters:
-            # 支持的过滤参数
             filter_mappings = {
                 'strategy_type': 'strategy_type',
                 'strategy_id': 'strategy_id',
@@ -605,12 +580,10 @@ class MemoryHttpService:
 
     @property
     def endpoint(self) -> str:
-        """获取当前端点"""
+        """Get current endpoint."""
         if self._endpoint:
-            # 使用自定义端点
             return self._endpoint.rstrip('/')
         else:
-            # 使用策略确定的基础端点
             return get_memory_endpoint(
                 self._auth_strategy.get_endpoint_type(), 
                 self.region_name
@@ -618,10 +591,10 @@ class MemoryHttpService:
 
     @property
     def region(self) -> str:
-        """获取区域"""
+        """Get region."""
         return self.region_name
     
     @property
     def endpoint_type(self) -> str:
-        """获取端点类型"""
+        """Get endpoint type."""
         return self._auth_strategy.get_endpoint_type()

@@ -23,12 +23,14 @@ Typical usage::
 
 from __future__ import annotations
 
-from contextvars import ContextVar
-from typing import Any, Optional
+import asyncio
+import contextvars
+from _contextvars import ContextVar
+from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Coroutine
+from typing import Optional
 
 from pydantic import BaseModel, Field
-
-
 
 
 class RequestContext(BaseModel):
@@ -266,3 +268,29 @@ class AgentArtsRuntimeContext:
         cls._oauth2_callback_url.set(None)
         cls._user_token.set(None)
         cls._oauth2_custom_state.set(None)
+
+
+def run_async_in_sync_context(coro: Coroutine[Any, Any, Any]) -> Any:
+    """Run an async coroutine in a synchronous context, handling both environments.
+
+    Args:
+        coro: Async coroutine to execute
+
+    Returns:
+        Result of the async coroutine
+    """
+    if _has_running_loop():
+        ctx = contextvars.copy_context()
+        with ThreadPoolExecutor() as executor:
+            future = executor.submit(ctx.run, asyncio.run, coro)
+            return future.result()
+    else:
+        return asyncio.run(coro)
+
+
+def _has_running_loop() -> bool:
+    try:
+        asyncio.get_running_loop()
+        return True
+    except RuntimeError:
+        return False

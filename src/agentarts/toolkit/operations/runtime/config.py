@@ -140,6 +140,8 @@ def add_agent(
     swr_repository: Optional[str] = None,
     dependency_file: Optional[str] = None,
     set_as_default: bool = True,
+    organization_auto_create: bool = False,
+    repository_auto_create: bool = False,
 ) -> bool:
     """
     Add or update an agent configuration.
@@ -152,6 +154,8 @@ def add_agent(
         swr_repository: SWR repository
         dependency_file: Path to dependency file (e.g., requirements.txt)
         set_as_default: Whether to set as default agent
+        organization_auto_create: Whether to auto-create SWR organization
+        repository_auto_create: Whether to auto-create SWR repository
 
     Returns:
         True if successful
@@ -168,6 +172,8 @@ def add_agent(
         swr_config=SWRConfig(
             organization=swr_organization,
             repository=swr_repository,
+            organization_auto_create=organization_auto_create,
+            repository_auto_create=repository_auto_create,
         ),
     )
 

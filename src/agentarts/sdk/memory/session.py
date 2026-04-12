@@ -1,6 +1,6 @@
 """
 Agent Memory SDK - Session Management
-会话管理模块，提供MemorySession类
+Session management module, provides MemorySession class
 """
 
 import logging
@@ -29,13 +29,13 @@ logger = logging.getLogger(__name__)
 
 class RetrievalConfig:
     """
-    检索配置类，用于配置记忆检索相关参数
+    Retrieval configuration class for configuring memory retrieval parameters
 
     Attributes:
-        user_id: 用户 ID，用于个性化检索
-        max_tokens: 检索结果的最大 token 数，0 表示不限制
-        top_k: 返回 Top-K 条记忆，默认为 2
-        score_threshold: 相似度分数阈值，低于此分数的结果会被过滤
+        user_id: User ID for personalized retrieval
+        max_tokens: Maximum token count for retrieval results, 0 means no limit
+        top_k: Return Top-K memories, default is 2
+        score_threshold: Similarity score threshold, results below this score will be filtered
     """
     user_id: Optional[str] = None
     max_tokens: int = 0
@@ -51,22 +51,23 @@ class RetrievalConfig:
 
 class MemorySession:
     """
-    Memory 会话封装类
+    Memory session wrapper class
 
-    提供对特定 Space 和 Session 的便捷操作。
-    与 MemoryClient 相比，MemorySession 预先绑定了 space_id 和 session_id，
-    调用方法时无需重复传入这两个参数。
+    Provides convenient operations for a specific Space and Session.
+    Compared to MemoryClient, MemorySession pre-binds space_id and session_id,
+    so you don't need to pass these parameters repeatedly when calling methods.
 
-    与 MemoryClient 的区别:
-        - MemoryClient: 适用于需要操作多个 Space 或 Session 的场景
-        - MemorySession: 适用于专注于单一 Session 对话管理的场景
+    Difference from MemoryClient:
+        - MemoryClient: Suitable for scenarios requiring operations on multiple Spaces or Sessions
+        - MemorySession: Suitable for scenarios focused on single Session conversation management
 
-    使用方式:
-        1. 创建 MemorySession 时指定 space_id 和 actor_id，自动创建新 Session
-        2. 或指定已有的 session_id，复用已有 Session
+    Usage:
+        1. Specify space_id and actor_id when creating MemorySession, automatically creates a new Session
+        2. Or specify an existing session_id to reuse an existing Session
 
     Environment Variables:
-        HW_API_KEY: 必填，从 Space 获取的 API Key
+        HUAWEICLOUD_SDK_MEMORY_API_KEY: Optional, API Key obtained from Space.
+            If api_key parameter is not provided, will read from this environment variable.
     """
 
     def __init__(
@@ -74,39 +75,49 @@ class MemorySession:
             space_id: str,
             actor_id: str,
             session_id: Optional[str] = None,
-            region_name: Optional[str] = None
+            region_name: Optional[str] = None,
+            api_key: Optional[str] = None
     ):
         """
-        初始化 MemorySession
+        Initialize MemorySession
 
-        创建一个 MemorySession 实例，绑定到指定的 Space 和 Actor。
+        Creates a MemorySession instance bound to the specified Space and Actor.
 
-        实现逻辑:
-            1. 初始化 DataPlane（用于数据面 API 调用）
-            2. 如果未提供 session_id，自动调用后端 API 创建新 Session
-            3. 将 space_id、session_id、actor_id 绑定到实例属性
+        Implementation logic:
+            1. Initialize DataPlane (for data plane API calls)
+            2. If session_id is not provided, automatically call backend API to create a new Session
+            3. Bind space_id, session_id, actor_id to instance attributes
 
         Args:
-            space_id: Space ID，必填。指定要操作的 Space
-            actor_id: 参与者 ID，必填。标识会话的用户或实体
-            session_id: Session ID，可选。
-                - 不传: 自动创建新 Session
-                - 传值: 复用已有 Session
-            region_name: 华为云区域名称，可选，默认 "cn-north-4"
+            space_id: Space ID, required. Specifies the Space to operate on
+            actor_id: Participant ID, required. Identifies the user or entity in the session
+            session_id: Session ID, optional.
+                - Not provided: Automatically creates a new Session
+                - Provided: Reuses an existing Session
+            region_name: Huawei Cloud region name, optional, default "cn-north-4"
+            api_key: API Key for data plane authentication, optional.
+                If not provided, will read from HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable.
 
         Raises:
-            ValueError: 当创建 Session 失败时
+            ValueError: When Session creation fails
 
         Examples:
-            >>> # 方式1: 自动创建新 Session
+            >>> # Method 1: Automatically create a new Session
             >>> session = MemorySession(space_id="space-123", actor_id="user-456")
             >>> print(f"New Session ID: {session.session_id}")
 
-            >>> # 方式2: 复用已有 Session
+            >>> # Method 2: Reuse an existing Session
             >>> session = MemorySession(
             ...     space_id="space-123",
             ...     actor_id="user-456",
             ...     session_id="session-789"
+            ... )
+
+            >>> # Method 3: With explicit API key
+            >>> session = MemorySession(
+            ...     space_id="space-123",
+            ...     actor_id="user-456",
+            ...     api_key="your-api-key"
             ... )
         """
         if region_name is None:
@@ -116,9 +127,9 @@ class MemorySession:
         self.actor_id = actor_id
         self._region_name = region_name
 
-        self._data_plane = _DataPlane(region_name=region_name)
+        self._data_plane = _DataPlane(region_name=region_name, api_key=api_key)
 
-        # 如果没有提供session_id，调用后端 API 创建新的session
+        # If session_id is not provided, call backend API to create a new session
         if session_id is None:
             session_config = SessionCreateRequest(actor_id=actor_id)
             session_info = self._data_plane.create_memory_session(space_id, session_config.to_dict())
@@ -129,7 +140,7 @@ class MemorySession:
         else:
             self.session_id = session_id
 
-    # ==================== Session 创建 ====================
+    # ==================== Session Creation ====================
 
     @classmethod
     def of(
@@ -137,68 +148,78 @@ class MemorySession:
             space_id: str,
             actor_id: str,
             session_id: Optional[str] = None,
-            region_name: Optional[str] = None
+            region_name: Optional[str] = None,
+            api_key: Optional[str] = None
     ) -> "MemorySession":
         """
-        工厂方法：创建 MemorySession
+        Factory method: Create MemorySession
 
-        提供更语义化的实例创建方式，功能等同于直接调用构造函数。
-        推荐使用此方法创建 MemorySession，使代码更易读。
+        Provides a more semantic way to create instances, functionally equivalent to calling the constructor directly.
+        Recommended to use this method for creating MemorySession, making code more readable.
 
         Args:
-            space_id: Space ID，必填
-            actor_id: 参与者 ID，必填
-            session_id: Session ID，可选
-            region_name: 华为云区域名称，可选
+            space_id: Space ID, required
+            actor_id: Participant ID, required
+            session_id: Session ID, optional
+            region_name: Huawei Cloud region name, optional
+            api_key: API Key for data plane authentication, optional
 
         Returns:
-            MemorySession: 新建的会话实例
+            MemorySession: Newly created session instance
 
         Examples:
-            >>> # 使用工厂方法创建 Session
+            >>> # Create Session using factory method
             >>> session = MemorySession.of(space_id="space-123", actor_id="user-456")
 
-            >>> # 复用已有 Session
+            >>> # Reuse an existing Session
             >>> session = MemorySession.of(
             ...     space_id="space-123",
             ...     actor_id="user-456",
             ...     session_id="session-789"
+            ... )
+
+            >>> # With explicit API key
+            >>> session = MemorySession.of(
+            ...     space_id="space-123",
+            ...     actor_id="user-456",
+            ...     api_key="your-api-key"
             ... )
         """
         return cls(
             space_id=space_id,
             actor_id=actor_id,
             session_id=session_id,
-            region_name=region_name
+            region_name=region_name,
+            api_key=api_key
         )
 
     def __repr__(self) -> str:
         """
-        返回会话的字符串表示
+        Return string representation of the session
 
         Returns:
-            str: 格式化的会话信息
+            str: Formatted session information
         """
         return f"MemorySession(space_id='{self.space_id}', session_id='{self.session_id}', region_name='{self.region_name}')"
 
-    # ==================== 消息管理 ====================
+    # ==================== Message Management ====================
 
     def get_last_k_messages(
             self,
             k: int
     ) -> List[MessageInfo]:
         """
-        获取当前绑定的会话中最近 K 条消息
+        Get the last K messages from the bound session
 
         Args:
-            k: 获取 K 条消息
+            k: Number of messages to retrieve
 
         Returns:
-            List[MessageInfo]: 消息列表，包含详细信息
+            List[MessageInfo]: List of messages with detailed information
 
         Note:
-            此操作在绑定的 space_id 和 session_id 上执行
-            需要事先设置 HW_API_KEY 环境变量
+            This operation executes on the bound space_id and session_id
+            Requires HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable to be set
         """
         logger.info(f"Getting last {k} messages for session: {self.session_id}")
         return self._data_plane.get_last_k_messages(self.session_id, k, self.space_id)
@@ -212,56 +233,56 @@ class MemorySession:
             is_force_extract: bool = False
     ) -> MessageBatchResponse:
         """
-        向当前绑定的会话添加消息 - 支持文本消息、工具调用消息和工具结果消息
+        Add messages to the bound session - supports text messages, tool call messages, and tool result messages
         
         Args:
-            messages: 消息列表，支持TextMessage、ToolCallMessage和ToolResultMessage对象混合使用
-            timestamp: 客户端调用API时间（毫秒时间戳，可选）
-            idempotency_key: 批量操作的幂等键（防重试重复写）
-            is_force_extract: 是否强制触发记忆抽取，默认False
+            messages: List of messages, supports mixing TextMessage, ToolCallMessage, and ToolResultMessage objects
+            timestamp: Client API call time (millisecond timestamp, optional)
+            idempotency_key: Idempotency key for batch operations (prevents duplicate writes on retry)
+            is_force_extract: Whether to force trigger memory extraction, default False
 
         Returns:
-            MessageBatchResponse: 添加成功的消息列表
+            MessageBatchResponse: List of successfully added messages
 
         Examples:
-            >>> # 方法1: 使用TextMessage对象
-            >>> session.add_messages([TextMessage(role="user", content="你好"), TextMessage(role="user", content="请帮助我")])
+            >>> # Method 1: Use TextMessage objects
+            >>> session.add_messages([TextMessage(role="user", content="Hello"), TextMessage(role="user", content="Please help me")])
             
-            >>> # 方法2: 使用工具调用消息
+            >>> # Method 2: Use tool call messages
             >>> tool_call = ToolCallMessage(
             ...     id="call_123",
             ...     name="query_weather",
-            ...     arguments={"city": "北京"}
+            ...     arguments={"city": "Beijing"}
             ... )
             >>> session.add_messages([tool_call])
             
-            >>> # 方法3: 混合使用多种消息类型
+            >>> # Method 3: Mix multiple message types
             >>> messages = [
-            ...     TextMessage(role="user", content="查询北京天气"),
+            ...     TextMessage(role="user", content="Query Beijing weather"),
             ...     tool_call,
             ...     ToolResultMessage(
             ...         tool_call_id="call_123",
-            ...         content="北京今天晴天，气温25°C"
+            ...         content="Beijing is sunny today, temperature 25°C"
             ...     )
             ... ]
             >>> session.add_messages(messages)
 
         Note:
-            此操作在绑定的 space_id 和 session_id 上执行
-            需要事先设置 HW_API_KEY 环境变量
+            This operation executes on the bound space_id and session_id
+            Requires HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable to be set
         """
         logger.info(f"Adding {len(messages)} messages to session: {self.session_id}")
 
-        # 转换为OpenAPI格式
+        # Convert to OpenAPI format
         message_requests = []
 
         for msg in messages:
             if isinstance(msg, (TextMessage, ToolCallMessage, ToolResultMessage)):
                 message_requests.append(msg.to_dict())
             else:
-                raise ValueError(f"不支持的消息类型: {type(msg)}")
+                raise ValueError(f"Unsupported message type: {type(msg)}")
 
-        # 调用数据面 API
+        # Call data plane API
         return self._data_plane.add_messages(
             space_id=self.space_id,
             session_id=self.session_id,
@@ -277,18 +298,18 @@ class MemorySession:
             offset: int = 0
     ) -> MessageListResponse:
         """
-        列出当前绑定的会话中的消息
+        List messages in the bound session
 
         Args:
-            limit: 最大返回消息数量，默认10 (可选)
-            offset: 偏移量，默认0 (可选)
+            limit: Maximum number of messages to return, default 10 (optional)
+            offset: Offset, default 0 (optional)
 
         Returns:
-            MessageListResponse: 包含items和total的响应对象
+            MessageListResponse: Response object containing items and total
 
         Note:
-            此操作在绑定的 space_id 和 session_id 上执行
-            需要事先设置 HW_API_KEY 环境变量
+            This operation executes on the bound space_id and session_id
+            Requires HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable to be set
         """
         logger.info(f"Listing messages for session: {self.session_id}")
         return self._data_plane.list_messages(
@@ -300,17 +321,17 @@ class MemorySession:
 
     def get_message(self, message_id: str) -> MessageInfo:
         """
-        获取当前绑定的会话中的特定消息
+        Get a specific message from the bound session
 
         Args:
-            message_id: 消息ID
+            message_id: Message ID
 
         Returns:
-            MessageInfo: 消息详情
+            MessageInfo: Message details
 
         Note:
-            此操作在绑定的 space_id 和 session_id 上执行
-            需要事先设置 HW_API_KEY 环境变量
+            This operation executes on the bound space_id and session_id
+            Requires HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable to be set
         """
         logger.info(f"Getting message: {message_id}")
         return self._data_plane.get_message(self.space_id, self.session_id, message_id)
@@ -320,17 +341,17 @@ class MemorySession:
             filters: Optional[MemorySearchFilter] = None
     ) -> MemorySearchResponse:
         """
-        在当前绑定的 session 中搜索记忆
+        Search memories in the bound session
 
         Args:
-            filters: 过滤条件，包含搜索查询、策略类型、时间范围、返回数量、分数阈值等
+            filters: Filter conditions, including search query, strategy type, time range, return count, score threshold, etc.
 
         Returns:
-            MemorySearchResponse: 类型化的记忆搜索结果，包含records和total等字段
+            MemorySearchResponse: Typed memory search results, containing records and total fields
 
         Note:
-            此操作在绑定的 space_id 上执行
-            需要事先设置 HW_API_KEY 环境变量
+            This operation executes on the bound space_id
+            Requires HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable to be set
         """
         logger.info(f"Searching memories with filter: {filters}")
 
@@ -346,19 +367,19 @@ class MemorySession:
             filters: Optional[MemoryListFilter] = None
     ) -> MemoryListResponse:
         """
-        列出当前绑定的 session 中的记忆记录
+        List memory records in the bound session
 
         Args:
-            limit: 每页返回数量
-            offset: 偏移量
-            filters: 过滤条件
+            limit: Number of items per page
+            offset: Offset
+            filters: Filter conditions
 
         Returns:
-            MemoryListResponse: 类型化的记忆记录列表，包含items和total字段
+            MemoryListResponse: Typed list of memory records, containing items and total fields
 
         Note:
-            此操作在绑定的 space_id 上执行
-            需要事先设置 HW_API_KEY 环境变量
+            This operation executes on the bound space_id
+            Requires HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable to be set
         """
         logger.info(f"Listing memory records: limit={limit}, offset={offset}")
 
@@ -371,31 +392,31 @@ class MemorySession:
 
     def get_memory(self, memory_id: str) -> MemoryInfo:
         """
-        获取当前绑定的 session 中特定的记忆记录
+        Get a specific memory record from the bound session
 
         Args:
-            memory_id: 记忆记录ID
+            memory_id: Memory record ID
 
         Returns:
-            MemoryInfo: 记录详情
+            MemoryInfo: Record details
 
         Note:
-            此操作在绑定的 space_id 上执行
-            需要事先设置 HW_API_KEY 环境变量
+            This operation executes on the bound space_id
+            Requires HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable to be set
         """
         logger.info(f"Getting memory record: {memory_id}")
         return self._data_plane.get_memory(self.space_id, memory_id)
 
     def delete_memory(self, memory_id: str) -> None:
         """
-        删除当前绑定的会话中特定的记忆记录
+        Delete a specific memory record from the bound session
 
         Args:
-            memory_id: 记忆记录ID
+            memory_id: Memory record ID
 
         Note:
-            此操作在绑定的 space_id 上执行
-            需要事先设置 HW_API_KEY 环境变量
+            This operation executes on the bound space_id
+            Requires HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable to be set
         """
         logger.info(f"Deleting memory record: {memory_id}")
         self._data_plane.delete_memory(self.space_id, memory_id)

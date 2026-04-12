@@ -1,0 +1,112 @@
+"""
+{{ name }} - LangChain Agent Implementation
+
+An agent built using LangChain framework, wrapped with AgentArts SDK runtime.
+"""
+
+from typing import Dict, Any, Optional
+
+from agentarts.sdk.runtime import AgentArtsRuntimeApp, RequestContext
+
+app = AgentArtsRuntimeApp()
+
+
+class LangChainAgent:
+    """LangChain-based Agent implementation."""
+
+    def __init__(self, model_name: str = "gpt-4o-mini"):
+        self.name = "{{ name }}"
+        self.model_name = model_name
+        self._llm = None
+
+    def _get_llm(self):
+        """Initialize LLM lazily."""
+        if self._llm is None:
+            try:
+                from langchain_openai import ChatOpenAI
+                self._llm = ChatOpenAI(model=self.model_name)
+            except ImportError:
+                raise ImportError(
+                    "langchain-openai is required. Install it with: pip install langchain-openai"
+                )
+        return self._llm
+
+    async def run(
+        self,
+        query: str,
+        system_prompt: Optional[str] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """
+        Process a query using LangChain.
+
+        Args:
+            query: User input query
+            system_prompt: Optional system prompt
+            **kwargs: Additional parameters
+
+        Returns:
+            Response dictionary
+        """
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        llm = self._get_llm()
+
+        messages = []
+        if system_prompt:
+            messages.append(SystemMessage(content=system_prompt))
+        messages.append(HumanMessage(content=query))
+
+        response = await llm.ainvoke(messages)
+
+        return {
+            "response": response.content,
+            "status": "success",
+            "agent": self.name,
+            "model": self.model_name,
+        }
+
+
+_agent: Optional[LangChainAgent] = None
+
+
+def _get_agent() -> LangChainAgent:
+    """Get or create the agent instance."""
+    global _agent
+    if _agent is None:
+        _agent = LangChainAgent()
+    return _agent
+
+
+@app.ping
+def ping():
+    """Health check endpoint."""
+    return "healthy"
+
+
+@app.entrypoint
+async def handler(payload: Dict[str, Any], context: RequestContext = None) -> Dict[str, Any]:
+    """
+    Process a query using LangChain.
+
+    Args:
+        payload: User input payload containing query
+        context: Request context with session info (optional)
+
+    Returns:
+        Response dictionary
+    """
+    query = payload.get("query", payload.get("input", ""))
+    system_prompt = payload.get("system_prompt")
+    
+    agent = _get_agent()
+    return await agent.run(query, system_prompt=system_prompt)
+
+
+def create_agent():
+    """Create agent instance for runtime."""
+    return app
+
+
+if __name__ == "__main__":
+    app.run()

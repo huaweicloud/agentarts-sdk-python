@@ -1,24 +1,74 @@
 """Init command definition"""
 
+from enum import Enum
 from typing import Annotated, Optional
 
-import click
 import typer
+from rich.console import Console
+from rich.prompt import Prompt
 
 from agentarts.toolkit.operations.runtime import init as init_op
 
+console = Console()
+
+
+class TemplateType(str, Enum):
+    """Available project templates"""
+    basic = "basic"
+    langgraph = "langgraph"
+    langchain = "langchain"
+    google_adk = "google-adk"
+
+
+TEMPLATE_DESCRIPTIONS = {
+    TemplateType.basic: "Basic agent template with minimal setup",
+    TemplateType.langgraph: "LangGraph-based agent with state management",
+    TemplateType.langchain: "LangChain-based agent with tool integration",
+    TemplateType.google_adk: "Google ADK agent template",
+}
+
+
+def prompt_for_template() -> TemplateType:
+    """Prompt user to select a template interactively"""
+    console.print("\n[bold cyan]Available Templates:[/bold cyan]\n")
+    
+    for i, template in enumerate(TemplateType, 1):
+        desc = TEMPLATE_DESCRIPTIONS.get(template, "")
+        console.print(f"  [yellow]{i}[/yellow]. [green]{template.value:<12}[/green] - {desc}")
+    
+    console.print()
+    
+    choices = [str(i) for i in range(1, len(TemplateType) + 1)]
+    choice_map = {str(i): t for i, t in enumerate(TemplateType, 1)}
+    
+    selection = Prompt.ask(
+        "[bold]Select a template[/bold]",
+        choices=choices,
+        default="2",
+        show_choices=False,
+    )
+    
+    return choice_map[selection]
+
+
+def prompt_for_name() -> str:
+    """Prompt user to enter project name"""
+    return Prompt.ask("\n[bold]Enter project name[/bold]", default="my_agent")
+
 
 def init(
-    name: Annotated[str, typer.Option("--name", "-n", help="Project name")] = ...,
+    name: Annotated[
+        Optional[str],
+        typer.Option("--name", "-n", help="Project name"),
+    ] = None,
     template: Annotated[
-        str,
+        Optional[TemplateType],
         typer.Option(
             "--template",
             "-t",
             help="Project template (basic, langgraph, langchain, google-adk)",
-            click_type=click.Choice(["basic", "langgraph", "langchain", "google-adk"]),
         ),
-    ] = "langgraph",
+    ] = None,
     path: Annotated[str, typer.Option("--path", "-p", help="Project path")] = ".",
     region: Annotated[
         Optional[str],
@@ -45,13 +95,24 @@ def init(
     After initialization, you can directly deploy using 'agentarts deploy'.
 
     Examples:
+        agentarts init
         agentarts init -n my_agent
         agentarts init -n my_agent -t langgraph
         agentarts init -n my_agent -t langchain -r cn-southwest-2
         agentarts init -n my_agent --swr-org my-org --swr-repo my-repo
     """
+    if name is None:
+        name = prompt_for_name()
+    
+    if template is None:
+        template = prompt_for_template()
+    
+    console.print(f"\n[bold]Creating project:[/bold] [cyan]{name}[/cyan]")
+    console.print(f"[bold]Template:[/bold] [green]{template.value}[/green]")
+    console.print(f"[bold]Path:[/bold] {path}\n")
+    
     success = init_op.init_project(
-        template=template,
+        template=template.value,
         name=name,
         path=path,
         region=region,
