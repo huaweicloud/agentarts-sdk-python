@@ -19,6 +19,15 @@ from agentarts.sdk.service.runtime_client import LocalRuntimeClient, RuntimeClie
 console = Console()
 
 
+def _ensure_https(endpoint: str) -> str:
+    """Ensure endpoint has https:// prefix."""
+    if not endpoint:
+        return endpoint
+    if not endpoint.startswith(("http://", "https://")):
+        return f"https://{endpoint}"
+    return endpoint
+
+
 class InvokeMode(str, Enum):
     """Invoke mode."""
 
@@ -111,7 +120,8 @@ def invoke_agent(
                 console.print("[dim]Set AGENTARTS_RUNTIME_DATA_ENDPOINT environment variable or ensure agent is deployed[/dim]")
                 return False
 
-            console.print()
+            data_endpoint = _ensure_https(data_endpoint)
+
             echo_info("Invoke Request", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]")
 
             client = RuntimeClient(data_endpoint=data_endpoint)
@@ -220,6 +230,8 @@ def status_agent(
                 echo_error("No data plane endpoint configured and could not get access_endpoint from agent")
                 console.print("[dim]Set AGENTARTS_RUNTIME_DATA_ENDPOINT environment variable or ensure agent is deployed[/dim]")
                 return False
+
+            data_endpoint = _ensure_https(data_endpoint)
 
             console.print()
             echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]")
