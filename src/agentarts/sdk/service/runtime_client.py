@@ -85,7 +85,7 @@ class RuntimeClient:
             base_url=self._control_base,
             timeout=timeout,
             verify_ssl=verify_ssl,
-        ))
+        ), open_ak_sk=True)
 
         self._data_client = BaseHTTPClient(RequestConfig(
             base_url=self._data_base,
@@ -99,7 +99,6 @@ class RuntimeClient:
     def set_auth_token(self, token: str) -> None:
         """Set the Bearer token for authentication."""
         self._access_token = token
-        self._control_client.set_auth_token(token)
         self._data_client.set_auth_token(token)
 
     def _control(self, method: str, path: str, **kwargs: Any) -> RequestResult:
