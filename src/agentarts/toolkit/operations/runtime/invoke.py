@@ -8,6 +8,7 @@ from typing import Any, Dict, Iterator, Optional, Union
 from rich.console import Console
 from rich.panel import Panel
 
+from agentarts.sdk.utils.constant import get_region
 from agentarts.toolkit.operations.runtime.config import (
     get_agent,
     get_config_file_path,
@@ -88,15 +89,15 @@ def invoke_agent(
                     console.print("[dim]Specify --agent or set a default agent in config[/dim]")
                     return False
 
-            actual_region = region or "cn-north-4"
+            actual_region = region or get_region()
             actual_session_id = session_id or str(uuid.uuid4())
 
             console.print()
             echo_info("Invoke Request", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]")
 
-            from agentarts.sdk.utils.constant import get_data_plane_endpoint
+            from agentarts.sdk.utils.constant import get_runtime_data_plane_endpoint
 
-            data_endpoint = get_data_plane_endpoint(actual_region)
+            data_endpoint = get_runtime_data_plane_endpoint(actual_region)
             client = RuntimeClient(data_endpoint=data_endpoint)
 
             result = client.invoke_agent(
@@ -189,9 +190,9 @@ def status_agent(
             console.print()
             echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]")
 
-            from agentarts.sdk.utils.constant import get_data_plane_endpoint
+            from agentarts.sdk.utils.constant import get_runtime_data_plane_endpoint
 
-            data_endpoint = get_data_plane_endpoint(actual_region)
+            data_endpoint = get_runtime_data_plane_endpoint(actual_region)
             client = RuntimeClient(data_endpoint=data_endpoint)
 
             result = client.ping_agent(

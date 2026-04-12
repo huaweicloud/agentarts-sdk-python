@@ -48,7 +48,7 @@ def create_agentarts_runtime(
     agent_config: Optional[Any] = None,
     port: Optional[int] = None,
     description: Optional[str] = None,
-) -> Optional[str]:
+) -> Optional[Dict]:
     """
     Create or update AgentArts runtime using RuntimeClient.
 
@@ -61,7 +61,7 @@ def create_agentarts_runtime(
         description: Agent description (overrides config)
 
     Returns:
-        Agent ID if successful, None otherwise
+        Agent dict if successful, None otherwise
     """
     console.print(f"[bold cyan]Creating AgentArts runtime: [cyan]{agent_name}[/cyan]...")
 
@@ -144,7 +144,7 @@ def create_agentarts_runtime(
         latest_version = agent.get("latest_version")
 
         echo_success(f"Runtime '{agent_name}({latest_version})'created/updated successfully with [dim]ID: {agent_id}[/dim]")
-        return agent_id
+        return agent
 
     except Exception as e:
         echo_error(f"Failed to create runtime: {e}")
@@ -318,7 +318,7 @@ def deploy_project(
         title="[bold cyan]Deploy Progress[/bold cyan]",
         border_style="cyan",
     ))
-    runtime_id = create_agentarts_runtime(
+    agent = create_agentarts_runtime(
         agent_name=actual_agent_name,
         swr_image=swr_image,
         region=region,
@@ -327,14 +327,20 @@ def deploy_project(
         description=description,
     )
 
-    if runtime_id is None:
+    if agent is None:
         return False
+
+    runtime_id = agent.get("id")
+    invoke_config_resp = agent.get("invoke_config") or {}
+    access_endpoint = invoke_config_resp.get("access_endpoint")
 
     full_config = load_config()
     if full_config:
         agent_key = agent_name or full_config.default_agent or "default"
         if agent_key in (full_config.agents or {}):
             full_config.agents[agent_key].runtime.agent_id = runtime_id
+            if access_endpoint and full_config.agents[agent_key].runtime.invoke_config:
+                full_config.agents[agent_key].runtime.invoke_config.access_endpoint = access_endpoint
             full_config.to_yaml(str(config_path))
 
     console.print(Panel(
@@ -348,6 +354,8 @@ def deploy_project(
         f"[cyan]Image:[/cyan] [white]{swr_image}[/white]\n"
         f"[cyan]Region:[/cyan] [yellow]{region}[/yellow]\n"
     )
+    if access_endpoint:
+        summary += f"\n[cyan]Access Endpoint:[/cyan] [white]{access_endpoint}[/white]"
     echo_success(summary)
 
     return True
