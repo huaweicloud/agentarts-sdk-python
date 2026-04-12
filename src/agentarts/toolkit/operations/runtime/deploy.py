@@ -331,7 +331,8 @@ def deploy_project(
         return False
 
     runtime_id = agent.get("id")
-    invoke_config_resp = agent.get("invoke_config") or {}
+    version_detail = agent.get("version_detail") or {}
+    invoke_config_resp = version_detail.get("invoke_config") or {}
     access_endpoint = invoke_config_resp.get("access_endpoint")
 
     full_config = load_config()
@@ -339,8 +340,6 @@ def deploy_project(
         agent_key = agent_name or full_config.default_agent or "default"
         if agent_key in (full_config.agents or {}):
             full_config.agents[agent_key].runtime.agent_id = runtime_id
-            if access_endpoint and full_config.agents[agent_key].runtime.invoke_config:
-                full_config.agents[agent_key].runtime.invoke_config.access_endpoint = access_endpoint
             full_config.to_yaml(str(config_path))
 
     console.print(Panel(
