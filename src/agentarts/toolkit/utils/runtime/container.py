@@ -59,11 +59,7 @@ def build_docker_image(
     full_image_name = f"{image_name}:{image_tag}"
 
     console.print(f"\n[bold]Building Docker image:[/bold] [cyan]{full_image_name}[/cyan]")
-    console.print(f"[dim]Dockerfile: {dockerfile_path}[/dim]")
-    console.print(f"[dim]Build context: {build_context}[/dim]")
-    console.print()
 
-    current_step = ""
     step_pattern = re.compile(r"^Step\s+(\d+)/(\d+)\s*:\s*(.+)$")
     
     try:
@@ -85,6 +81,9 @@ def build_docker_image(
         )
 
         output_lines = []
+        error_lines = []
+        current_step_num = 0
+        total_steps = 0
         
         for line in iter(process.stdout.readline, ""):
             if not line:
@@ -95,34 +94,35 @@ def build_docker_image(
             
             match = step_pattern.match(line)
             if match:
-                step_num = match.group(1)
-                total_steps = match.group(2)
+                step_num = int(match.group(1))
+                total_steps = int(match.group(2))
                 step_desc = match.group(3)
-                current_step = f"Step {step_num}/{total_steps}: {step_desc}"
+                current_step_num = step_num
                 
-                console.print(f"\n[bold yellow]▶[/bold yellow] [cyan]Step {step_num}/{total_steps}[/cyan]: [white]{markup.escape(step_desc)}[/white]")
-            elif line.startswith(" ---> "):
-                console.print(f"  [dim]{markup.escape(line)}[/dim]")
-            elif "Running in" in line:
-                console.print(f"  [green]✓[/green] {markup.escape(line.strip())}")
+                console.print(f"  [yellow]▶[/yellow] Step {step_num}/{total_steps}: [white]{markup.escape(step_desc)}[/white]")
             elif "Successfully built" in line:
-                console.print(f"  [green]✓[/green] [bold]{markup.escape(line.strip())}[/bold]")
+                console.print(f"  [green]✓[/green] {markup.escape(line.strip())}")
             elif "Successfully tagged" in line:
-                console.print(f"  [green]✓[/green] [bold cyan]{markup.escape(line.strip())}[/bold]")
+                console.print(f"  [green]✓[/green] {markup.escape(line.strip())}")
             elif line.strip():
                 if "error" in line.lower() or "error:" in line.lower():
-                    console.print(f"  [red]{markup.escape(line)}[/red]")
-                elif "warning" in line.lower():
-                    console.print(f"  [yellow]{markup.escape(line)}[/yellow]")
-                else:
-                    console.print(f"  [dim]{markup.escape(line)}[/dim]")
+                    error_lines.append(line)
+                    console.print(f"  [red]✗ {markup.escape(line)}[/red]")
+                elif "warning" in line.lower() and "warning:" in line.lower():
+                    console.print(f"  [yellow]! {markup.escape(line)}[/yellow]")
 
         process.wait()
 
         if process.returncode != 0:
             console.print(f"\n[red]Error building image:[/red]")
-            for line in output_lines[-20:]:
-                console.print(f"  [red]{markup.escape(line)}[/red]")
+            if error_lines:
+                console.print("[dim]Error details:[/dim]")
+                for line in error_lines[-10:]:
+                    console.print(f"  [red]{markup.escape(line)}[/red]")
+            else:
+                console.print("[dim]Last 15 lines of output:[/dim]")
+                for line in output_lines[-15:]:
+                    console.print(f"  [dim]{markup.escape(line)}[/dim]")
             return False
 
         console.print(f"\n[green]✓ Done:[/green] Image [cyan]{full_image_name}[/cyan] built successfully")
@@ -184,7 +184,6 @@ def push_image(image: str) -> bool:
         True if successful, False otherwise
     """
     console.print(f"\n[bold]Pushing image:[/bold] [cyan]{image}[/cyan]")
-    console.print()
 
     try:
         process = subprocess.Popen(
@@ -197,7 +196,9 @@ def push_image(image: str) -> bool:
         )
 
         output_lines = []
+        error_lines = []
         digest_pattern = re.compile(r"digest:\s*(sha256:[a-f0-9]+)")
+        pushed_layers = 0
 
         for line in iter(process.stdout.readline, ""):
             if not line:
@@ -206,23 +207,32 @@ def push_image(image: str) -> bool:
             line = line.rstrip()
             output_lines.append(line)
             
-            if "Pushed" in line or "Layer already exists" in line:
+            if "Pushed" in line:
+                pushed_layers += 1
                 console.print(f"  [green]✓[/green] {markup.escape(line)}")
+            elif "Layer already exists" in line:
+                console.print(f"  [dim]○[/dim] Layer exists (skipped)")
             elif digest_pattern.search(line):
                 match = digest_pattern.search(line)
                 console.print(f"  [green]✓[/green] Digest: [cyan]{match.group(1)}[/cyan]")
             elif line.strip():
-                console.print(f"  [dim]{markup.escape(line)}[/dim]")
+                if "error" in line.lower() or "denied" in line.lower():
+                    error_lines.append(line)
+                    console.print(f"  [red]✗ {markup.escape(line)}[/red]")
 
         process.wait()
 
         if process.returncode != 0:
             console.print(f"\n[red]Error pushing image:[/red]")
-            for line in output_lines[-10:]:
-                console.print(f"  [red]{markup.escape(line)}[/red]")
+            if error_lines:
+                for line in error_lines:
+                    console.print(f"  [red]{markup.escape(line)}[/red]")
+            else:
+                for line in output_lines[-10:]:
+                    console.print(f"  [red]{markup.escape(line)}[/red]")
             return False
 
-        console.print(f"\n[green]✓ Done:[/green] Image pushed successfully")
+        console.print(f"[green]✓ Done:[/green] Image pushed successfully")
         return True
 
     except subprocess.TimeoutExpired:
