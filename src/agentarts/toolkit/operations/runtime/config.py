@@ -181,21 +181,43 @@ def add_agent(
         True if successful
     """
     config = load_config()
-
-    agent_config = AgentArtsConfig(
-        base=BaseConfig(
-            name=name,
-            entrypoint=entrypoint,
-            region=region,
-            dependency_file=dependency_file,
-        ),
-        swr_config=SWRConfig(
-            organization=swr_organization,
-            repository=swr_repository,
-            organization_auto_create=organization_auto_create,
-            repository_auto_create=repository_auto_create,
-        ),
-    )
+    
+    existing_agent = config.get_agent(name)
+    
+    if existing_agent:
+        existing_dict = existing_agent.to_dict()
+        
+        if entrypoint is not None:
+            existing_dict.setdefault("base", {})["entrypoint"] = entrypoint
+        if region is not None:
+            existing_dict.setdefault("base", {})["region"] = region
+        if dependency_file is not None:
+            existing_dict.setdefault("base", {})["dependency_file"] = dependency_file
+        existing_dict.setdefault("base", {})["name"] = name
+        
+        if swr_organization is not None:
+            existing_dict.setdefault("swr_config", {})["organization"] = swr_organization
+        if swr_repository is not None:
+            existing_dict.setdefault("swr_config", {})["repository"] = swr_repository
+        existing_dict.setdefault("swr_config", {})["organization_auto_create"] = organization_auto_create
+        existing_dict.setdefault("swr_config", {})["repository_auto_create"] = repository_auto_create
+        
+        agent_config = AgentArtsConfig.from_dict(existing_dict)
+    else:
+        agent_config = AgentArtsConfig(
+            base=BaseConfig(
+                name=name,
+                entrypoint=entrypoint,
+                region=region,
+                dependency_file=dependency_file,
+            ),
+            swr_config=SWRConfig(
+                organization=swr_organization,
+                repository=swr_repository,
+                organization_auto_create=organization_auto_create,
+                repository_auto_create=repository_auto_create,
+            ),
+        )
 
     config.add_agent(name, agent_config)
 
