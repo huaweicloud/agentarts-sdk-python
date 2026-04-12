@@ -6,6 +6,7 @@ It only handles command registration. Command definitions are in cli/
 and implementation logic is in operations/.
 """
 
+import logging
 from typing import Annotated
 
 import typer
@@ -19,6 +20,30 @@ from agentarts.toolkit.cli.mcp_gateway import mcp_gateway
 from agentarts.toolkit.cli.memory.commands import memory_app
 
 console = Console()
+
+
+def setup_logging(verbose: bool = False):
+    """
+    Configure logging for toolkit CLI.
+    
+    Args:
+        verbose: If True, set log level to DEBUG; otherwise INFO.
+    """
+    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    date_format = "%Y-%m-%d %H:%M:%S"
+    
+    logging.basicConfig(
+        level=logging.DEBUG if verbose else logging.INFO,
+        format=log_format,
+        datefmt=date_format,
+        handlers=[
+            logging.StreamHandler(),
+        ],
+    )
+    
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("huaweicloudsdkcore").setLevel(logging.WARNING)
+
 
 app = typer.Typer(
     name="agentarts",
@@ -34,6 +59,10 @@ def main(
         bool,
         typer.Option("--version", "-v", help="Show version and exit"),
     ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", help="Enable verbose logging (DEBUG level)"),
+    ] = False,
 ):
     """
     AgentArts CLI - Huawei Cloud Agent Development Toolkit
@@ -45,6 +74,8 @@ def main(
         agentarts dev --port 8080
         agentarts deploy -r cn-north-4 -e production
     """
+    setup_logging(verbose=verbose)
+    
     if version:
         from agentarts import __version__
         console.print(f"agentarts version: [bold green]{__version__}[/bold green]")
