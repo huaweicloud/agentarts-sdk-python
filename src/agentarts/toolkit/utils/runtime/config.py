@@ -107,6 +107,10 @@ class InvokeConfig(BaseModel):
         le=65535,
         description="Port number of the server",
     )
+    access_endpoint: Optional[str] = Field(
+        default=None,
+        description="Access endpoint URL (returned by API, not sent in requests)",
+    )
 
     model_config = {
         "use_enum_values": True,
