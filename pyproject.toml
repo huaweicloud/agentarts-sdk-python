@@ -41,7 +41,9 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-#    "huaweicloudsdkagentidentity",
+    "huaweicloudsdkcore>=3.1.0",
+    "huaweicloudsdkmodelarts>=3.1.0",
+    "huaweicloudsdkiam>=3.1.0",
     "fastapi>=0.104.0",
     "starlette>=0.46.2",
     "uvicorn[standard]>=0.24.0",
@@ -107,6 +109,8 @@ huaweicloud = [
     "huaweicloudsdkcore>=3.1.0",
     "huaweicloudsdkmodelarts>=3.1.0",
     "huaweicloudsdkiam>=3.1.0",
+    "huaweicloudsdkobs>=3.1.0",
+    "huaweicloudsdkdws>=3.1.0",
 ]
 docs = [
     "sphinx>=7.2.0",
@@ -114,7 +118,7 @@ docs = [
     "myst-parser>=2.0.0",
 ]
 all = [
-    "huaweicloud-agentarts-sdk[langchain,langgraph,autogen,crewai,vector-stores,database,monitoring,huaweicloud]",
+    "huaweicloud-agentarts-sdk[langchain,langgraph,autogen,crewai,vector-stores,database,monitoring,huaweicloud,dev,docs]",
 ]
 
 [project.urls]
