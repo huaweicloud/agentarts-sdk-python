@@ -274,6 +274,10 @@ class ArtifactSourceConfig(BaseModel):
         "extra": "allow",
     }
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary."""
+        return self.model_dump(mode="json", exclude_none=True)
+
 
 class KeyValuePair(BaseModel):
     """Key-value pair configuration."""

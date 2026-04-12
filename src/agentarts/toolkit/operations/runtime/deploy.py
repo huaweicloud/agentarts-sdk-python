@@ -72,11 +72,7 @@ def create_agentarts_runtime(
 
         client = RuntimeClient(control_endpoint=endpoint, verify_ssl=False)
 
-        artifact_source_config = {
-            "url": swr_image,
-            "commands": [],
-        }
-
+        artifact_source_config = None
         invoke_config = {}
         network_config = None
         identity_config = None
@@ -88,6 +84,9 @@ def create_agentarts_runtime(
 
         if agent_config is not None:
             runtime_cfg = agent_config.runtime
+
+            if runtime_cfg.artifact_source:
+                artifact_source_config = runtime_cfg.artifact_source.to_dict()
 
             if runtime_cfg.invoke_config:
                 invoke_config = {
@@ -112,6 +111,12 @@ def create_agentarts_runtime(
 
             execution_agency_name = runtime_cfg.execution_agency_name
             agent_gateway_id = runtime_cfg.agent_gateway_id
+
+        if not artifact_source_config:
+            artifact_source_config = {
+                "url": swr_image,
+                "commands": [],
+            }
 
         if not invoke_config:
             invoke_config = {
