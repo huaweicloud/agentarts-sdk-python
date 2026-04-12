@@ -188,6 +188,8 @@ class SWRClient:
                 log.info("Organization '%s' already exists", organization)
                 return self.get_organization(organization)
             log.error("Failed to create organization '%s': %s", organization, e)
+            import traceback
+            traceback.print_exc()
             return None
 
     def create_or_get_organization(
@@ -288,6 +290,8 @@ class SWRClient:
                 log.info("Repository '%s/%s' already exists", organization, repository)
                 return self.get_repository(organization, repository)
             log.error("Failed to create repository '%s/%s': %s", organization, repository, e)
+            import traceback
+            traceback.print_exc()
             return None
 
     def create_or_get_repository(
