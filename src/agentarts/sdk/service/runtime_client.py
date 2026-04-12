@@ -245,11 +245,11 @@ class RuntimeClient:
         if description:
             payload["description"] = description
         if artifact_source_config is not None:
-            payload["artifact_source_config"] = artifact_source_config
+            payload["artifact_source"] = artifact_source_config
         if env_vars is not None:
-            payload["env_vars"] = env_vars
+            payload["environment_variables"] = env_vars
         if identity_config is not None:
-            payload["identity_config"] = identity_config
+            payload["identity_configuration"] = identity_config
         if execution_agency_name is not None:
             payload["execution_agency_name"] = execution_agency_name
         if network_config is not None:
@@ -259,9 +259,9 @@ class RuntimeClient:
         if invoke_config is not None:
             payload["invoke_config"] = invoke_config
         if observability_config is not None:
-            payload["observability_config"] = observability_config
+            payload["observability"] = observability_config
         if tags_config is not None:
-            payload["tags_config"] = tags_config
+            payload["tags"] = tags_config
 
         result = self._control("POST", "/v1/core/runtimes", json=payload)
         return self._check(result, "create_agent")
@@ -303,9 +303,9 @@ class RuntimeClient:
         if description is not None:
             payload["description"] = description
         if artifact_source_config is not None:
-            payload["artifact_source_config"] = artifact_source_config
+            payload["artifact_source"] = artifact_source_config
         if env_vars is not None:
-            payload["env_vars"] = env_vars
+            payload["environment_variables"] = env_vars
         if execution_agency_name is not None:
             payload["execution_agency_name"] = execution_agency_name
         if network_config is not None:
@@ -315,9 +315,9 @@ class RuntimeClient:
         if invoke_config is not None:
             payload["invoke_config"] = invoke_config
         if observability_config is not None:
-            payload["observability_config"] = observability_config
+            payload["observability"] = observability_config
         if tags_config is not None:
-            payload["tags_config"] = tags_config
+            payload["tags"] = tags_config
 
         result = self._control("PUT", f"/v1/core/runtimes/{agent_id}", json=payload)
         return self._check(result, "update_agent")
@@ -365,11 +365,11 @@ class RuntimeClient:
         if description:
             payload["description"] = description
         if artifact_source_config is not None:
-            payload["artifact_source_config"] = artifact_source_config
+            payload["artifact_source"] = artifact_source_config
         if env_vars is not None:
-            payload["env_vars"] = env_vars
+            payload["environment_variables"] = env_vars
         if identity_config is not None:
-            payload["identity_config"] = identity_config
+            payload["identity_configuration"] = identity_config
         if execution_agency_name is not None:
             payload["execution_agency_name"] = execution_agency_name
         if network_config is not None:
@@ -379,9 +379,9 @@ class RuntimeClient:
         if invoke_config is not None:
             payload["invoke_config"] = invoke_config
         if observability_config is not None:
-            payload["observability_config"] = observability_config
+            payload["observability"] = observability_config
         if tags_config is not None:
-            payload["tags_config"] = tags_config
+            payload["tags"] = tags_config
 
         existing = self.find_agent_by_name(agent_name)
         agent_id = existing.get("agent_id")
