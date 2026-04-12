@@ -10,6 +10,7 @@ from agentarts.sdk.utils.constant import get_region
 from agentarts.toolkit.operations.runtime.config import (
     get_agent,
     get_config_file_path,
+    load_config,
 )
 from agentarts.toolkit.utils.runtime.container import (
     check_docker_available,
@@ -62,8 +63,7 @@ def create_agentarts_runtime(
     Returns:
         Agent ID if successful, None otherwise
     """
-    console.print()
-    echo_step(6, f"Creating AgentArts runtime: [cyan]{agent_name}[/cyan]")
+    console.print(f"[bold cyan]Creating AgentArts runtime: [cyan]{agent_name}[/cyan]")
 
     try:
         from agentarts.sdk.utils.constant import get_control_plane_endpoint
@@ -140,14 +140,11 @@ def create_agentarts_runtime(
             agent_gateway_id=agent_gateway_id,
         )
 
-        agent_id = agent.get("agent_id")
-        if agent_id:
-            echo_success(f"Runtime created/updated successfully")
-            console.print(f"  [dim]Agent ID: {agent_id}[/dim]")
-            return agent_id
-        else:
-            console.print("[yellow]Warning: Agent created but no agent_id returned[/yellow]")
-            return agent.get("name")
+        agent_id = agent.get("id")
+        latest_version = agent.get("latest_version")
+
+        echo_success(f"Runtime created/updated successfully with [dim]Agent ID: {agent_id}({latest_version})[/dim]")
+        return agent_id
 
     except Exception as e:
         echo_error(f"Failed to create runtime: {e}")
@@ -195,7 +192,6 @@ def deploy_project(
     region = agent_config.base.region or get_region()
     service_port = port or (agent_config.runtime.invoke_config.port if agent_config.runtime.invoke_config else 8080)
 
-    console.print()
     echo_info("Deploy Configuration", f"[cyan]Agent:[/cyan] [white]{actual_agent_name}[/white]\n[cyan]Mode:[/cyan] [yellow]{mode.value}[/yellow]\n[cyan]Region:[/cyan] [yellow]{region}[/yellow]")
 
     if not check_docker_available():
@@ -211,7 +207,6 @@ def deploy_project(
     local_image_name = f"{actual_agent_name}"
     local_full_image = f"{local_image_name}:{image_tag}"
 
-    console.print()
     console.print(Panel(
         f"[bold]Step 1/6[/bold] Building Docker image\n[dim]Image: {local_full_image}[/dim]",
         title="[bold cyan]Deploy Progress[/bold cyan]",
@@ -222,7 +217,6 @@ def deploy_project(
 
     if mode == DeployMode.LOCAL:
         local_service_port = local_port or service_port
-        console.print()
         console.print(Panel(
             f"[bold]Step 2/2[/bold] Starting local container\n[dim]Port: {local_service_port}[/dim]",
             title="[bold cyan]Deploy Progress[/bold cyan]",
@@ -243,7 +237,6 @@ def deploy_project(
         console.print("[dim]Specify via --swr-org and --swr-repo options, or configure in yaml[/dim]")
         return False
 
-    console.print()
     console.print(Panel(
         f"[bold]Step 2/6[/bold] Setting up SWR resources\n[dim]Organization: {final_swr_org}\n[dim]Repository: {final_swr_repo}[/dim]",
         title="[bold cyan]Deploy Progress[/bold cyan]",
@@ -281,7 +274,6 @@ def deploy_project(
                 return False
             echo_success(f"Using existing repository [cyan]{final_swr_org}/{final_swr_repo}[/cyan]")
 
-        console.print()
         console.print(Panel(
             f"[bold]Step 3/6[/bold] Getting SWR credentials\n[dim]Registry: swr.{region}.myhuaweicloud.com[/dim]",
             title="[bold cyan]Deploy Progress[/bold cyan]",
@@ -298,7 +290,6 @@ def deploy_project(
 
         swr_image = swr_client.get_full_image_name(final_swr_org, final_swr_repo, image_tag)
 
-        console.print()
         console.print(Panel(
             f"[bold]Step 4/6[/bold] Tagging and pushing image\n[dim]Source: {local_full_image}\n[dim]Target: {swr_image}[/dim]",
             title="[bold cyan]Deploy Progress[/bold cyan]",
@@ -322,7 +313,6 @@ def deploy_project(
         echo_error(f"SWR deployment failed: {e}")
         return False
 
-    console.print()
     console.print(Panel(
         f"[bold]Step 5/6[/bold] Creating AgentArts runtime\n[dim]Agent: {actual_agent_name}\n[dim]Image: {swr_image}[/dim]",
         title="[bold cyan]Deploy Progress[/bold cyan]",
@@ -340,21 +330,24 @@ def deploy_project(
     if runtime_id is None:
         return False
 
-    console.print()
+    full_config = load_config()
+    if full_config:
+        agent_key = agent_name or full_config.default_agent or "default"
+        if agent_key in (full_config.agents or {}):
+            full_config.agents[agent_key].runtime.agent_id = runtime_id
+            full_config.to_yaml(str(config_path))
+
     console.print(Panel(
         f"[bold]Step 6/6[/bold] Deployment complete!",
         title="[bold green]Deploy Progress[/bold green]",
         border_style="green",
     ))
-    console.print()
     summary = (
         f"[cyan]Agent Name:[/cyan] [white]{actual_agent_name}[/white]\n"
         f"[cyan]Runtime ID:[/cyan] [white]{runtime_id}[/white]\n"
         f"[cyan]Image:[/cyan] [white]{swr_image}[/white]\n"
         f"[cyan]Region:[/cyan] [yellow]{region}[/yellow]\n"
-        f"\n[cyan]Dashboard:[/cyan] [link]https://console.huaweicloud.com/agentarts[/link]"
     )
-    echo_success("Deployment successful!")
-    console.print()
+    echo_success(summary)
 
     return True
