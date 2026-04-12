@@ -38,7 +38,7 @@ class DeployMode(str, Enum):
     """Deploy mode."""
 
     LOCAL = "local"
-    SWR = "swr"
+    CLOUD = "cloud"
 
 
 def create_agentarts_runtime(
@@ -63,7 +63,7 @@ def create_agentarts_runtime(
     Returns:
         Agent ID if successful, None otherwise
     """
-    console.print(f"[bold cyan]Creating AgentArts runtime: [cyan]{agent_name}[/cyan]")
+    console.print(f"[bold cyan]Creating AgentArts runtime: [cyan]{agent_name}[/cyan]...")
 
     try:
         from agentarts.sdk.utils.constant import get_control_plane_endpoint
@@ -143,7 +143,7 @@ def create_agentarts_runtime(
         agent_id = agent.get("id")
         latest_version = agent.get("latest_version")
 
-        echo_success(f"Runtime created/updated successfully with [dim]Agent ID: {agent_id}({latest_version})[/dim]")
+        echo_success(f"Runtime '{agent_name}({latest_version})'created/updated successfully with [dim]ID: {agent_id}[/dim]")
         return agent_id
 
     except Exception as e:
@@ -153,7 +153,7 @@ def create_agentarts_runtime(
 
 def deploy_project(
     agent_name: Optional[str] = None,
-    mode: DeployMode = DeployMode.SWR,
+    mode: DeployMode = DeployMode.CLOUD,
     image_tag: str = "latest",
     port: Optional[int] = None,
     local_port: Optional[int] = None,
@@ -168,7 +168,7 @@ def deploy_project(
         agent_name: Agent name (uses default if None)
         mode: Deploy mode (local or swr)
         image_tag: Docker image tag
-        port: Service port (for SWR mode)
+        port: Service port (for cloud mode)
         local_port: Local port (for local mode)
         swr_org: SWR organization (overrides config)
         swr_repo: SWR repository (overrides config)

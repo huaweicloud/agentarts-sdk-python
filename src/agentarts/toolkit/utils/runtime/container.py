@@ -150,7 +150,7 @@ def tag_image(
     Returns:
         True if successful, False otherwise
     """
-    console.print(f"\n[bold]Tagging image:[/bold] [cyan]{source_image}[/cyan] -> [cyan]{target_image}[/cyan]")
+    console.print(f"[bold]Tagging image:[/bold] [cyan]{source_image}[/cyan] -> [cyan]{target_image}[/cyan]")
 
     try:
         result = subprocess.run(
