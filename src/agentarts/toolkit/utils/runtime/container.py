@@ -4,11 +4,16 @@ Container operations for Docker.
 Provides functions for building, tagging, pushing, and running Docker images.
 """
 
+import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Optional
 
 from rich.console import Console
+from rich.live import Live
+from rich.panel import Panel
+from rich.text import Text
 
 console = Console()
 
@@ -39,7 +44,7 @@ def build_docker_image(
     build_context: str = ".",
 ) -> bool:
     """
-    Build Docker image.
+    Build Docker image with real-time output.
 
     Args:
         image_name: Image name
@@ -53,7 +58,13 @@ def build_docker_image(
     full_image_name = f"{image_name}:{image_tag}"
 
     console.print(f"\n[bold]Building Docker image:[/bold] [cyan]{full_image_name}[/cyan]")
+    console.print(f"[dim]Dockerfile: {dockerfile_path}[/dim]")
+    console.print(f"[dim]Build context: {build_context}[/dim]")
+    console.print()
 
+    current_step = ""
+    step_pattern = re.compile(r"^Step\s+(\d+)/(\d+)\s*:\s*(.+)$")
+    
     try:
         cmd = [
             "docker",
@@ -63,19 +74,57 @@ def build_docker_image(
             build_context,
         ]
 
-        result = subprocess.run(
+        process = subprocess.Popen(
             cmd,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
-            timeout=600,
+            bufsize=1,
+            universal_newlines=True,
         )
 
-        if result.returncode != 0:
-            console.print(f"[red]Error building image:[/red]")
-            console.print(result.stderr)
+        output_lines = []
+        
+        for line in iter(process.stdout.readline, ""):
+            if not line:
+                break
+            
+            line = line.rstrip()
+            output_lines.append(line)
+            
+            match = step_pattern.match(line)
+            if match:
+                step_num = match.group(1)
+                total_steps = match.group(2)
+                step_desc = match.group(3)
+                current_step = f"Step {step_num}/{total_steps}: {step_desc}"
+                
+                console.print(f"\n[bold yellow]▶[/bold yellow] [cyan]Step {step_num}/{total_steps}[/cyan]: [white]{step_desc}[/white]")
+            elif line.startswith(" ---> "):
+                console.print(f"  [dim]{line}[/dim]")
+            elif "Running in" in line:
+                console.print(f"  [green]✓[/green] {line.strip()}")
+            elif "Successfully built" in line:
+                console.print(f"  [green]✓[/green] [bold]{line.strip()}[/bold]")
+            elif "Successfully tagged" in line:
+                console.print(f"  [green]✓[/green] [bold cyan]{line.strip()}[/bold]")
+            elif line.strip():
+                if "error" in line.lower() or "error:" in line.lower():
+                    console.print(f"  [red]{line}[/red]")
+                elif "warning" in line.lower():
+                    console.print(f"  [yellow]{line}[/yellow]")
+                else:
+                    console.print(f"  [dim]{line}[/dim]")
+
+        process.wait()
+
+        if process.returncode != 0:
+            console.print(f"\n[red]Error building image:[/red]")
+            for line in output_lines[-20:]:
+                console.print(f"  [red]{line}[/red]")
             return False
 
-        console.print(f"[green]Done:[/green] Image [cyan]{full_image_name}[/cyan] built successfully")
+        console.print(f"\n[green]✓ Done:[/green] Image [cyan]{full_image_name}[/cyan] built successfully")
         return True
 
     except subprocess.TimeoutExpired:
@@ -115,7 +164,7 @@ def tag_image(
             console.print(result.stderr)
             return False
 
-        console.print(f"[green]Done:[/green] Image tagged successfully")
+        console.print(f"[green]✓ Done:[/green] Image tagged successfully")
         return True
 
     except subprocess.SubprocessError as e:
@@ -125,7 +174,7 @@ def tag_image(
 
 def push_image(image: str) -> bool:
     """
-    Push Docker image to registry.
+    Push Docker image to registry with real-time output.
 
     Args:
         image: Image name to push
@@ -134,21 +183,45 @@ def push_image(image: str) -> bool:
         True if successful, False otherwise
     """
     console.print(f"\n[bold]Pushing image:[/bold] [cyan]{image}[/cyan]")
+    console.print()
 
     try:
-        result = subprocess.run(
+        process = subprocess.Popen(
             ["docker", "push", image],
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
-            timeout=600,
+            bufsize=1,
+            universal_newlines=True,
         )
 
-        if result.returncode != 0:
-            console.print(f"[red]Error pushing image:[/red]")
-            console.print(result.stderr)
+        output_lines = []
+        digest_pattern = re.compile(r"digest:\s*(sha256:[a-f0-9]+)")
+
+        for line in iter(process.stdout.readline, ""):
+            if not line:
+                break
+            
+            line = line.rstrip()
+            output_lines.append(line)
+            
+            if "Pushed" in line or "Layer already exists" in line:
+                console.print(f"  [green]✓[/green] {line}")
+            elif digest_pattern.search(line):
+                match = digest_pattern.search(line)
+                console.print(f"  [green]✓[/green] Digest: [cyan]{match.group(1)}[/cyan]")
+            elif line.strip():
+                console.print(f"  [dim]{line}[/dim]")
+
+        process.wait()
+
+        if process.returncode != 0:
+            console.print(f"\n[red]Error pushing image:[/red]")
+            for line in output_lines[-10:]:
+                console.print(f"  [red]{line}[/red]")
             return False
 
-        console.print(f"[green]Done:[/green] Image pushed successfully")
+        console.print(f"\n[green]✓ Done:[/green] Image pushed successfully")
         return True
 
     except subprocess.TimeoutExpired:
@@ -195,7 +268,7 @@ def login_to_registry(
             console.print(result.stderr)
             return False
 
-        console.print(f"[green]Done:[/green] Logged in to registry successfully")
+        console.print(f"[green]✓ Done:[/green] Logged in to registry successfully")
         return True
 
     except subprocess.SubprocessError as e:
@@ -256,7 +329,7 @@ def run_container(
             return False
 
         container_id = result.stdout.strip()
-        console.print(f"[green]Done:[/green] Container [cyan]{container_name}[/cyan] started")
+        console.print(f"[green]✓ Done:[/green] Container [cyan]{container_name}[/cyan] started")
         console.print(f"[dim]Container ID: {container_id[:12]}[/dim]")
         console.print(f"\n[bold]Access your agent at:[/bold] [link]http://localhost:{port}[/link]")
         return True
@@ -301,7 +374,7 @@ def generate_dockerfile(
 
     try:
         dockerfile_path.write_text(content, encoding="utf-8")
-        console.print(f"[green]Done:[/green] Dockerfile generated at [cyan]{dockerfile_path}[/cyan]")
+        console.print(f"[green]✓ Done:[/green] Dockerfile generated at [cyan]{dockerfile_path}[/cyan]")
         return True
     except Exception as e:
         console.print(f"[red]Error: Failed to write Dockerfile: {e}[/red]")
