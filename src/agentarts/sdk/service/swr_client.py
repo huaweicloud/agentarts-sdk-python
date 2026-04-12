@@ -172,11 +172,7 @@ class SWRClient:
 
             log.info("Created SWR organization: %s", organization)
 
-            return {
-                "id": response.id,
-                "name": response.name,
-                "creator_name": response.creator_name,
-            }
+            return self.get_organization(organization)
 
         except Exception as e:
             log.error("Failed to create organization '%s': %s", organization, e)
@@ -272,12 +268,7 @@ class SWRClient:
 
             log.info("Created SWR repository: %s/%s", organization, repository)
 
-            return {
-                "id": response.id,
-                "name": response.name,
-                "namespace": response.namespace,
-                "is_public": response.is_public,
-            }
+            return self.get_repository(organization, repository)
 
         except Exception as e:
             log.error("Failed to create repository '%s/%s': %s", organization, repository, e)
