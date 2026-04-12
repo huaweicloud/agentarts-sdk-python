@@ -42,8 +42,8 @@ classifiers = [
 requires-python = ">=3.10"
 dependencies = [
     "huaweicloudsdkcore>=3.1.0",
-    "huaweicloudsdkmodelarts>=3.1.0",
     "huaweicloudsdkiam>=3.1.0",
+    "huaweicloudsdkswr>=3.1.0",
     "fastapi>=0.104.0",
     "starlette>=0.46.2",
     "uvicorn[standard]>=0.24.0",
@@ -106,11 +106,8 @@ monitoring = [
     "opentelemetry-instrumentation-fastapi>=0.41b0",
 ]
 huaweicloud = [
-    "huaweicloudsdkcore>=3.1.0",
-    "huaweicloudsdkmodelarts>=3.1.0",
-    "huaweicloudsdkiam>=3.1.0",
+    "huaweicloudsdkswr>=3.1.0",
     "huaweicloudsdkobs>=3.1.0",
-    "huaweicloudsdkdws>=3.1.0",
 ]
 docs = [
     "sphinx>=7.2.0",
