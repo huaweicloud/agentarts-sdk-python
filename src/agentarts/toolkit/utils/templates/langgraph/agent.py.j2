@@ -2,8 +2,30 @@
 {{ name }} - LangGraph Agent Implementation
 
 An agent built using LangGraph for stateful workflows, wrapped with AgentArts SDK runtime.
+
+Environment Variables:
+    OPENAI_API_KEY: Your OpenAI API key (required)
+        - Get it from: https://platform.openai.com/api-keys
+        - Set in .agentarts_config.yaml under runtime.environment_variables
+    OPENAI_BASE_URL: Custom API endpoint URL (optional)
+        - Use this to connect to OpenAI-compatible APIs (e.g., Azure OpenAI, local LLMs)
+        - Example: https://your-api-endpoint.com/v1
+        - Leave empty to use default OpenAI API
+
+Configuration:
+    Edit .agentarts_config.yaml to customize:
+    - runtime.environment_variables: Set OPENAI_API_KEY and optionally OPENAI_BASE_URL
+    - runtime.invoke_config: Change protocol or port
+    - runtime.network_config: Configure VPC if needed
+
+Usage:
+    1. Set your OPENAI_API_KEY in .agentarts_config.yaml
+    2. (Optional) Set OPENAI_BASE_URL for custom endpoints
+    3. Run: agentarts deploy
+    4. Invoke: agentarts invoke --input '{"query": "Hello"}'
 """
 
+import os
 from typing import Dict, Any, TypedDict, Annotated, Optional
 from operator import add
 
@@ -33,9 +55,21 @@ class LangGraphAgent:
         from langgraph.graph import StateGraph, END
         from langchain_core.messages import HumanMessage, AIMessage
 
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "OPENAI_API_KEY environment variable is not set. "
+                "Please set it in .agentarts_config.yaml under runtime.environment_variables"
+            )
+
+        base_url = os.environ.get("OPENAI_BASE_URL")
+
         try:
             from langchain_openai import ChatOpenAI
-            llm = ChatOpenAI(model=self.model_name)
+            llm_kwargs = {"model": self.model_name, "api_key": api_key}
+            if base_url:
+                llm_kwargs["base_url"] = base_url
+            llm = ChatOpenAI(**llm_kwargs)
         except ImportError:
             raise ImportError(
                 "langchain-openai is required. Install it with: pip install langchain-openai"
@@ -109,12 +143,6 @@ def _get_agent() -> LangGraphAgent:
     if _agent is None:
         _agent = LangGraphAgent()
     return _agent
-
-
-@app.ping
-def ping():
-    """Health check endpoint."""
-    return "healthy"
 
 
 @app.entrypoint
