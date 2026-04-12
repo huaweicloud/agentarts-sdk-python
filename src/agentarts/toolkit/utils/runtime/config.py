@@ -474,7 +474,7 @@ class AgentArtsConfig(BaseModel):
                 if "runtime" in ordered_agents[agent_name]:
                     ordered_agents[agent_name]["runtime"] = order_dict(
                         ordered_agents[agent_name]["runtime"],
-                        ["invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "environment_variables", "tags"]
+                        ["agent_id", "agent_gateway_id", "execution_agency_name", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "environment_variables", "tags"]
                     )
             ordered_data["agents"] = ordered_agents
         
