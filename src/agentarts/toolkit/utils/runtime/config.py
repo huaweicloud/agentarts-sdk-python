@@ -42,6 +42,10 @@ class BaseConfig(BaseModel):
         default=None,
         description="Path to dependency file (e.g., requirements.txt, pyproject.toml)",
     )
+    region: Optional[str] = Field(
+        default=None,
+        description="Huawei Cloud region",
+    )
     platform: str = Field(
         default="linux/amd64",
         description="Platform of the AgentArts runtime",
@@ -57,10 +61,6 @@ class BaseConfig(BaseModel):
     base_image: str = Field(
         default="python:3.10-slim",
         description="Base image of the AgentArts runtime",
-    )
-    region: Optional[str] = Field(
-        default=None,
-        description="Huawei Cloud region",
     )
 
     model_config = {
@@ -418,11 +418,44 @@ class AgentArtsConfig(BaseModel):
         return cls.model_validate(data)
 
     def to_yaml(self, path: str) -> None:
-        """Save configuration to YAML file."""
+        """Save configuration to YAML file with ordered fields."""
         import yaml
-
+        
+        def order_dict(d: Dict[str, Any], key_order: List[str]) -> Dict[str, Any]:
+            """Reorder dictionary keys with specified order."""
+            ordered = {}
+            for key in key_order:
+                if key in d:
+                    ordered[key] = d[key]
+            for key in d:
+                if key not in ordered:
+                    ordered[key] = d[key]
+            return ordered
+        
+        data = self.model_dump(mode="json")
+        
+        ordered_data = order_dict(data, ["default_agent", "agents"])
+        
+        if "agents" in ordered_data:
+            ordered_agents = {}
+            for agent_name, agent_config in ordered_data["agents"].items():
+                ordered_agents[agent_name] = order_dict(
+                    agent_config, ["base", "swr_config", "runtime"]
+                )
+                if "base" in ordered_agents[agent_name]:
+                    ordered_agents[agent_name]["base"] = order_dict(
+                        ordered_agents[agent_name]["base"],
+                        ["name", "entrypoint", "dependency_file", "region", "platform", "language", "base_image"]
+                    )
+                if "runtime" in ordered_agents[agent_name]:
+                    ordered_agents[agent_name]["runtime"] = order_dict(
+                        ordered_agents[agent_name]["runtime"],
+                        ["invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "environment_variables", "tags"]
+                    )
+            ordered_data["agents"] = ordered_agents
+        
         with open(path, "w", encoding="utf-8") as f:
-            yaml.dump(self.model_dump(mode="json"), f, default_flow_style=False)
+            yaml.dump(ordered_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "AgentArtsConfig":

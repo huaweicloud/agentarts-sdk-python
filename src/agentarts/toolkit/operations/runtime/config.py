@@ -18,6 +18,26 @@ console = Console()
 CONFIG_FILE_NAME = ".agentarts_config.yaml"
 
 
+def detect_dependency_file() -> str:
+    """
+    Detect dependency file in current directory.
+    
+    Priority: requirements.txt > pyproject.toml
+    
+    Returns:
+        Detected dependency file name or 'requirements.txt' as default
+    """
+    cwd = Path.cwd()
+    
+    if (cwd / "requirements.txt").exists():
+        return "requirements.txt"
+    
+    if (cwd / "pyproject.toml").exists():
+        return "pyproject.toml"
+    
+    return "requirements.txt"
+
+
 def get_config_file_path() -> Path:
     """Get the configuration file path in current directory."""
     return Path.cwd() / CONFIG_FILE_NAME
