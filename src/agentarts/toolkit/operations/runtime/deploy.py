@@ -70,7 +70,7 @@ def create_agentarts_runtime(
 
         endpoint = get_control_plane_endpoint(region)
 
-        client = RuntimeClient(control_endpoint=endpoint)
+        client = RuntimeClient(control_endpoint=endpoint, verify_ssl=False)
 
         artifact_source_config = {
             "url": swr_image,
