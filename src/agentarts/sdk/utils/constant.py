@@ -128,8 +128,8 @@ def get_control_plane_endpoint(region: str = None) -> str:
     """
     Get the AgentArts control plane endpoint URL.
 
-    If AGENTARTS_CONTROL_ENDPOINT is set and no region is provided,
-    returns that value directly. Otherwise, constructs the endpoint from the region.
+    If AGENTARTS_CONTROL_ENDPOINT is set, returns that value directly.
+    Otherwise, constructs the endpoint from the region.
 
     Args:
         region: Huawei Cloud region (e.g., "cn-southwest-2").
@@ -142,17 +142,15 @@ def get_control_plane_endpoint(region: str = None) -> str:
         >>> get_control_plane_endpoint("cn-southwest-2")
         "https://agentarts.cn-southwest-2.myhuaweicloud.com"
     """
-    if region:
-        return f"https://agentarts.{region}.myhuaweicloud.com"
     if AGENTARTS_CONTROL_ENDPOINT:
         return AGENTARTS_CONTROL_ENDPOINT
-    region = get_region()
+    region = region or get_region()
     return f"https://agentarts.{region}.myhuaweicloud.com"
 
 
 def get_runtime_data_plane_endpoint() -> str:
     """
-    Get the AgentArts runtime data plane endpoint URL.
+    Get the AgentArts data plane endpoint URL.
 
     Args:
         endpoint: Custom data plane endpoint URL. If not provided,
@@ -162,19 +160,6 @@ def get_runtime_data_plane_endpoint() -> str:
         The data plane endpoint URL, or empty string if not configured.
     """
     return AGENTARTS_RUNTIME_DATA_ENDPOINT
-
-
-def get_data_plane_endpoint() -> str:
-    """
-    Get the AgentArts data plane endpoint URL (alias for runtime).
-
-    This is an alias for get_runtime_data_plane_endpoint() for backward
-    compatibility.
-
-    Returns:
-        The data plane endpoint URL, or empty string if not configured.
-    """
-    return get_runtime_data_plane_endpoint()
 
 def get_code_interpreter_data_plane_endpoint() -> str:
     """
@@ -240,8 +225,8 @@ def get_iam_endpoint(region: str = None) -> str:
     """
     Get the Huawei Cloud IAM (Identity and Access Management) endpoint URL.
 
-    If HUAWEICLOUD_SDK_IAM_ENDPOINT is set and no region is provided,
-    returns that value directly. Otherwise, constructs the endpoint from the region.
+    If HUAWEICLOUD_SDK_IAM_ENDPOINT is set, returns that value directly.
+    Otherwise, constructs the endpoint from the region.
 
     Args:
         region: Huawei Cloud region (e.g., "cn-southwest-2").
@@ -254,19 +239,17 @@ def get_iam_endpoint(region: str = None) -> str:
         >>> get_iam_endpoint("cn-southwest-2")
         "https://iam.cn-southwest-2.myhuaweicloud.com"
     """
-    if region:
-        return f"https://iam.{region}.myhuaweicloud.com"
     if HUAWEICLOUD_SDK_IAM_ENDPOINT:
         return HUAWEICLOUD_SDK_IAM_ENDPOINT
-    region = get_region()
+    region = region or get_region()
     return f"https://iam.{region}.myhuaweicloud.com"
 
 def get_swr_endpoint(region: str = None) -> str:
     """
     Get the Huawei Cloud SWR (Software Repository for Container) endpoint URL.
 
-    If HUAWEICLOUD_SDK_SWR_ENDPOINT is set and no region is provided,
-    returns that value directly. Otherwise, constructs the endpoint from the region.
+    If HUAWEICLOUD_SDK_SWR_ENDPOINT is set, returns that value directly.
+    Otherwise, constructs the endpoint from the region.
 
     Args:
         region: Huawei Cloud region (e.g., "cn-southwest-2").
@@ -279,34 +262,30 @@ def get_swr_endpoint(region: str = None) -> str:
         >>> get_swr_endpoint("cn-southwest-2")
         "https://swr-api.cn-southwest-2.myhuaweicloud.com"
     """
-    if region:
-        return f"https://swr-api.{region}.myhuaweicloud.com"
     if HUAWEICLOUD_SDK_SWR_ENDPOINT:
         return HUAWEICLOUD_SDK_SWR_ENDPOINT
-    region = get_region()
+    region = region or get_region()
     return f"https://swr-api.{region}.myhuaweicloud.com"
 
 def get_identity_endpoint(region: str = None) -> str:
     """
-    Get the Huawei Cloud Agent Identity endpoint URL.
+    Get the Huawei Cloud SWR (Software Repository for Container) endpoint URL.
 
-    If HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT is set and no region is provided,
-    returns that value directly. Otherwise, constructs the endpoint from the region.
+    If HUAWEICLOUD_SDK_SWR_ENDPOINT is set, returns that value directly.
+    Otherwise, constructs the endpoint from the region.
 
     Args:
         region: Huawei Cloud region (e.g., "cn-southwest-2").
                  If not provided, auto-detected from environment.
 
     Returns:
-        The Agent Identity endpoint URL.
+        The SWR endpoint URL.
 
     Example:
-        >>> get_identity_endpoint("cn-southwest-2")
+        >>> get_swr_endpoint("cn-southwest-2")
         "https://agent-identity.cn-southwest-2.myhuaweicloud.com"
     """
-    if region:
-        return f"https://agent-identity.{region}.myhuaweicloud.com"
     if HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT:
         return HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT
-    region = get_region()
+    region = region or get_region()
     return f"https://agent-identity.{region}.myhuaweicloud.com"

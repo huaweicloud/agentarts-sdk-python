@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 from rich.console import Console
 from rich.panel import Panel
 
+from agentarts.sdk.utils.constant import get_region
 from agentarts.toolkit.operations.runtime.config import (
     get_agent,
     get_config_file_path,
@@ -186,7 +187,7 @@ def deploy_project(
         return False
 
     actual_agent_name = agent_config.base.name or agent_name or "agent"
-    region = agent_config.base.region or "cn-southwest-2"
+    region = agent_config.base.region or get_region()
     service_port = port or (agent_config.runtime.invoke_config.port if agent_config.runtime.invoke_config else 8080)
 
     console.print()
