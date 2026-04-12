@@ -128,6 +128,8 @@ def create_config_file(
     actual_swr_org = swr_org or "agentarts-org"
     actual_swr_repo = swr_repo or name
 
+    artifact_url = f"swr.{actual_region}.myhuaweicloud.com/{actual_swr_org}/{actual_swr_repo}:latest"
+
     env_vars = get_template_env_vars(template)
 
     env_vars_yaml = ""
@@ -188,7 +190,7 @@ agents:
           enabled: false
 
       artifact_source:
-        url: null
+        url: {artifact_url}
         commands: []
 
       environment_variables:{env_vars_yaml}
