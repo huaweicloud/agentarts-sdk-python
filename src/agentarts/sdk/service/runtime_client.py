@@ -46,12 +46,13 @@ from agentarts.sdk.utils.constant import (
 log = logging.getLogger(__name__)
 
 
-class RuntimeClient(BaseHTTPClient):
+class RuntimeClient:
     """
     Client for the AgentArts runtime service.
 
-    Wraps :class:`BaseHTTPClient` and provides typed methods for every
-    control-plane and data-plane API exposed by the AgentArts platform.
+    Provides typed methods for every control-plane and data-plane API
+    exposed by the AgentArts platform. Uses separate HTTP clients for
+    control and data planes to ensure thread-safety in concurrent scenarios.
 
     Args:
         control_endpoint: Override the control plane base URL.
@@ -59,7 +60,7 @@ class RuntimeClient(BaseHTTPClient):
             via :func:`~agentarts.sdk.utils.constant.get_control_plane_endpoint`.
         data_endpoint: Override the data plane base URL.
             If ``None``, the URL is derived from environment variables
-            via :func:`~agentarts.sdk.utils.constant.get_data_plane_endpoint`.
+            via :func:`~agentarts.sdk.utils.constant.get_runtime_data_plane_endpoint`.
         access_token: Bearer token for API authentication.
             Can also be set later via :meth:`set_auth_token`.
         timeout: Default request timeout in seconds.
@@ -76,9 +77,18 @@ class RuntimeClient(BaseHTTPClient):
     ) -> None:
         self._control_base = control_endpoint or get_control_plane_endpoint()
         self._data_base = data_endpoint or get_runtime_data_plane_endpoint()
+        self._timeout = timeout
+        self._verify_ssl = verify_ssl
+        self._access_token = access_token
 
-        super().__init__(RequestConfig(
+        self._control_client = BaseHTTPClient(RequestConfig(
             base_url=self._control_base,
+            timeout=timeout,
+            verify_ssl=verify_ssl,
+        ))
+
+        self._data_client = BaseHTTPClient(RequestConfig(
+            base_url=self._data_base,
             timeout=timeout,
             verify_ssl=verify_ssl,
         ))
@@ -86,23 +96,19 @@ class RuntimeClient(BaseHTTPClient):
         if access_token:
             self.set_auth_token(access_token)
 
+    def set_auth_token(self, token: str) -> None:
+        """Set the Bearer token for authentication."""
+        self._access_token = token
+        self._control_client.set_auth_token(token)
+        self._data_client.set_auth_token(token)
+
     def _control(self, method: str, path: str, **kwargs: Any) -> RequestResult:
         """Send a request to the control plane."""
-        old_base = self._config.base_url
-        self._config.base_url = self._control_base
-        try:
-            return self._request(method, path, **kwargs)
-        finally:
-            self._config.base_url = old_base
+        return self._control_client._request(method, path, **kwargs)
 
     def _data(self, method: str, path: str, **kwargs: Any) -> RequestResult:
         """Send a request to the data plane."""
-        old_base = self._config.base_url
-        self._config.base_url = self._data_base
-        try:
-            return self._request(method, path, **kwargs)
-        finally:
-            self._config.base_url = old_base
+        return self._data_client._request(method, path, **kwargs)
 
     @staticmethod
     def _check(result: RequestResult, operation: str) -> Dict[str, Any]:
