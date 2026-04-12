@@ -1,0 +1,49 @@
+"""
+{{ name }} - Basic Agent Implementation
+
+A simple agent that processes user queries using AgentArts SDK runtime.
+"""
+
+from typing import Dict, Any
+
+from agentarts.sdk.runtime import AgentArtsRuntimeApp, RequestContext
+
+app = AgentArtsRuntimeApp()
+
+
+@app.ping
+def ping():
+    """Health check endpoint."""
+    return "healthy"
+
+
+@app.entrypoint
+def handler(payload: Dict[str, Any], context: RequestContext = None) -> Dict[str, Any]:
+    """
+    Process a query and return a response.
+
+    Args:
+        payload: User input payload containing query
+        context: Request context with session info (optional)
+
+    Returns:
+        Response dictionary
+    """
+    query = payload.get("query", payload.get("input", ""))
+    
+    # TODO: Implement your agent logic here
+    
+    return {
+        "response": f"Processed: {query}",
+        "status": "success",
+        "agent": "{{ name }}",
+    }
+
+
+def create_agent():
+    """Create agent instance for runtime."""
+    return app
+
+
+if __name__ == "__main__":
+    app.run()

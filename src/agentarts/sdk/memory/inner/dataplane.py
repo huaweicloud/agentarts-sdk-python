@@ -1,17 +1,18 @@
 """
 Agent Memory SDK - Data Plane
-数据面：处理消息、记忆等操作
 
-根据华为云后端 API 定义的方法实现：
-- create_memory_session: 创建 Session
-- add_messages: 添加消息
-- get_last_k_messages: 获取最近K条消息
-- get_message: 获取单条消息
-- list_messages: 列出消息
-- search_memories: 搜索记忆
-- list_memories: 列出记忆记录
-- get_memory: 获取记忆记录
-- delete_memory: 删除记忆记录
+Data plane: handles messages, memories and other operations.
+
+Based on Huawei Cloud backend API definitions:
+- create_memory_session: Create Session
+- add_messages: Add messages
+- get_last_k_messages: Get last K messages
+- get_message: Get single message
+- list_messages: List messages
+- search_memories: Search memories
+- list_memories: List memory records
+- get_memory: Get memory record
+- delete_memory: Delete memory record
 """
 
 import logging
@@ -34,30 +35,30 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Message:
-    """消息"""
-    role: str  # "user" 或 "assistant"
+    """Message data class."""
+    role: str  # "user" or "assistant"
     content: str
 
 
 class _DataPlane:
     """
-    数据面API - 根据华为云后端 API 实现
+    Data Plane API - Based on Huawei Cloud backend API implementation.
     """
 
-    def __init__(self, region_name: Optional[str] = None):
+    def __init__(self, region_name: Optional[str] = None, api_key: Optional[str] = None):
         """
-        初始化数据面
+        Initialize data plane.
 
         Args:
-            region_name: 华为云区域名称（可选）
+            region_name: Huawei Cloud region name (optional)
+            api_key: API Key for data plane authentication (optional, falls back to environment variable)
         """
         self.client = MemoryHttpService(
             region_name=region_name,
-            endpoint_type="data"
+            endpoint_type="data",
+            api_key=api_key
         )
         logger.info("DataPlane initialized")
-
-    # ==================== 数据面方法 ====================
 
     def create_memory_session(
             self,
@@ -65,14 +66,14 @@ class _DataPlane:
             request: SessionCreateRequest
     ) -> SessionInfo:
         """
-        创建 Memory Session
+        Create Memory Session.
 
         Args:
             space_id: Space ID
-            session_config: Session 配置（可选），可包含 actor_id, assistant_id, meta 等
+            request: Session configuration (optional), can include actor_id, assistant_id, meta, etc.
 
         Returns:
-            Session 信息，包含 id 字段
+            Session info, including id field
         """
         logger.info(f"Creating memory session in space: {space_id}")
 
@@ -91,27 +92,26 @@ class _DataPlane:
             is_force_extract: bool = False
     ) -> MessageBatchResponse:
         """
-        添加消息
+        Add messages.
 
         Args:
-            space_id: Space ID（必填）
+            space_id: Space ID (required)
             session_id: Session ID
-            messages: 消息列表（已经是OpenAPI格式字典）
-            timestamp: 客户端调用API时间（毫秒时间戳，可选）
-            idempotency_key: 批量操作的幂等键（防重试重复写）
-            is_force_extract: 是否强制触发记忆抽取
+            messages: Message list (already in OpenAPI format dictionary)
+            timestamp: Client API call time (milliseconds timestamp, optional)
+            idempotency_key: Idempotency key for batch operations (prevents retry duplicates)
+            is_force_extract: Whether to force trigger memory extraction
 
         Returns:
-            MessageBatchResponse: 添加成功的消息列表
+            MessageBatchResponse: List of successfully added messages
         """
         if not space_id:
             raise ValueError("space_id is required for data plane operations")
 
         logger.info(f"Adding {len(messages)} messages to session: {session_id}")
 
-        # 构建请求字典，使用OpenAPI格式
         request_data = {
-            "messages": messages,  # messages已经是OpenAPI格式的字典列表
+            "messages": messages,
             "is_force_extract": is_force_extract
         }
         if timestamp is not None:
@@ -130,29 +130,26 @@ class _DataPlane:
             space_id: str
     ) -> List[MessageInfo]:
         """
-        获取最近 K 条消息
+        Get last K messages.
 
         Args:
             session_id: Session ID
-            k: 获取 K 条消息
-            space_id: Space ID（必填）
+            k: Number of messages to retrieve
+            space_id: Space ID (required)
 
         Returns:
-            List[MessageInfo]: 消息列表
+            List[MessageInfo]: Message list
         """
         if not space_id:
             raise ValueError("space_id is required")
 
         logger.info(f"Getting last {k} messages from session: {session_id}")
 
-        # 先获取总数
         result = self.client.list_messages(space_id, session_id, limit=1, offset=0)
         total = result.get('total', 0)
 
-        # 计算 offset
         offset = max(0, total - k)
 
-        # 获取消息
         result = self.client.list_messages(space_id, session_id, limit=k, offset=offset)
         return [MessageInfo.from_dict(msg) for msg in result.get('items', [])]
 
@@ -163,15 +160,15 @@ class _DataPlane:
             session_id: str
     ) -> Dict[str, Any]:
         """
-        获取单条消息
+        Get single message.
 
         Args:
-            message_id: 消息 ID
+            message_id: Message ID
             space_id: Space ID
             session_id: Session ID
 
         Returns:
-            消息详情
+            Message details
         """
         logger.info(f"Getting message: {message_id}")
         return MessageInfo.from_dict(self.client.get_message(space_id, session_id, message_id))
@@ -184,16 +181,16 @@ class _DataPlane:
             offset: int = 0
     ) -> MessageListResponse:
         """
-        列出消息
+        List messages.
 
         Args:
             space_id: Space ID
-            session_id: Session ID（可选，用于获取特定会话的消息）
-            limit: 每页数量，默认10
-            offset: 偏移量，默认0
+            session_id: Session ID (optional, for getting messages from a specific session)
+            limit: Number per page, default 10
+            offset: Offset, default 0
 
         Returns:
-            MessageListResponse: 消息列表响应，包含items和total等信息
+            MessageListResponse: Message list response, including items and total
         """
         logger.info(f"Listing messages in space: {space_id}, session: {session_id}")
         result = self.client.list_messages(space_id, session_id, limit=limit, offset=offset)
@@ -205,14 +202,14 @@ class _DataPlane:
             filters: MemorySearchFilter = None
     ) -> Dict[str, Any]:
         """
-        搜索记忆
+        Search memories.
 
         Args:
             space_id: Space ID
-            filters: 过滤条件（可选）
+            filters: Filter conditions (optional)
 
         Returns:
-            搜索结果
+            Search results
         """
         logger.info(f"Searching memories in space: {space_id}")
 
@@ -228,16 +225,16 @@ class _DataPlane:
             filters: MemoryListFilter = None
     ) -> MemoryListResponse:
         """
-        列出记忆记录
+        List memory records.
 
         Args:
             space_id: Space ID
-            limit: 每页返回数量，默认10
-            offset: 偏移量，默认0
-            filters: 过滤条件
+            limit: Number per page, default 10
+            offset: Offset, default 0
+            filters: Filter conditions
 
         Returns:
-            MemoryListResponse: 记忆记录列表响应，包含items和total等信息
+            MemoryListResponse: Memory record list response, including items and total
         """
         logger.info(f"Listing memories in space: {space_id}")
         filters_dict = filters.to_dict() if filters else {}
@@ -251,14 +248,14 @@ class _DataPlane:
 
     def get_memory(self, space_id: str, memory_id: str) -> MemoryInfo:
         """
-        获取记忆记录
+        Get memory record.
 
         Args:
             space_id: Space ID
-            memory_id: 记忆 ID
+            memory_id: Memory ID
 
         Returns:
-            MemoryInfo: 记录详情
+            MemoryInfo: Record details
         """
         logger.info(f"Getting memory: {memory_id}")
         result = self.client.get_memory(space_id, memory_id)
@@ -266,11 +263,11 @@ class _DataPlane:
 
     def delete_memory(self, space_id: str, memory_id: str) -> None:
         """
-        删除记忆记录
+        Delete memory record.
 
         Args:
             space_id: Space ID
-            memory_id: 记忆 ID
+            memory_id: Memory ID
         """
         logger.info(f"Deleting memory: {memory_id}")
         self.client.delete_memory(space_id, memory_id)

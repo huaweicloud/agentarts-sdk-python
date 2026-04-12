@@ -4,21 +4,78 @@ import json
 from typing import Annotated, Optional
 
 import typer
+from rich.console import Console
 
 from agentarts.toolkit.operations.runtime.invoke import (
     InvokeMode,
     invoke_agent,
-    ping_agent,
+    status_agent,
 )
 
-console = typer.Typer(help="Invoke agent locally or on cloud")
+rich_console = Console()
 
 
-@console.command(name="invoke")
+def status(
+    agent: Annotated[
+        Optional[str],
+        typer.Option("--agent", "-a", help="Agent name (uses default if not specified for cloud mode)"),
+    ] = None,
+    mode: Annotated[
+        str,
+        typer.Option(
+            "--mode",
+            "-m",
+            help="Status mode: 'local' for Docker container, 'cloud' for AgentArts runtime (default)",
+        ),
+    ] = "cloud",
+    region: Annotated[
+        Optional[str],
+        typer.Option("--region", "-r", help="Huawei Cloud region (for cloud mode)"),
+    ] = None,
+    port: Annotated[
+        Optional[int],
+        typer.Option("--port", "-p", help="Local port (for local mode, default: 8080)"),
+    ] = None,
+    bearer_token: Annotated[
+        Optional[str],
+        typer.Option("--token", "-t", help="Bearer token for authentication"),
+    ] = None,
+):
+    """
+    Check agent health status.
+
+    Two status modes are supported:
+    - cloud (default): Check AgentArts runtime on Huawei Cloud
+    - local: Check local Docker container
+
+    Examples:
+        agentarts status
+        agentarts status --agent my-agent
+        agentarts status --mode local --port 8080
+    """
+    status_mode = InvokeMode.CLOUD
+    if mode.lower() == "local":
+        status_mode = InvokeMode.LOCAL
+    elif mode.lower() != "cloud":
+        rich_console.print(f"[red]Error: Invalid mode '{mode}'. Use 'local' or 'cloud'.[/red]")
+        raise typer.Exit(1)
+
+    success = status_agent(
+        agent_name=agent,
+        mode=status_mode,
+        region=region,
+        port=port,
+        bearer_token=bearer_token,
+    )
+
+    if not success:
+        raise typer.Exit(1)
+
+
 def invoke(
     payload: Annotated[
         str,
-        typer.Argument(help="JSON payload to send to the agent"),
+        typer.Argument(help="JSON payload to send to the agent (e.g., '{\"input\": \"hello\"}')"),
     ],
     agent: Annotated[
         Optional[str],
@@ -54,7 +111,7 @@ def invoke(
     ] = None,
     timeout: Annotated[
         int,
-        typer.Option("--timeout", help="Request timeout in seconds"),
+        typer.Option("--timeout", help="Request timeout in seconds (default: 900)"),
     ] = 900,
 ):
     """
@@ -72,10 +129,6 @@ def invoke(
         agentarts invoke '{"input": "hello"}' --mode local --port 8080
         agentarts invoke '{"query": "test"}' --session my-session-123
     """
-    from rich.console import Console as RichConsole
-
-    rich_console = RichConsole()
-
     invoke_mode = InvokeMode.CLOUD
     if mode.lower() == "local":
         invoke_mode = InvokeMode.LOCAL
@@ -93,68 +146,6 @@ def invoke(
         session_id=session_id,
         bearer_token=bearer_token,
         timeout=timeout,
-    )
-
-    if not success:
-        raise typer.Exit(1)
-
-
-@console.command(name="ping")
-def ping(
-    agent: Annotated[
-        Optional[str],
-        typer.Option("--agent", "-a", help="Agent name (uses default if not specified for cloud mode)"),
-    ] = None,
-    mode: Annotated[
-        str,
-        typer.Option(
-            "--mode",
-            "-m",
-            help="Ping mode: 'local' for Docker container, 'cloud' for AgentArts runtime (default)",
-        ),
-    ] = "cloud",
-    region: Annotated[
-        Optional[str],
-        typer.Option("--region", "-r", help="Huawei Cloud region (for cloud mode)"),
-    ] = None,
-    port: Annotated[
-        Optional[int],
-        typer.Option("--port", "-p", help="Local port (for local mode, default: 8080)"),
-    ] = None,
-    bearer_token: Annotated[
-        Optional[str],
-        typer.Option("--token", "-t", help="Bearer token for authentication"),
-    ] = None,
-):
-    """
-    Ping agent to check health status.
-
-    Two ping modes are supported:
-    - cloud (default): Ping AgentArts runtime on Huawei Cloud
-    - local: Ping local Docker container
-
-    Examples:
-        agentarts invoke ping
-        agentarts invoke ping --agent my-agent
-        agentarts invoke ping --mode local --port 8080
-    """
-    from rich.console import Console as RichConsole
-
-    rich_console = RichConsole()
-
-    ping_mode = InvokeMode.CLOUD
-    if mode.lower() == "local":
-        ping_mode = InvokeMode.LOCAL
-    elif mode.lower() != "cloud":
-        rich_console.print(f"[red]Error: Invalid mode '{mode}'. Use 'local' or 'cloud'.[/red]")
-        raise typer.Exit(1)
-
-    success = ping_agent(
-        agent_name=agent,
-        mode=ping_mode,
-        region=region,
-        port=port,
-        bearer_token=bearer_token,
     )
 
     if not success:

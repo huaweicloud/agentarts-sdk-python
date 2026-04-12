@@ -43,19 +43,35 @@ requires-python = ">=3.10"
 dependencies = [
 #    "huaweicloudsdkagentidentity",
     "fastapi>=0.104.0",
+    "starlette>=0.46.2",
     "uvicorn[standard]>=0.24.0",
-    "pydantic>=2.0.0",
-    "pydantic-settings>=2.0.0",
+    "pydantic>=2.10.0,<2.13.0",
+    "pydantic-settings>=2.6.0,<2.9.0",
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0",
     "requests>=2.31.0",
     "tenacity>=8.2.0",
-    "click>=8.1.0",
     "typer>=0.9.0",
     "rich>=13.0.0",
     "pyjwt>=2.8.0",
     "cryptography>=41.0.0",
     "docker>=7.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "flake8>=6.1.0",
+    "mypy>=1.5.0",
+    "pre-commit>=3.5.0",
+    "types-PyYAML>=6.0.0",
+    "types-redis>=4.6.0",
+    "ruff>=0.1.0",
 ]
 
 [project.optional-dependencies]
@@ -91,20 +107,6 @@ huaweicloud = [
     "huaweicloudsdkcore>=3.1.0",
     "huaweicloudsdkmodelarts>=3.1.0",
     "huaweicloudsdkiam>=3.1.0",
-]
-dev = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.1.0",
-    "pytest-mock>=3.11.0",
-    "black>=23.0.0",
-    "isort>=5.12.0",
-    "flake8>=6.1.0",
-    "mypy>=1.5.0",
-    "pre-commit>=3.5.0",
-    "types-PyYAML>=6.0.0",
-    "types-redis>=4.6.0",
-    "ruff>=0.1.0",
 ]
 docs = [
     "sphinx>=7.2.0",
