@@ -80,9 +80,12 @@ class SWRClient:
 
         try:
             import logging
+            import warnings
             
             logging.getLogger("huaweicloudsdkcore").setLevel(logging.ERROR)
             logging.getLogger("urllib3").setLevel(logging.ERROR)
+            warnings.filterwarnings("ignore", message="Unverified HTTPS request")
+            warnings.filterwarnings("ignore", category=Warning, module="urllib3")
             
             from huaweicloudsdkcore.http.http_config import HttpConfig
             from huaweicloudsdkswr.v2 import SwrClient
@@ -180,6 +183,10 @@ class SWRClient:
             return self.get_organization(organization)
 
         except Exception as e:
+            error_str = str(e).lower()
+            if "already exist" in error_str or "已存在" in error_str or "duplicate" in error_str:
+                log.info("Organization '%s' already exists", organization)
+                return self.get_organization(organization)
             log.error("Failed to create organization '%s': %s", organization, e)
             return None
 
@@ -276,6 +283,10 @@ class SWRClient:
             return self.get_repository(organization, repository)
 
         except Exception as e:
+            error_str = str(e).lower()
+            if "already exist" in error_str or "已存在" in error_str or "duplicate" in error_str:
+                log.info("Repository '%s/%s' already exists", organization, repository)
+                return self.get_repository(organization, repository)
             log.error("Failed to create repository '%s/%s': %s", organization, repository, e)
             return None
 
