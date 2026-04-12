@@ -134,6 +134,10 @@ class VpcConfig(BaseModel):
         "extra": "allow",
     }
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary."""
+        return self.model_dump(mode="json", exclude_none=True)
+
 
 class NetworkConfig(BaseModel):
     """Network endpoint configuration."""
@@ -151,6 +155,10 @@ class NetworkConfig(BaseModel):
         "extra": "allow",
     }
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary."""
+        return self.model_dump(mode="json", exclude_none=True)
+
 
 class APIKeyPair(BaseModel):
     """API key pair configuration."""
@@ -167,6 +175,10 @@ class APIKeyPair(BaseModel):
     model_config = {
         "extra": "allow",
     }
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary."""
+        return self.model_dump(mode="json", exclude_none=True)
 
 
 class APIKeyAuthConfig(BaseModel):
@@ -240,6 +252,10 @@ class InboundIdentityConfig(BaseModel):
         "use_enum_values": True,
         "extra": "allow",
     }
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary."""
+        return self.model_dump(mode="json", exclude_none=True)
 
 
 class ArtifactSourceConfig(BaseModel):
@@ -333,6 +349,10 @@ class ObservabilityConfig(BaseModel):
     model_config = {
         "extra": "allow",
     }
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary."""
+        return self.model_dump(mode="json", exclude_none=True)
 
 
 class AgentArtsRuntimeConfig(BaseModel):
