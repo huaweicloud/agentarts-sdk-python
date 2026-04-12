@@ -2,11 +2,25 @@
 {{ name }} - Google ADK Agent Implementation
 
 An agent built using Google ADK framework, wrapped with AgentArts SDK runtime.
+
+Environment Variables:
+    GOOGLE_API_KEY: Your Google API key for Gemini access (required)
+        - Get it from: https://aistudio.google.com/app/apikey
+        - Set in .agentarts_config.yaml under runtime.environment_variables
 """
 
+import os
 from typing import Dict, Any, Optional
 
 from agentarts.sdk.runtime import AgentArtsRuntimeApp, RequestContext
+
+api_key = os.environ.get("GOOGLE_API_KEY")
+if not api_key:
+    raise ValueError(
+        "GOOGLE_API_KEY environment variable is not set. "
+        "Please set it in .agentarts_config.yaml under runtime.environment_variables, "
+        "or export it directly: export GOOGLE_API_KEY=your_api_key"
+    )
 
 app = AgentArtsRuntimeApp()
 
@@ -119,12 +133,6 @@ def _get_agent() -> GoogleADKAgent:
     if _agent is None:
         _agent = GoogleADKAgent()
     return _agent
-
-
-@app.ping
-def ping():
-    """Health check endpoint."""
-    return "healthy"
 
 
 @app.entrypoint

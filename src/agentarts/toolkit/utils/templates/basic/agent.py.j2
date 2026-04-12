@@ -2,6 +2,12 @@
 {{ name }} - Basic Agent Implementation
 
 A simple agent that processes user queries using AgentArts SDK runtime.
+
+Environment Variables:
+    None required for basic template.
+
+Configuration:
+    Edit .agentarts_config.yaml to customize runtime settings.
 """
 
 from typing import Dict, Any
@@ -9,12 +15,6 @@ from typing import Dict, Any
 from agentarts.sdk.runtime import AgentArtsRuntimeApp, RequestContext
 
 app = AgentArtsRuntimeApp()
-
-
-@app.ping
-def ping():
-    """Health check endpoint."""
-    return "healthy"
 
 
 @app.entrypoint
