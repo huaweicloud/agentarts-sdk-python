@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Any, Dict, Optional
 
 from rich.console import Console
+from rich.panel import Panel
 
 from agentarts.toolkit.operations.runtime.config import (
     get_agent,
@@ -187,7 +188,7 @@ def deploy_project(
     actual_agent_name = agent_config.base.name or agent_name or "agent"
 
     console.print()
-    echo_info("Deploy Configuration", f"[cyan]Agent:[/cyan] [white]{actual_agent_name}[/white]\n[cyan]Mode:[/cyan] [yellow]{mode.value}[/yellow]")
+    echo_info("Deploy Configuration", f"[cyan]Agent:[/cyan] [white]{actual_agent_name}[/white]\n[cyan]Mode:[/cyan] [yellow]{mode.value}[/yellow]\n[cyan]Region:[/cyan] [yellow]{region}[/yellow]")
 
     if not check_docker_available():
         echo_error("Docker is not available or not running")
@@ -199,21 +200,29 @@ def deploy_project(
         console.print("[dim]Run 'agentarts config' to generate Dockerfile first[/dim]")
         return False
 
-    region = agent_config.base.region or "cn-north-4"
+    region = agent_config.base.region or "cn-southwest-2"
     service_port = port or (agent_config.runtime.invoke_config.port if agent_config.runtime.invoke_config else 8080)
 
     local_image_name = f"{actual_agent_name}"
     local_full_image = f"{local_image_name}:{image_tag}"
 
     console.print()
-    echo_step(1, "Building Docker image")
+    console.print(Panel(
+        f"[bold]Step 1/6[/bold] Building Docker image\n[dim]Image: {local_full_image}[/dim]",
+        title="[bold cyan]Deploy Progress[/bold cyan]",
+        border_style="cyan",
+    ))
     if not build_docker_image(local_image_name, image_tag):
         return False
 
     if mode == DeployMode.LOCAL:
         local_service_port = local_port or service_port
         console.print()
-        echo_step(2, "Starting local container")
+        console.print(Panel(
+            f"[bold]Step 2/2[/bold] Starting local container\n[dim]Port: {local_service_port}[/dim]",
+            title="[bold cyan]Deploy Progress[/bold cyan]",
+            border_style="cyan",
+        ))
         return run_container(
             image_name=local_image_name,
             image_tag=image_tag,
@@ -230,13 +239,14 @@ def deploy_project(
         return False
 
     console.print()
-    echo_step(2, f"Deploying to SWR: [cyan]{final_swr_org}/{final_swr_repo}[/cyan]")
+    console.print(Panel(
+        f"[bold]Step 2/6[/bold] Setting up SWR resources\n[dim]Organization: {final_swr_org}\n[dim]Repository: {final_swr_repo}[/dim]",
+        title="[bold cyan]Deploy Progress[/bold cyan]",
+        border_style="cyan",
+    ))
 
     try:
         swr_client = SWRClient(region=region)
-
-        console.print()
-        echo_step(3, "Setting up SWR resources")
 
         if agent_config.swr_config.organization_auto_create:
             org_result = swr_client.create_or_get_organization(final_swr_org)
@@ -267,7 +277,11 @@ def deploy_project(
             echo_success(f"Using existing repository [cyan]{final_swr_org}/{final_swr_repo}[/cyan]")
 
         console.print()
-        echo_step(4, "Getting SWR credentials")
+        console.print(Panel(
+            f"[bold]Step 3/6[/bold] Getting SWR credentials\n[dim]Registry: swr.{region}.myhuaweicloud.com[/dim]",
+            title="[bold cyan]Deploy Progress[/bold cyan]",
+            border_style="cyan",
+        ))
         login_server, username, password = swr_client.create_swr_secret()
         if not username or not password:
             echo_error("Failed to get SWR credentials")
@@ -280,7 +294,11 @@ def deploy_project(
         swr_image = swr_client.get_full_image_name(final_swr_org, final_swr_repo, image_tag)
 
         console.print()
-        echo_step(5, "Tagging and pushing image")
+        console.print(Panel(
+            f"[bold]Step 4/6[/bold] Tagging and pushing image\n[dim]Source: {local_full_image}\n[dim]Target: {swr_image}[/dim]",
+            title="[bold cyan]Deploy Progress[/bold cyan]",
+            border_style="cyan",
+        ))
         if not tag_image(local_full_image, swr_image):
             echo_error("Failed to tag image")
             return False
@@ -299,6 +317,12 @@ def deploy_project(
         echo_error(f"SWR deployment failed: {e}")
         return False
 
+    console.print()
+    console.print(Panel(
+        f"[bold]Step 5/6[/bold] Creating AgentArts runtime\n[dim]Agent: {actual_agent_name}\n[dim]Image: {swr_image}[/dim]",
+        title="[bold cyan]Deploy Progress[/bold cyan]",
+        border_style="cyan",
+    ))
     runtime_id = create_agentarts_runtime(
         agent_name=actual_agent_name,
         swr_image=swr_image,
@@ -312,7 +336,11 @@ def deploy_project(
         return False
 
     console.print()
-    echo_success("Deployment successful!")
+    console.print(Panel(
+        f"[bold]Step 6/6[/bold] Deployment complete!",
+        title="[bold green]Deploy Progress[/bold green]",
+        border_style="green",
+    ))
     console.print()
     summary = (
         f"[cyan]Agent Name:[/cyan] [white]{actual_agent_name}[/white]\n"
@@ -321,6 +349,7 @@ def deploy_project(
         f"[cyan]Region:[/cyan] [yellow]{region}[/yellow]\n"
         f"\n[cyan]Dashboard:[/cyan] [link]https://console.huaweicloud.com/agentarts[/link]"
     )
+    echo_success("Deployment successful!")
     console.print()
 
     return True
