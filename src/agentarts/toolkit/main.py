@@ -11,6 +11,7 @@ from typing import Annotated
 
 import typer
 from rich.console import Console
+from rich.logging import RichHandler
 
 from agentarts.toolkit.cli.runtime import init, dev, deploy
 from agentarts.toolkit.cli.runtime.config import config_app
@@ -29,16 +30,12 @@ def setup_logging(verbose: bool = False):
     Args:
         verbose: If True, set log level to DEBUG; otherwise INFO.
     """
-    log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    date_format = "%Y-%m-%d %H:%M:%S"
+    log_format = "%(message)s"
     
     logging.basicConfig(
         level=logging.DEBUG if verbose else logging.INFO,
         format=log_format,
-        datefmt=date_format,
-        handlers=[
-            logging.StreamHandler(),
-        ],
+        handlers=[RichHandler(show_time=False, show_path=False, show_level=False, console=console)],
     )
     
     logging.getLogger("urllib3").setLevel(logging.WARNING)
