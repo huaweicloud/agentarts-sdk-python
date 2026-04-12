@@ -8,7 +8,7 @@ from typing import Any, Dict, Iterator, Optional, Union
 from rich.console import Console
 from rich.panel import Panel
 
-from agentarts.sdk.utils.constant import get_region
+from agentarts.sdk.utils.constant import get_region, get_runtime_data_plane_endpoint, get_control_plane_endpoint
 from agentarts.toolkit.operations.runtime.config import (
     get_agent,
     get_config_file_path,
@@ -92,12 +92,28 @@ def invoke_agent(
             actual_region = region or get_region()
             actual_session_id = session_id or str(uuid.uuid4())
 
+            data_endpoint = get_runtime_data_plane_endpoint()
+            access_endpoint = None
+
+            if not data_endpoint:
+                control_endpoint = get_control_plane_endpoint(actual_region)
+                control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=False)
+                agent_info = control_client.find_agent_by_name(agent_name)
+                if agent_info:
+                    version_detail = agent_info.get("version_detail") or {}
+                    invoke_config_resp = version_detail.get("invoke_config") or {}
+                    access_endpoint = invoke_config_resp.get("access_endpoint")
+                    if access_endpoint:
+                        data_endpoint = access_endpoint
+
+            if not data_endpoint:
+                echo_error("No data plane endpoint configured and could not get access_endpoint from agent")
+                console.print("[dim]Set AGENTARTS_RUNTIME_DATA_ENDPOINT environment variable or ensure agent is deployed[/dim]")
+                return False
+
             console.print()
-            echo_info("Invoke Request", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]")
+            echo_info("Invoke Request", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]")
 
-            from agentarts.sdk.utils.constant import get_runtime_data_plane_endpoint
-
-            data_endpoint = get_runtime_data_plane_endpoint(actual_region)
             client = RuntimeClient(data_endpoint=data_endpoint)
 
             result = client.invoke_agent(
@@ -185,14 +201,29 @@ def status_agent(
                     echo_error("No agent specified")
                     return False
 
-            actual_region = region or "cn-north-4"
+            actual_region = region or get_region()
+
+            data_endpoint = get_runtime_data_plane_endpoint()
+
+            if not data_endpoint:
+                control_endpoint = get_control_plane_endpoint(actual_region)
+                control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=False)
+                agent_info = control_client.find_agent_by_name(agent_name)
+                if agent_info:
+                    version_detail = agent_info.get("version_detail") or {}
+                    invoke_config_resp = version_detail.get("invoke_config") or {}
+                    access_endpoint = invoke_config_resp.get("access_endpoint")
+                    if access_endpoint:
+                        data_endpoint = access_endpoint
+
+            if not data_endpoint:
+                echo_error("No data plane endpoint configured and could not get access_endpoint from agent")
+                console.print("[dim]Set AGENTARTS_RUNTIME_DATA_ENDPOINT environment variable or ensure agent is deployed[/dim]")
+                return False
 
             console.print()
-            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]")
+            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]")
 
-            from agentarts.sdk.utils.constant import get_runtime_data_plane_endpoint
-
-            data_endpoint = get_runtime_data_plane_endpoint(actual_region)
             client = RuntimeClient(data_endpoint=data_endpoint)
 
             result = client.ping_agent(

@@ -331,9 +331,6 @@ def deploy_project(
         return False
 
     runtime_id = agent.get("id")
-    version_detail = agent.get("version_detail") or {}
-    invoke_config_resp = version_detail.get("invoke_config") or {}
-    access_endpoint = invoke_config_resp.get("access_endpoint")
 
     full_config = load_config()
     if full_config:
@@ -353,6 +350,9 @@ def deploy_project(
         f"[cyan]Image:[/cyan] [white]{swr_image}[/white]\n"
         f"[cyan]Region:[/cyan] [yellow]{region}[/yellow]\n"
     )
+    version_detail = agent.get("version_detail") or {}
+    invoke_config_resp = version_detail.get("invoke_config") or {}
+    access_endpoint = invoke_config_resp.get("access_endpoint")
     if access_endpoint:
         summary += f"\n[cyan]Access Endpoint:[/cyan] [white]{access_endpoint}[/white]"
     echo_success(summary)
