@@ -79,6 +79,11 @@ class SWRClient:
             return self._client
 
         try:
+            import logging
+            
+            logging.getLogger("huaweicloudsdkcore").setLevel(logging.ERROR)
+            logging.getLogger("urllib3").setLevel(logging.ERROR)
+            
             from huaweicloudsdkcore.http.http_config import HttpConfig
             from huaweicloudsdkswr.v2 import SwrClient
             from huaweicloudsdkswr.v2.region.swr_region import SwrRegion
@@ -136,9 +141,9 @@ class SWRClient:
             response = client.show_namespace(request)
 
             return {
-                "id": response.id,
-                "name": response.name,
-                "creator_name": response.creator_name,
+                "id": self._get_attr_value(response, "id"),
+                "name": self._get_attr_value(response, "name") or organization,
+                "creator_name": self._get_attr_value(response, "creator_name"),
             }
 
         except Exception as e:
@@ -224,10 +229,10 @@ class SWRClient:
             response = client.show_repo(request)
 
             return {
-                "id": response.id,
-                "name": response.name,
-                "namespace": response.namespace,
-                "is_public": response.is_public,
+                "id": self._get_attr_value(response, "id"),
+                "name": self._get_attr_value(response, "name") or repository,
+                "namespace": self._get_attr_value(response, "namespace") or organization,
+                "is_public": self._get_attr_value(response, "is_public"),
             }
 
         except Exception as e:
