@@ -288,10 +288,18 @@ class BaseHTTPClient:
                 data = response.text if response.content else None
             response.close()
 
+            error_msg = None
+            if not response.ok:
+                if isinstance(data, dict):
+                    error_msg = data.get("error") or data.get("message") or data.get("error_msg") or response.text
+                else:
+                    error_msg = response.text or f"HTTP {response.status_code}"
+
             return RequestResult(
                 success=response.ok,
                 status_code=response.status_code,
                 data=data,
+                error=error_msg,
                 headers=dict(response.headers),
             )
 
