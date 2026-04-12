@@ -171,7 +171,7 @@ agents:
           security_group_id: []
 
       identity_configuration:
-        auth_type: IAM
+        authorizer_type: IAM
         authorizer_configuration:
           custom_jwt:
             discovery_url: null

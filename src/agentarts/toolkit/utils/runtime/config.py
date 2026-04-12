@@ -239,7 +239,7 @@ class AuthConfig(BaseModel):
 class InboundIdentityConfig(BaseModel):
     """Inbound identity configuration."""
 
-    auth_type: AuthType = Field(
+    authorizer_type: AuthType = Field(
         default=AuthType.IAM,
         description="Authentication type",
     )
