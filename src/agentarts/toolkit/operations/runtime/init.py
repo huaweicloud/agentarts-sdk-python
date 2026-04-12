@@ -123,8 +123,8 @@ def create_config_file(
     swr_repo: Optional[str] = None,
 ) -> None:
     """Create .agentarts_config.yaml configuration file."""
-    actual_region = region or "cn-north-4"
-    actual_swr_org = swr_org or f"{name}-org"
+    actual_region = region or "cn-southwest-2"
+    actual_swr_org = swr_org or "agentarts-org"
     actual_swr_repo = swr_repo or name
 
     config_content = f"""# AgentArts Configuration
