@@ -361,32 +361,12 @@ class RuntimeClient:
         Returns:
             The agent object from the API.
         """
-        payload: Dict[str, Any] = {"name": agent_name, **extra}
-        if description:
-            payload["description"] = description
-        if artifact_source_config is not None:
-            payload["artifact_source"] = artifact_source_config
-        if env_vars is not None:
-            payload["environment_variables"] = env_vars
-        if identity_config is not None:
-            payload["identity_configuration"] = identity_config
-        if execution_agency_name is not None:
-            payload["execution_agency_name"] = execution_agency_name
-        if network_config is not None:
-            payload["network_config"] = network_config
-        if agent_gateway_id is not None:
-            payload["agent_gateway_id"] = agent_gateway_id
-        if invoke_config is not None:
-            payload["invoke_config"] = invoke_config
-        if observability_config is not None:
-            payload["observability"] = observability_config
-        if tags_config is not None:
-            payload["tags"] = tags_config
 
         existing = self.find_agent_by_name(agent_name)
-        agent_id = existing.get("agent_id")
-        if agent_id:
-            log.debug("Agent '%s' found (ID: %s), updating", agent_name, agent_id)
+
+        if existing:
+            agent_id = existing.get("id")
+            log.info("Agent '%s' found (ID: %s), updating", agent_name, agent_id)
             return self.update_agent(
                 agent_id=agent_id,
                 description=description,
@@ -461,10 +441,22 @@ class RuntimeClient:
         Returns:
             The matching agent object, or raises if not found.
         """
-        params: Dict[str, Any] = {"name": agent_name}
+        params: Dict[str, Any] = {"name": agent_name, "match_type" : "EXACT"}
 
         result = self._control("GET", "/v1/core/runtimes", params=params)
-        return self._check(result, "find_agent_by_name")
+        response_data = self._check(result, "find_agent_by_name")
+        # Extract list from response
+        agents = []
+        if isinstance(response_data, dict):
+            agents = response_data.get("items", [])
+        elif isinstance(response_data, list):
+            agents = response_data
+
+        # Find matching agent by name
+        for agent in agents:
+            if isinstance(agent, dict) and agent.get("name") == agent_name:
+                return agent
+        return None
 
     def find_agent_by_id(self, agent_id: str) -> Optional[Dict[Any, Any]]:
         """
