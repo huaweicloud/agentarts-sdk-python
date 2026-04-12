@@ -211,14 +211,14 @@ class RuntimeClient:
         name: str,
         description: str = "",
         artifact_source_config: Optional[Dict] = None,
-        env_vars: Optional[Dict] = None,
+        env_vars: Optional[List[Dict]] = None,
         identity_config: Optional[Dict] = None,
         execution_agency_name: Optional[str] = None,
         network_config: Optional[Dict] = None,
         agent_gateway_id: Optional[str] = None,
         invoke_config: Optional[Dict] = None,
         observability_config: Optional[Dict] = None,
-        tags_config: Optional[Dict] = None,
+        tags_config: Optional[List[Dict]] = None,
         **extra: Any,
     ) -> Dict[str, Any]:
         """
@@ -228,14 +228,14 @@ class RuntimeClient:
             name: Agent name (unique within the workspace).
             description: Human-readable description.
             artifact_source_config: Configuration for the agent's artifact source.
-            env_vars: Environment variables to inject into the agent runtime.
+            env_vars: Environment variables as list of {"key": "K", "value": "V"} dicts.
             identity_config: Identity and authentication configuration.
             execution_agency_name: Name of the execution agency.
             network_config: Network access configuration.
             agent_gateway_id: ID of the agent gateway to attach.
             invoke_config: Invocation-related configuration.
             observability_config: Observability (tracing, metrics) configuration.
-            tags_config: Tags and labels for the agent.
+            tags_config: Tags as list of {"key": "K", "value": "V"} dicts.
             **extra: Additional fields forwarded to the API.
 
         Returns:
@@ -271,13 +271,13 @@ class RuntimeClient:
         agent_id: str,
         description: str = "",
         artifact_source_config: Optional[Dict] = None,
-        env_vars: Optional[Dict] = None,
+        env_vars: Optional[List[Dict]] = None,
         execution_agency_name: Optional[str] = None,
         network_config: Optional[Dict] = None,
         agent_gateway_id: Optional[str] = None,
         invoke_config: Optional[Dict] = None,
         observability_config: Optional[Dict] = None,
-        tags_config: Optional[Dict] = None,
+        tags_config: Optional[List[Dict]] = None,
         **extra: Any,
     ) -> Dict[str, Any]:
         """
@@ -287,13 +287,13 @@ class RuntimeClient:
             agent_id: The unique agent identifier.
             description: New description (omit to keep unchanged).
             artifact_source_config: Configuration for the agent's artifact source.
-            env_vars: Environment variables to inject into the agent runtime.
+            env_vars: Environment variables as list of {"key": "K", "value": "V"} dicts.
             execution_agency_name: Name of the execution agency.
             network_config: Network access configuration.
             agent_gateway_id: ID of the agent gateway to attach.
             invoke_config: Invocation-related configuration.
             observability_config: Observability (tracing, metrics) configuration.
-            tags_config: Tags and labels for the agent.
+            tags_config: Tags as list of {"key": "K", "value": "V"} dicts.
             **extra: Additional fields forwarded to the API.
 
         Returns:
@@ -327,14 +327,14 @@ class RuntimeClient:
         agent_name: str,
         description: str = "",
         artifact_source_config: Optional[Dict] = None,
-        env_vars: Optional[Dict] = None,
+        env_vars: Optional[List[Dict]] = None,
         identity_config: Optional[Dict] = None,
         execution_agency_name: Optional[str] = None,
         network_config: Optional[Dict] = None,
         agent_gateway_id: Optional[str] = None,
         invoke_config: Optional[Dict] = None,
         observability_config: Optional[Dict] = None,
-        tags_config: Optional[Dict] = None,
+        tags_config: Optional[List[Dict]] = None,
         **extra: Any,
     ) -> Dict[str, Any]:
         """
@@ -348,14 +348,14 @@ class RuntimeClient:
             agent_name: Agent name (used as the lookup key).
             description: Human-readable description.
             artifact_source_config: Configuration for the agent's artifact source.
-            env_vars: Environment variables to inject into the agent runtime.
+            env_vars: Environment variables as list of {"key": "K", "value": "V"} dicts.
             identity_config: Identity and authentication configuration.
             execution_agency_name: Name of the execution agency.
             network_config: Network access configuration.
             agent_gateway_id: ID of the agent gateway to attach.
             invoke_config: Invocation-related configuration.
             observability_config: Observability (tracing, metrics) configuration.
-            tags_config: Tags and labels for the agent.
+            tags_config: Tags as list of {"key": "K", "value": "V"} dicts.
             **extra: Additional fields forwarded to the API.
 
         Returns:
