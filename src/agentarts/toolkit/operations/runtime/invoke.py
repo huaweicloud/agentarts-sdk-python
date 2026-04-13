@@ -12,6 +12,7 @@ from agentarts.sdk.utils.constant import get_region, get_runtime_data_plane_endp
 from agentarts.toolkit.operations.runtime.config import (
     get_agent,
     get_config_file_path,
+    load_config,
 )
 from agentarts.toolkit.utils.common import echo_error, echo_success, echo_info, echo_key_value
 from agentarts.sdk.service.runtime_client import LocalRuntimeClient, RuntimeClient
@@ -45,10 +46,18 @@ def _resolve_agent_info(
     if agent_name is None:
         config_path = get_config_file_path()
         if config_path.exists():
-            agent_config = get_agent(None)
-            if agent_config is not None:
-                agent_name = agent_config.base.name
-                region = region or agent_config.base.region
+            config = load_config()
+            if config:
+                if config.default_agent and config.default_agent in (config.agents or {}):
+                    agent_name = config.default_agent
+                    agent_config = config.agents[agent_name]
+                    region = region or agent_config.base.region
+                elif config.agents:
+                    first_agent_key = next(iter(config.agents.keys()), None)
+                    if first_agent_key:
+                        agent_name = first_agent_key
+                        agent_config = config.agents[first_agent_key]
+                        region = region or agent_config.base.region
     return agent_name, region
 
 
@@ -158,7 +167,7 @@ def invoke_agent(
             data_endpoint = _get_data_endpoint(agent_name, actual_region)
 
             if not data_endpoint:
-                echo_error("No data plane endpoint configured and could not get access_endpoint from agent")
+                echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent {agent_name}")
                 console.print("[dim]Set AGENTARTS_RUNTIME_DATA_ENDPOINT environment variable or ensure agent is deployed[/dim]")
                 return False
 
@@ -250,7 +259,7 @@ def status_agent(
             data_endpoint = _get_data_endpoint(agent_name, actual_region)
 
             if not data_endpoint:
-                echo_error("No data plane endpoint configured and could not get access_endpoint from agent")
+                echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent {agent_name}")
                 console.print("[dim]Set AGENTARTS_RUNTIME_DATA_ENDPOINT environment variable or ensure agent is deployed[/dim]")
                 return False
 
