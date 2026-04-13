@@ -79,7 +79,7 @@ class MemoryClient:
 
     def __init__(
             self,
-            region_name: Optional[str] = "cn-north-4",
+            region_name: Optional[str] = "cn-southwest-2",
             api_key: Optional[str] = None
     ):
         """
@@ -94,7 +94,7 @@ class MemoryClient:
           when Space management API is first called
 
         Args:
-            region_name: Huawei Cloud region name, default "cn-north-4"
+            region_name: Huawei Cloud region name, default "cn-southwest-2"
             api_key: API Key for data plane authentication (optional, falls back
                 to HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable)
 
