@@ -330,8 +330,7 @@ agentarts destroy
 ### Docker
 
 Docker is required for:
-- Local development with `agentarts dev`
-- Building deployment packages
+- Building and deploying agents with `agentarts deploy` (alias: `launch`)
 
 **Install Docker:**
 - [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop)
