@@ -259,11 +259,13 @@ class BaseHTTPClient:
         if self._open_ak_sk:
             kwargs = self._sign_request(method, full_url, **kwargs)
 
+        timeout = kwargs.pop("timeout", self._config.timeout)
+
         try:
             response = self._session.request(
                 method,
                 full_url,
-                timeout=self._config.timeout,
+                timeout=timeout,
                 verify=self._config.verify_ssl,
                 stream=True,
                 **kwargs,
