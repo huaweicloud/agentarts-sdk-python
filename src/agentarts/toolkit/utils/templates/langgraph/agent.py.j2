@@ -157,7 +157,7 @@ async def handler(payload: Dict[str, Any], context: RequestContext = None) -> Di
     Returns:
         Response dictionary
     """
-    query = payload.get("query", payload.get("input", ""))
+    query = payload.get("message", "")
     agent = _get_agent()
     return await agent.run(query)
 
