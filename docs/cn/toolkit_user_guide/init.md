@@ -103,8 +103,8 @@ agentarts init \
 3. **配置环境变量**
    
    根据模板类型，在 `.agentarts_config.yaml` 中配置必要的环境变量：
-   - LangGraph/LangChain: `OPENAI_API_KEY`
-   - Google ADK: `GOOGLE_API_KEY`
+   - LangGraph/LangChain: `OPENAI_API_KEY`, `OPENAI_MODEL_NAME` (可选)
+   - Google ADK: `GOOGLE_API_KEY`, `GOOGLE_MODEL_NAME` (可选)
 
 4. **本地开发测试**
    ```bash

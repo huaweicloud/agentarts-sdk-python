@@ -213,6 +213,10 @@ def get_template_env_vars(template: str) -> List[Dict[str, str]]:
                 "description": "OpenAI API key for LLM access",
             },
             {
+                "key": "OPENAI_MODEL_NAME",
+                "description": "Model name (default: gpt-4o-mini, e.g., gpt-4o, gpt-4-turbo)",
+            },
+            {
                 "key": "OPENAI_BASE_URL",
                 "description": "Custom API endpoint URL (optional, for OpenAI-compatible APIs)",
             },
@@ -223,6 +227,10 @@ def get_template_env_vars(template: str) -> List[Dict[str, str]]:
                 "description": "OpenAI API key for LLM access",
             },
             {
+                "key": "OPENAI_MODEL_NAME",
+                "description": "Model name (default: gpt-4o-mini, e.g., gpt-4o, gpt-4-turbo)",
+            },
+            {
                 "key": "OPENAI_BASE_URL",
                 "description": "Custom API endpoint URL (optional, for OpenAI-compatible APIs)",
             },
@@ -231,6 +239,10 @@ def get_template_env_vars(template: str) -> List[Dict[str, str]]:
             {
                 "key": "GOOGLE_API_KEY",
                 "description": "Google API key for Gemini access",
+            },
+            {
+                "key": "GOOGLE_MODEL_NAME",
+                "description": "Model name (default: gemini-2.0-flash, e.g., gemini-1.5-pro)",
             },
         ],
     }

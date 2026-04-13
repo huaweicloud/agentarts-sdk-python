@@ -7,6 +7,8 @@ Environment Variables:
     GOOGLE_API_KEY: Your Google API key for Gemini access (required)
         - Get it from: https://aistudio.google.com/app/apikey
         - Set in .agentarts_config.yaml under runtime.environment_variables
+    GOOGLE_MODEL_NAME: Model name to use (optional, default: gemini-2.0-flash)
+        - Examples: gemini-2.0-flash, gemini-1.5-pro, gemini-1.5-flash
 """
 
 import os
@@ -28,9 +30,9 @@ app = AgentArtsRuntimeApp()
 class GoogleADKAgent:
     """Google ADK-based Agent implementation."""
 
-    def __init__(self, model: str = "gemini-2.0-flash"):
+    def __init__(self):
         self.name = "{{ name }}"
-        self.model = model
+        self.model = os.environ.get("GOOGLE_MODEL_NAME", "gemini-2.0-flash")
         self._agent = None
 
     def _setup_agent(self):

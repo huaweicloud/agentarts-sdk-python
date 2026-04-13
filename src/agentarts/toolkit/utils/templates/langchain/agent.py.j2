@@ -11,18 +11,22 @@ Environment Variables:
         - Use this to connect to OpenAI-compatible APIs (e.g., Azure OpenAI, local LLMs)
         - Example: https://your-api-endpoint.com/v1
         - Leave empty to use default OpenAI API
+    OPENAI_MODEL_NAME: Model name to use (optional, default: gpt-4o-mini)
+        - Examples: gpt-4o, gpt-4o-mini, gpt-4-turbo, gpt-3.5-turbo
+        - Or custom model names for OpenAI-compatible APIs
 
 Configuration:
     Edit .agentarts_config.yaml to customize:
-    - runtime.environment_variables: Set OPENAI_API_KEY and optionally OPENAI_BASE_URL
+    - runtime.environment_variables: Set OPENAI_API_KEY, OPENAI_MODEL_NAME and optionally OPENAI_BASE_URL
     - runtime.invoke_config: Change protocol or port
     - runtime.network_config: Configure VPC if needed
 
 Usage:
     1. Set your OPENAI_API_KEY in .agentarts_config.yaml
-    2. (Optional) Set OPENAI_BASE_URL for custom endpoints
-    3. Run: agentarts deploy
-    4. Invoke: agentarts invoke --input '{"query": "Hello"}'
+    2. (Optional) Set OPENAI_MODEL_NAME to use a different model
+    3. (Optional) Set OPENAI_BASE_URL for custom endpoints
+    4. Run: agentarts deploy
+    5. Invoke: agentarts invoke --input '{"query": "Hello"}'
 """
 
 import os
@@ -36,9 +40,9 @@ app = AgentArtsRuntimeApp()
 class LangChainAgent:
     """LangChain-based Agent implementation."""
 
-    def __init__(self, model_name: str = "gpt-4o-mini"):
+    def __init__(self):
         self.name = "{{ name }}"
-        self.model_name = model_name
+        self.model_name = os.environ.get("OPENAI_MODEL_NAME", "gpt-4o-mini")
         self._llm = None
 
     def _get_llm(self):
