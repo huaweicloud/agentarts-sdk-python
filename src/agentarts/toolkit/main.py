@@ -70,7 +70,7 @@ def main(
     Examples:
         agentarts init -n my_agent -t langgraph
         agentarts dev --port 8080
-        agentarts deploy -r cn-north-4 -e production
+        agentarts deploy -r cn-southwest-2 -e production
     """
     setup_logging(verbose=verbose)
     

@@ -28,7 +28,7 @@ def main(
     ctx: typer.Context,
     name: Annotated[Optional[str], typer.Option("--name", "-n", help="Agent name")] = None,
     entrypoint: Annotated[Optional[str], typer.Option("--entrypoint", "-e", help="Agent entrypoint (e.g., app:main)")] = None,
-    region: Annotated[Optional[str], typer.Option("--region", "-r", help="Huawei Cloud region (e.g., cn-north-4)")] = None,
+    region: Annotated[Optional[str], typer.Option("--region", "-r", help="Huawei Cloud region (e.g., cn-southwest-2)")] = None,
     dependency_file: Annotated[Optional[str], typer.Option("--dependency-file", "-d", help="Path to dependency file (e.g., requirements.txt)")] = None,
     swr_organization: Annotated[Optional[str], typer.Option("--swr-org", help="SWR organization name")] = None,
     swr_repository: Annotated[Optional[str], typer.Option("--swr-repo", help="SWR repository name")] = None,
@@ -247,7 +247,7 @@ def set(
     Set configuration value.
 
     Examples:
-        agentarts config set base.region cn-north-4
+        agentarts config set base.region cn-southwest-2
         agentarts config set base.name my-agent --agent my-agent
     """
     success = config_op.set_config_value(key, value, agent)
