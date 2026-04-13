@@ -300,7 +300,7 @@ agentarts deploy
 agentarts status
 
 # Invoke deployed agent
-agentarts invoke --input '{"message": "Hello, AgentArts!"}'
+agentarts invoke '{"message": "Hello, AgentArts!"}'
 
 # Destroy deployment
 agentarts destroy

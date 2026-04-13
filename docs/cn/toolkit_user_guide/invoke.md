@@ -8,16 +8,15 @@
 
 | 参数 | 简写 | 说明 | 默认值 |
 |------|------|------|--------|
+| `payload` | - | JSON 格式的请求数据（位置参数） | 必填 |
 | `--agent` | `-a` | Agent 名称 | 使用默认 Agent |
-| `--payload` | `-p` | JSON 格式的请求数据 | 无 |
-| `--input` | `-i` | 简单文本输入（自动转换为 JSON） | 无 |
 | `--region` | `-r` | 华为云区域 | 从配置文件读取 |
 | `--mode` | `-m` | 调用模式（local/cloud） | `cloud` |
-| `--port` | 无 | 本地模式端口 | `8080` |
+| `--port` | `-p` | 本地模式端口 | `8080` |
 | `--endpoint` | `-e` | 指定端点名称 | 无 |
 | `--session` | `-s` | 会话 ID（用于有状态 Agent） | 自动生成 UUID |
-| `--bearer-token` | 无 | Bearer 认证令牌 | 无 |
-| `--timeout` | `-t` | 请求超时时间（秒） | `900` |
+| `--token` | `-t` | Bearer 认证令牌 | 无 |
+| `--timeout` | - | 请求超时时间（秒） | `900` |
 
 ## 调用模式
 
@@ -26,7 +25,7 @@
 调用华为云上已部署的 Agent：
 
 ```bash
-agentarts invoke --agent my-agent --payload '{"message": "Hello"}'
+agentarts invoke '{"message": "Hello"}' --agent my-agent
 ```
 
 ### Local 模式
@@ -34,7 +33,7 @@ agentarts invoke --agent my-agent --payload '{"message": "Hello"}'
 调用本地运行的 Agent（用于开发测试）：
 
 ```bash
-agentarts invoke --mode local --payload '{"message": "Hello"}'
+agentarts invoke '{"message": "Hello"}' --mode local --port 8080
 ```
 
 ## 执行效果
@@ -69,71 +68,66 @@ data: {"content": " help?"}
 ### 示例 1: 基本调用
 
 ```bash
-agentarts invoke --agent my-agent --payload '{"message": "你好"}'
+agentarts invoke '{"message": "你好"}'
 ```
 
-### 示例 2: 使用简写参数
+### 示例 2: 指定 Agent 调用
 
 ```bash
-agentarts invoke -a my-agent -p '{"message": "你好"}'
+agentarts invoke '{"message": "你好"}' --agent my-agent
 ```
 
-### 示例 3: 使用简单文本输入
+### 示例 3: 使用简写参数
 
 ```bash
-agentarts invoke --agent my-agent --input "你好"
-```
-
-或使用简写：
-```bash
-agentarts invoke -a my-agent -i "你好"
+agentarts invoke '{"message": "你好"}' -a my-agent
 ```
 
 ### 示例 4: 指定区域调用
 
 ```bash
-agentarts invoke --agent my-agent --region cn-southwest-2 --payload '{"message": "你好"}'
+agentarts invoke '{"message": "你好"}' --agent my-agent --region cn-southwest-2
 ```
 
 ### 示例 5: 本地模式调用
 
 ```bash
-agentarts invoke --mode local --payload '{"message": "你好"}'
+agentarts invoke '{"message": "你好"}' --mode local
 ```
 
 或指定端口：
 ```bash
-agentarts invoke --mode local --port 8080 --payload '{"message": "你好"}'
+agentarts invoke '{"message": "你好"}' --mode local --port 8080
 ```
 
 ### 示例 6: 有状态会话调用
 
 ```bash
-agentarts invoke --agent my-agent --session "my-session-123" --payload '{"message": "继续之前的对话"}'
+agentarts invoke '{"message": "继续之前的对话"}' --agent my-agent --session "my-session-123"
 ```
 
 ### 示例 7: 使用 Bearer Token 认证
 
 ```bash
-agentarts invoke --agent my-agent --bearer-token "your-token" --payload '{"message": "你好"}'
+agentarts invoke '{"message": "你好"}' --agent my-agent --token "your-token"
 ```
 
 ### 示例 8: 指定端点调用
 
 ```bash
-agentarts invoke --agent my-agent --endpoint custom-endpoint --payload '{"message": "你好"}'
+agentarts invoke '{"message": "你好"}' --agent my-agent --endpoint custom-endpoint
 ```
 
 ### 示例 9: 设置超时时间
 
 ```bash
-agentarts invoke --agent my-agent --timeout 60 --payload '{"message": "你好"}'
+agentarts invoke '{"message": "你好"}' --agent my-agent --timeout 60
 ```
 
 ### 示例 10: 复杂数据调用
 
 ```bash
-agentarts invoke --agent my-agent --payload '{
+agentarts invoke '{
   "message": "分析这段文本",
   "context": {
     "language": "zh",
@@ -198,7 +192,7 @@ runtime:
 Agent 配置为其他认证类型时，需要提供 Bearer Token：
 
 ```bash
-agentarts invoke --agent my-agent --bearer-token "your-token" --payload '{"message": "你好"}'
+agentarts invoke '{"message": "你好"}' --agent my-agent --token "your-token"
 ```
 
 ## 会话管理
@@ -279,7 +273,7 @@ agentarts invoke --agent my-agent --bearer-token "your-token" --payload '{"messa
 
 ## 注意事项
 
-1. **Payload 格式**: 必须为有效的 JSON 格式
+1. **Payload 格式**: 必须为有效的 JSON 格式，作为位置参数传入
 2. **认证方式**: 根据 Agent 配置选择正确的认证方式
 3. **超时设置**: 长时间处理任务建议增加超时时间
 4. **会话管理**: 有状态 Agent 需要保持会话 ID 一致
