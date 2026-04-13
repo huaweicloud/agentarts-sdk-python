@@ -12,9 +12,13 @@ response ``Content-Type`` header:
   ``iter_lines()`` or ``iter_bytes()`` to consume the body incrementally.
 """
 
+import hashlib
+import hmac
+import datetime
+from enum import Enum
 from typing import Any, Dict, Iterator, Optional
 from dataclasses import dataclass, field
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 
 import requests
 
@@ -29,6 +33,13 @@ class APIException(Exception):
         self.error_code = error_code
         self.error_msg = error_msg
         super().__init__(f"[{error_code}] HTTP {status_code}: {error_msg}")
+
+
+class SignMode(Enum):
+    """Signature mode for AK/SK authentication."""
+
+    SDK_HMAC_SHA256 = "sdk"
+    V11_HMAC_SHA256 = "v11"
 
 
 @dataclass
@@ -119,7 +130,7 @@ class BaseHTTPClient:
     - Timeout and error handling
     - Auth token management
     - Context manager support
-    - Optional Huawei Cloud AK/SK signing
+    - Optional Huawei Cloud AK/SK signing (SDK-HMAC-SHA256 or V11-HMAC-SHA256)
 
     Usage::
 
@@ -147,16 +158,127 @@ class BaseHTTPClient:
                     print(result.data)
     """
 
-    def __init__(self, config: Optional[RequestConfig] = None, open_ak_sk: bool = False):
+    def __init__(
+        self,
+        config: Optional[RequestConfig] = None,
+        open_ak_sk: bool = False,
+        sign_mode: SignMode = SignMode.SDK_HMAC_SHA256,
+    ):
         self._config = config or RequestConfig()
         self._session = requests.Session()
         self._session.headers.update(self._config.headers)
         self._open_ak_sk = open_ak_sk
+        self._sign_mode = sign_mode
         self._signer = None
         self._credentials = None
 
-    def _sign_request(self, method: str, full_url: str, **kwargs) -> dict:
-        """Sign the HTTP request using AK/SK."""
+    def _get_timestamp(self) -> str:
+        """Get current timestamp in V11 format."""
+        return datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+
+    def _hex_encode(self, data: bytes) -> str:
+        """Hex encode bytes to string."""
+        return hashlib.sha256(data).hexdigest()
+
+    def _hmac_sha256(self, key: bytes, data: str) -> bytes:
+        """Compute HMAC-SHA256."""
+        return hmac.new(key, data.encode("utf-8"), hashlib.sha256).digest()
+
+    def _get_signature_key(self, sk: str, date: str) -> bytes:
+        """Derive signature key for V11 signing."""
+        k_date = self._hmac_sha256(sk.encode("utf-8"), date)
+        return self._hmac_sha256(k_date, "huaweicloud")
+
+    def _canonical_uri(self, path: str) -> str:
+        """Encode URI path for canonical request."""
+        if not path:
+            return "/"
+        segments = path.split("/")
+        encoded_segments = [quote(segment, safe="") for segment in segments]
+        return "/".join(encoded_segments)
+
+    def _canonical_query_string(self, query: str) -> str:
+        """Encode query string for canonical request."""
+        if not query:
+            return ""
+        params = []
+        for pair in query.split("&"):
+            if "=" in pair:
+                key, value = pair.split("=", 1)
+                params.append((quote(key, safe=""), quote(value, safe="")))
+            else:
+                params.append((quote(pair, safe=""), ""))
+        params.sort()
+        return "&".join(f"{k}={v}" for k, v in params)
+
+    def _canonical_headers(self, headers: Dict[str, str]) -> str:
+        """Format headers for canonical request."""
+        sorted_headers = sorted(headers.items(), key=lambda x: x[0].lower())
+        return "".join(f"{k.lower()}:{v.strip()}\n" for k, v in sorted_headers)
+
+    def _signed_headers(self, headers: Dict[str, str]) -> str:
+        """Get signed headers list."""
+        sorted_keys = sorted(k.lower() for k in headers.keys())
+        return ";".join(sorted_keys)
+
+    def _sign_request_v11(self, method: str, full_url: str, **kwargs) -> dict:
+        """Sign the HTTP request using V11-HMAC-SHA256 algorithm (without body)."""
+        from agentarts.sdk.utils.metadata import create_credential
+
+        if not self._credentials:
+            self._credentials = create_credential()
+
+        parsed_url = urlparse(full_url)
+        host = parsed_url.netloc
+        path = parsed_url.path or "/"
+        query = parsed_url.query or ""
+
+        timestamp = self._get_timestamp()
+
+        headers = kwargs.get("headers", {}) or {}
+        headers["host"] = host
+        headers["x-sdk-date"] = timestamp
+        headers["x-sdk-content-sha256"] = "UNSIGNED-PAYLOAD"
+
+        canonical_request = (
+            f"{method.upper()}\n"
+            f"{self._canonical_uri(path)}\n"
+            f"{self._canonical_query_string(query)}\n"
+            f"{self._canonical_headers(headers)}\n"
+            f"{self._signed_headers(headers)}\n"
+            f"UNSIGNED-PAYLOAD"
+        )
+
+        date_str = timestamp[:8]
+        signing_key = self._get_signature_key(self._credentials.sk, date_str)
+
+        string_to_sign = (
+            f"V11-HMAC-SHA256\n"
+            f"{timestamp}\n"
+            f"{date_str}/huaweicloud/sdk_request\n"
+            f"{self._hex_encode(canonical_request.encode('utf-8'))}"
+        )
+
+        signature = self._hmac_sha256(signing_key, string_to_sign)
+        signature_hex = signature.hex()
+
+        authorization = (
+            f"V11-HMAC-SHA256 "
+            f"Access={self._credentials.ak}, "
+            f"SignedHeaders={self._signed_headers(headers)}, "
+            f"Signature={signature_hex}"
+        )
+
+        headers["Authorization"] = authorization
+
+        if "headers" not in kwargs:
+            kwargs["headers"] = {}
+        kwargs["headers"].update(headers)
+
+        return kwargs
+
+    def _sign_request_sdk(self, method: str, full_url: str, **kwargs) -> dict:
+        """Sign the HTTP request using SDK-HMAC-SHA256 algorithm (with body)."""
         try:
             from huaweicloudsdkcore.signer.signer import Signer
             from huaweicloudsdkcore.sdk_request import SdkRequest
@@ -228,6 +350,13 @@ class BaseHTTPClient:
             kwargs["headers"].update(signed_request.header_params)
 
         return kwargs
+
+    def _sign_request(self, method: str, full_url: str, **kwargs) -> dict:
+        """Sign the HTTP request using AK/SK based on sign_mode."""
+        if self._sign_mode == SignMode.V11_HMAC_SHA256:
+            return self._sign_request_v11(method, full_url, **kwargs)
+        else:
+            return self._sign_request_sdk(method, full_url, **kwargs)
 
     def _request(self, method: str, url: str, **kwargs) -> RequestResult:
         """
