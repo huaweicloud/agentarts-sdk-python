@@ -208,7 +208,7 @@ def deploy_project(
     local_full_image = f"{local_image_name}:{image_tag}"
 
     console.print(Panel(
-        f"[bold]Step 1/6[/bold] Building Docker image\n[dim]Image: {local_full_image}[/dim]",
+        f"[bold]Step 1/5[/bold] Building Docker image\n[dim]Image: {local_full_image}[/dim]",
         title="[bold cyan]Deploy Progress[/bold cyan]",
         border_style="cyan",
     ))
@@ -238,7 +238,7 @@ def deploy_project(
         return False
 
     console.print(Panel(
-        f"[bold]Step 2/6[/bold] Setting up SWR resources\n[dim]Organization: {final_swr_org}\n[dim]Repository: {final_swr_repo}[/dim]",
+        f"[bold]Step 2/5[/bold] Setting up SWR resources\n[dim]Organization: {final_swr_org}\n[dim]Repository: {final_swr_repo}[/dim]",
         title="[bold cyan]Deploy Progress[/bold cyan]",
         border_style="cyan",
     ))
@@ -275,7 +275,7 @@ def deploy_project(
             echo_success(f"Using existing repository [cyan]{final_swr_org}/{final_swr_repo}[/cyan]")
 
         console.print(Panel(
-            f"[bold]Step 3/6[/bold] Getting SWR credentials\n[dim]Registry: swr.{region}.myhuaweicloud.com[/dim]",
+            f"[bold]Step 3/5[/bold] Getting SWR credentials\n[dim]Registry: swr.{region}.myhuaweicloud.com[/dim]",
             title="[bold cyan]Deploy Progress[/bold cyan]",
             border_style="cyan",
         ))
@@ -291,7 +291,7 @@ def deploy_project(
         swr_image = swr_client.get_full_image_name(final_swr_org, final_swr_repo, image_tag)
 
         console.print(Panel(
-            f"[bold]Step 4/6[/bold] Tagging and pushing image\n[dim]Source: {local_full_image}\n[dim]Target: {swr_image}[/dim]",
+            f"[bold]Step 4/5[/bold] Tagging and pushing image\n[dim]Source: {local_full_image}\n[dim]Target: {swr_image}[/dim]",
             title="[bold cyan]Deploy Progress[/bold cyan]",
             border_style="cyan",
         ))
@@ -314,7 +314,7 @@ def deploy_project(
         return False
 
     console.print(Panel(
-        f"[bold]Step 5/6[/bold] Creating AgentArts runtime\n[dim]Agent: {actual_agent_name}\n[dim]Image: {swr_image}[/dim]",
+        f"[bold]Step 5/5[/bold] Creating AgentArts runtime\n[dim]Agent: {actual_agent_name}\n[dim]Image: {swr_image}[/dim]",
         title="[bold cyan]Deploy Progress[/bold cyan]",
         border_style="cyan",
     ))
@@ -339,11 +339,6 @@ def deploy_project(
             full_config.agents[agent_key].runtime.agent_id = runtime_id
             full_config.to_yaml(str(config_path))
 
-    console.print(Panel(
-        f"[bold]Step 6/6[/bold] Deployment complete!",
-        title="[bold green]Deploy Progress[/bold green]",
-        border_style="green",
-    ))
     summary = (
         f"[cyan]Agent Name:[/cyan] [white]{actual_agent_name}[/white]\n"
         f"[cyan]Runtime ID:[/cyan] [white]{runtime_id}[/white]\n"
@@ -354,7 +349,12 @@ def deploy_project(
     invoke_config_resp = version_detail.get("invoke_config") or {}
     access_endpoint = invoke_config_resp.get("access_endpoint")
     if access_endpoint:
-        summary += f"\n[cyan]Access Endpoint:[/cyan] [white]{access_endpoint}[/white]"
-    echo_success(summary)
+        summary += f"[cyan]Access Endpoint:[/cyan] [white]{access_endpoint}[/white]"
+
+    console.print(Panel(
+        summary,
+        title="[bold green] Deployment complete! [/bold green]",
+        border_style="green",
+    ))
 
     return True

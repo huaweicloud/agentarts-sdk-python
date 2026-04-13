@@ -32,17 +32,18 @@ def _ensure_https(endpoint: str) -> str:
 def _resolve_agent_info(
     agent_name: Optional[str],
     region: Optional[str],
-) -> Tuple[Optional[str], Optional[str]]:
+) -> Tuple[Optional[str], Optional[str], Optional[str]]:
     """
-    Resolve agent name and region from config if not provided.
+    Resolve agent name, region and agent_id from config if not provided.
 
     Args:
         agent_name: Agent name (may be None)
         region: Region (may be None)
 
     Returns:
-        Tuple of (agent_name, region) with resolved values
+        Tuple of (agent_name, region, agent_id) with resolved values
     """
+    agent_id = None
     if agent_name is None:
         config_path = get_config_file_path()
         if config_path.exists():
@@ -52,18 +53,21 @@ def _resolve_agent_info(
                     agent_name = config.default_agent
                     agent_config = config.agents[agent_name]
                     region = region or agent_config.base.region
+                    agent_id = agent_config.runtime.agent_id
                 elif config.agents:
                     first_agent_key = next(iter(config.agents.keys()), None)
                     if first_agent_key:
                         agent_name = first_agent_key
                         agent_config = config.agents[first_agent_key]
                         region = region or agent_config.base.region
-    return agent_name, region
+                        agent_id = agent_config.runtime.agent_id
+    return agent_name, region, agent_id
 
 
 def _get_data_endpoint(
     agent_name: str,
     region: str,
+    agent_id: Optional[str] = None,
 ) -> Optional[str]:
     """
     Get data plane endpoint for the agent.
@@ -74,6 +78,7 @@ def _get_data_endpoint(
     Args:
         agent_name: Agent name
         region: Huawei Cloud region
+        agent_id: Optional agent ID from config file
 
     Returns:
         Data plane endpoint URL, or None if not available
@@ -83,19 +88,27 @@ def _get_data_endpoint(
     if not data_endpoint:
         control_endpoint = get_control_plane_endpoint(region)
         control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=False)
-        agent_info = control_client.find_agent_by_name(agent_name)
-        if agent_info:
-            agent_id = agent_info.get("id")
-            version_detail = agent_info.get("version_detail")
-            if not version_detail and agent_id:
-                agent_detail = control_client.find_agent_by_id(agent_id)
-                if agent_detail:
-                    version_detail = agent_detail.get("version_detail") or {}
-            if version_detail:
+
+        if agent_id:
+            agent_detail = control_client.find_agent_by_id(agent_id)
+            if agent_detail:
+                version_detail = agent_detail.get("version_detail") or {}
                 invoke_config_resp = version_detail.get("invoke_config") or {}
                 access_endpoint = invoke_config_resp.get("access_endpoint")
                 if access_endpoint:
                     data_endpoint = access_endpoint
+        else:
+            agent_info = control_client.find_agent_by_name(agent_name)
+            if agent_info:
+                agent_id = agent_info.get("id")
+                if agent_id:
+                    agent_detail = control_client.find_agent_by_id(agent_id)
+                    if agent_detail:
+                        version_detail = agent_detail.get("version_detail") or {}
+                        invoke_config_resp = version_detail.get("invoke_config") or {}
+                        access_endpoint = invoke_config_resp.get("access_endpoint")
+                        if access_endpoint:
+                            data_endpoint = access_endpoint
 
     if data_endpoint:
         data_endpoint = _ensure_https(data_endpoint)
@@ -160,7 +173,7 @@ def invoke_agent(
                 timeout=timeout,
             )
         else:
-            agent_name, region = _resolve_agent_info(agent_name, region)
+            agent_name, region, agent_id = _resolve_agent_info(agent_name, region)
 
             if agent_name is None:
                 echo_error("No agent specified and no default agent configured")
@@ -170,7 +183,7 @@ def invoke_agent(
             actual_region = region or get_region()
             actual_session_id = session_id or str(uuid.uuid4())
 
-            data_endpoint = _get_data_endpoint(agent_name, actual_region)
+            data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id)
 
             if not data_endpoint:
                 echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent [yellow]{agent_name} {actual_region}[/yellow]")
@@ -254,7 +267,7 @@ def status_agent(
                 echo_error(f"Status: {status}")
                 return False
         else:
-            agent_name, region = _resolve_agent_info(agent_name, region)
+            agent_name, region, agent_id = _resolve_agent_info(agent_name, region)
 
             if agent_name is None:
                 echo_error("No agent specified")
@@ -262,7 +275,7 @@ def status_agent(
 
             actual_region = region or get_region()
 
-            data_endpoint = _get_data_endpoint(agent_name, actual_region)
+            data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id)
 
             if not data_endpoint:
                 echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent {agent_name}")
