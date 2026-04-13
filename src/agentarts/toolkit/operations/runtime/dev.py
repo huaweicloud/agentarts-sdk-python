@@ -31,19 +31,26 @@ def run_dev_server(
     Returns:
         True if successful, False otherwise
     """
-    load_config(config_path)
+    config = load_config(config_path)
 
-    agent_file = Path("agent.py")
-    if not agent_file.exists():
-        echo_error("agent.py not found")
-        console.print("[dim]Please run 'agentarts init' first[/dim]")
+    entrypoint = get_entrypoint(config)
+    if not entrypoint:
+        echo_error("No entrypoint found in configuration")
+        console.print("[dim]Please set 'entrypoint' in .agentarts_config.yaml[/dim]")
+        return False
+
+    module_name = entrypoint.split(":")[0] if ":" in entrypoint else entrypoint
+    module_file = Path(f"{module_name}.py")
+    if not module_file.exists():
+        echo_error(f"Module file '{module_name}.py' not found")
+        console.print(f"[dim]Please ensure '{module_name}.py' exists in current directory[/dim]")
         return False
 
     os.environ["AGENTARTS_ENV"] = "development"
-    os.environ["AGENTARTS_CONFIG"] = config_path or "agentarts.yaml"
+    os.environ["AGENTARTS_CONFIG"] = config_path or ".agentarts_config.yaml"
 
     console.print()
-    echo_info("Development Server", f"[cyan]Host:[/cyan] [white]{host}[/white]\n[cyan]Port:[/cyan] [white]{port}[/white]\n[cyan]Config:[/cyan] [yellow]{config_path or 'agentarts.yaml'}[/yellow]\n[cyan]Auto-reload:[/cyan] [green]{'enabled' if reload else 'disabled'}[/green]")
+    echo_info("Development Server", f"[cyan]Host:[/cyan] [white]{host}[/white]\n[cyan]Port:[/cyan] [white]{port}[/white]\n[cyan]Config:[/cyan] [yellow]{config_path or '.agentarts_config.yaml'}[/yellow]\n[cyan]Entrypoint:[/cyan] [yellow]{entrypoint}[/yellow]\n[cyan]Auto-reload:[/cyan] [green]{'enabled' if reload else 'disabled'}[/green]")
     console.print()
     console.print(f"[cyan]API Documentation:[/cyan] [link]http://{host}:{port}/docs[/link]")
     console.print(f"[cyan]Health Check:[/cyan] [link]http://{host}:{port}/health[/link]")
@@ -55,7 +62,7 @@ def run_dev_server(
         sys.path.insert(0, os.getcwd())
 
         uvicorn.run(
-            "agentarts.sdk.runtime.app:create_app",
+            entrypoint,
             host=host,
             port=port,
             reload=reload,
@@ -67,6 +74,33 @@ def run_dev_server(
         echo_error(f"Failed to start server - {e}")
         console.print("[dim]Make sure all dependencies are installed: [yellow]pip install -e .[/yellow]")
         return False
+
+
+def get_entrypoint(config: dict) -> Optional[str]:
+    """
+    Get entrypoint from configuration.
+
+    Args:
+        config: Configuration dictionary
+
+    Returns:
+        Entrypoint string (e.g., "agent:create_app") or None
+    """
+    default_agent = config.get("default_agent")
+    if not default_agent:
+        agents = config.get("agents", {})
+        if agents:
+            default_agent = next(iter(agents.keys()), None)
+
+    if not default_agent:
+        return None
+
+    agents = config.get("agents", {})
+    agent_config = agents.get(default_agent, {})
+    base_config = agent_config.get("base", {})
+    entrypoint = base_config.get("entrypoint")
+
+    return entrypoint
 
 
 def load_config(config_path: Optional[str]) -> dict:
@@ -82,7 +116,7 @@ def load_config(config_path: Optional[str]) -> dict:
     if config_path:
         path = Path(config_path)
     else:
-        path = Path("agentarts.yaml")
+        path = Path(".agentarts_config.yaml")
 
     if path.exists():
         with open(path, encoding="utf-8") as f:
