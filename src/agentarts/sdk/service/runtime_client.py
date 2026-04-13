@@ -631,7 +631,7 @@ class RuntimeClient:
         """
         from agentarts.sdk.runtime.model import SESSION_HEADER
 
-        path = f"/agents/{agent_name}/invocations"
+        path = f"/agent/{agent_name}/invocations"
         params: Dict[str, Any] = {}
         if endpoint:
             params["endpoint"] = endpoint
@@ -688,7 +688,7 @@ class RuntimeClient:
 
         result = self._data(
             "GET",
-            f"/agents/{agent_name}/ping",
+            f"/agent/{agent_name}/ping",
             params=params if params else None,
             headers=headers if headers else None,
             timeout=timeout,

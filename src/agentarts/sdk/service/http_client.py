@@ -18,7 +18,7 @@ import datetime
 from enum import Enum
 from typing import Any, Dict, Iterator, Optional
 from dataclasses import dataclass, field
-from urllib.parse import urlparse, quote
+from urllib.parse import urlparse, quote, unquote
 
 import requests
 
@@ -62,7 +62,7 @@ class RequestResult:
         status_code: HTTP status code.
         data: Parsed response body.  For regular responses this is a
             ``dict`` (JSON) or ``str``.  For streaming responses this
-            is ``None``; use ``iter_lines()`` or ``iter_bytes()`` instead.
+            is ``None``; use ``iter_lines()`` / ``iter_bytes()`` instead.
         error: Error message if the request failed.
         headers: Response headers as a dict.
         streaming: ``True`` when the response Content-Type indicates a
@@ -163,63 +163,93 @@ class BaseHTTPClient:
         config: Optional[RequestConfig] = None,
         open_ak_sk: bool = False,
         sign_mode: SignMode = SignMode.SDK_HMAC_SHA256,
+        region_id: str = "",
     ):
         self._config = config or RequestConfig()
         self._session = requests.Session()
         self._session.headers.update(self._config.headers)
         self._open_ak_sk = open_ak_sk
         self._sign_mode = sign_mode
+        self._region_id = region_id
         self._signer = None
         self._credentials = None
 
-    def _get_timestamp(self) -> str:
-        """Get current timestamp in V11 format."""
-        return datetime.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    def _urlencode(self, s: str) -> str:
+        """URL encode with safe characters."""
+        return quote(s, safe="~")
 
-    def _hex_encode(self, data: bytes) -> str:
-        """Hex encode bytes to string."""
+    def _get_timestamp(self) -> str:
+        """Get current timestamp in SDK format."""
+        return datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+    def _hex_encode_sha256(self, data: bytes) -> str:
+        """Hex encode SHA256 hash."""
         return hashlib.sha256(data).hexdigest()
 
-    def _hmac_sha256(self, key: bytes, data: str) -> bytes:
-        """Compute HMAC-SHA256."""
-        return hmac.new(key, data.encode("utf-8"), hashlib.sha256).digest()
+    def _hkdf(self, key: str, secret: str, info: str, length: int = 32) -> str:
+        """Derive signing key using HKDF algorithm."""
+        salt = bytearray(key, "utf-8")
+        ikm = bytearray(secret, "utf-8")
+        info_bytes = bytearray(info, "utf-8")
 
-    def _get_signature_key(self, sk: str, date: str) -> bytes:
-        """Derive signature key for V11 signing."""
-        k_date = self._hmac_sha256(sk.encode("utf-8"), date)
-        return self._hmac_sha256(k_date, "huaweicloud")
+        prk = hmac.new(salt, ikm, hashlib.sha256).digest()
+
+        okm = b""
+        t = b""
+        for i in range(1, (length + 32) // 32 + 1):
+            new_info = t + info_bytes + bytes([i])
+            t = hmac.new(prk, new_info, hashlib.sha256).digest()
+            okm += t
+
+        return okm[:length].hex()
 
     def _canonical_uri(self, path: str) -> str:
-        """Encode URI path for canonical request."""
-        if not path:
-            return "/"
-        segments = path.split("/")
-        encoded_segments = [quote(segment, safe="") for segment in segments]
-        return "/".join(encoded_segments)
+        """Build canonical URI path."""
+        patterns = unquote(path).split("/")
+        uri = []
+        for value in patterns:
+            uri.append(self._urlencode(value))
+        url_path = "/".join(uri)
+        if url_path and url_path[-1] != "/":
+            url_path = url_path + "/"
+        return url_path
 
-    def _canonical_query_string(self, query: str) -> str:
-        """Encode query string for canonical request."""
-        if not query:
+    def _canonical_query_string(self, query_params: Optional[Dict[str, Any]]) -> str:
+        """Build canonical query string."""
+        if not query_params:
             return ""
-        params = []
-        for pair in query.split("&"):
-            if "=" in pair:
-                key, value = pair.split("=", 1)
-                params.append((quote(key, safe=""), quote(value, safe="")))
+
+        keys = sorted(query_params.keys())
+        arr = []
+        for key in keys:
+            ke = self._urlencode(key)
+            value = query_params[key]
+            if isinstance(value, list):
+                sorted_values = sorted(str(v) for v in value)
+                for v in sorted_values:
+                    arr.append(f"{ke}={self._urlencode(v)}")
             else:
-                params.append((quote(pair, safe=""), ""))
-        params.sort()
-        return "&".join(f"{k}={v}" for k, v in params)
+                arr.append(f"{ke}={self._urlencode(str(value))}")
+        return "&".join(arr)
 
-    def _canonical_headers(self, headers: Dict[str, str]) -> str:
-        """Format headers for canonical request."""
-        sorted_headers = sorted(headers.items(), key=lambda x: x[0].lower())
-        return "".join(f"{k.lower()}:{v.strip()}\n" for k, v in sorted_headers)
+    def _canonical_headers(self, headers: Dict[str, str], signed_headers: list) -> str:
+        """Build canonical headers string."""
+        _headers = {}
+        for k, v in headers.items():
+            key_lower = k.lower()
+            value_stripped = v.strip()
+            _headers[key_lower] = value_stripped
 
-    def _signed_headers(self, headers: Dict[str, str]) -> str:
-        """Get signed headers list."""
-        sorted_keys = sorted(k.lower() for k in headers.keys())
-        return ";".join(sorted_keys)
+        arr = []
+        for k in signed_headers:
+            arr.append(f"{k}:{_headers.get(k, '')}")
+        return "\n".join(arr) + "\n"
+
+    def _signed_headers(self, headers: Dict[str, str]) -> list:
+        """Get sorted list of signed header names."""
+        arr = [k.lower() for k in headers.keys()]
+        arr.sort()
+        return arr
 
     def _sign_request_v11(self, method: str, full_url: str, **kwargs) -> dict:
         """Sign the HTTP request using V11-HMAC-SHA256 algorithm (without body)."""
@@ -228,45 +258,55 @@ class BaseHTTPClient:
         if not self._credentials:
             self._credentials = create_credential()
 
+        if not self._region_id:
+            raise ValueError("region_id is required for V11-HMAC-SHA256 signing")
+
         parsed_url = urlparse(full_url)
         host = parsed_url.netloc
         path = parsed_url.path or "/"
-        query = parsed_url.query or ""
+
+        query_params = kwargs.get("params", {})
 
         timestamp = self._get_timestamp()
+        date_str = timestamp[:8]
 
         headers = kwargs.get("headers", {}) or {}
         headers["host"] = host
-        headers["x-sdk-date"] = timestamp
+        headers["X-Sdk-Date"] = timestamp
         headers["x-sdk-content-sha256"] = "UNSIGNED-PAYLOAD"
 
+        signed_headers = self._signed_headers(headers)
         canonical_request = (
             f"{method.upper()}\n"
             f"{self._canonical_uri(path)}\n"
-            f"{self._canonical_query_string(query)}\n"
-            f"{self._canonical_headers(headers)}\n"
-            f"{self._signed_headers(headers)}\n"
+            f"{self._canonical_query_string(query_params)}\n"
+            f"{self._canonical_headers(headers, signed_headers)}\n"
+            f"{';'.join(signed_headers)}\n"
             f"UNSIGNED-PAYLOAD"
         )
 
-        date_str = timestamp[:8]
-        signing_key = self._get_signature_key(self._credentials.sk, date_str)
+        credential_scope = f"{date_str}/{self._region_id}/apic"
+        hashed_canonical_request = self._hex_encode_sha256(canonical_request.encode("utf-8"))
 
         string_to_sign = (
             f"V11-HMAC-SHA256\n"
             f"{timestamp}\n"
-            f"{date_str}/huaweicloud/sdk_request\n"
-            f"{self._hex_encode(canonical_request.encode('utf-8'))}"
+            f"{credential_scope}\n"
+            f"{hashed_canonical_request}"
         )
 
-        signature = self._hmac_sha256(signing_key, string_to_sign)
-        signature_hex = signature.hex()
+        real_use_secret = self._hkdf(self._credentials.ak, self._credentials.sk, credential_scope)
+        signature = hmac.new(
+            real_use_secret.encode("utf-8"),
+            string_to_sign.encode("utf-8"),
+            hashlib.sha256
+        ).hexdigest()
 
         authorization = (
             f"V11-HMAC-SHA256 "
-            f"Access={self._credentials.ak}, "
-            f"SignedHeaders={self._signed_headers(headers)}, "
-            f"Signature={signature_hex}"
+            f"Credential={self._credentials.ak}/{credential_scope}, "
+            f"SignedHeaders={';'.join(signed_headers)}, "
+            f"Signature={signature}"
         )
 
         headers["Authorization"] = authorization
