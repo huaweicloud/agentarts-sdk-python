@@ -643,19 +643,14 @@ class RuntimeClient:
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
 
-        old_base = self._config.base_url
-        self._config.base_url = self._data_base
-        try:
-            result = self._request(
-                "POST",
-                path,
-                data=payload,
-                params=params if params else None,
-                headers=headers,
-                timeout=timeout,
-            )
-        finally:
-            self._config.base_url = old_base
+        result = self._data(
+            "POST",
+            path,
+            data=payload,
+            params=params if params else None,
+            headers=headers,
+            timeout=timeout,
+        )
 
         return self._dispatch_response(result, "invoke_agent")
 
@@ -691,18 +686,14 @@ class RuntimeClient:
         if endpoint:
             params["endpoint"] = endpoint
 
-        old_base = self._config.base_url
-        self._config.base_url = self._data_base
-        try:
-            result = self._request(
-                "GET",
-                f"/agents/{agent_name}/ping",
-                params=params if params else None,
-                headers=headers if headers else None,
-                timeout=timeout,
-            )
-        finally:
-            self._config.base_url = old_base
+        result = self._data(
+            "GET",
+            f"/agents/{agent_name}/ping",
+            params=params if params else None,
+            headers=headers if headers else None,
+            timeout=timeout,
+        )
+
 
         return self._dispatch_response(result, "ping_agent")
 
