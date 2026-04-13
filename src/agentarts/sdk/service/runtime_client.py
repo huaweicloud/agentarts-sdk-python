@@ -37,7 +37,7 @@ import json
 import logging
 from typing import Any, Dict, Iterator, List, Optional, Union
 
-from agentarts.sdk.service.http_client import BaseHTTPClient, RequestConfig, RequestResult
+from agentarts.sdk.service.http_client import BaseHTTPClient, RequestConfig, RequestResult, SignMode
 from agentarts.sdk.utils.constant import (
     get_control_plane_endpoint,
     get_runtime_data_plane_endpoint,
@@ -65,6 +65,8 @@ class RuntimeClient:
             Can also be set later via :meth:`set_auth_token`.
         timeout: Default request timeout in seconds.
         verify_ssl: Whether to verify SSL certificates.
+        sign_mode: Signature mode for data plane requests (SDK_HMAC_SHA256 or V11_HMAC_SHA256).
+        region_id: Region ID for V11 signature mode.
     """
 
     def __init__(
@@ -74,12 +76,16 @@ class RuntimeClient:
         access_token: Optional[str] = None,
         timeout: float = 30.0,
         verify_ssl: bool = True,
+        sign_mode: SignMode = SignMode.SDK_HMAC_SHA256,
+        region_id: str = "",
     ) -> None:
         self._control_base = control_endpoint or get_control_plane_endpoint()
         self._data_base = data_endpoint or get_runtime_data_plane_endpoint()
         self._timeout = timeout
         self._verify_ssl = verify_ssl
         self._access_token = access_token
+        self._sign_mode = sign_mode
+        self._region_id = region_id
 
         self._control_client = BaseHTTPClient(RequestConfig(
             base_url=self._control_base,
@@ -91,7 +97,7 @@ class RuntimeClient:
             base_url=self._data_base,
             timeout=timeout,
             verify_ssl=verify_ssl,
-        ))
+        ), open_ak_sk=(sign_mode == SignMode.V11_HMAC_SHA256), sign_mode=sign_mode, region_id=region_id)
 
         if access_token:
             self.set_auth_token(access_token)

@@ -273,7 +273,7 @@ class BaseHTTPClient:
         headers = kwargs.get("headers", {}) or {}
         headers["host"] = host
         headers["X-Sdk-Date"] = timestamp
-        headers["x-sdk-content-sha256"] = "UNSIGNED-PAYLOAD"
+        headers["X-Sdk-Content-Sha256"] = "UNSIGNED-PAYLOAD"
 
         signed_headers = self._signed_headers(headers)
         canonical_request = (

@@ -9,6 +9,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from agentarts.sdk.utils.constant import get_region, get_runtime_data_plane_endpoint, get_control_plane_endpoint
+from agentarts.sdk.service.http_client import SignMode
 from agentarts.toolkit.operations.runtime.config import (
     get_agent,
     get_config_file_path,
@@ -32,18 +33,19 @@ def _ensure_https(endpoint: str) -> str:
 def _resolve_agent_info(
     agent_name: Optional[str],
     region: Optional[str],
-) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
     """
-    Resolve agent name, region and agent_id from config if not provided.
+    Resolve agent name, region, agent_id and auth_type from config if not provided.
 
     Args:
         agent_name: Agent name (may be None)
         region: Region (may be None)
 
     Returns:
-        Tuple of (agent_name, region, agent_id) with resolved values
+        Tuple of (agent_name, region, agent_id, auth_type) with resolved values
     """
     agent_id = None
+    auth_type = None
     if agent_name is None:
         config_path = get_config_file_path()
         if config_path.exists():
@@ -54,6 +56,8 @@ def _resolve_agent_info(
                     agent_config = config.agents[agent_name]
                     region = region or agent_config.base.region
                     agent_id = agent_config.runtime.agent_id
+                    if agent_config.runtime.identity_configuration:
+                        auth_type = agent_config.runtime.identity_configuration.authorizer_type
                 elif config.agents:
                     first_agent_key = next(iter(config.agents.keys()), None)
                     if first_agent_key:
@@ -61,7 +65,9 @@ def _resolve_agent_info(
                         agent_config = config.agents[first_agent_key]
                         region = region or agent_config.base.region
                         agent_id = agent_config.runtime.agent_id
-    return agent_name, region, agent_id
+                        if agent_config.runtime.identity_configuration:
+                            auth_type = agent_config.runtime.identity_configuration.authorizer_type
+    return agent_name, region, agent_id, auth_type
 
 
 def _get_data_endpoint(
@@ -173,7 +179,7 @@ def invoke_agent(
                 timeout=timeout,
             )
         else:
-            agent_name, region, agent_id = _resolve_agent_info(agent_name, region)
+            agent_name, region, agent_id, auth_type = _resolve_agent_info(agent_name, region)
 
             if agent_name is None:
                 echo_error("No agent specified and no default agent configured")
@@ -190,9 +196,18 @@ def invoke_agent(
                 console.print("[dim]Set AGENTARTS_RUNTIME_DATA_ENDPOINT environment variable or ensure agent is deployed[/dim]")
                 return False
 
-            echo_info("Invoke Request", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]")
+            sign_mode = SignMode.SDK_HMAC_SHA256
+            if auth_type and auth_type.upper() == "IAM":
+                sign_mode = SignMode.V11_HMAC_SHA256
 
-            client = RuntimeClient(data_endpoint=data_endpoint, verify_ssl=False)
+            echo_info("Invoke Request", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]\n[cyan]Auth Type:[/cyan] [dim]{auth_type or 'None'}[/dim]")
+
+            client = RuntimeClient(
+                data_endpoint=data_endpoint,
+                verify_ssl=False,
+                sign_mode=sign_mode,
+                region_id=actual_region,
+            )
 
             result = client.invoke_agent(
                 agent_name=agent_name,
@@ -267,7 +282,7 @@ def status_agent(
                 echo_error(f"Status: {status}")
                 return False
         else:
-            agent_name, region, agent_id = _resolve_agent_info(agent_name, region)
+            agent_name, region, agent_id, auth_type = _resolve_agent_info(agent_name, region)
 
             if agent_name is None:
                 echo_error("No agent specified")
@@ -282,10 +297,19 @@ def status_agent(
                 console.print("[dim]Set AGENTARTS_RUNTIME_DATA_ENDPOINT environment variable or ensure agent is deployed[/dim]")
                 return False
 
-            console.print()
-            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]")
+            sign_mode = SignMode.SDK_HMAC_SHA256
+            if auth_type and auth_type.upper() == "IAM":
+                sign_mode = SignMode.V11_HMAC_SHA256
 
-            client = RuntimeClient(data_endpoint=data_endpoint, verify_ssl=False)
+            console.print()
+            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]\n[cyan]Auth Type:[/cyan] [dim]{auth_type or 'None'}[/dim]")
+
+            client = RuntimeClient(
+                data_endpoint=data_endpoint,
+                verify_ssl=False,
+                sign_mode=sign_mode,
+                region_id=actual_region,
+            )
 
             result = client.ping_agent(
                 agent_name=agent_name,
