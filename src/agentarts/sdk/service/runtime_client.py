@@ -491,7 +491,7 @@ class RuntimeClient:
             True if the agent was deleted successfully.
         """
         existing = self.find_agent_by_name(agent_name)
-        agent_id = existing.get("agent_id")
+        agent_id = existing.get("id")
         if not agent_id:
             log.warning("Agent '%s' not found, nothing to delete", agent_name)
             return False
