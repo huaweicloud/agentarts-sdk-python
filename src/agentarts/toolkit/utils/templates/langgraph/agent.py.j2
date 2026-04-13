@@ -166,10 +166,5 @@ async def handler(payload: Dict[str, Any], context: RequestContext = None) -> Di
     return await agent.run(query)
 
 
-def create_app():
-    """Create app instance for runtime."""
-    return app
-
-
 if __name__ == "__main__":
     app.run()

@@ -145,7 +145,7 @@ agents:
   {name}:
     base:
       name: {name}
-      entrypoint: agent:create_app
+      entrypoint: agent:app
       dependency_file: requirements.txt
       platform: linux/amd64
       language: python3
@@ -256,7 +256,7 @@ def create_dockerfile(project_path: Path, template: str) -> None:
     dockerfile_content = render_dockerfile(
         base_image="python:3.10-slim",
         dependency_file="requirements.txt",
-        entrypoint="agent:create_app",
+        entrypoint="agent:app",
         port=8080,
     )
 

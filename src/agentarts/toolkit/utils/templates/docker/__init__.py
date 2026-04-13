@@ -53,8 +53,8 @@ RUN pip install --no-cache-dir -r {dependency_file}"""
     chown_app_section = f"RUN chown -R {user_name}:{user_name} /app"
 
     if entrypoint and ":" in entrypoint:
-        module, func = entrypoint.split(":")
-        cmd_section = f'CMD ["python", "-c", "from {module} import {func}; {func}()"]'
+        module, app_target = entrypoint.split(":")
+        cmd_section = f'CMD ["uvicorn", "{module}:{app_target}", "--host", "0.0.0.0", "--port", "{port}"]'
     else:
         cmd_section = 'CMD ["python", "-m", "agentarts.server", "--config", "agentarts.yaml"]'
 

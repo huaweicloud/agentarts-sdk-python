@@ -64,8 +64,22 @@ def run_dev_server(
 
     try:
         import uvicorn
+        import importlib
 
         sys.path.insert(0, os.getcwd())
+
+        use_factory = False
+        if ":" in entrypoint:
+            module_name, target_name = entrypoint.split(":", 1)
+            try:
+                module = importlib.import_module(module_name)
+                target = getattr(module, target_name, None)
+                if target is not None:
+                    from starlette.applications import Starlette
+                    if callable(target) and not isinstance(target, Starlette):
+                        use_factory = True
+            except Exception:
+                pass
 
         uvicorn.run(
             entrypoint,
@@ -73,7 +87,7 @@ def run_dev_server(
             port=port,
             reload=reload,
             log_level="info",
-            factory=True,
+            factory=use_factory,
         )
         return True
     except ImportError as e:

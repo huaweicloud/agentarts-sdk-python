@@ -42,11 +42,6 @@ async def handler(payload: dict, context: RequestContext = None) -> dict:
     return {"response": f"Received: {message}"}
 
 
-def create_app():
-    """返回 ASGI 应用实例"""
-    return app
-
-
 if __name__ == "__main__":
     app.run()
 ```
@@ -61,7 +56,7 @@ agentarts dev
 python agent.py
 
 # 或使用 uvicorn
-uvicorn agent:create_app --host 0.0.0.0 --port 8080
+uvicorn agent:app --host 0.0.0.0 --port 8080
 ```
 
 ## AgentArtsRuntimeApp 类
@@ -433,10 +428,6 @@ def health_check():
     return PingStatus.HEALTHY
 
 
-def create_app():
-    return app
-
-
 if __name__ == "__main__":
     app.run()
 ```
@@ -464,10 +455,6 @@ async def streaming_handler(payload: dict, context: RequestContext = None) -> As
             "index": i,
             "total": len(words),
         }
-
-
-def create_app():
-    return app
 ```
 
 ### WebSocket Agent
@@ -507,10 +494,6 @@ async def ws_handler(websocket: WebSocket, context: RequestContext = None):
 
 async def process_message(session_id: str, message: str) -> str:
     return f"Echo: {message}"
-
-
-def create_app():
-    return app
 ```
 
 ## 注意事项
