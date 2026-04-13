@@ -52,8 +52,8 @@ def run_dev_server(
     console.print()
     echo_info("Development Server", f"[cyan]Host:[/cyan] [white]{host}[/white]\n[cyan]Port:[/cyan] [white]{port}[/white]\n[cyan]Config:[/cyan] [yellow]{config_path or '.agentarts_config.yaml'}[/yellow]\n[cyan]Entrypoint:[/cyan] [yellow]{entrypoint}[/yellow]\n[cyan]Auto-reload:[/cyan] [green]{'enabled' if reload else 'disabled'}[/green]")
     console.print()
-    console.print(f"[cyan]API Documentation:[/cyan] [link]http://{host}:{port}/docs[/link]")
-    console.print(f"[cyan]Health Check:[/cyan] [link]http://{host}:{port}/health[/link]")
+    console.print(f"[cyan]Invocation Endpoint:[/cyan] [white]POST[/white] [link]http://{host}:{port}/invocations[/link]")
+    console.print(f"[cyan]Health Check:[/cyan] [white]GET[/white] [link]http://{host}:{port}/ping[/link]")
     console.print()
 
     try:
