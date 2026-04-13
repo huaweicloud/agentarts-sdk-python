@@ -173,7 +173,7 @@ client.delete_code_interpreter(
 | --- | --- | --- |
 |code_interpreter_name |str| **Required**  代码解释器的名称，用于识别和管理会话，名称唯一|
 |session_name |str| 会话名称|
-|api_key |str| 认证使用的API Key，如果不提供则从环境变量API_KEY中获取, default: `None`|
+|api_key |str| 认证使用的API Key，如果不提供则从环境变量HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY中获取, default: `None`|
 |session_timeout |int| 会话超时时间，单位为秒，默认15分钟，最小值为60秒，最大值为86400秒（24小时）, default: `900`|
 
 **返回值**
@@ -195,7 +195,7 @@ session_id = client.start_session(
 | --- | --- | --- |
 |code_interpreter_name |str| **Required**  代码解释器的名称，用于识别和管理会话，名称唯一|
 |session_id |str| 会话ID，默认使用当前会话ID, default: `None`|
-|api_key |str| 认证使用的API Key，如果不提供则从环境变量API_KEY中获取, default: `None`|
+|api_key |str| 认证使用的API Key，如果不提供则从环境变量HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY中获取, default: `None`|
 
 **返回值**
 包含会话详情的字典：
@@ -218,7 +218,7 @@ session_info = client.get_session(
 **参数**
 | 参数名 | 类型 | 描述 |
 | --- | --- | --- |
-|api_key |str| 认证使用的API Key，如果不提供则从环境变量API_KEY中获取, default: `None`|
+|api_key |str| 认证使用的API Key，如果不提供则从环境变量HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY中获取, default: `None`|
 
 **返回值**
 bool: 没有活跃会话时返回True，否则返回False
@@ -236,7 +236,7 @@ client.stop_session()
 | --- | --- | --- |
 |operate_type |str| **Required**  调用方法名，"execute_code"或"execute_command"等|
 |arguments |Dict| **Required**  调用参数，根据operate_type不同而不同|
-|api_key |str| 认证使用的API Key，如果不提供则从环境变量API_KEY中获取, default: `None`|
+|api_key |str| 认证使用的API Key，如果不提供则从环境变量HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY中获取, default: `None`|
 
 **返回值**
 result[Dict]: 包含调用结果的字典
