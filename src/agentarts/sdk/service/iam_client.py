@@ -31,13 +31,13 @@ class IAMClient:
         """
         # Import modules here to avoid dependency issues
         from huaweicloudsdkiam.v5 import IamClient
-        from huaweicloudsdkcore.region import Region
+        from huaweicloudsdkcore.region.region import Region
         from huaweicloudsdkcore.http.http_config import HttpConfig
-        from agentarts.sdk.utils.metadata import get_credentials
+        from agentarts.sdk.utils.metadata import create_credential
         from agentarts.sdk.utils.constant import get_region, get_iam_endpoint
         
         # Create credentials
-        credentials = get_credentials()
+        credentials = create_credential()
         
         # Create HTTP config with ignore_ssl_verification=True
         http_config = HttpConfig.get_default_config()
