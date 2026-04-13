@@ -56,9 +56,7 @@ class CodeInterpreter:
 
         # 管理代码解释器的数据面客户端
         # 优先级：环境变量 > 参数 > 默认值
-        endpoint_url = os.getenv("HUAWEICLOUD_SDK_CODE_INTERPRETER_DATA_ENDPOINT")
-        if not endpoint_url:
-            endpoint_url = data_endpoint or get_code_interpreter_data_plane_endpoint()
+        endpoint_url = get_code_interpreter_data_plane_endpoint(endpoint=data_endpoint)
         
         self.data_plane_client = DataToolsHttpClient(
             region_name=region,
