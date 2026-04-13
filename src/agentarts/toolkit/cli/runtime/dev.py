@@ -1,10 +1,18 @@
 """Dev command definition"""
 
-from typing import Annotated, Optional
+from typing import Annotated, List, Optional
 
 import typer
 
 from agentarts.toolkit.operations.runtime import dev as dev_op
+
+
+def parse_env_var(env_str: str) -> tuple:
+    """Parse environment variable string KEY=VALUE."""
+    if "=" in env_str:
+        key, value = env_str.split("=", 1)
+        return key.strip(), value.strip()
+    return env_str.strip(), ""
 
 
 def dev(
@@ -15,13 +23,34 @@ def dev(
         Optional[str],
         typer.Option("--config", "-c", help="Configuration file path"),
     ] = None,
+    env: Annotated[
+        Optional[List[str]],
+        typer.Option("--env", "-e", help="Environment variables (KEY=VALUE). Can be used multiple times."),
+    ] = None,
 ):
     """
     Run local development server.
 
+    Environment variables can be set via --env option or in .agentarts_config.yaml.
+    Command-line --env takes precedence over config file.
+
     Examples:
         agentarts dev --port 8080 --reload
+        agentarts dev --env OPENAI_API_KEY=sk-xxx --env OPENAI_MODEL_NAME=gpt-4o
     """
-    success = dev_op.run_dev_server(port=port, host=host, reload=reload, config_path=config)
+    env_vars = {}
+    if env:
+        for env_str in env:
+            key, value = parse_env_var(env_str)
+            if key:
+                env_vars[key] = value
+
+    success = dev_op.run_dev_server(
+        port=port,
+        host=host,
+        reload=reload,
+        config_path=config,
+        env_vars=env_vars if env_vars else None,
+    )
     if not success:
         raise typer.Exit(1)
