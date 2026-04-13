@@ -46,7 +46,7 @@ def destroy_agent(
         from agentarts.sdk.utils.constant import get_control_plane_endpoint
 
         control_endpoint = get_control_plane_endpoint(actual_region)
-        client = RuntimeClient(control_endpoint=control_endpoint)
+        client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=False)
 
         result = client.delete_agent_by_name(agent_name=agent_name)
 
