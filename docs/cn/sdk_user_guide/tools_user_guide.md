@@ -67,7 +67,7 @@ CodeInterpreter(region: str, data_endpoint: Optional[str] = None)
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | region | str | 否 | 从配置读取 | 华为云区域名称 |
-| data_endpoint | str | 否 | None | 数据面端点，优先从环境变量 HUAWEICLOUD_SDK_CODE_INTERPRETER_DATA_ENDPOINT 读取 |
+| data_endpoint | str | 否 | None | 数据面端点，优先从环境变量 AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT 读取 |
 
 **使用示例**：
 
@@ -103,7 +103,7 @@ client = CodeInterpreter(
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | region | str | 否 | 从配置读取 | 华为云区域名称 |
-| data_endpoint | str | 否 | None | 数据面端点，优先从环境变量 HUAWEICLOUD_SDK_CODE_INTERPRETER_DATA_ENDPOINT 读取 |
+| data_endpoint | str | 否 | None | 数据面端点，优先从环境变量 AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT 读取 |
 
 #### 1. 创建代码解释器
 **方法名** `create_code_interpreter`

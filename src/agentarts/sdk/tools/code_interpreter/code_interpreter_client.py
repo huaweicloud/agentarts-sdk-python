@@ -842,18 +842,27 @@ class CodeInterpreter:
         return result
     
 @contextmanager
-def code_session(region: str, code_interpreter_name: str) -> Generator[CodeInterpreter, None, None]:
+def code_session(
+    region: str, 
+    code_interpreter_name: str,
+    api_key: Optional[str] = None
+) -> Generator[CodeInterpreter, None, None]:
     """代码解释器会话上下文管理器
     
     Args:
-        region (str): region名称，如"cn-north-4"
+        region (str): region名称，如"cn-southwest-2"
         code_interpreter_name (str): 代码解释器名称
+        api_key (Optional[str]): API Key，如果不提供则从环境变量HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY中获取
     
     Yields:
         CodeInterpreter: 会话启动完成的代码解释器实例
         
     Example:
-        >>> with code_session("cn-north-4", "my-code-interpreter-name") as client:
+        >>> with code_session("cn-southwest-2", "my-code-interpreter-name") as client:
+        >>>     client.execute_code("print('Hello, World!')")
+        >>> 
+        >>> # 传入 API Key
+        >>> with code_session("cn-southwest-2", "my-code-interpreter-name", api_key="your-api-key") as client:
         >>>     client.execute_code("print('Hello, World!')")
     """
 
@@ -861,10 +870,11 @@ def code_session(region: str, code_interpreter_name: str) -> Generator[CodeInter
     default_session_name = "default-session-name"
     client.start_session(
         code_interpreter_name=code_interpreter_name, 
-        session_name=default_session_name
+        session_name=default_session_name,
+        api_key=api_key
     )
 
     try:
         yield client
     finally:
-        client.stop_session()
+        client.stop_session(api_key=api_key)
