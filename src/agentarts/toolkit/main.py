@@ -52,6 +52,7 @@ app = typer.Typer(
 
 @app.callback(invoke_without_command=True)
 def main(
+    ctx: typer.Context,
     version: Annotated[
         bool,
         typer.Option("--version", "-v", help="Show version and exit"),
@@ -76,6 +77,20 @@ def main(
     if version:
         from agentarts import __version__
         console.print(f"agentarts version: [bold green]{__version__}[/bold green]")
+        raise typer.Exit()
+    
+    if ctx.invoked_subcommand is None:
+        from agentarts import __version__
+        console.print()
+        console.print(f"[bold cyan]AgentArts CLI[/bold cyan] [dim]v{__version__}[/dim]")
+        console.print("[dim]Huawei Cloud Agent Development Toolkit[/dim]")
+        console.print()
+        console.print("[yellow]Usage:[/yellow] agentarts [OPTIONS] COMMAND [ARGS]...")
+        console.print()
+        console.print("[yellow]Try:[/yellow]")
+        console.print("  [cyan]agentarts --help[/cyan]     Show available commands")
+        console.print("  [cyan]agentarts init --help[/cyan]  Show init command help")
+        console.print()
         raise typer.Exit()
 
 
