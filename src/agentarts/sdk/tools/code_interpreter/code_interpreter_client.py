@@ -36,17 +36,15 @@ class CodeInterpreter:
         control_plane_client : 用于与控制面API交互
         data_plane_client : 用于与数据面API交互
     """
-    
-    def __init__(self, region: str, data_endpoint: Optional[str] = None) -> None:
+    def __init__(self, region: Optional[str], data_endpoint: Optional[str] = None) -> None:
         """支持在指定的region中初始化代码解释器客户端
 
         Args:
             region: 指定的区域
-            data_endpoint: 数据面端点，可选，如果不提供则从环境变量HUAWEICLOUD_SDK_CODE_INTERPRETER_DATA_ENDPOINT中获取
+            data_endpoint: 数据面端点，可选，如果不提供则从环境变量AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT中获取
 
         """
-        if not region:
-            region = get_region()
+        region = region or get_region()
         
         # 管理代码解释器的控制面客户端
         self.control_plane_client = ControlToolsHttpClient(

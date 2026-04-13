@@ -161,7 +161,7 @@ def get_runtime_data_plane_endpoint() -> str:
     """
     return AGENTARTS_RUNTIME_DATA_ENDPOINT
 
-def get_code_interpreter_data_plane_endpoint() -> str:
+def get_code_interpreter_data_plane_endpoint(endpoint: str = None) -> str:
     """
     Get the AgentArts data plane endpoint URL.
 
@@ -174,6 +174,8 @@ def get_code_interpreter_data_plane_endpoint() -> str:
     """
     if AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT:
         return AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT
+    if endpoint:
+        return endpoint
     return AGENTARTS_RUNTIME_DATA_ENDPOINT
 
 def get_memory_endpoint(
