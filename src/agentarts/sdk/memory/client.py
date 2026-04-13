@@ -28,6 +28,7 @@ from .inner.config import (
 )
 from .inner.controlplane import _ControlPlane
 from .inner.dataplane import _DataPlane
+from ..utils.constant import get_region
 
 
 class MemoryClient:
@@ -79,7 +80,7 @@ class MemoryClient:
 
     def __init__(
             self,
-            region_name: Optional[str] = "cn-southwest-2",
+            region_name: Optional[str],
             api_key: Optional[str] = None
     ):
         """
@@ -122,7 +123,7 @@ class MemoryClient:
             >>> # Specify region
             >>> client = MemoryClient(region_name="cn-east-3", api_key="your-api-key")
         """
-        self.region_name = region_name
+        self.region_name = region_name or get_region()
 
         self._control_plane = None  # Lazy loading
         self._data_plane = _DataPlane(region_name=region_name, api_key=api_key)
