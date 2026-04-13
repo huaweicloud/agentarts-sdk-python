@@ -336,12 +336,6 @@ Docker is required for:
 - [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop)
 - [Docker Engine for Linux](https://docs.docker.com/engine/install/)
 
-### Supported Regions
-
-| Region | Code |
-|--------|------|
-| Southwest China (Guiyang) | `cn-southwest-2` |
-
 ### Resource Quotas
 
 Refer to [Huawei Cloud AgentArts Documentation](https://docs.huaweicloud.com/agentarts) for resource quotas and limits.
