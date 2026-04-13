@@ -72,7 +72,7 @@ Huawei Cloud AgentArts SDK adopts a **layered architecture + plugin design** phi
 │                    CLI Toolkit Layer                         │
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │         agentarts-cli (Command Line Tool)            │  │
-│  │  init | dev | build | package | deploy | logs | config│  │
+│  │  init | dev | build | package | deploy | config            │  │
 │  └──────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -222,7 +222,6 @@ huaweicloud-agentarts-sdk-python/
 │       │   ├── dev.py
 │       │   ├── build.py
 │       │   ├── deploy.py
-│       │   ├── logs.py
 │       │   └── config.py
 │       └── templates/             # Project templates
 │           ├── basic/
@@ -356,9 +355,6 @@ agentarts build --platform docker
 # Deploy to cloud
 agentarts deploy -r cn-north-4 -e production
 
-# View logs
-agentarts logs -f --tail 100
-
 # Configuration management
 agentarts config set region cn-north-4
 ```
@@ -451,7 +447,7 @@ This architecture design document provides a complete technical solution for Hua
 2. **Modular Design**: Memory, Identity, MCP, Tools, Server core modules
 3. **Framework Adapters**: Support for LangChain, LangGraph, AutoGen, CrewAI
 4. **Complete API Specification**: RESTful API, WebSocket, SSE streaming
-5. **CLI Toolchain**: init, dev, build, deploy, logs commands
+5. **CLI Toolchain**: init, dev, build, deploy commands
 6. **Cloud Native Deployment**: Docker, Kubernetes, Serverless options
 7. **Technology Recommendations**: Detailed stack selection and optimization suggestions
 
