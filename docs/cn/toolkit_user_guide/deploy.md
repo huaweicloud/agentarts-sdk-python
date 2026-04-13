@@ -227,7 +227,7 @@ agentarts status --agent my-agent
 ### 2. 调用 Agent
 
 ```bash
-agentarts invoke --agent my-agent --payload '{"message": "Hello"}'
+agentarts invoke '{"message": "Hello"}' --agent my-agent
 ```
 
 ### 3. 查看 Agent 详情

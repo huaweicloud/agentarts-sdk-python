@@ -124,10 +124,10 @@ def invoke(
     The payload must be a valid JSON string.
 
     Examples:
-        agentarts invoke '{"input": "hello"}'
-        agentarts invoke '{"input": "hello"}' --agent my-agent
-        agentarts invoke '{"input": "hello"}' --mode local --port 8080
-        agentarts invoke '{"query": "test"}' --session my-session-123
+        agentarts invoke '{"message": "hello"}'
+        agentarts invoke '{"message": "hello"}' --agent my-agent
+        agentarts invoke '{"message": "hello"}' --mode local --port 8080
+        agentarts invoke '{"message": "test"}' --session my-session-123
     """
     invoke_mode = InvokeMode.CLOUD
     if mode.lower() == "local":

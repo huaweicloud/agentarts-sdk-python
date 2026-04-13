@@ -296,7 +296,7 @@ fi
 # 检查状态
 if agentarts status -a my-agent | grep -q "Healthy"; then
   # 状态正常，调用 Agent
-  agentarts invoke -a my-agent -p '{"message": "你好"}'
+  agentarts invoke '{"message": "你好"}' --agent my-agent
 else
   echo "Agent is not healthy, skipping invocation"
 fi
