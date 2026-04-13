@@ -69,8 +69,17 @@ app = AgentArtsRuntimeApp(
     lifespan=None,         # 生命周期管理
     middleware=None,       # 中间件列表
     protocol="http",       # 协议类型: "http" 或 "https"
+    max_concurrency=15,    # 最大并发请求数
 )
 ```
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `debug` | `bool` | `False` | 调试模式 |
+| `lifespan` | `Lifespan` | `None` | 生命周期管理 |
+| `middleware` | `Sequence[Middleware]` | `None` | 中间件列表 |
+| `protocol` | `"http"` \| `"https"` | `"http"` | 协议类型 |
+| `max_concurrency` | `int` | `15` | 最大并发请求数，超出返回 503 错误 |
 
 ### run() 方法
 
@@ -498,7 +507,7 @@ async def process_message(session_id: str, message: str) -> str:
 
 ## 注意事项
 
-1. **并发限制**: 默认最大并发请求数为 2，超出返回 503 错误
+1. **并发限制**: 默认最大并发请求数为 15，可通过 `max_concurrency` 参数配置，超出返回 503 错误
 2. **上下文隔离**: 每个请求的上下文相互隔离，不会互相干扰
 3. **流式响应**: 流式输出使用 SSE (Server-Sent Events) 格式
 4. **健康检查**: 建议实现自定义健康检查逻辑，特别是有状态 Agent

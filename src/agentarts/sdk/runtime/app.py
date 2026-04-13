@@ -84,6 +84,7 @@ class AgentArtsRuntimeApp(Starlette):
         lifespan: Optional[Lifespan] = None,
         middleware: Optional[Sequence[Middleware]] = None,
         protocol: Literal["http", "https"] = "http",
+        max_concurrency: int = 15,
     ) -> None:
         self.handlers: Dict[str, Callable] = {}
         self._ping_handler: Optional[Callable] = None
@@ -92,9 +93,9 @@ class AgentArtsRuntimeApp(Starlette):
         self._force_ping_status: Optional[PingStatus] = None
         self._active_tasks: Dict[int, Dict[str, Any]] = {}
         self._task_counter_lock :threading.Lock = threading.Lock()
-        self._invocation_semaphore = asyncio.Semaphore(2)
+        self._invocation_semaphore = asyncio.Semaphore(max_concurrency)
         self._invocation_executor = ThreadPoolExecutor(
-            max_workers=2, thread_name_prefix="invocation"
+            max_workers=max_concurrency, thread_name_prefix="invocation"
         )
         self.protocol = protocol
         self.logger = logging.getLogger("agentarts.runtime.app")
