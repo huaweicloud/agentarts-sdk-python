@@ -192,7 +192,7 @@ def invoke_agent(
 
             echo_info("Invoke Request", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]")
 
-            client = RuntimeClient(data_endpoint=data_endpoint)
+            client = RuntimeClient(data_endpoint=data_endpoint, verify_ssl=False)
 
             result = client.invoke_agent(
                 agent_name=agent_name,
@@ -285,7 +285,7 @@ def status_agent(
             console.print()
             echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]")
 
-            client = RuntimeClient(data_endpoint=data_endpoint)
+            client = RuntimeClient(data_endpoint=data_endpoint, verify_ssl=False)
 
             result = client.ping_agent(
                 agent_name=agent_name,
