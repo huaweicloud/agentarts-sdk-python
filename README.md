@@ -257,7 +257,8 @@ This creates:
 my_agent/
 ├── agent.py              # Agent implementation
 ├── requirements.txt      # Python dependencies
-└── .agentarts_config.yaml # Project configuration
+├── .agentarts_config.yaml # Project configuration
+└── Dockerfile            # Docker build file
 ```
 
 ### 2. Configure Environment
