@@ -85,11 +85,17 @@ def _get_data_endpoint(
         control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=False)
         agent_info = control_client.find_agent_by_name(agent_name)
         if agent_info:
-            version_detail = agent_info.get("version_detail") or {}
-            invoke_config_resp = version_detail.get("invoke_config") or {}
-            access_endpoint = invoke_config_resp.get("access_endpoint")
-            if access_endpoint:
-                data_endpoint = access_endpoint
+            agent_id = agent_info.get("id")
+            version_detail = agent_info.get("version_detail")
+            if not version_detail and agent_id:
+                agent_detail = control_client.find_agent_by_id(agent_id)
+                if agent_detail:
+                    version_detail = agent_detail.get("version_detail") or {}
+            if version_detail:
+                invoke_config_resp = version_detail.get("invoke_config") or {}
+                access_endpoint = invoke_config_resp.get("access_endpoint")
+                if access_endpoint:
+                    data_endpoint = access_endpoint
 
     if data_endpoint:
         data_endpoint = _ensure_https(data_endpoint)
@@ -167,7 +173,7 @@ def invoke_agent(
             data_endpoint = _get_data_endpoint(agent_name, actual_region)
 
             if not data_endpoint:
-                echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent {agent_name}")
+                echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent [yellow]{agent_name} {actual_region}[/yellow]")
                 console.print("[dim]Set AGENTARTS_RUNTIME_DATA_ENDPOINT environment variable or ensure agent is deployed[/dim]")
                 return False
 
