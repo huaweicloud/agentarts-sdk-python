@@ -23,14 +23,6 @@ export HUAWEICLOUD_SDK_AK="your-access-key"
 export HUAWEICLOUD_SDK_SK="your-secret-key"
 ```
 
-**方式二：代码中直接配置**
-
-```python
-import os
-os.environ["HUAWEICLOUD_SDK_AK"] = "your-access-key"
-os.environ["HUAWEICLOUD_SDK_SK"] = "your-secret-key"
-```
-
 ### 获取 AK/SK
 
 1. 登录华为云控制台

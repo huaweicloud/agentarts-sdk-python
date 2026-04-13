@@ -7,8 +7,85 @@
 
 ---
 
+## 环境要求
+
+- Python 3.10+
+- 已安装 AgentArts SDK：`pip install agentarts`
+
+## 认证配置
+
+### 华为云 AK/SK 认证
+
+CodeInterpreter SDK 使用华为云 AK/SK 进行身份认证。请通过以下方式配置：
+
+**方式一：环境变量配置（推荐）**
+
+```bash
+# 设置华为云 AK/SK
+export HUAWEICLOUD_SDK_AK="your-access-key"
+export HUAWEICLOUD_SDK_SK="your-secret-key"
+```
+
+### 获取 AK/SK
+
+1. 登录华为云控制台
+2. 进入"我的凭证"页面
+3. 在"访问密钥"标签页创建或查看 AK/SK
+
+### 数据面端点配置
+
+CodeInterpreter 数据面端点可以通过以下方式配置（按优先级排序）：
+
+1. **环境变量**（最高优先级）：
+   ```bash
+   export HUAWEICLOUD_SDK_CODE_INTERPRETER_DATA_ENDPOINT="https://your-data-endpoint"
+   ```
+
+2. **初始化参数**：
+   ```python
+   client = CodeInterpreter(
+       region="cn-southwest-2",
+       data_endpoint="https://your-data-endpoint"
+   )
+   ```
+
+3. **默认值**：使用 SDK 内置的默认端点
+
+---
+
 ## 类名
 CodeInterpreter
+
+### 初始化
+
+```python
+CodeInterpreter(region: str, data_endpoint: Optional[str] = None)
+```
+
+**参数说明**：
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| region | str | 否 | 从配置读取 | 华为云区域名称 |
+| data_endpoint | str | 否 | None | 数据面端点，优先从环境变量 HUAWEICLOUD_SDK_CODE_INTERPRETER_DATA_ENDPOINT 读取 |
+
+**使用示例**：
+
+```python
+# 使用默认配置
+client = CodeInterpreter(region="cn-southwest-2")
+
+# 通过参数指定数据面端点
+client = CodeInterpreter(
+    region="cn-southwest-2",
+    data_endpoint="https://your-custom-endpoint.com"
+)
+
+# 通过环境变量配置数据面端点
+import os
+os.environ["HUAWEICLOUD_SDK_CODE_INTERPRETER_DATA_ENDPOINT"] = "https://your-endpoint"
+client = CodeInterpreter(region="cn-southwest-2")
+```
 
 ### 功能特性
 - 管理CodeInterpreter实例
@@ -16,9 +93,21 @@ CodeInterpreter
 
 ### 属性
 - control_plane_client: 控制面客户端
-- data_plane_client: 管理面客户端
+- data_plane_client: 数据面客户端
 
 ### 方法
+
+### 方法
+
+### 方法
+
+#### 初始化参数
+**参数说明**：
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| region | str | 否 | 从配置读取 | 华为云区域名称 |
+| data_endpoint | str | 否 | None | 数据面端点，优先从环境变量 HUAWEICLOUD_SDK_CODE_INTERPRETER_DATA_ENDPOINT 读取 |
 
 #### 1. 创建代码解释器
 **方法名** `create_code_interpreter`
