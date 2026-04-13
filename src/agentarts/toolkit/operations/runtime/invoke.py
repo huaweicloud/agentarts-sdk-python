@@ -199,6 +199,12 @@ def invoke_agent(
             sign_mode = SignMode.SDK_HMAC_SHA256
             if auth_type and auth_type.upper() == "IAM":
                 sign_mode = SignMode.V11_HMAC_SHA256
+            else:
+                # 非 IAM 认证需要 bearer token
+                if not bearer_token:
+                    echo_error("Bearer token is required for non-IAM authentication")
+                    console.print("[dim]Specify --bearer-token or set BEARER_TOKEN environment variable[/dim]")
+                    return False
 
             echo_info("Invoke Request", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]\n[cyan]Auth Type:[/cyan] [dim]{auth_type or 'None'}[/dim]")
 
@@ -300,6 +306,12 @@ def status_agent(
             sign_mode = SignMode.SDK_HMAC_SHA256
             if auth_type and auth_type.upper() == "IAM":
                 sign_mode = SignMode.V11_HMAC_SHA256
+            else:
+                # 非 IAM 认证需要 bearer token
+                if not bearer_token:
+                    echo_error("Bearer token is required for non-IAM authentication")
+                    console.print("[dim]Specify --bearer-token or set BEARER_TOKEN environment variable[/dim]")
+                    return False
 
             console.print()
             echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]\n[cyan]Auth Type:[/cyan] [dim]{auth_type or 'None'}[/dim]")

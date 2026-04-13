@@ -253,9 +253,8 @@ class BaseHTTPClient:
 
     def _sign_request_v11(self, method: str, full_url: str, **kwargs) -> dict:
         """Sign the HTTP request using V11-HMAC-SHA256 algorithm (without body)."""
-        from agentarts.sdk.utils.metadata import create_credential
-
         if not self._credentials:
+            from agentarts.sdk.utils.metadata import create_credential
             self._credentials = create_credential()
 
         if not self._region_id:
@@ -272,8 +271,8 @@ class BaseHTTPClient:
 
         headers = kwargs.get("headers", {}) or {}
         headers["host"] = host
-        headers["X-Sdk-Date"] = timestamp
-        headers["X-Sdk-Content-Sha256"] = "UNSIGNED-PAYLOAD"
+        headers["x-sdk-date"] = timestamp
+        headers["x-sdk-content-sha256"] = "UNSIGNED-PAYLOAD"
 
         signed_headers = self._signed_headers(headers)
         canonical_request = (
@@ -311,7 +310,7 @@ class BaseHTTPClient:
 
         headers["Authorization"] = authorization
 
-        if "headers" not in kwargs:
+        if "headers" not in kwargs or kwargs["headers"] is None:
             kwargs["headers"] = {}
         kwargs["headers"].update(headers)
 
@@ -384,7 +383,7 @@ class BaseHTTPClient:
 
         signed_request = self._signer.sign(sdk_request)
 
-        if "headers" not in kwargs:
+        if "headers" not in kwargs or kwargs["headers"] is None:
             kwargs["headers"] = {}
         if hasattr(signed_request, "header_params") and signed_request.header_params:
             kwargs["headers"].update(signed_request.header_params)
