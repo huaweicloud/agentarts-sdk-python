@@ -131,8 +131,8 @@ async def handler(payload: Dict[str, Any], context: RequestContext = None) -> Di
     return await agent.run(query, system_prompt=system_prompt)
 
 
-def create_agent():
-    """Create agent instance for runtime."""
+def create_app():
+    """Create app instance for runtime."""
     return app
 
 
