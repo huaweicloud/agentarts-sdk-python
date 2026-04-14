@@ -103,7 +103,6 @@ def update_mcp_gateway(
     description: Annotated[Optional[str], typer.Option("--description", "-d", help="Gateway description")] = None,
     authorizer_configuration: Annotated[Optional[str], typer.Option("--authorizer-configuration", help="Authorizer configuration (JSON format)")] = None,
     log_delivery_configuration: Annotated[Optional[str], typer.Option("--log-delivery-configuration", help="Log delivery configuration (JSON format)")] = None,
-    outbound_network_configuration: Annotated[Optional[str], typer.Option("--outbound-network-configuration", help="Outbound network configuration (JSON format)")] = None,
     tags: Annotated[List[str], typer.Option("--tags", help="Gateway tags")] = None,
 ):
     """
@@ -115,7 +114,6 @@ def update_mcp_gateway(
     try:
         authorizer_config = _parse_json(authorizer_configuration)
         log_delivery_config = _parse_json(log_delivery_configuration)
-        outbound_network_config = _parse_json(outbound_network_configuration)
 
         client = _get_mcp_gateway_client()
         result = client.update_mcp_gateway(
@@ -123,7 +121,6 @@ def update_mcp_gateway(
             description=description,
             authorizer_configuration=authorizer_config,
             log_delivery_configuration=log_delivery_config,
-            outbound_network_configuration=outbound_network_config,
             tags=list(tags) if tags else [],
         )
 

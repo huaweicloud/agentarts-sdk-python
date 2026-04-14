@@ -78,7 +78,6 @@ agentarts mcp-gateway update-mcp-gateway <gateway_id> [options]
 | --description | -d | 否 | None | 网关描述 |
 | --authorizer-configuration | 无 | 否 | None | 授权器配置（JSON 格式） |
 | --log-delivery-configuration | 无 | 否 | None | 日志投递配置（JSON 格式） |
-| --outbound-network-configuration | 无 | 否 | None | 出站网络配置（JSON 格式） |
 | --tags | 无 | 否 | None | 网关标签 |
 **使用示例**：
 ```bash
