@@ -16,7 +16,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
     @patch("src.agentarts.sdk.service.tools_http.HUAWEICLOUD_SDK_AK")
     @patch("src.agentarts.sdk.service.tools_http.HUAWEICLOUD_SDK_SK")
     @patch("src.agentarts.sdk.utils.constant.get_control_plane_endpoint")
-    @patch("src.agentarts.sdk.utils.constant.get_data_plane_endpoint")
+    @patch("src.agentarts.sdk.utils.constant.get_code_interpreter_data_plane_endpoint")
     def setUp(self, mock_get_data_plane_endpoint, mock_get_control_plane_endpoint, mock_sk, mock_ak):
         """在每个测试方法前调用"""
         mock_get_control_plane_endpoint.return_value = "https://control-plane.example.com"
@@ -424,7 +424,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 "session_timeout": 900  # 默认值
             }
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
     
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "start_session")
@@ -489,7 +489,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
             session_id=session_id,
             api_key="test-api-key"
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
         
     def test_get_session_with_no_params(self):
         """测试get_session方法，不提供参数的情况"""
@@ -521,7 +521,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
             session_id="test-session-id",
             api_key="test-api-key"
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
     def test_stop_session_with_no_activate(self):
         """测试stop_session方法，无激活会话的情况"""
@@ -571,7 +571,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 "arguments": {}
             }
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
@@ -603,7 +603,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             }
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
     
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
@@ -636,7 +636,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             }
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
     def test_execute_code_with_invalid_language(self):
         """测试execute_code方法，提供无效的语言的情况"""
@@ -682,7 +682,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             }
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
     
     @patch.object(os, "getenv")
     def test_execute_command_with_invalid_command(self, mock_getenv):
@@ -735,7 +735,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             }
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
@@ -773,7 +773,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             }
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
     
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
@@ -812,7 +812,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             }
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
 
     @patch.object(os, "getenv")
@@ -861,7 +861,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             }
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
     
     def test_upload_files_with_invalid_path(self):
@@ -932,7 +932,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
             }
         )
         self.assertEqual(response, text_content)
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
@@ -981,7 +981,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
             }
         )
         self.assertEqual(response, binary_content)
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
     
     @patch.object(DataToolsHttpClient, "invoke")
     def test_download_file_with_no_found_file(self, mock_invoke):
@@ -1060,7 +1060,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             }
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
     
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
@@ -1113,7 +1113,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             }
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
     
     def test_download_files_with_invalid_path(self):
         """测试download_files方法，提供无效路径的情况"""
@@ -1154,7 +1154,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             }
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
@@ -1182,7 +1182,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             }
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
@@ -1213,7 +1213,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             }
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
     def test_install_packages_with_invalid_package(self):
         """测试install_packages方法，提供无效的包的情况"""
@@ -1256,4 +1256,4 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             }
         )
-        mock_getenv.assert_called_once_with("API_KEY")
+        mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
