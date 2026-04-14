@@ -3,7 +3,7 @@ requires = ["uv_build>=0.9.27,<0.10.0"]
 build-backend = "uv_build"
 
 [project]
-name = "huaweicloud-agentarts-sdk"
+name = "agentarts-sdk"
 version = "0.1.0"
 description = "Huawei Cloud AgentArts SDK - Build, deploy and manage AI agents with cloud capabilities"
 readme = "README.md"
@@ -117,7 +117,7 @@ docs = [
     "myst-parser>=2.0.0",
 ]
 all = [
-    "huaweicloud-agentarts-sdk[langchain,langgraph,autogen,crewai,vector-stores,database,monitoring,huaweicloud,dev,docs]",
+    "agentarts-sdk[langchain,langgraph,autogen,crewai,vector-stores,database,monitoring,huaweicloud,dev,docs]",
 ]
 
 [project.urls]
