@@ -54,8 +54,8 @@ class TestToolsHttpClient(unittest.TestCase):
         # Assert
         self.assertEqual(result, mock_post.return_value.data)
         mock_post.assert_called_once_with(
-            url="v1/core/code-interpreters/",
-            data={
+            url="/v1/core/code-interpreters",
+            json={
                 "name": "test-code-interpreter-name",
                 "description": "test-code-interpreter-description",
                 "auth_type": "API_KEY",
@@ -111,8 +111,8 @@ class TestToolsHttpClient(unittest.TestCase):
         # Assert
         self.assertEqual(result, mock_get.return_value.data)
         mock_get.assert_called_once_with(
-            url="v1/core/code-interpreters/",
-            params={
+            url="/v1/core/code-interpreters",
+            json={
                 "offset": 0,
                 "limit": 10
             }
@@ -157,8 +157,8 @@ class TestToolsHttpClient(unittest.TestCase):
         # Assert
         self.assertEqual(result, mock_put.return_value.data)
         mock_put.assert_called_once_with(
-            url=f"v1/core/code-interpreters/{code_interpreter_id}",
-            data={
+            url=f"/v1/core/code-interpreters/{code_interpreter_id}",
+            json={
                 "observability": {},
                 "tags": [
                     {
@@ -208,7 +208,7 @@ class TestToolsHttpClient(unittest.TestCase):
         # Assert
         self.assertEqual(result, mock_get.return_value.data)
         mock_get.assert_called_once_with(
-            url=f"v1/core/code-interpreters/{code_interpreter_id}"
+            url=f"/v1/core/code-interpreters/{code_interpreter_id}"
         )
 
     @patch.object(ControlToolsHttpClient, "delete")
@@ -233,7 +233,7 @@ class TestToolsHttpClient(unittest.TestCase):
         # Assert
         self.assertEqual(result, mock_delete.return_value.data)
         mock_delete.assert_called_once_with(
-            url=f"v1/core/code-interpreters/{code_interpreter_id}"
+            url=f"/v1/core/code-interpreters/{code_interpreter_id}"
         )
 
     @patch.object(DataToolsHttpClient, "post")
@@ -271,9 +271,9 @@ class TestToolsHttpClient(unittest.TestCase):
         # Assert
         self.assertEqual(result, mock_post.return_value.data)
         mock_post.assert_called_once_with(
-            url=f"v1/code-interpreters/{code_interpreter_name}/sessions-start",
-            headers={"Authorization": f"Bearer {api_key}"},
-            data=request_params
+            url=f"/v1/code-interpreters/{code_interpreter_name}/sessions-start",
+            data=request_params,
+            headers = {"Authorization": f"Bearer {api_key}"}
         )
     
     @patch.object(DataToolsHttpClient, "get")
@@ -308,7 +308,7 @@ class TestToolsHttpClient(unittest.TestCase):
         # Assert
         self.assertEqual(result, mock_get.return_value.data)
         mock_get.assert_called_once_with(
-            url=f"v1/code-interpreters/{code_interpreter_name}/sessions-get",
+            url=f"/v1/code-interpreters/{code_interpreter_name}/sessions-get",
             headers={
                 "x-HW-Agentarts-Code-Interpreter-Session-Id": session_id,
                 "Authorization": f"Bearer {api_key}"
@@ -332,7 +332,7 @@ class TestToolsHttpClient(unittest.TestCase):
         
         # Assert
         mock_put.assert_called_once_with(
-            url=f"v1/code-interpreters/{code_interpreter_name}/sessions-stop",
+            url=f"/v1/code-interpreters/{code_interpreter_name}/sessions-stop",
             headers={
                 "x-HW-Agentarts-Code-Interpreter-Session-Id": session_id,
                 "Authorization": f"Bearer {api_key}"
@@ -403,10 +403,10 @@ class TestToolsHttpClient(unittest.TestCase):
         # Assert
         self.assertEqual(result, mock_post.return_value.data)
         mock_post.assert_called_once_with(
-            url=f"v1/code-interpreters/{code_interpreter_name}/invoke",
+            url=f"/v1/code-interpreters/{code_interpreter_name}/invoke",
             headers={
                 "x-HW-Agentarts-Code-Interpreter-Session-Id": session_id,
                 "Authorization": f"Bearer {api_key}"
             },
-            data=params
+            json=params
         )
