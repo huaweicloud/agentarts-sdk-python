@@ -1,0 +1,28 @@
+[project]
+name = "basic-sdk-usage-example"
+version = "0.1.0"
+description = "Basic SDK usage examples for Agent Identity SDK"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.128.1",
+    "uvicorn>=0.40.0",
+    "agentarts",
+    "huaweicloudsdkiam==3.1.187",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.sources]
+agentarts = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.9.27,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.2.0",
+    "jupyter>=1.1.1",
+]
