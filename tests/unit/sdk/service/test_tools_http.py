@@ -1,12 +1,12 @@
 import unittest
 from unittest.mock import patch
 
-from src.agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
-from src.agentarts.sdk.service.http_client import RequestResult
+from agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
+from agentarts.sdk.service.http_client import RequestResult
 
 class TestToolsHttpClient(unittest.TestCase):
-    @patch("src.agentarts.sdk.service.tools_http.HUAWEICLOUD_SDK_AK")
-    @patch("src.agentarts.sdk.service.tools_http.HUAWEICLOUD_SDK_SK")
+    @patch("agentarts.sdk.service.tools_http.HUAWEICLOUD_SDK_AK")
+    @patch("agentarts.sdk.service.tools_http.HUAWEICLOUD_SDK_SK")
     def setUp(self, mock_ak, mock_sk):
         mock_ak = "test_ak"
         mock_sk = "test_sk"
