@@ -184,6 +184,9 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             channel_values={"messages": langgraph_messages},
             channel_versions={"messages": 1},
             versions_seen={},
+            step=-1,
+            pending_sends=[],
+            parents={},
         )
 
         metadata = CheckpointMetadata(
@@ -327,6 +330,9 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             channel_values={"messages": langgraph_messages},
             channel_versions={"messages": 1},
             versions_seen={},
+            step=-1,
+            pending_sends=[],
+            parents={},
         )
 
         metadata = CheckpointMetadata(
