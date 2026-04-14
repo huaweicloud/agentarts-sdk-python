@@ -3,7 +3,6 @@
 from typing import Any, Dict, Optional
 
 from .http_client import BaseHTTPClient, RequestConfig
-from src.agentarts.sdk.utils.constant import HUAWEICLOUD_SDK_AK, HUAWEICLOUD_SDK_SK
 
 class ToolsAPIError(BaseException):
     
@@ -25,27 +24,27 @@ class ControlToolsHttpClient(BaseHTTPClient):
         super().__init__(request_config, open_ak_sk=True)
         self.region_name = region_name
     
-    def create_code_interpreter(self, params: Dict) -> Dict[Any, Any]:
+    def create_code_interpreter(self, request_params: Dict) -> Dict[Any, Any]:
         """POST v1/core/code-interpreters/
         
         创建代码解释器
 
         """
         endpoint = f"/v1/core/code-interpreters"
-        response = self.post(url=endpoint, data=params)
+        response = self.post(url=endpoint, json=request_params)
         if not response.success:
             raise ToolsAPIError(response.status_code, response.error)
         else:
             return response.data
 
-    def list_code_interpreters(self, params: Dict) -> Dict[Any, Any]:
+    def list_code_interpreters(self, request_params: Dict) -> Dict[Any, Any]:
         """GET v1/core/code-interpreters/
         
         列出所有代码解释器
 
         """
         endpoint = f"/v1/core/code-interpreters"
-        response = self.get(url=endpoint, params=params)
+        response = self.get(url=endpoint, json=request_params)
         if not response.success:
             raise ToolsAPIError(response.status_code, response.error)
         else:
@@ -58,7 +57,7 @@ class ControlToolsHttpClient(BaseHTTPClient):
 
         """
         endpoint = f"/v1/core/code-interpreters/{code_interpreter_id}"
-        response = self.put(url=endpoint, data=request_params)
+        response = self.put(url=endpoint, json=request_params)
         if not response.success:
             raise ToolsAPIError(response.status_code, response.error)
         else:
@@ -77,13 +76,13 @@ class ControlToolsHttpClient(BaseHTTPClient):
         else:
             return response.data
 
-    def delete_code_interpreter(self, code_interpreter_id: str) -> Dict[Any, Any]:
+    def delete_code_interpreter(self, code_interpreter_id: str):
         """DELETE v1/core/code-interpreters/{code_interpreter_id}
         
         删除代码解释器
 
         """
-        endpoint = f"v1/core/code-interpreters/{code_interpreter_id}"
+        endpoint = f"/v1/core/code-interpreters/{code_interpreter_id}"
         response = self.delete(url=endpoint)
         if not response.success:
             raise ToolsAPIError(response.status_code, response.error)
@@ -103,7 +102,7 @@ class DataToolsHttpClient(BaseHTTPClient):
         headers = {
             "Authorization": f"Bearer {api_key}"
         }
-        response = self.post(url=endpoint, data=request_params, headers=headers)
+        response = self.post(url=endpoint, json=request_params, headers=headers)
         if not response.success:
             raise ToolsAPIError(response.status_code, response.error)
         else:
@@ -157,7 +156,7 @@ class DataToolsHttpClient(BaseHTTPClient):
             "x-HW-Agentarts-Code-Interpreter-Session-Id": session_id,
             "Authorization": f"Bearer {api_key}"
         }
-        response = self.post(url=endpoint, headers=headers, data=arguments)
+        response = self.post(url=endpoint, headers=headers, json=arguments)
         if not response.success:
             raise ToolsAPIError(response.status_code, response.error)
         else:
