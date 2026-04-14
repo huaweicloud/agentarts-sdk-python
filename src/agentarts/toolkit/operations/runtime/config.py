@@ -412,9 +412,22 @@ def set_config_value(key: str, value: str, agent_name: Optional[str] = None) -> 
 
     try:
         updated_config = AgentArtsConfig.from_dict(config_dict)
-        config.agents[agent_name] = updated_config
+        
+        if key == "base.name" and value != agent_name:
+            config.agents[value] = updated_config
+            del config.agents[agent_name]
+            
+            if config.default_agent == agent_name:
+                config.default_agent = value
+            
+            console.print(f"[green]Done:[/green] Renamed agent [cyan]{agent_name}[/cyan] to [cyan]{value}[/cyan]")
+            agent_name = value
+        else:
+            config.agents[agent_name] = updated_config
+        
         if save_config(config):
-            console.print(f"[green]Done:[/green] Set [cyan]{key}[/cyan] = [yellow]{value}[/yellow] for agent [cyan]{agent_name}[/cyan]")
+            if key != "base.name":
+                console.print(f"[green]Done:[/green] Set [cyan]{key}[/cyan] = [yellow]{value}[/yellow] for agent [cyan]{agent_name}[/cyan]")
             return True
     except Exception as e:
         console.print(f"[red]Error: Failed to set configuration: {e}[/red]")
