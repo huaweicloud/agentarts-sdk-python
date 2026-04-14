@@ -296,7 +296,7 @@ ignore = [
 "__init__.py" = ["F401"]
 
 [tool.uv.workspace]
-members = ["examples/sdk/*"]
+members = ["examples/sdk/*", "libs/huaweicloudsdkagentidentity"]
 
 [tool.uv.sources]
-huaweicloudsdkagentidentity = { path = "libs/huaweicloudsdkagentidentity-3.1.184-py3-none-any.whl" }
+huaweicloudsdkagentidentity = { workspace = true }

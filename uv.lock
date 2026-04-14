@@ -21,6 +21,7 @@ resolution-markers = [
 members = [
     "basic-sdk-usage-example",
     "huaweicloud-agentarts-sdk",
+    "huaweicloudsdkagentidentity",
 ]
 
 [[package]]
@@ -1935,7 +1936,7 @@ requires-dist = [
     { name = "docker", specifier = ">=7.0.0" },
     { name = "fastapi", specifier = ">=0.104.0" },
     { name = "huaweicloud-agentarts-sdk", extras = ["langchain", "langgraph", "autogen", "crewai", "vector-stores", "database", "monitoring", "huaweicloud", "dev", "docs"], marker = "extra == 'all'" },
-    { name = "huaweicloudsdkagentidentity", path = "libs/huaweicloudsdkagentidentity-3.1.184-py3-none-any.whl" },
+    { name = "huaweicloudsdkagentidentity", editable = "libs/huaweicloudsdkagentidentity" },
     { name = "huaweicloudsdkcore", specifier = ">=3.1.0" },
     { name = "huaweicloudsdkiam", specifier = ">=3.1.0" },
     { name = "huaweicloudsdkobs", marker = "extra == 'huaweicloud'", specifier = ">=3.1.0" },
@@ -1989,12 +1990,9 @@ dev = [
 [[package]]
 name = "huaweicloudsdkagentidentity"
 version = "3.1.184"
-source = { path = "libs/huaweicloudsdkagentidentity-3.1.184-py3-none-any.whl" }
+source = { editable = "libs/huaweicloudsdkagentidentity" }
 dependencies = [
     { name = "huaweicloudsdkcore" },
-]
-wheels = [
-    { filename = "huaweicloudsdkagentidentity-3.1.184-py3-none-any.whl", hash = "sha256:daadeaebba6feaf4f478236a74867560674a626710b6db3e4f3fb7dac20847e8" },
 ]
 
 [package.metadata]
