@@ -44,6 +44,7 @@ dependencies = [
     "huaweicloudsdkcore>=3.1.0",
     "huaweicloudsdkiam>=3.1.0",
     "huaweicloudsdkswr>=3.1.0",
+    "huaweicloudsdkagentidentity",
     "fastapi>=0.104.0",
     "starlette>=0.46.2",
     "uvicorn[standard]>=0.24.0",
@@ -296,3 +297,6 @@ ignore = [
 
 [tool.uv.workspace]
 members = ["examples/sdk/*"]
+
+[tool.uv.sources]
+huaweicloudsdkagentidentity = { path = "libs/huaweicloudsdkagentidentity-3.1.184-py3-none-any.whl" }
