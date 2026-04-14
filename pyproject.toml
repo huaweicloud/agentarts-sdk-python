@@ -75,6 +75,7 @@ dev = [
     "types-PyYAML>=6.0.0",
     "types-redis>=4.6.0",
     "ruff>=0.1.0",
+    "ty>=0.0.14",
 ]
 
 [project.optional-dependencies]
