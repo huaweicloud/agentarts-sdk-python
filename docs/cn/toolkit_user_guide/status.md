@@ -11,9 +11,10 @@
 | `--agent` | `-a` | Agent 名称 | 使用默认 Agent |
 | `--region` | `-r` | 华为云区域 | 从配置文件读取 |
 | `--mode` | `-m` | 检查模式（local/cloud） | `cloud` |
-| `--port` | 无 | 本地模式端口 | `8080` |
+| `--port` | `-p` | 本地模式端口 | `8080` |
 | `--bearer-token` | 无 | Bearer 认证令牌 | 无 |
 | `--endpoint` | `-e` | 指定端点名称 | 无 |
+| `--session` | `-s` | 会话 ID（用于有状态 Agent） | 无 |
 
 ## 健康状态说明
 
@@ -128,7 +129,13 @@ agentarts status --agent my-agent --bearer-token "your-token"
 agentarts status --agent my-agent --endpoint custom-endpoint
 ```
 
-### 示例 7: 完整参数示例
+### 示例 7: 使用会话 ID
+
+```bash
+agentarts status --agent my-agent --session my-session-123
+```
+
+### 示例 8: 完整参数示例
 
 ```bash
 agentarts status \
