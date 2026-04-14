@@ -234,7 +234,7 @@ def add_agent(
         
         final_region = existing_dict.get("base", {}).get("region", "cn-southwest-2")
         final_org = existing_dict.get("swr_config", {}).get("organization", "agentarts-org")
-        final_repo = existing_dict.get("swr_config", {}).get("repository", name)
+        final_repo = existing_dict.get("swr_config", {}).get("repository", f"agent_{name}")
         
         artifact_url = f"swr.{final_region}.myhuaweicloud.com/{final_org}/{final_repo}:latest"
         existing_dict.setdefault("runtime", {}).setdefault("artifact_source", {})["url"] = artifact_url
@@ -260,7 +260,7 @@ def add_agent(
         
         final_region = region or "cn-southwest-2"
         final_org = swr_organization or "agentarts-org"
-        final_repo = swr_repository or name
+        final_repo = swr_repository or f"agent_{name}"
         
         artifact_url = f"swr.{final_region}.myhuaweicloud.com/{final_org}/{final_repo}:latest"
         agent_config_dict = agent_config.to_dict()

@@ -156,7 +156,7 @@ def create_config_file(
     """Create .agentarts_config.yaml configuration file."""
     actual_region = region or "cn-southwest-2"
     actual_swr_org = swr_org or "agentarts-org"
-    actual_swr_repo = swr_repo or name
+    actual_swr_repo = swr_repo or f"agent_{name}"
     detected_platform = detect_platform()
 
     artifact_url = f"swr.{actual_region}.myhuaweicloud.com/{actual_swr_org}/{actual_swr_repo}:latest"
