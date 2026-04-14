@@ -12,13 +12,56 @@ import json
 import logging
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
-from agentarts.sdk.memory import MemoryClient, TextMessage
+from agentarts.sdk.memory import MemoryClient, TextMessage, ToolCallMessage, ToolResultMessage
 from agentarts.sdk.integration.langgraph.config import CheckpointerConfig
 from agentarts.sdk.integration.langgraph.converter import (
     langgraph_messages_to_memory,
     memory_to_langgraph_message,
 )
 from agentarts.sdk.utils.constant import get_region
+
+
+def _convert_dict_to_message(msg_dict: Dict[str, Any]) -> Union[TextMessage, ToolCallMessage, ToolResultMessage]:
+    """Convert a message dictionary to a message object.
+    
+    Args:
+        msg_dict: Message dictionary with 'role' and 'parts' keys
+        
+    Returns:
+        TextMessage, ToolCallMessage, or ToolResultMessage
+    """
+    role = msg_dict.get("role", "user")
+    parts = msg_dict.get("parts", [])
+    
+    if not parts:
+        return TextMessage(role=role, content="")
+    
+    for part in parts:
+        if not isinstance(part, dict):
+            continue
+        part_type = part.get("type", "")
+        
+        if part_type == "tool_call":
+            tool_call = part.get("tool_call", {})
+            return ToolCallMessage(
+                id=tool_call.get("id", ""),
+                name=tool_call.get("name", ""),
+                arguments=tool_call.get("arguments", "{}"),
+            )
+        
+        elif part_type == "tool_result":
+            tool_result = part.get("tool_result", {})
+            return ToolResultMessage(
+                tool_call_id=tool_result.get("tool_call_id", ""),
+                content=tool_result.get("content", ""),
+            )
+        
+        elif part_type == "text":
+            text = part.get("text", "")
+            return TextMessage(role=role, content=text)
+    
+    return TextMessage(role=role, content="")
+
 
 logger = logging.getLogger(__name__)
 
@@ -258,12 +301,14 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             runtime_config.assistant_id,
             meta=checkpoint_meta
         )
+        
+        message_objects = [_convert_dict_to_message(msg) for msg in cloud_messages]
 
         try:
             self._client.add_messages(
                 space_id=self._space_id,
                 session_id=session_id,
-                messages=cloud_messages
+                messages=message_objects
             )
 
         except Exception as e:
