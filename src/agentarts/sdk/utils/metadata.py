@@ -35,7 +35,7 @@ def create_credential():
     return chain.get_credentials()
 
 
-def requires_credentials(*, key: str = "credentials"):
+def require_credentials(*, key: str = "credentials"):
     """
     Decorator to ensure credentials are available for a function.
     

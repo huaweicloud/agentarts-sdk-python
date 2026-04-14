@@ -37,21 +37,22 @@ import json
 import logging
 from typing import Any, Dict, Iterator, List, Optional, Union
 
-from agentarts.sdk.service.http_client import BaseHTTPClient, RequestConfig, RequestResult
+from agentarts.sdk.service.http_client import BaseHTTPClient, RequestConfig, RequestResult, SignMode
 from agentarts.sdk.utils.constant import (
     get_control_plane_endpoint,
-    get_data_plane_endpoint,
+    get_runtime_data_plane_endpoint,
 )
 
 log = logging.getLogger(__name__)
 
 
-class RuntimeClient(BaseHTTPClient):
+class RuntimeClient:
     """
     Client for the AgentArts runtime service.
 
-    Wraps :class:`BaseHTTPClient` and provides typed methods for every
-    control-plane and data-plane API exposed by the AgentArts platform.
+    Provides typed methods for every control-plane and data-plane API
+    exposed by the AgentArts platform. Uses separate HTTP clients for
+    control and data planes to ensure thread-safety in concurrent scenarios.
 
     Args:
         control_endpoint: Override the control plane base URL.
@@ -59,10 +60,13 @@ class RuntimeClient(BaseHTTPClient):
             via :func:`~agentarts.sdk.utils.constant.get_control_plane_endpoint`.
         data_endpoint: Override the data plane base URL.
             If ``None``, the URL is derived from environment variables
-            via :func:`~agentarts.sdk.utils.constant.get_data_plane_endpoint`.
+            via :func:`~agentarts.sdk.utils.constant.get_runtime_data_plane_endpoint`.
         access_token: Bearer token for API authentication.
             Can also be set later via :meth:`set_auth_token`.
         timeout: Default request timeout in seconds.
+        verify_ssl: Whether to verify SSL certificates.
+        sign_mode: Signature mode for data plane requests (SDK_HMAC_SHA256 or V11_HMAC_SHA256).
+        region_id: Region ID for V11 signature mode.
     """
 
     def __init__(
@@ -71,32 +75,45 @@ class RuntimeClient(BaseHTTPClient):
         data_endpoint: Optional[str] = None,
         access_token: Optional[str] = None,
         timeout: float = 30.0,
+        verify_ssl: bool = True,
+        sign_mode: SignMode = SignMode.SDK_HMAC_SHA256,
+        region_id: str = "",
     ) -> None:
         self._control_base = control_endpoint or get_control_plane_endpoint()
-        self._data_base = data_endpoint or get_data_plane_endpoint()
+        self._data_base = data_endpoint or get_runtime_data_plane_endpoint()
+        self._timeout = timeout
+        self._verify_ssl = verify_ssl
+        self._access_token = access_token
+        self._sign_mode = sign_mode
+        self._region_id = region_id
 
-        super().__init__(RequestConfig(base_url=self._control_base, timeout=timeout))
+        self._control_client = BaseHTTPClient(RequestConfig(
+            base_url=self._control_base,
+            timeout=timeout,
+            verify_ssl=verify_ssl,
+        ), open_ak_sk=True)
+
+        self._data_client = BaseHTTPClient(RequestConfig(
+            base_url=self._data_base,
+            timeout=timeout,
+            verify_ssl=verify_ssl,
+        ), open_ak_sk=(sign_mode == SignMode.V11_HMAC_SHA256), sign_mode=sign_mode, region_id=region_id)
 
         if access_token:
             self.set_auth_token(access_token)
 
+    def set_auth_token(self, token: str) -> None:
+        """Set the Bearer token for authentication."""
+        self._access_token = token
+        self._data_client.set_auth_token(token)
+
     def _control(self, method: str, path: str, **kwargs: Any) -> RequestResult:
         """Send a request to the control plane."""
-        old_base = self._config.base_url
-        self._config.base_url = self._control_base
-        try:
-            return self._request(method, path, **kwargs)
-        finally:
-            self._config.base_url = old_base
+        return self._control_client._request(method, path, **kwargs)
 
     def _data(self, method: str, path: str, **kwargs: Any) -> RequestResult:
         """Send a request to the data plane."""
-        old_base = self._config.base_url
-        self._config.base_url = self._data_base
-        try:
-            return self._request(method, path, **kwargs)
-        finally:
-            self._config.base_url = old_base
+        return self._data_client._request(method, path, **kwargs)
 
     @staticmethod
     def _check(result: RequestResult, operation: str) -> Dict[str, Any]:
@@ -200,14 +217,14 @@ class RuntimeClient(BaseHTTPClient):
         name: str,
         description: str = "",
         artifact_source_config: Optional[Dict] = None,
-        env_vars: Optional[Dict] = None,
+        env_vars: Optional[List[Dict]] = None,
         identity_config: Optional[Dict] = None,
         execution_agency_name: Optional[str] = None,
         network_config: Optional[Dict] = None,
         agent_gateway_id: Optional[str] = None,
         invoke_config: Optional[Dict] = None,
         observability_config: Optional[Dict] = None,
-        tags_config: Optional[Dict] = None,
+        tags_config: Optional[List[Dict]] = None,
         **extra: Any,
     ) -> Dict[str, Any]:
         """
@@ -217,14 +234,14 @@ class RuntimeClient(BaseHTTPClient):
             name: Agent name (unique within the workspace).
             description: Human-readable description.
             artifact_source_config: Configuration for the agent's artifact source.
-            env_vars: Environment variables to inject into the agent runtime.
+            env_vars: Environment variables as list of {"key": "K", "value": "V"} dicts.
             identity_config: Identity and authentication configuration.
             execution_agency_name: Name of the execution agency.
             network_config: Network access configuration.
             agent_gateway_id: ID of the agent gateway to attach.
             invoke_config: Invocation-related configuration.
             observability_config: Observability (tracing, metrics) configuration.
-            tags_config: Tags and labels for the agent.
+            tags_config: Tags as list of {"key": "K", "value": "V"} dicts.
             **extra: Additional fields forwarded to the API.
 
         Returns:
@@ -234,11 +251,11 @@ class RuntimeClient(BaseHTTPClient):
         if description:
             payload["description"] = description
         if artifact_source_config is not None:
-            payload["artifact_source_config"] = artifact_source_config
+            payload["artifact_source"] = artifact_source_config
         if env_vars is not None:
-            payload["env_vars"] = env_vars
+            payload["environment_variables"] = env_vars
         if identity_config is not None:
-            payload["identity_config"] = identity_config
+            payload["identity_configuration"] = identity_config
         if execution_agency_name is not None:
             payload["execution_agency_name"] = execution_agency_name
         if network_config is not None:
@@ -248,11 +265,11 @@ class RuntimeClient(BaseHTTPClient):
         if invoke_config is not None:
             payload["invoke_config"] = invoke_config
         if observability_config is not None:
-            payload["observability_config"] = observability_config
+            payload["observability"] = observability_config
         if tags_config is not None:
-            payload["tags_config"] = tags_config
+            payload["tags"] = tags_config
 
-        result = self._control("POST", "/v1/agents", json=payload)
+        result = self._control("POST", "/v1/core/runtimes", json=payload)
         return self._check(result, "create_agent")
 
     def update_agent(
@@ -260,13 +277,13 @@ class RuntimeClient(BaseHTTPClient):
         agent_id: str,
         description: str = "",
         artifact_source_config: Optional[Dict] = None,
-        env_vars: Optional[Dict] = None,
+        env_vars: Optional[List[Dict]] = None,
         execution_agency_name: Optional[str] = None,
         network_config: Optional[Dict] = None,
         agent_gateway_id: Optional[str] = None,
         invoke_config: Optional[Dict] = None,
         observability_config: Optional[Dict] = None,
-        tags_config: Optional[Dict] = None,
+        tags_config: Optional[List[Dict]] = None,
         **extra: Any,
     ) -> Dict[str, Any]:
         """
@@ -276,25 +293,25 @@ class RuntimeClient(BaseHTTPClient):
             agent_id: The unique agent identifier.
             description: New description (omit to keep unchanged).
             artifact_source_config: Configuration for the agent's artifact source.
-            env_vars: Environment variables to inject into the agent runtime.
+            env_vars: Environment variables as list of {"key": "K", "value": "V"} dicts.
             execution_agency_name: Name of the execution agency.
             network_config: Network access configuration.
             agent_gateway_id: ID of the agent gateway to attach.
             invoke_config: Invocation-related configuration.
             observability_config: Observability (tracing, metrics) configuration.
-            tags_config: Tags and labels for the agent.
+            tags_config: Tags as list of {"key": "K", "value": "V"} dicts.
             **extra: Additional fields forwarded to the API.
 
         Returns:
             The updated agent object.
         """
-        payload: Dict[str, Any] = {"agent_id": agent_id, **extra}
+        payload: Dict[str, Any] = {**extra}
         if description is not None:
             payload["description"] = description
         if artifact_source_config is not None:
-            payload["artifact_source_config"] = artifact_source_config
+            payload["artifact_source"] = artifact_source_config
         if env_vars is not None:
-            payload["env_vars"] = env_vars
+            payload["environment_variables"] = env_vars
         if execution_agency_name is not None:
             payload["execution_agency_name"] = execution_agency_name
         if network_config is not None:
@@ -304,11 +321,11 @@ class RuntimeClient(BaseHTTPClient):
         if invoke_config is not None:
             payload["invoke_config"] = invoke_config
         if observability_config is not None:
-            payload["observability_config"] = observability_config
+            payload["observability"] = observability_config
         if tags_config is not None:
-            payload["tags_config"] = tags_config
+            payload["tags"] = tags_config
 
-        result = self._control("PUT", f"/v1/agents/{agent_id}", json=payload)
+        result = self._control("PUT", f"/v1/core/runtimes/{agent_id}", json=payload)
         return self._check(result, "update_agent")
 
     def create_or_update_agent(
@@ -316,14 +333,14 @@ class RuntimeClient(BaseHTTPClient):
         agent_name: str,
         description: str = "",
         artifact_source_config: Optional[Dict] = None,
-        env_vars: Optional[Dict] = None,
+        env_vars: Optional[List[Dict]] = None,
         identity_config: Optional[Dict] = None,
         execution_agency_name: Optional[str] = None,
         network_config: Optional[Dict] = None,
         agent_gateway_id: Optional[str] = None,
         invoke_config: Optional[Dict] = None,
         observability_config: Optional[Dict] = None,
-        tags_config: Optional[Dict] = None,
+        tags_config: Optional[List[Dict]] = None,
         **extra: Any,
     ) -> Dict[str, Any]:
         """
@@ -337,45 +354,25 @@ class RuntimeClient(BaseHTTPClient):
             agent_name: Agent name (used as the lookup key).
             description: Human-readable description.
             artifact_source_config: Configuration for the agent's artifact source.
-            env_vars: Environment variables to inject into the agent runtime.
+            env_vars: Environment variables as list of {"key": "K", "value": "V"} dicts.
             identity_config: Identity and authentication configuration.
             execution_agency_name: Name of the execution agency.
             network_config: Network access configuration.
             agent_gateway_id: ID of the agent gateway to attach.
             invoke_config: Invocation-related configuration.
             observability_config: Observability (tracing, metrics) configuration.
-            tags_config: Tags and labels for the agent.
+            tags_config: Tags as list of {"key": "K", "value": "V"} dicts.
             **extra: Additional fields forwarded to the API.
 
         Returns:
             The agent object from the API.
         """
-        payload: Dict[str, Any] = {"name": agent_name, **extra}
-        if description:
-            payload["description"] = description
-        if artifact_source_config is not None:
-            payload["artifact_source_config"] = artifact_source_config
-        if env_vars is not None:
-            payload["env_vars"] = env_vars
-        if identity_config is not None:
-            payload["identity_config"] = identity_config
-        if execution_agency_name is not None:
-            payload["execution_agency_name"] = execution_agency_name
-        if network_config is not None:
-            payload["network_config"] = network_config
-        if agent_gateway_id is not None:
-            payload["agent_gateway_id"] = agent_gateway_id
-        if invoke_config is not None:
-            payload["invoke_config"] = invoke_config
-        if observability_config is not None:
-            payload["observability_config"] = observability_config
-        if tags_config is not None:
-            payload["tags_config"] = tags_config
 
         existing = self.find_agent_by_name(agent_name)
-        agent_id = existing.get("agent_id")
-        if agent_id:
-            log.debug("Agent '%s' found (ID: %s), updating", agent_name, agent_id)
+
+        if existing:
+            agent_id = existing.get("id")
+            log.info("Agent '%s' found (ID: %s), updating", agent_name, agent_id)
             return self.update_agent(
                 agent_id=agent_id,
                 description=description,
@@ -429,7 +426,7 @@ class RuntimeClient(BaseHTTPClient):
         if agent_name:
             params["agent_name"] = agent_name
 
-        result = self._control("GET", "/v1/agents", params=params)
+        result = self._control("GET", "/v1/core/runtimes", params=params)
         data = self._check(result, "get_agents")
         if isinstance(data, dict):
             return data.get("items", data.get("agents", []))
@@ -450,10 +447,22 @@ class RuntimeClient(BaseHTTPClient):
         Returns:
             The matching agent object, or raises if not found.
         """
-        params: Dict[str, Any] = {"name": agent_name}
+        params: Dict[str, Any] = {"name": agent_name, "match_type" : "EXACT"}
 
-        result = self._control("GET", "/v1/agents/find", params=params)
-        return self._check(result, "find_agent_by_name")
+        result = self._control("GET", "/v1/core/runtimes", params=params)
+        response_data = self._check(result, "find_agent_by_name")
+        # Extract list from response
+        agents = []
+        if isinstance(response_data, dict):
+            agents = response_data.get("items", [])
+        elif isinstance(response_data, list):
+            agents = response_data
+
+        # Find matching agent by name
+        for agent in agents:
+            if isinstance(agent, dict) and agent.get("name") == agent_name:
+                return agent
+        return None
 
     def find_agent_by_id(self, agent_id: str) -> Optional[Dict[Any, Any]]:
         """
@@ -465,7 +474,7 @@ class RuntimeClient(BaseHTTPClient):
         Returns:
             The agent object.
         """
-        result = self._control("GET", f"/v1/agents/{agent_id}")
+        result = self._control("GET", f"/v1/core/runtimes/{agent_id}")
         return self._check(result, "find_agent_by_id")
 
     def delete_agent_by_name(
@@ -481,9 +490,13 @@ class RuntimeClient(BaseHTTPClient):
         Returns:
             True if the agent was deleted successfully.
         """
-        params: Dict[str, Any] = {"name": agent_name}
+        existing = self.find_agent_by_name(agent_name)
+        agent_id = existing.get("id")
+        if not agent_id:
+            log.warning("Agent '%s' not found, nothing to delete", agent_name)
+            return False
 
-        result = self._control("DELETE", "/v1/agents", params=params)
+        result = self._control("DELETE", f"/v1/core/runtimes/{agent_id}")
         self._check(result, "delete_agent_by_name")
         return True
 
@@ -518,7 +531,7 @@ class RuntimeClient(BaseHTTPClient):
             payload["config"] = config
 
         result = self._control(
-            "POST", f"/v1/agents/{agent_id}/endpoints", json=payload
+            "POST", f"/v1/core/runtimes/{agent_id}/endpoints", json=payload
         )
         return self._check(result, "create_agent_endpoint")
 
@@ -546,7 +559,7 @@ class RuntimeClient(BaseHTTPClient):
             payload["config"] = config
 
         result = self._control(
-            "PUT", f"/v1/agents/{agent_id}/endpoints/{endpoint_name}", json=payload
+            "PUT", f"/v1/core/runtimes/{agent_id}/endpoints/{endpoint_name}", json=payload
         )
         return self._check(result, "update_agent_endpoint")
 
@@ -566,7 +579,7 @@ class RuntimeClient(BaseHTTPClient):
             The deletion response.
         """
         result = self._control(
-            "DELETE", f"/v1/agents/{agent_id}/endpoints/{endpoint_name}"
+            "DELETE", f"/v1/core/runtimes/{agent_id}/endpoints/{endpoint_name}"
         )
         return self._check(result, "delete_agent_endpoint")
 
@@ -586,7 +599,7 @@ class RuntimeClient(BaseHTTPClient):
             The endpoint object.
         """
         result = self._control(
-            "GET", f"/v1/agents/{agent_id}/endpoints/{endpoint_name}"
+            "GET", f"/v1/core/runtimes/{agent_id}/endpoints/{endpoint_name}"
         )
         return self._check(result, "find_agent_endpoint")
 
@@ -624,7 +637,7 @@ class RuntimeClient(BaseHTTPClient):
         """
         from agentarts.sdk.runtime.model import SESSION_HEADER
 
-        path = f"/agents/{agent_name}/invocations"
+        path = f"/agent/{agent_name}/invocations"
         params: Dict[str, Any] = {}
         if endpoint:
             params["endpoint"] = endpoint
@@ -636,19 +649,14 @@ class RuntimeClient(BaseHTTPClient):
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
 
-        old_base = self._config.base_url
-        self._config.base_url = self._data_base
-        try:
-            result = self._request(
-                "POST",
-                path,
-                data=payload,
-                params=params if params else None,
-                headers=headers,
-                timeout=timeout,
-            )
-        finally:
-            self._config.base_url = old_base
+        result = self._data(
+            "POST",
+            path,
+            data=payload,
+            params=params if params else None,
+            headers=headers,
+            timeout=timeout,
+        )
 
         return self._dispatch_response(result, "invoke_agent")
 
@@ -684,18 +692,14 @@ class RuntimeClient(BaseHTTPClient):
         if endpoint:
             params["endpoint"] = endpoint
 
-        old_base = self._config.base_url
-        self._config.base_url = self._data_base
-        try:
-            result = self._request(
-                "GET",
-                f"/agents/{agent_name}/ping",
-                params=params if params else None,
-                headers=headers if headers else None,
-                timeout=timeout,
-            )
-        finally:
-            self._config.base_url = old_base
+        result = self._data(
+            "GET",
+            f"/agent/{agent_name}/ping",
+            params=params if params else None,
+            headers=headers if headers else None,
+            timeout=timeout,
+        )
+
 
         return self._dispatch_response(result, "ping_agent")
 

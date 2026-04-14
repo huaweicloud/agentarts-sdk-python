@@ -7,8 +7,160 @@
 
 ---
 
+## 环境要求
+
+- Python 3.10+
+- 已安装 AgentArts SDK：`pip install agentarts`
+
+## 认证配置
+
+### 华为云 AK/SK 认证
+
+CodeInterpreter SDK 使用华为云 AK/SK 进行身份认证。请通过以下方式配置：
+
+**方式一：环境变量配置（推荐）**
+
+```bash
+# 设置华为云 AK/SK
+export HUAWEICLOUD_SDK_AK="your-access-key"
+export HUAWEICLOUD_SDK_SK="your-secret-key"
+```
+
+### 获取 AK/SK
+
+1. 登录华为云控制台
+2. 进入"我的凭证"页面
+3. 在"访问密钥"标签页创建或查看 AK/SK
+
+### API Key 配置
+
+CodeInterpreter 会话认证需要 API Key，可通过以下方式配置：
+
+**方式一：环境变量配置（推荐）**
+
+```bash
+export HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY="your-api-key"
+```
+
+**方式二：代码中传递参数**
+
+```python
+# 在 start_session 中传递
+client.start_session(
+    code_interpreter_name="my-code-interpreter",
+    api_key="your-api-key"
+)
+
+# 在 code_session 中传递
+with code_session("cn-southwest-2", "my-code-interpreter", api_key="your-api-key") as client:
+    client.execute_code("print('Hello')")
+```
+
+### 数据面端点配置
+
+CodeInterpreter 数据面端点可以通过以下方式配置（按优先级排序）：
+
+1. **环境变量**（最高优先级）：
+   ```bash
+   export AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT="https://your-data-endpoint"
+   ```
+
+2. **初始化参数**：
+   ```python
+   client = CodeInterpreter(
+       region="cn-southwest-2",
+       data_endpoint="https://your-data-endpoint"
+   )
+   ```
+
+3. **默认值**：使用 SDK 内置的默认端点
+
+---
+
+## 快速开始
+
+### 使用 code_session 上下文管理器（推荐）
+
+`code_session` 是一个上下文管理器，自动管理会话的启动和停止，推荐用于大多数场景：
+
+```python
+from agentarts.sdk.tools.code_interpreter.code_interpreter_client import code_session
+
+# 使用环境变量中的 API Key
+with code_session("cn-southwest-2", "my-code-interpreter-name") as client:
+    # 执行代码
+    result = client.execute_code("print('Hello, World!')")
+    print(result)
+    
+    # 执行命令
+    result = client.execute_command("ls -la")
+    
+    # 上传文件
+    client.upload_file("/home/user/data.csv", "col1,col2\n1,2\n3,4")
+    
+    # 下载文件
+    content = client.download_file("/home/user/output.txt")
+
+# 传入 API Key
+with code_session("cn-southwest-2", "my-code-interpreter-name", api_key="your-api-key") as client:
+    result = client.execute_code("import pandas as pd; print(pd.__version__)")
+```
+
+### 手动管理会话
+
+如果需要更细粒度的控制，可以手动管理会话：
+
+```python
+from agentarts.sdk.tools.code_interpreter.code_interpreter_client import CodeInterpreter
+
+# 创建客户端
+client = CodeInterpreter(region="cn-southwest-2")
+
+# 启动会话
+session_id = client.start_session(
+    code_interpreter_name="my-code-interpreter-name",
+    session_name="my-session",
+    api_key="your-api-key"  # 可选，不传则从环境变量读取
+)
+
+# 执行操作
+result = client.execute_code("print('Hello')")
+
+# 停止会话
+client.stop_session(api_key="your-api-key")  # 可选
+```
+
+---
+
 ## 类名
 CodeInterpreter
+
+### 初始化
+
+```python
+CodeInterpreter(region: str, data_endpoint: Optional[str] = None)
+```
+
+**参数说明**：
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|------|------|------|--------|------|
+| region | str | 否 | 从配置读取 | 华为云区域名称 |
+| data_endpoint | str | 否 | None | 数据面端点，优先从环境变量 AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT 读取 |
+
+**使用示例**：
+
+```python
+# 使用环境变量配置
+client = CodeInterpreter(region="cn-southwest-2")
+
+# 通过参数指定数据面端点
+client = CodeInterpreter(
+    region="cn-southwest-2",
+    data_endpoint="https://your-custom-endpoint.com"
+)
+
+```
 
 ### 功能特性
 - 管理CodeInterpreter实例
@@ -16,7 +168,7 @@ CodeInterpreter
 
 ### 属性
 - control_plane_client: 控制面客户端
-- data_plane_client: 管理面客户端
+- data_plane_client: 数据面客户端
 
 ### 方法
 
@@ -173,7 +325,7 @@ client.delete_code_interpreter(
 | --- | --- | --- |
 |code_interpreter_name |str| **Required**  代码解释器的名称，用于识别和管理会话，名称唯一|
 |session_name |str| 会话名称|
-|api_key |str| 认证使用的API Key，如果不提供则从环境变量API_KEY中获取, default: `None`|
+|api_key |str| 认证使用的API Key，如果不提供则从环境变量HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY中获取, default: `None`|
 |session_timeout |int| 会话超时时间，单位为秒，默认15分钟，最小值为60秒，最大值为86400秒（24小时）, default: `900`|
 
 **返回值**
@@ -181,9 +333,17 @@ session_id (str): 会话ID
 
 **样例**
 ```python
+# 使用环境变量中的 API Key
 session_id = client.start_session(
     code_interpreter_name="my-code-interpreter-name",
     session_name="my-session-name"
+)
+
+# 传入 API Key
+session_id = client.start_session(
+    code_interpreter_name="my-code-interpreter-name",
+    session_name="my-session-name",
+    api_key="your-api-key"
 )
 ```
 
@@ -195,7 +355,7 @@ session_id = client.start_session(
 | --- | --- | --- |
 |code_interpreter_name |str| **Required**  代码解释器的名称，用于识别和管理会话，名称唯一|
 |session_id |str| 会话ID，默认使用当前会话ID, default: `None`|
-|api_key |str| 认证使用的API Key，如果不提供则从环境变量API_KEY中获取, default: `None`|
+|api_key |str| 认证使用的API Key，如果不提供则从环境变量HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY中获取, default: `None`|
 
 **返回值**
 包含会话详情的字典：
@@ -218,7 +378,7 @@ session_info = client.get_session(
 **参数**
 | 参数名 | 类型 | 描述 |
 | --- | --- | --- |
-|api_key |str| 认证使用的API Key，如果不提供则从环境变量API_KEY中获取, default: `None`|
+|api_key |str| 认证使用的API Key，如果不提供则从环境变量HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY中获取, default: `None`|
 
 **返回值**
 bool: 没有活跃会话时返回True，否则返回False
@@ -226,6 +386,9 @@ bool: 没有活跃会话时返回True，否则返回False
 **样例**
 ```python
 client.stop_session()
+
+# 传入 API Key
+client.stop_session(api_key="your-api-key")
 ```
 
 #### 9. 调用代码解释器会话
@@ -236,7 +399,7 @@ client.stop_session()
 | --- | --- | --- |
 |operate_type |str| **Required**  调用方法名，"execute_code"或"execute_command"等|
 |arguments |Dict| **Required**  调用参数，根据operate_type不同而不同|
-|api_key |str| 认证使用的API Key，如果不提供则从环境变量API_KEY中获取, default: `None`|
+|api_key |str| 认证使用的API Key，如果不提供则从环境变量HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY中获取, default: `None`|
 
 **返回值**
 result[Dict]: 包含调用结果的字典
@@ -424,11 +587,17 @@ client.execute_code("print(x)")
 **参数**
 | 参数名 | 类型 | 描述 |
 | --- | --- | --- |
-|region |str| **Required**  region名称，如"cn-north-4"|
+|region |str| **Required**  region名称，如"cn-southwest-2"|
 |code_interpreter_name |str| **Required**  代码解释器名称|
+|api_key |str| 认证使用的API Key，如果不提供则从环境变量HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY中获取, default: `None`|
 
 **样例**
 ```python
-with code_session("cn-north-4", "my-code-interpreter-name") as client:
+# 使用环境变量中的 API Key
+with code_session("cn-southwest-2", "my-code-interpreter-name") as client:
+    client.execute_code("print('Hello, World!')")
+
+# 传入 API Key
+with code_session("cn-southwest-2", "my-code-interpreter-name", api_key="your-api-key") as client:
     client.execute_code("print('Hello, World!')")
 ```

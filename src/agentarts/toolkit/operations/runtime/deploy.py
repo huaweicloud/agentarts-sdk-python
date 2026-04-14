@@ -4,10 +4,13 @@ from enum import Enum
 from typing import Any, Dict, Optional
 
 from rich.console import Console
+from rich.panel import Panel
 
+from agentarts.sdk.utils.constant import get_region
 from agentarts.toolkit.operations.runtime.config import (
     get_agent,
     get_config_file_path,
+    load_config,
 )
 from agentarts.toolkit.utils.runtime.container import (
     check_docker_available,
@@ -35,7 +38,7 @@ class DeployMode(str, Enum):
     """Deploy mode."""
 
     LOCAL = "local"
-    SWR = "swr"
+    CLOUD = "cloud"
 
 
 def create_agentarts_runtime(
@@ -45,7 +48,7 @@ def create_agentarts_runtime(
     agent_config: Optional[Any] = None,
     port: Optional[int] = None,
     description: Optional[str] = None,
-) -> Optional[str]:
+) -> Optional[Dict]:
     """
     Create or update AgentArts runtime using RuntimeClient.
 
@@ -58,23 +61,18 @@ def create_agentarts_runtime(
         description: Agent description (overrides config)
 
     Returns:
-        Agent ID if successful, None otherwise
+        Agent dict if successful, None otherwise
     """
-    console.print()
-    echo_step(6, f"Creating AgentArts runtime: [cyan]{agent_name}[/cyan]")
+    console.print(f"[bold cyan]Creating AgentArts runtime: [cyan]{agent_name}[/cyan]...")
 
     try:
         from agentarts.sdk.utils.constant import get_control_plane_endpoint
 
         endpoint = get_control_plane_endpoint(region)
 
-        client = RuntimeClient(control_endpoint=endpoint)
+        client = RuntimeClient(control_endpoint=endpoint, verify_ssl=False)
 
-        artifact_source_config = {
-            "url": swr_image,
-            "commands": [],
-        }
-
+        artifact_source_config = None
         invoke_config = {}
         network_config = None
         identity_config = None
@@ -86,6 +84,9 @@ def create_agentarts_runtime(
 
         if agent_config is not None:
             runtime_cfg = agent_config.runtime
+
+            if runtime_cfg.artifact_source:
+                artifact_source_config = runtime_cfg.artifact_source.to_dict()
 
             if runtime_cfg.invoke_config:
                 invoke_config = {
@@ -103,13 +104,19 @@ def create_agentarts_runtime(
                 observability_config = runtime_cfg.observability.to_dict()
 
             if runtime_cfg.environment_variables:
-                env_vars = {kv.key: kv.value for kv in runtime_cfg.environment_variables if kv.value}
+                env_vars = [{"key": kv.key, "value": kv.value} for kv in runtime_cfg.environment_variables if kv.value]
 
             if runtime_cfg.tags:
-                tags_config = {kv.key: kv.value for kv in runtime_cfg.tags if kv.value}
+                tags_config = [{"key": kv.key, "value": kv.value} for kv in runtime_cfg.tags if kv.value]
 
             execution_agency_name = runtime_cfg.execution_agency_name
             agent_gateway_id = runtime_cfg.agent_gateway_id
+
+        if not artifact_source_config:
+            artifact_source_config = {
+                "url": swr_image,
+                "commands": [],
+            }
 
         if not invoke_config:
             invoke_config = {
@@ -133,14 +140,11 @@ def create_agentarts_runtime(
             agent_gateway_id=agent_gateway_id,
         )
 
-        agent_id = agent.get("agent_id")
-        if agent_id:
-            echo_success(f"Runtime created/updated successfully")
-            console.print(f"  [dim]Agent ID: {agent_id}[/dim]")
-            return agent_id
-        else:
-            console.print("[yellow]Warning: Agent created but no agent_id returned[/yellow]")
-            return agent.get("name")
+        agent_id = agent.get("id")
+        latest_version = agent.get("latest_version")
+
+        echo_success(f"Runtime '{agent_name}({latest_version})'created/updated successfully with [dim]ID: {agent_id}[/dim]")
+        return agent
 
     except Exception as e:
         echo_error(f"Failed to create runtime: {e}")
@@ -149,7 +153,7 @@ def create_agentarts_runtime(
 
 def deploy_project(
     agent_name: Optional[str] = None,
-    mode: DeployMode = DeployMode.SWR,
+    mode: DeployMode = DeployMode.CLOUD,
     image_tag: str = "latest",
     port: Optional[int] = None,
     local_port: Optional[int] = None,
@@ -164,7 +168,7 @@ def deploy_project(
         agent_name: Agent name (uses default if None)
         mode: Deploy mode (local or swr)
         image_tag: Docker image tag
-        port: Service port (for SWR mode)
+        port: Service port (for cloud mode)
         local_port: Local port (for local mode)
         swr_org: SWR organization (overrides config)
         swr_repo: SWR repository (overrides config)
@@ -185,9 +189,10 @@ def deploy_project(
         return False
 
     actual_agent_name = agent_config.base.name or agent_name or "agent"
+    region = agent_config.base.region or get_region()
+    service_port = port or (agent_config.runtime.invoke_config.port if agent_config.runtime.invoke_config else 8080)
 
-    console.print()
-    echo_info("Deploy Configuration", f"[cyan]Agent:[/cyan] [white]{actual_agent_name}[/white]\n[cyan]Mode:[/cyan] [yellow]{mode.value}[/yellow]")
+    echo_info("Deploy Configuration", f"[cyan]Agent:[/cyan] [white]{actual_agent_name}[/white]\n[cyan]Mode:[/cyan] [yellow]{mode.value}[/yellow]\n[cyan]Region:[/cyan] [yellow]{region}[/yellow]")
 
     if not check_docker_available():
         echo_error("Docker is not available or not running")
@@ -199,21 +204,24 @@ def deploy_project(
         console.print("[dim]Run 'agentarts config' to generate Dockerfile first[/dim]")
         return False
 
-    region = agent_config.base.region or "cn-north-4"
-    service_port = port or (agent_config.runtime.invoke_config.port if agent_config.runtime.invoke_config else 8080)
-
     local_image_name = f"{actual_agent_name}"
     local_full_image = f"{local_image_name}:{image_tag}"
 
-    console.print()
-    echo_step(1, "Building Docker image")
+    console.print(Panel(
+        f"[bold]Step 1/5[/bold] Building Docker image\n[dim]Image: {local_full_image}[/dim]",
+        title="[bold cyan]Deploy Progress[/bold cyan]",
+        border_style="cyan",
+    ))
     if not build_docker_image(local_image_name, image_tag):
         return False
 
     if mode == DeployMode.LOCAL:
         local_service_port = local_port or service_port
-        console.print()
-        echo_step(2, "Starting local container")
+        console.print(Panel(
+            f"[bold]Step 2/2[/bold] Starting local container\n[dim]Port: {local_service_port}[/dim]",
+            title="[bold cyan]Deploy Progress[/bold cyan]",
+            border_style="cyan",
+        ))
         return run_container(
             image_name=local_image_name,
             image_tag=image_tag,
@@ -229,14 +237,14 @@ def deploy_project(
         console.print("[dim]Specify via --swr-org and --swr-repo options, or configure in yaml[/dim]")
         return False
 
-    console.print()
-    echo_step(2, f"Deploying to SWR: [cyan]{final_swr_org}/{final_swr_repo}[/cyan]")
+    console.print(Panel(
+        f"[bold]Step 2/5[/bold] Setting up SWR resources\n[dim]Organization: {final_swr_org}\n[dim]Repository: {final_swr_repo}[/dim]",
+        title="[bold cyan]Deploy Progress[/bold cyan]",
+        border_style="cyan",
+    ))
 
     try:
         swr_client = SWRClient(region=region)
-
-        console.print()
-        echo_step(3, "Setting up SWR resources")
 
         if agent_config.swr_config.organization_auto_create:
             org_result = swr_client.create_or_get_organization(final_swr_org)
@@ -266,8 +274,11 @@ def deploy_project(
                 return False
             echo_success(f"Using existing repository [cyan]{final_swr_org}/{final_swr_repo}[/cyan]")
 
-        console.print()
-        echo_step(4, "Getting SWR credentials")
+        console.print(Panel(
+            f"[bold]Step 3/5[/bold] Getting SWR credentials\n[dim]Registry: swr.{region}.myhuaweicloud.com[/dim]",
+            title="[bold cyan]Deploy Progress[/bold cyan]",
+            border_style="cyan",
+        ))
         login_server, username, password = swr_client.create_swr_secret()
         if not username or not password:
             echo_error("Failed to get SWR credentials")
@@ -279,8 +290,11 @@ def deploy_project(
 
         swr_image = swr_client.get_full_image_name(final_swr_org, final_swr_repo, image_tag)
 
-        console.print()
-        echo_step(5, "Tagging and pushing image")
+        console.print(Panel(
+            f"[bold]Step 4/5[/bold] Tagging and pushing image\n[dim]Source: {local_full_image}\n[dim]Target: {swr_image}[/dim]",
+            title="[bold cyan]Deploy Progress[/bold cyan]",
+            border_style="cyan",
+        ))
         if not tag_image(local_full_image, swr_image):
             echo_error("Failed to tag image")
             return False
@@ -299,7 +313,12 @@ def deploy_project(
         echo_error(f"SWR deployment failed: {e}")
         return False
 
-    runtime_id = create_agentarts_runtime(
+    console.print(Panel(
+        f"[bold]Step 5/5[/bold] Creating AgentArts runtime\n[dim]Agent: {actual_agent_name}\n[dim]Image: {swr_image}[/dim]",
+        title="[bold cyan]Deploy Progress[/bold cyan]",
+        border_style="cyan",
+    ))
+    agent = create_agentarts_runtime(
         agent_name=actual_agent_name,
         swr_image=swr_image,
         region=region,
@@ -308,19 +327,34 @@ def deploy_project(
         description=description,
     )
 
-    if runtime_id is None:
+    if agent is None:
         return False
 
-    console.print()
-    echo_success("Deployment successful!")
-    console.print()
+    runtime_id = agent.get("id")
+
+    full_config = load_config()
+    if full_config:
+        agent_key = agent_name or full_config.default_agent or "default"
+        if agent_key in (full_config.agents or {}):
+            full_config.agents[agent_key].runtime.agent_id = runtime_id
+            full_config.to_yaml(str(config_path))
+
     summary = (
         f"[cyan]Agent Name:[/cyan] [white]{actual_agent_name}[/white]\n"
         f"[cyan]Runtime ID:[/cyan] [white]{runtime_id}[/white]\n"
         f"[cyan]Image:[/cyan] [white]{swr_image}[/white]\n"
         f"[cyan]Region:[/cyan] [yellow]{region}[/yellow]\n"
-        f"\n[cyan]Dashboard:[/cyan] [link]https://console.huaweicloud.com/agentarts[/link]"
     )
-    console.print()
+    version_detail = agent.get("version_detail") or {}
+    invoke_config_resp = version_detail.get("invoke_config") or {}
+    access_endpoint = invoke_config_resp.get("access_endpoint")
+    if access_endpoint:
+        summary += f"[cyan]Access Endpoint:[/cyan] [white]{access_endpoint}[/white]"
+
+    console.print(Panel(
+        summary,
+        title="[bold green] Deployment complete! [/bold green]",
+        border_style="green",
+    ))
 
     return True

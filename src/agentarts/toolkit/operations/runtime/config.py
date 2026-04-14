@@ -18,6 +18,26 @@ console = Console()
 CONFIG_FILE_NAME = ".agentarts_config.yaml"
 
 
+def detect_dependency_file() -> str:
+    """
+    Detect dependency file in current directory.
+    
+    Priority: requirements.txt > pyproject.toml
+    
+    Returns:
+        Detected dependency file name or 'requirements.txt' as default
+    """
+    cwd = Path.cwd()
+    
+    if (cwd / "requirements.txt").exists():
+        return "requirements.txt"
+    
+    if (cwd / "pyproject.toml").exists():
+        return "pyproject.toml"
+    
+    return "requirements.txt"
+
+
 def get_config_file_path() -> Path:
     """Get the configuration file path in current directory."""
     return Path.cwd() / CONFIG_FILE_NAME
@@ -161,21 +181,59 @@ def add_agent(
         True if successful
     """
     config = load_config()
-
-    agent_config = AgentArtsConfig(
-        base=BaseConfig(
-            name=name,
-            entrypoint=entrypoint,
-            region=region,
-            dependency_file=dependency_file,
-        ),
-        swr_config=SWRConfig(
-            organization=swr_organization,
-            repository=swr_repository,
-            organization_auto_create=organization_auto_create,
-            repository_auto_create=repository_auto_create,
-        ),
-    )
+    
+    existing_agent = config.get_agent(name)
+    
+    if existing_agent:
+        existing_dict = existing_agent.to_dict()
+        
+        if entrypoint is not None:
+            existing_dict.setdefault("base", {})["entrypoint"] = entrypoint
+        if region is not None:
+            existing_dict.setdefault("base", {})["region"] = region
+        if dependency_file is not None:
+            existing_dict.setdefault("base", {})["dependency_file"] = dependency_file
+        existing_dict.setdefault("base", {})["name"] = name
+        
+        if swr_organization is not None:
+            existing_dict.setdefault("swr_config", {})["organization"] = swr_organization
+        if swr_repository is not None:
+            existing_dict.setdefault("swr_config", {})["repository"] = swr_repository
+        existing_dict.setdefault("swr_config", {})["organization_auto_create"] = organization_auto_create
+        existing_dict.setdefault("swr_config", {})["repository_auto_create"] = repository_auto_create
+        
+        final_region = existing_dict.get("base", {}).get("region", "cn-southwest-2")
+        final_org = existing_dict.get("swr_config", {}).get("organization", "agentarts-org")
+        final_repo = existing_dict.get("swr_config", {}).get("repository", name)
+        
+        artifact_url = f"swr.{final_region}.myhuaweicloud.com/{final_org}/{final_repo}:latest"
+        existing_dict.setdefault("runtime", {}).setdefault("artifact_source", {})["url"] = artifact_url
+        
+        agent_config = AgentArtsConfig.from_dict(existing_dict)
+    else:
+        agent_config = AgentArtsConfig(
+            base=BaseConfig(
+                name=name,
+                entrypoint=entrypoint,
+                region=region,
+                dependency_file=dependency_file,
+            ),
+            swr_config=SWRConfig(
+                organization=swr_organization,
+                repository=swr_repository,
+                organization_auto_create=organization_auto_create,
+                repository_auto_create=repository_auto_create,
+            ),
+        )
+        
+        final_region = region or "cn-southwest-2"
+        final_org = swr_organization or "agentarts-org"
+        final_repo = swr_repository or name
+        
+        artifact_url = f"swr.{final_region}.myhuaweicloud.com/{final_org}/{final_repo}:latest"
+        agent_config_dict = agent_config.to_dict()
+        agent_config_dict.setdefault("runtime", {}).setdefault("artifact_source", {})["url"] = artifact_url
+        agent_config = AgentArtsConfig.from_dict(agent_config_dict)
 
     config.add_agent(name, agent_config)
 

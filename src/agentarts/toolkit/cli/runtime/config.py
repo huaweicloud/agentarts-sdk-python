@@ -28,7 +28,7 @@ def main(
     ctx: typer.Context,
     name: Annotated[Optional[str], typer.Option("--name", "-n", help="Agent name")] = None,
     entrypoint: Annotated[Optional[str], typer.Option("--entrypoint", "-e", help="Agent entrypoint (e.g., app:main)")] = None,
-    region: Annotated[Optional[str], typer.Option("--region", "-r", help="Huawei Cloud region (e.g., cn-north-4)")] = None,
+    region: Annotated[Optional[str], typer.Option("--region", "-r", help="Huawei Cloud region (e.g., cn-southwest-2)")] = None,
     dependency_file: Annotated[Optional[str], typer.Option("--dependency-file", "-d", help="Path to dependency file (e.g., requirements.txt)")] = None,
     swr_organization: Annotated[Optional[str], typer.Option("--swr-org", help="SWR organization name")] = None,
     swr_repository: Annotated[Optional[str], typer.Option("--swr-repo", help="SWR repository name")] = None,
@@ -90,17 +90,21 @@ def main(
     agent_region = region
     if agent_region is None:
         existing_config = config_op.get_agent(agent_name)
-        default_region = existing_config.base.region if existing_config else "cn-north-4"
+        default_region = existing_config.base.region if existing_config else "cn-southwest-2"
         console.print(f"\n[bold]Region [cyan]({default_region})[/cyan]:[/bold]")
-        console.print("[dim]  Common regions: cn-southwest-2, cn-north-4, cn-east-3[/dim]")
+        console.print("[dim]  Available region: cn-southwest-2[/dim]")
         agent_region = Prompt.ask("  Region", default=default_region)
 
     agent_dependency_file = dependency_file
     if agent_dependency_file is None:
         existing_config = config_op.get_agent(agent_name)
-        default_dep = existing_config.base.dependency_file if existing_config else "requirements.txt"
+        default_dep = existing_config.base.dependency_file if existing_config else None
+        
+        if default_dep is None:
+            default_dep = config_op.detect_dependency_file()
+        
         console.print(f"\n[bold]Dependency file [cyan]({default_dep})[/cyan]:[/bold]")
-        console.print("[dim]  Press Enter to use default, or input custom path[/dim]")
+        console.print("[dim]  Auto-detected from requirements.txt or pyproject.toml. Press Enter to use default[/dim]")
         agent_dependency_file = Prompt.ask("  File", default=default_dep)
 
     org = swr_organization
@@ -243,7 +247,7 @@ def set(
     Set configuration value.
 
     Examples:
-        agentarts config set base.region cn-north-4
+        agentarts config set base.region cn-southwest-2
         agentarts config set base.name my-agent --agent my-agent
     """
     success = config_op.set_config_value(key, value, agent)

@@ -4,11 +4,17 @@ Container operations for Docker.
 Provides functions for building, tagging, pushing, and running Docker images.
 """
 
+import re
 import subprocess
+import sys
 from pathlib import Path
 from typing import Optional
 
 from rich.console import Console
+from rich.live import Live
+from rich.panel import Panel
+from rich.text import Text
+from rich import markup
 
 console = Console()
 
@@ -39,7 +45,7 @@ def build_docker_image(
     build_context: str = ".",
 ) -> bool:
     """
-    Build Docker image.
+    Build Docker image with real-time output.
 
     Args:
         image_name: Image name
@@ -54,6 +60,8 @@ def build_docker_image(
 
     console.print(f"\n[bold]Building Docker image:[/bold] [cyan]{full_image_name}[/cyan]")
 
+    step_pattern = re.compile(r"^Step\s+(\d+)/(\d+)\s*:\s*(.+)$")
+    
     try:
         cmd = [
             "docker",
@@ -63,19 +71,61 @@ def build_docker_image(
             build_context,
         ]
 
-        result = subprocess.run(
+        process = subprocess.Popen(
             cmd,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
-            timeout=600,
+            bufsize=1,
+            universal_newlines=True,
         )
 
-        if result.returncode != 0:
-            console.print(f"[red]Error building image:[/red]")
-            console.print(result.stderr)
+        output_lines = []
+        error_lines = []
+        current_step_num = 0
+        total_steps = 0
+        
+        for line in iter(process.stdout.readline, ""):
+            if not line:
+                break
+            
+            line = line.rstrip()
+            output_lines.append(line)
+            
+            match = step_pattern.match(line)
+            if match:
+                step_num = int(match.group(1))
+                total_steps = int(match.group(2))
+                step_desc = match.group(3)
+                current_step_num = step_num
+                
+                console.print(f"  [yellow]▶[/yellow] Step {step_num}/{total_steps}: [white]{markup.escape(step_desc)}[/white]")
+            elif "Successfully built" in line:
+                console.print(f"  [green]✓[/green] {markup.escape(line.strip())}")
+            elif "Successfully tagged" in line:
+                console.print(f"  [green]✓[/green] {markup.escape(line.strip())}")
+            elif line.strip():
+                if "error" in line.lower() or "error:" in line.lower():
+                    error_lines.append(line)
+                    console.print(f"  [red]✗ {markup.escape(line)}[/red]")
+                elif "warning" in line.lower() and "warning:" in line.lower():
+                    console.print(f"  [yellow]! {markup.escape(line)}[/yellow]")
+
+        process.wait()
+
+        if process.returncode != 0:
+            console.print(f"\n[red]Error building image:[/red]")
+            if error_lines:
+                console.print("[dim]Error details:[/dim]")
+                for line in error_lines[-10:]:
+                    console.print(f"  [red]{markup.escape(line)}[/red]")
+            else:
+                console.print("[dim]Last 15 lines of output:[/dim]")
+                for line in output_lines[-15:]:
+                    console.print(f"  [dim]{markup.escape(line)}[/dim]")
             return False
 
-        console.print(f"[green]Done:[/green] Image [cyan]{full_image_name}[/cyan] built successfully")
+        console.print(f"\n[green]✓ Done:[/green] Image [cyan]{full_image_name}[/cyan] built successfully")
         return True
 
     except subprocess.TimeoutExpired:
@@ -100,7 +150,7 @@ def tag_image(
     Returns:
         True if successful, False otherwise
     """
-    console.print(f"\n[bold]Tagging image:[/bold] [cyan]{source_image}[/cyan] -> [cyan]{target_image}[/cyan]")
+    console.print(f"[bold]Tagging image:[/bold] [cyan]{source_image}[/cyan] -> [cyan]{target_image}[/cyan]")
 
     try:
         result = subprocess.run(
@@ -115,7 +165,7 @@ def tag_image(
             console.print(result.stderr)
             return False
 
-        console.print(f"[green]Done:[/green] Image tagged successfully")
+        console.print(f"[green]✓ Done:[/green] Image tagged successfully")
         return True
 
     except subprocess.SubprocessError as e:
@@ -125,7 +175,7 @@ def tag_image(
 
 def push_image(image: str) -> bool:
     """
-    Push Docker image to registry.
+    Push Docker image to registry with real-time output.
 
     Args:
         image: Image name to push
@@ -136,19 +186,53 @@ def push_image(image: str) -> bool:
     console.print(f"\n[bold]Pushing image:[/bold] [cyan]{image}[/cyan]")
 
     try:
-        result = subprocess.run(
+        process = subprocess.Popen(
             ["docker", "push", image],
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
-            timeout=600,
+            bufsize=1,
+            universal_newlines=True,
         )
 
-        if result.returncode != 0:
-            console.print(f"[red]Error pushing image:[/red]")
-            console.print(result.stderr)
+        output_lines = []
+        error_lines = []
+        digest_pattern = re.compile(r"digest:\s*(sha256:[a-f0-9]+)")
+        pushed_layers = 0
+
+        for line in iter(process.stdout.readline, ""):
+            if not line:
+                break
+            
+            line = line.rstrip()
+            output_lines.append(line)
+            
+            if "Pushed" in line:
+                pushed_layers += 1
+                console.print(f"  [green]✓[/green] {markup.escape(line)}")
+            elif "Layer already exists" in line:
+                console.print(f"  [dim]○[/dim] Layer exists (skipped)")
+            elif digest_pattern.search(line):
+                match = digest_pattern.search(line)
+                console.print(f"  [green]✓[/green] Digest: [cyan]{match.group(1)}[/cyan]")
+            elif line.strip():
+                if "error" in line.lower() or "denied" in line.lower():
+                    error_lines.append(line)
+                    console.print(f"  [red]✗ {markup.escape(line)}[/red]")
+
+        process.wait()
+
+        if process.returncode != 0:
+            console.print(f"\n[red]Error pushing image:[/red]")
+            if error_lines:
+                for line in error_lines:
+                    console.print(f"  [red]{markup.escape(line)}[/red]")
+            else:
+                for line in output_lines[-10:]:
+                    console.print(f"  [red]{markup.escape(line)}[/red]")
             return False
 
-        console.print(f"[green]Done:[/green] Image pushed successfully")
+        console.print(f"[green]✓ Done:[/green] Image pushed successfully")
         return True
 
     except subprocess.TimeoutExpired:
@@ -195,7 +279,7 @@ def login_to_registry(
             console.print(result.stderr)
             return False
 
-        console.print(f"[green]Done:[/green] Logged in to registry successfully")
+        console.print(f"[green]✓ Done:[/green] Logged in to registry successfully")
         return True
 
     except subprocess.SubprocessError as e:
@@ -256,7 +340,7 @@ def run_container(
             return False
 
         container_id = result.stdout.strip()
-        console.print(f"[green]Done:[/green] Container [cyan]{container_name}[/cyan] started")
+        console.print(f"[green]✓ Done:[/green] Container [cyan]{container_name}[/cyan] started")
         console.print(f"[dim]Container ID: {container_id[:12]}[/dim]")
         console.print(f"\n[bold]Access your agent at:[/bold] [link]http://localhost:{port}[/link]")
         return True
@@ -301,7 +385,7 @@ def generate_dockerfile(
 
     try:
         dockerfile_path.write_text(content, encoding="utf-8")
-        console.print(f"[green]Done:[/green] Dockerfile generated at [cyan]{dockerfile_path}[/cyan]")
+        console.print(f"[green]✓ Done:[/green] Dockerfile generated at [cyan]{dockerfile_path}[/cyan]")
         return True
     except Exception as e:
         console.print(f"[red]Error: Failed to write Dockerfile: {e}[/red]")

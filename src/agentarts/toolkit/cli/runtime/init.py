@@ -56,6 +56,13 @@ def prompt_for_name() -> str:
     return Prompt.ask("\n[bold]Enter project name[/bold]", default="my_agent")
 
 
+def prompt_for_region() -> str:
+    """Prompt user to enter region"""
+    console.print("\n[bold]Region:[/bold]")
+    console.print("[dim]  Default: cn-southwest-2[/dim]")
+    return Prompt.ask("  Region", default="cn-southwest-2")
+
+
 def init(
     name: Annotated[
         Optional[str],
@@ -76,7 +83,7 @@ def init(
     ] = None,
     swr_org: Annotated[
         Optional[str],
-        typer.Option("--swr-org", help="SWR organization (default: {name}-org)"),
+        typer.Option("--swr-org", help="SWR organization (default: agentarts-org)"),
     ] = None,
     swr_repo: Annotated[
         Optional[str],
@@ -107,8 +114,12 @@ def init(
     if template is None:
         template = prompt_for_template()
     
+    if region is None:
+        region = prompt_for_region()
+    
     console.print(f"\n[bold]Creating project:[/bold] [cyan]{name}[/cyan]")
     console.print(f"[bold]Template:[/bold] [green]{template.value}[/green]")
+    console.print(f"[bold]Region:[/bold] [yellow]{region}[/yellow]")
     console.print(f"[bold]Path:[/bold] {path}\n")
     
     success = init_op.init_project(

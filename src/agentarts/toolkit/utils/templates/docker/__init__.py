@@ -17,6 +17,9 @@ def render_dockerfile(
     dependency_file: Optional[str] = None,
     entrypoint: Optional[str] = None,
     port: int = 8080,
+    user_name: str = "appuser",
+    user_id: int = 1000,
+    group_id: int = 1000,
 ) -> str:
     """
     Render Dockerfile from template.
@@ -26,11 +29,20 @@ def render_dockerfile(
         dependency_file: Path to dependency file (e.g., requirements.txt)
         entrypoint: Entrypoint in format "module:function" (e.g., "app:main")
         port: Port to expose
+        user_name: Non-root user name (default: appuser)
+        user_id: Non-root user ID (default: 1000)
+        group_id: Non-root group ID (default: 1000)
 
     Returns:
         Rendered Dockerfile content
     """
     template = get_dockerfile_template()
+
+    user_section = f"""# Create non-root user for security
+RUN groupadd -g {group_id} {user_name} && \\
+    useradd -u {user_id} -g {group_id} -m -s /bin/bash {user_name}"""
+
+    chown_section = f"RUN chown {user_name}:{user_name} /app"
 
     if dependency_file:
         dependency_section = f"""COPY {dependency_file} .
@@ -38,16 +50,22 @@ RUN pip install --no-cache-dir -r {dependency_file}"""
     else:
         dependency_section = "# No dependency file specified"
 
+    chown_app_section = f"RUN chown -R {user_name}:{user_name} /app"
+
     if entrypoint and ":" in entrypoint:
-        module, func = entrypoint.split(":")
-        cmd_section = f'CMD ["python", "-c", "from {module} import {func}; {func}()"]'
+        module, app_target = entrypoint.split(":")
+        cmd_section = f'CMD ["uvicorn", "{module}:{app_target}", "--host", "0.0.0.0", "--port", "{port}"]'
     else:
         cmd_section = 'CMD ["python", "-m", "agentarts.server", "--config", "agentarts.yaml"]'
 
     content = template.format(
         base_image=base_image,
+        user_section=user_section,
+        chown_section=chown_section,
         dependency_section=dependency_section,
+        chown_app_section=chown_app_section,
         port=port,
+        user_name=user_name,
         cmd_section=cmd_section,
     )
 

@@ -26,14 +26,11 @@ Usage::
 from __future__ import annotations
 
 import base64
-import logging
 from typing import Any, Dict, Optional, Tuple
 
 from huaweicloudsdkcore.region.region import Region
 
 from agentarts.sdk.utils.constant import get_swr_endpoint
-
-log = logging.getLogger(__name__)
 
 
 class SWRClient:
@@ -79,6 +76,14 @@ class SWRClient:
             return self._client
 
         try:
+            import logging
+            import warnings
+            
+            logging.getLogger("huaweicloudsdkcore").setLevel(logging.ERROR)
+            logging.getLogger("urllib3").setLevel(logging.ERROR)
+            warnings.filterwarnings("ignore", message="Unverified HTTPS request")
+            warnings.filterwarnings("ignore", category=Warning, module="urllib3")
+            
             from huaweicloudsdkcore.http.http_config import HttpConfig
             from huaweicloudsdkswr.v2 import SwrClient
             from huaweicloudsdkswr.v2.region.swr_region import SwrRegion
@@ -91,7 +96,7 @@ class SWRClient:
             try:
                 swr_region = SwrRegion.value_of(self._region)
             except Exception:
-                swr_region = Region(id=self._region, endpoint=get_swr_endpoint())
+                swr_region = Region(id=self._region, endpoint=self._endpoint)
 
             self._client = SwrClient.new_builder() \
                 .with_credentials(credentials) \
@@ -136,13 +141,13 @@ class SWRClient:
             response = client.show_namespace(request)
 
             return {
-                "id": response.id,
-                "name": response.name,
-                "creator_name": response.creator_name,
+                "id": self._get_attr_value(response, "id"),
+                "name": self._get_attr_value(response, "name") or organization,
+                "creator_name": self._get_attr_value(response, "creator_name"),
             }
 
         except Exception as e:
-            log.debug("Organization '%s' not found: %s", organization, e)
+            print(f"Organization '{organization}' not found: {e}")
             return None
 
     def create_organization(
@@ -170,16 +175,18 @@ class SWRClient:
             request = CreateNamespaceRequest(body=body)
             response = client.create_namespace(request)
 
-            log.info("Created SWR organization: %s", organization)
+            print(f"√ Created SWR organization: {organization}")
 
-            return {
-                "id": response.id,
-                "name": response.name,
-                "creator_name": response.creator_name,
-            }
+            return self.get_organization(organization)
 
         except Exception as e:
-            log.error("Failed to create organization '%s': %s", organization, e)
+            error_str = str(e).lower()
+            if "already exist" in error_str or "已存在" in error_str or "duplicate" in error_str:
+                print(f"Organization '{organization}' already exists")
+                return self.get_organization(organization)
+            print(f"Failed to create organization '{organization}': {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
     def create_or_get_organization(
@@ -200,7 +207,7 @@ class SWRClient:
         """
         existing = self.get_organization(organization)
         if existing is not None:
-            log.debug("Organization '%s' already exists", organization)
+            print(f"Organization '{organization}' already exists")
             return existing
 
         return self.create_organization(organization)
@@ -221,21 +228,21 @@ class SWRClient:
             Repository details dict, or None if not found.
         """
         try:
-            from huaweicloudsdkswr.v2 import ShowRepoRequest
+            from huaweicloudsdkswr.v2 import ShowRepositoryRequest
 
             client = self._get_client()
-            request = ShowRepoRequest(namespace=organization, repository=repository)
-            response = client.show_repo(request)
+            request = ShowRepositoryRequest(namespace=organization, repository=repository)
+            response = client.show_repository(request)
 
             return {
-                "id": response.id,
-                "name": response.name,
-                "namespace": response.namespace,
-                "is_public": response.is_public,
+                "name": self._get_attr_value(response, "name") or repository,
+                "namespace": self._get_attr_value(response, "namespace") or organization,
+                "is_public": self._get_attr_value(response, "is_public"),
+                "path":self._get_attr_value(response, "path"),
             }
 
         except Exception as e:
-            log.debug("Repository '%s/%s' not found: %s", organization, repository, e)
+            print(f"Repository '{organization}/{repository}' not found: {e}")
             return None
 
     def create_repository(
@@ -270,17 +277,16 @@ class SWRClient:
             request = CreateRepoRequest(namespace=organization, body=body)
             response = client.create_repo(request)
 
-            log.info("Created SWR repository: %s/%s", organization, repository)
+            print(f"√ Created SWR repository: {organization}/{repository}")
 
-            return {
-                "id": response.id,
-                "name": response.name,
-                "namespace": response.namespace,
-                "is_public": response.is_public,
-            }
+            return self.get_repository(organization, repository)
 
         except Exception as e:
-            log.error("Failed to create repository '%s/%s': %s", organization, repository, e)
+            error_str = str(e).lower()
+            if "already exist" in error_str or "已存在" in error_str or "duplicate" in error_str:
+                print(f"Repository '{organization}/{repository}' already exists")
+                return self.get_repository(organization, repository)
+            print(f"Failed to create repository '{organization}/{repository}': {e}")
             return None
 
     def create_or_get_repository(
@@ -305,7 +311,7 @@ class SWRClient:
         """
         existing = self.get_repository(organization, repository)
         if existing is not None:
-            log.debug("Repository '%s/%s' already exists", organization, repository)
+            print(f"Repository {organization}/{repository} already exists")
             return existing
 
         return self.create_repository(organization, repository, is_public)
@@ -336,14 +342,14 @@ class SWRClient:
             if auth_data:
                 decoded_auth = base64.b64decode(auth_data).decode("utf-8")
                 username, password = decoded_auth.split(":", 1)
-                log.info("Created SWR secret for region: %s", self._region)
+                print(f"√ Created SWR secret for region: {self._region}")
                 return login_server, username, password
 
-            log.warning("No auth data found in SWR secret response")
+            print("Warning: No auth data found in SWR secret response")
             return login_server, "", ""
 
         except Exception as e:
-            log.error("Failed to create SWR secret: %s", e)
+            print(f"Failed to create SWR secret: {e}")
             return login_server, "", ""
 
     def get_full_image_name(

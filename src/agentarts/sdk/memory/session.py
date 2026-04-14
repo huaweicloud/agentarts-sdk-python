@@ -94,7 +94,7 @@ class MemorySession:
             session_id: Session ID, optional.
                 - Not provided: Automatically creates a new Session
                 - Provided: Reuses an existing Session
-            region_name: Huawei Cloud region name, optional, default "cn-north-4"
+            region_name: Huawei Cloud region name, optional, default "cn-southwest-2"
             api_key: API Key for data plane authentication, optional.
                 If not provided, will read from HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable.
 
@@ -121,7 +121,7 @@ class MemorySession:
             ... )
         """
         if region_name is None:
-            region_name = "cn-north-4"
+            region_name = "cn-southwest-2"
 
         self.space_id = space_id
         self.actor_id = actor_id
