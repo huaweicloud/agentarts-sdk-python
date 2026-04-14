@@ -136,7 +136,8 @@ class VpcConfig(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        return self.model_dump(mode="json", exclude_none=True)
+        data = self.model_dump(mode="json", exclude_none=True)
+        return {k: v for k, v in data.items() if v != [] and v != {}}
 
 
 class NetworkConfig(BaseModel):
@@ -157,7 +158,8 @@ class NetworkConfig(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        return self.model_dump(mode="json", exclude_none=True)
+        data = self.model_dump(mode="json", exclude_none=True)
+        return {k: v for k, v in data.items() if v != [] and v != {}}
 
 
 class APIKeyPair(BaseModel):
@@ -178,7 +180,8 @@ class APIKeyPair(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        return self.model_dump(mode="json", exclude_none=True)
+        data = self.model_dump(mode="json", exclude_none=True)
+        return {k: v for k, v in data.items() if v != [] and v != {}}
 
 
 class APIKeyAuthConfig(BaseModel):

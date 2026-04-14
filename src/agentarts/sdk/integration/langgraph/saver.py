@@ -10,57 +10,17 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
-from agentarts.sdk.memory import MemoryClient, TextMessage, ToolCallMessage, ToolResultMessage
+from agentarts.sdk.memory import MemoryClient
 from agentarts.sdk.integration.langgraph.config import CheckpointerConfig
 from agentarts.sdk.integration.langgraph.converter import (
     langgraph_messages_to_memory,
     memory_to_langgraph_message,
 )
 from agentarts.sdk.utils.constant import get_region
-
-
-def _convert_dict_to_message(msg_dict: Dict[str, Any]) -> Union[TextMessage, ToolCallMessage, ToolResultMessage]:
-    """Convert a message dictionary to a message object.
-    
-    Args:
-        msg_dict: Message dictionary with 'role' and 'parts' keys
-        
-    Returns:
-        TextMessage, ToolCallMessage, or ToolResultMessage
-    """
-    role = msg_dict.get("role", "user")
-    parts = msg_dict.get("parts", [])
-    
-    if not parts:
-        return TextMessage(role=role, content="")
-    
-    for part in parts:
-        if not isinstance(part, dict):
-            continue
-        part_type = part.get("type", "")
-        
-        if part_type == "tool_call":
-            tool_call = part.get("tool_call", {})
-            return ToolCallMessage(
-                id=tool_call.get("id", ""),
-                name=tool_call.get("name", ""),
-                arguments=tool_call.get("arguments", "{}"),
-            )
-        
-        elif part_type == "tool_result":
-            tool_result = part.get("tool_result", {})
-            return ToolResultMessage(
-                tool_call_id=tool_result.get("tool_call_id", ""),
-                content=tool_result.get("content", ""),
-            )
-        
-        elif part_type == "text":
-            text = part.get("text", "")
-            return TextMessage(role=role, content=text)
-    
-    return TextMessage(role=role, content="")
 
 
 logger = logging.getLogger(__name__)
@@ -187,13 +147,15 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         and builds a checkpoint tuple.
         
         Args:
-            config: Runnable config containing thread_id
+            config: Runnable config containing thread_id and optionally checkpoint_id
             
         Returns:
             CheckpointTuple if messages found, None otherwise
         """
         runtime_config = self._get_runtime_config(config)
         session_id = runtime_config.session_id
+        
+        checkpoint_id_from_config = config.get("configurable", {}).get("checkpoint_id")
 
         try:
             messages = self._client.get_last_k_messages(
@@ -222,20 +184,32 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
 
         step = 0
         source = "loop"
+        checkpoint_id = str(uuid.uuid4())
+        checkpoint_ts = datetime.now(timezone.utc).isoformat()
         if messages:
             last_msg = messages[-1]
-            if hasattr(last_msg, 'parts') and last_msg.parts:
-                for part in last_msg.parts:
-                    if isinstance(part, dict) and "meta" in part:
-                        meta = part.get("meta", {})
-                        step = meta.get("step", 0)
-                        source = meta.get("source", "loop")
-                        break
+            if hasattr(last_msg, 'meta') and last_msg.meta:
+                try:
+                    meta = json.loads(last_msg.meta)
+                    step = meta.get("step", 0)
+                    source = meta.get("source", "loop")
+                    checkpoint_id = meta.get("checkpoint_id", checkpoint_id)
+                    checkpoint_ts = meta.get("checkpoint_ts", checkpoint_ts)
+                except (json.JSONDecodeError, TypeError):
+                    logger.debug(f"Failed to parse meta: {last_msg.meta}")
+        
+        if checkpoint_id_from_config:
+            if checkpoint_id_from_config != checkpoint_id:
+                logger.debug(
+                    f"Requested checkpoint_id {checkpoint_id_from_config} "
+                    f"does not match latest {checkpoint_id}"
+                )
+                return None
 
         checkpoint = Checkpoint(
             v=1,
-            id=str(hash(str(langgraph_messages))),
-            ts="",
+            id=checkpoint_id,
+            ts=checkpoint_ts,
             channel_values={"messages": langgraph_messages},
             channel_versions={"messages": 1},
             versions_seen={},
@@ -291,24 +265,26 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
 
         step = metadata.get("step", 0)
         source = metadata.get("source", "loop")
-        checkpoint_meta = {
+        checkpoint_id = checkpoint.get("id", str(uuid.uuid4()))
+        checkpoint_ts = checkpoint.get("ts", datetime.now(timezone.utc).isoformat())
+        checkpoint_meta = json.dumps({
             "step": step,
             "source": source,
-        }
+            "checkpoint_id": checkpoint_id,
+            "checkpoint_ts": checkpoint_ts,
+        }, ensure_ascii=False)
         cloud_messages = langgraph_messages_to_memory(
             messages, 
             runtime_config.actor_id, 
             runtime_config.assistant_id,
             meta=checkpoint_meta
         )
-        
-        message_objects = [_convert_dict_to_message(msg) for msg in cloud_messages]
 
         try:
             self._client.add_messages(
                 space_id=self._space_id,
                 session_id=session_id,
-                messages=message_objects
+                messages=cloud_messages
             )
 
         except Exception as e:
@@ -395,20 +371,24 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
 
         step = 0
         source = "loop"
+        checkpoint_id = str(uuid.uuid4())
+        checkpoint_ts = datetime.now(timezone.utc).isoformat()
         if messages:
             last_msg = messages[-1]
-            if hasattr(last_msg, 'parts') and last_msg.parts:
-                for part in last_msg.parts:
-                    if isinstance(part, dict) and "meta" in part:
-                        meta = part.get("meta", {})
-                        step = meta.get("step", 0)
-                        source = meta.get("source", "loop")
-                        break
+            if hasattr(last_msg, 'meta') and last_msg.meta:
+                try:
+                    meta = json.loads(last_msg.meta)
+                    step = meta.get("step", 0)
+                    source = meta.get("source", "loop")
+                    checkpoint_id = meta.get("checkpoint_id", checkpoint_id)
+                    checkpoint_ts = meta.get("checkpoint_ts", checkpoint_ts)
+                except (json.JSONDecodeError, TypeError):
+                    logger.debug(f"Failed to parse meta: {last_msg.meta}")
 
         checkpoint = Checkpoint(
             v=1,
-            id=str(hash(str(langgraph_messages))),
-            ts="",
+            id=checkpoint_id,
+            ts=checkpoint_ts,
             channel_values={"messages": langgraph_messages},
             channel_versions={"messages": 1},
             versions_seen={},

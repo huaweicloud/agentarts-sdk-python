@@ -253,6 +253,8 @@ def status_agent(
     mode: InvokeMode = InvokeMode.CLOUD,
     region: Optional[str] = None,
     port: Optional[int] = None,
+    endpoint: Optional[str] = None,
+    session_id: Optional[str] = None,
     bearer_token: Optional[str] = None,
 ) -> bool:
     """
@@ -263,6 +265,8 @@ def status_agent(
         mode: Invoke mode (local or cloud)
         region: Huawei Cloud region (for cloud mode)
         port: Local port (for local mode)
+        endpoint: Optional endpoint name
+        session_id: Session ID for stateful agents
         bearer_token: Optional bearer token
 
     Returns:
@@ -278,6 +282,8 @@ def status_agent(
 
             result = client.ping_agent(
                 bearer_token=bearer_token,
+                endpoint=endpoint,
+                session_id=session_id,
             )
 
             status = result.get("status", "Unknown")
@@ -326,6 +332,8 @@ def status_agent(
             result = client.ping_agent(
                 agent_name=agent_name,
                 bearer_token=bearer_token,
+                endpoint=endpoint,
+                session_id=session_id,
             )
 
             if isinstance(result, dict):

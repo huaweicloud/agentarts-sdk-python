@@ -372,6 +372,7 @@ class ToolCallMessage:
     id: str = ""
     name: str = ""
     arguments: str = ""
+    meta: Optional[str] = None
 
     def __post_init__(self):
         if self.arguments is None:
@@ -381,16 +382,18 @@ class ToolCallMessage:
             self.arguments = json.dumps(self.arguments, ensure_ascii=False)
 
     def to_dict(self) -> Dict[str, Any]:
-        result = {
+        tool_call = {
             "id": self.id,
             "name": self.name,
             "arguments": self.arguments
         }
-
-        return {
+        result = {
             "role": "tool",
-            "parts": [{"type": "tool_call", "tool_call": result}]
+            "parts": [{"type": "tool_call", "tool_call": tool_call}]
         }
+        if self.meta:
+            result["meta"] = self.meta
+        return result
 
 
 @dataclass
@@ -400,18 +403,21 @@ class ToolResultMessage:
     tool_call_id: str = ""
     content: str = ""
     asset_ref: Optional[AssetRef] = None
+    meta: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
-        result = {
+        tool_result = {
             "tool_call_id": self.tool_call_id,
             "content": self.content,
             "asset_ref": self.asset_ref
         }
-
-        return {
+        result = {
             "role": "tool",
-            "parts": [{"type": "tool_result", "tool_result": result}]
+            "parts": [{"type": "tool_result", "tool_result": tool_result}]
         }
+        if self.meta:
+            result["meta"] = self.meta
+        return result
 
 
 @dataclass
@@ -898,16 +904,20 @@ class TextMessage:
     content: str = ""
     actor_id: Optional[str] = None
     assistant_id: Optional[str] = None
+    meta: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to OpenAPI format message request."""
         if not self.content:
             raise ValueError("Text message content cannot be empty")
 
-        return {
+        result = {
             "role": self.role,
             "parts": [{"type": "text", "text": self.content}]
         }
+        if self.meta:
+            result["meta"] = self.meta
+        return result
 
 
 @dataclass
