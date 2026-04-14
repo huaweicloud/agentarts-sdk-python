@@ -16,6 +16,9 @@ Quick Start:
     
     # MCP Gateway
     from agentarts.sdk import MCPGatewayClient
+    
+    # Identity
+    from agentarts.sdk import require_access_token, require_api_key, IdentityClient
 """
 
 from agentarts.sdk.runtime.app import AgentArtsRuntimeApp
@@ -27,6 +30,13 @@ from agentarts.sdk.tools import CodeInterpreter, code_session
 from agentarts.sdk.memory import MemoryClient
 
 from agentarts.sdk.mcpgateway import MCPGatewayClient
+
+from agentarts.sdk.identity import (
+    require_access_token,
+    require_api_key,
+    require_sts_token,
+    IdentityClient,
+)
 
 __version__ = "0.1.0"
 __author__ = "Huawei Cloud AgentArts Team"
@@ -42,4 +52,8 @@ __all__ = [
     "code_session",
     "MemoryClient",
     "MCPGatewayClient",
+    "require_access_token",
+    "require_api_key",
+    "require_sts_token",
+    "IdentityClient",
 ]
