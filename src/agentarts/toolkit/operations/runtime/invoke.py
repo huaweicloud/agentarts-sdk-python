@@ -266,24 +266,26 @@ def status_agent(
         region: Huawei Cloud region (for cloud mode)
         port: Local port (for local mode)
         endpoint: Optional endpoint name
-        session_id: Session ID for stateful agents
+        session_id: Session ID for stateful agents (auto-generated if None)
         bearer_token: Optional bearer token
 
     Returns:
         True if healthy, False otherwise
     """
+    actual_session_id = session_id or str(uuid.uuid4())
+    
     try:
         if mode == InvokeMode.LOCAL:
             local_port = port or 8080
             client = LocalRuntimeClient(port=local_port)
 
             console.print()
-            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Local[/yellow]\n[cyan]Endpoint:[/cyan] [white]localhost:{local_port}[/white]")
+            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Local[/yellow]\n[cyan]Endpoint:[/cyan] [white]localhost:{local_port}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]")
 
             result = client.ping_agent(
                 bearer_token=bearer_token,
                 endpoint=endpoint,
-                session_id=session_id,
+                session_id=actual_session_id,
             )
 
             status = result.get("status", "Unknown")
@@ -320,7 +322,7 @@ def status_agent(
                     return False
 
             console.print()
-            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]\n[cyan]Auth Type:[/cyan] [dim]{auth_type or 'None'}[/dim]")
+            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]\n[cyan]Auth Type:[/cyan] [dim]{auth_type or 'None'}[/dim]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]")
 
             client = RuntimeClient(
                 data_endpoint=data_endpoint,
@@ -333,7 +335,7 @@ def status_agent(
                 agent_name=agent_name,
                 bearer_token=bearer_token,
                 endpoint=endpoint,
-                session_id=session_id,
+                session_id=actual_session_id,
             )
 
             if isinstance(result, dict):
