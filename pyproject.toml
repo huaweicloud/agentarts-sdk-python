@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.9.27,<0.10.0"]
+build-backend = "uv_build"
 
 [project]
 name = "huaweicloud-agentarts-sdk"
@@ -129,12 +129,9 @@ Changelog = "https://github.com/huaweicloud/agentarts-sdk-python/blob/main/CHANG
 [project.scripts]
 agentarts = "agentarts.toolkit.main:cli"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["agentarts*"]
-
-[tool.setuptools.package-data]
-agentarts = ["py.typed"]
+[tool.uv.build-backend]
+module-name = "agentarts"
+module-root = "src"
 
 [tool.black]
 line-length = 100
