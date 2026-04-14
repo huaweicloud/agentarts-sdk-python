@@ -15,7 +15,7 @@
 | `--port` | `-p` | 本地模式端口 | `8080` |
 | `--endpoint` | `-e` | 指定端点名称 | 无 |
 | `--session` | `-s` | 会话 ID（用于有状态 Agent） | 自动生成 UUID |
-| `--bearer-token` | 无 | Bearer 认证令牌 | 无 |
+| `--bearer-token` | `-bt` | Bearer 认证令牌 | 无 |
 | `--timeout` | - | 请求超时时间（秒） | `900` |
 
 ## 调用模式
