@@ -141,7 +141,7 @@ def get_config_env_vars(config: dict) -> Dict[str, str]:
     agents = config.get("agents", {})
     agent_config = agents.get(default_agent, {})
     runtime_config = agent_config.get("runtime", {})
-    env_vars_list = runtime_config.get("environment_variables", [])
+    env_vars_list = runtime_config.get("environment_variables", []) or []
 
     for env_var in env_vars_list:
         if isinstance(env_var, dict):
