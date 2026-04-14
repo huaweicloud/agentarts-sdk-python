@@ -9,7 +9,7 @@ from typing import Any, Dict, Iterator, Optional, Tuple, Union
 from rich.console import Console
 from rich.panel import Panel
 
-from agentarts.sdk.utils.constant import get_region, get_runtime_data_plane_endpoint, get_control_plane_endpoint
+from agentarts.sdk.utils.constant import get_region, get_runtime_data_plane_endpoint, get_control_plane_endpoint, _ensure_https
 from agentarts.sdk.service.http_client import SignMode
 from agentarts.toolkit.operations.runtime.config import (
     get_agent,
@@ -20,15 +20,6 @@ from agentarts.toolkit.utils.common import echo_error, echo_success, echo_info, 
 from agentarts.sdk.service.runtime_client import LocalRuntimeClient, RuntimeClient
 
 console = Console()
-
-
-def _ensure_https(endpoint: str) -> str:
-    """Ensure endpoint has https:// prefix."""
-    if not endpoint:
-        return endpoint
-    if not endpoint.startswith(("http://", "https://")):
-        return f"https://{endpoint}"
-    return endpoint
 
 
 def _resolve_agent_info(
