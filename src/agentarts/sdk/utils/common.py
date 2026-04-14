@@ -21,4 +21,4 @@ def generate_random_string(length: int = 4) -> str:
     """
     if length < 4 or length > 64:
         raise ValueError(f"Length must be between 4 and 64, got {length}")
-    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
