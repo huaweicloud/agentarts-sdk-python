@@ -323,6 +323,18 @@ agentarts destroy
 - **Minimum:** Python 3.10
 - **Recommended:** Python 3.10 or 3.11
 
+### Framework Versions
+
+When using optional framework dependencies, ensure the following minimum versions:
+
+| Framework | Minimum Version | Install Command |
+|-----------|-----------------|-----------------|
+| LangGraph | 1.0.0 | `pip install huaweicloud-agentarts-sdk[langgraph]` |
+| LangChain | 0.1.0 | `pip install huaweicloud-agentarts-sdk[langchain]` |
+| langchain-core | 0.1.0 | Included with langgraph/langchain |
+
+> **Note:** LangGraph 1.0+ introduces a new Checkpoint format with required fields (`step`, `pending_sends`, `parents`). The SDK's integration module is compatible with LangGraph 1.0 and above.
+
 ### Docker
 
 Docker is required for:

@@ -51,7 +51,7 @@ class DataPlaneAuthenticationStrategy(AuthenticationStrategy):
     def setup_credentials(self, region_name: str):
         """Data plane does not require AK/SK credentials."""
         self.credentials = None
-        logger.info("Data plane endpoint: credentials will be handled via API_KEY in headers")
+        logger.info("Data plane endpoint: credentials will be handled via HUAWEICLOUD_SDK_MEMORY_API_KEY in headers")
     
     def setup_session_hooks(self, session: requests.Session):
         """Data plane does not require special session hooks."""
