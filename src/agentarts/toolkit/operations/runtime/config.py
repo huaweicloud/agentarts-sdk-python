@@ -505,6 +505,7 @@ def generate_dockerfile(agent_name: Optional[str] = None, output_path: Optional[
     base_image = agent_config.base.base_image
     dependency_file = agent_config.base.dependency_file
     entrypoint = agent_config.base.entrypoint
+    region = agent_config.base.region
     port = agent_config.runtime.invoke_config.port if agent_config.runtime.invoke_config else 8080
 
     return _generate_dockerfile(
@@ -513,4 +514,5 @@ def generate_dockerfile(agent_name: Optional[str] = None, output_path: Optional[
         entrypoint=entrypoint,
         port=port,
         output_path=output_path or "Dockerfile",
+        region=region,
     )

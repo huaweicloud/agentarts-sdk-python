@@ -91,7 +91,7 @@ def init_project(
     create_agent_file(project_path, template, name)
     create_requirements_file(project_path, template)
     create_config_file(project_path, name, template, region, swr_org, swr_repo)
-    create_dockerfile(project_path, template)
+    create_dockerfile(project_path, template, region)
 
     echo_success(f"Project '{name}' created successfully!")
     
@@ -280,15 +280,17 @@ def get_template_env_vars(template: str) -> List[Dict[str, str]]:
     return template_env_vars.get(template, [])
 
 
-def create_dockerfile(project_path: Path, template: str) -> None:
+def create_dockerfile(project_path: Path, template: str, region: Optional[str] = None) -> None:
     """Create Dockerfile for the project."""
     from agentarts.toolkit.utils.templates.docker import render_dockerfile
 
+    actual_region = region or "cn-southwest-2"
     dockerfile_content = render_dockerfile(
         base_image="python:3.10-slim",
         dependency_file="requirements.txt",
         entrypoint="agent:app",
         port=8080,
+        region=actual_region,
     )
 
     dockerfile_path = project_path / "Dockerfile"
