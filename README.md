@@ -164,25 +164,25 @@ source venv/bin/activate
 
 **Windows:**
 ```powershell
-pip install huaweicloud-agentarts-sdk
+pip install agentarts-sdk
 ```
 
 **Linux/macOS:**
 ```bash
-pip install huaweicloud-agentarts-sdk
+pip install agentarts-sdk
 ```
 
 ### Install with Optional Dependencies
 
 ```bash
 # With LangChain support
-pip install huaweicloud-agentarts-sdk[langchain]
+pip install agentarts-sdk[langchain]
 
 # With LangGraph support
-pip install huaweicloud-agentarts-sdk[langgraph]
+pip install agentarts-sdk[langgraph]
 
 # With all optional dependencies
-pip install huaweicloud-agentarts-sdk[all]
+pip install agentarts-sdk[all]
 ```
 
 ### Install from Source
@@ -329,8 +329,8 @@ When using optional framework dependencies, ensure the following minimum version
 
 | Framework | Minimum Version | Install Command |
 |-----------|-----------------|-----------------|
-| LangGraph | 1.0.0 | `pip install huaweicloud-agentarts-sdk[langgraph]` |
-| LangChain | 0.1.0 | `pip install huaweicloud-agentarts-sdk[langchain]` |
+| LangGraph | 1.0.0 | `pip install agentarts-sdk[langgraph]` |
+| LangChain | 0.1.0 | `pip install agentarts-sdk[langchain]` |
 | langchain-core | 0.1.0 | Included with langgraph/langchain |
 
 > **Note:** LangGraph 1.0+ introduces a new Checkpoint format with required fields (`step`, `pending_sends`, `parents`). The SDK's integration module is compatible with LangGraph 1.0 and above.

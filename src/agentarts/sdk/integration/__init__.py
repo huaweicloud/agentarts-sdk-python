@@ -55,7 +55,7 @@ def __getattr__(name: str):
             raise ImportError(
                 f"{name} requires the 'langgraph' extra to be installed. "
                 f"Install it with:\n"
-                f"  pip install huaweicloud-agentarts-sdk[langgraph]\n"
+                f"  pip install agentarts-sdk[langgraph]\n"
                 f"Original error: {e}"
             ) from e
         raise
