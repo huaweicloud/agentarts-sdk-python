@@ -1,5 +1,6 @@
 """Init operation implementation"""
 
+import platform as platform_module
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -22,6 +23,35 @@ TEMPLATES = {
     "langgraph": "langgraph",
     "google-adk": "google-adk",
 }
+
+
+def detect_platform() -> str:
+    """
+    Detect the current platform architecture.
+
+    Returns:
+        str: Platform string (e.g., 'linux/amd64', 'linux/arm64')
+    """
+    machine = platform_module.machine().lower()
+    system = platform_module.system().lower()
+
+    if system == "linux":
+        if machine in ("aarch64", "arm64"):
+            return "linux/arm64"
+        elif machine in ("x86_64", "amd64"):
+            return "linux/amd64"
+    elif system == "darwin":
+        if machine in ("aarch64", "arm64"):
+            return "linux/arm64"
+        elif machine in ("x86_64", "amd64"):
+            return "linux/amd64"
+    elif system == "windows":
+        if machine in ("amd64", "x86_64"):
+            return "linux/amd64"
+        elif machine in ("arm64", "aarch64"):
+            return "linux/arm64"
+
+    return "linux/amd64"
 
 
 def init_project(
@@ -127,6 +157,7 @@ def create_config_file(
     actual_region = region or "cn-southwest-2"
     actual_swr_org = swr_org or "agentarts-org"
     actual_swr_repo = swr_repo or name
+    detected_platform = detect_platform()
 
     artifact_url = f"swr.{actual_region}.myhuaweicloud.com/{actual_swr_org}/{actual_swr_repo}:latest"
 
@@ -147,7 +178,7 @@ agents:
       name: {name}
       entrypoint: agent:app
       dependency_file: requirements.txt
-      platform: linux/amd64
+      platform: {detected_platform}
       language: python3
       base_image: python:3.10-slim
       region: {actual_region}

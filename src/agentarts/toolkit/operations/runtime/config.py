@@ -1,5 +1,6 @@
 """Config operation implementation"""
 
+import platform as platform_module
 from pathlib import Path
 from typing import List, Optional
 
@@ -16,6 +17,35 @@ from agentarts.toolkit.utils.runtime.config import (
 console = Console()
 
 CONFIG_FILE_NAME = ".agentarts_config.yaml"
+
+
+def detect_platform() -> str:
+    """
+    Detect the current platform architecture.
+
+    Returns:
+        str: Platform string (e.g., 'linux/amd64', 'linux/arm64')
+    """
+    machine = platform_module.machine().lower()
+    system = platform_module.system().lower()
+
+    if system == "linux":
+        if machine in ("aarch64", "arm64"):
+            return "linux/arm64"
+        elif machine in ("x86_64", "amd64"):
+            return "linux/amd64"
+    elif system == "darwin":
+        if machine in ("aarch64", "arm64"):
+            return "linux/arm64"
+        elif machine in ("x86_64", "amd64"):
+            return "linux/amd64"
+    elif system == "windows":
+        if machine in ("amd64", "x86_64"):
+            return "linux/amd64"
+        elif machine in ("arm64", "aarch64"):
+            return "linux/arm64"
+
+    return "linux/amd64"
 
 
 def detect_dependency_file() -> str:
@@ -211,12 +241,14 @@ def add_agent(
         
         agent_config = AgentArtsConfig.from_dict(existing_dict)
     else:
+        detected_platform = detect_platform()
         agent_config = AgentArtsConfig(
             base=BaseConfig(
                 name=name,
                 entrypoint=entrypoint,
                 region=region,
                 dependency_file=dependency_file,
+                platform=detected_platform,
             ),
             swr_config=SWRConfig(
                 organization=swr_organization,
