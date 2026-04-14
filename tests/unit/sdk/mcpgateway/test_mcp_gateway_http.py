@@ -57,10 +57,10 @@ class TestMCPGatewayClient:
         assert result.success
         mock_put.assert_called_once()
     
-    @pytest.mark.parametrize("description, authorizer_config, log_config, outbound_config, tags", [
-        (None, None, None, None, None),
+    @pytest.mark.parametrize("description, authorizer_config, log_config, tags", [
+        (None, None, None, None),
     ])
-    def test_update_mcp_gateway_no_params(self, description, authorizer_config, log_config, outbound_config, tags):
+    def test_update_mcp_gateway_no_params(self, description, authorizer_config, log_config, tags):
         """Test update_mcp_gateway with no parameters"""
         with pytest.raises(ValueError):
             self.client.update_mcp_gateway(
@@ -68,7 +68,6 @@ class TestMCPGatewayClient:
                 description=description,
                 authorizer_configuration=authorizer_config,
                 log_delivery_configuration=log_config,
-                outbound_network_configuration=outbound_config,
                 tags=tags
             )
     

@@ -137,7 +137,6 @@ class MCPGatewayClient(BaseHTTPClient):
         description: Optional[str] = None,
         authorizer_configuration: Optional[Dict[str, Any]] = None,
         log_delivery_configuration: Optional[Dict[str, Any]] = None,
-        outbound_network_configuration: Optional[Dict[str, Any]] = None,
         tags: Optional[List[str]] = None
     ) -> RequestResult:
         """
@@ -148,7 +147,6 @@ class MCPGatewayClient(BaseHTTPClient):
             description: Gateway description
             authorizer_configuration: Authorizer configuration
             log_delivery_configuration: Log delivery configuration
-            outbound_network_configuration: Outbound network configuration
             tags: Gateway tags
             
         Returns:
@@ -163,14 +161,12 @@ class MCPGatewayClient(BaseHTTPClient):
             description,
             authorizer_configuration,
             log_delivery_configuration,
-            outbound_network_configuration,
             tags
         ]):
             updateable_fields = [
                 "description",
                 "authorizer_configuration",
                 "log_delivery_configuration",
-                "outbound_network_configuration",
                 "tags"
             ]
             raise ValueError(f"At least one parameter must be provided for update. Available fields: {', '.join(updateable_fields)}")
@@ -179,7 +175,6 @@ class MCPGatewayClient(BaseHTTPClient):
             "description": description,
             "authorizer_configuration": authorizer_configuration,
             "log_delivery_configuration": log_delivery_configuration,
-            "outbound_network_configuration": outbound_network_configuration,
             "tags": tags
         }
         
