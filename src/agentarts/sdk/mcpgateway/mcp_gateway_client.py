@@ -46,7 +46,7 @@ class MCPGatewayClient(BaseHTTPClient):
         Create a new MCP gateway.
         
         Args:
-            name: Gateway name, default is TestGateway-<random-string>
+            name: Gateway name, default is gateway-<random-string>
             description: Gateway description
             protocol_type: Protocol type, default is "mcp"
             authorizer_type: Authorizer type, can be "custom_jwt", "iam", or "api_key", default is "iam"
@@ -64,7 +64,7 @@ class MCPGatewayClient(BaseHTTPClient):
         """
         # Set default name if not provided
         if name is None:
-            name = f"TestGateway-{generate_random_string()}"
+            name = f"gateway-{generate_random_string(8)}"
         
         # Handle agency_name if not provided
         if agency_name is None:
@@ -137,7 +137,6 @@ class MCPGatewayClient(BaseHTTPClient):
         description: Optional[str] = None,
         authorizer_configuration: Optional[Dict[str, Any]] = None,
         log_delivery_configuration: Optional[Dict[str, Any]] = None,
-        outbound_network_configuration: Optional[Dict[str, Any]] = None,
         tags: Optional[List[str]] = None
     ) -> RequestResult:
         """
@@ -148,7 +147,6 @@ class MCPGatewayClient(BaseHTTPClient):
             description: Gateway description
             authorizer_configuration: Authorizer configuration
             log_delivery_configuration: Log delivery configuration
-            outbound_network_configuration: Outbound network configuration
             tags: Gateway tags
             
         Returns:
@@ -163,14 +161,12 @@ class MCPGatewayClient(BaseHTTPClient):
             description,
             authorizer_configuration,
             log_delivery_configuration,
-            outbound_network_configuration,
             tags
         ]):
             updateable_fields = [
                 "description",
                 "authorizer_configuration",
                 "log_delivery_configuration",
-                "outbound_network_configuration",
                 "tags"
             ]
             raise ValueError(f"At least one parameter must be provided for update. Available fields: {', '.join(updateable_fields)}")
@@ -179,7 +175,6 @@ class MCPGatewayClient(BaseHTTPClient):
             "description": description,
             "authorizer_configuration": authorizer_configuration,
             "log_delivery_configuration": log_delivery_configuration,
-            "outbound_network_configuration": outbound_network_configuration,
             "tags": tags
         }
         
@@ -262,7 +257,7 @@ class MCPGatewayClient(BaseHTTPClient):
         
         Args:
             gateway_id: Gateway ID
-            name: Target name, default is TestGatewayTarget-<random-string>
+            name: Target name, default is target-<random-string>
             description: Target description
             target_configuration: Target configuration
             credential_provider_configuration: Credential provider configuration
@@ -272,7 +267,7 @@ class MCPGatewayClient(BaseHTTPClient):
         """
         # Set default name if not provided
         if name is None:
-            name = f"TestGatewayTarget-{generate_random_string()}"
+            name = f"target-{generate_random_string(8)}"
         
         # Set default credential provider configuration if not provided
         if credential_provider_configuration is None:

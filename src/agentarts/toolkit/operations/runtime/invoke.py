@@ -3,19 +3,123 @@
 import json
 import uuid
 from enum import Enum
-from typing import Any, Dict, Iterator, Optional, Union
+from typing import Any, Dict, Iterator, Optional, Tuple, Union
 
 from rich.console import Console
 from rich.panel import Panel
 
+from agentarts.sdk.utils.constant import get_region, get_runtime_data_plane_endpoint, get_control_plane_endpoint
+from agentarts.sdk.service.http_client import SignMode
 from agentarts.toolkit.operations.runtime.config import (
     get_agent,
     get_config_file_path,
+    load_config,
 )
 from agentarts.toolkit.utils.common import echo_error, echo_success, echo_info, echo_key_value
 from agentarts.sdk.service.runtime_client import LocalRuntimeClient, RuntimeClient
 
 console = Console()
+
+
+def _ensure_https(endpoint: str) -> str:
+    """Ensure endpoint has https:// prefix."""
+    if not endpoint:
+        return endpoint
+    if not endpoint.startswith(("http://", "https://")):
+        return f"https://{endpoint}"
+    return endpoint
+
+
+def _resolve_agent_info(
+    agent_name: Optional[str],
+    region: Optional[str],
+) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
+    """
+    Resolve agent name, region, agent_id and auth_type from config if not provided.
+
+    Args:
+        agent_name: Agent name (may be None)
+        region: Region (may be None)
+
+    Returns:
+        Tuple of (agent_name, region, agent_id, auth_type) with resolved values
+    """
+    agent_id = None
+    auth_type = None
+    if agent_name is None:
+        config_path = get_config_file_path()
+        if config_path.exists():
+            config = load_config()
+            if config:
+                if config.default_agent and config.default_agent in (config.agents or {}):
+                    agent_name = config.default_agent
+                    agent_config = config.agents[agent_name]
+                    region = region or agent_config.base.region
+                    agent_id = agent_config.runtime.agent_id
+                    if agent_config.runtime.identity_configuration:
+                        auth_type = agent_config.runtime.identity_configuration.authorizer_type
+                elif config.agents:
+                    first_agent_key = next(iter(config.agents.keys()), None)
+                    if first_agent_key:
+                        agent_name = first_agent_key
+                        agent_config = config.agents[first_agent_key]
+                        region = region or agent_config.base.region
+                        agent_id = agent_config.runtime.agent_id
+                        if agent_config.runtime.identity_configuration:
+                            auth_type = agent_config.runtime.identity_configuration.authorizer_type
+    return agent_name, region, agent_id, auth_type
+
+
+def _get_data_endpoint(
+    agent_name: str,
+    region: str,
+    agent_id: Optional[str] = None,
+) -> Optional[str]:
+    """
+    Get data plane endpoint for the agent.
+
+    First checks if AGENTARTS_RUNTIME_DATA_ENDPOINT is configured.
+    If not, fetches agent info from control plane and extracts access_endpoint.
+
+    Args:
+        agent_name: Agent name
+        region: Huawei Cloud region
+        agent_id: Optional agent ID from config file
+
+    Returns:
+        Data plane endpoint URL, or None if not available
+    """
+    data_endpoint = get_runtime_data_plane_endpoint()
+
+    if not data_endpoint:
+        control_endpoint = get_control_plane_endpoint(region)
+        control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=False)
+
+        if agent_id:
+            agent_detail = control_client.find_agent_by_id(agent_id)
+            if agent_detail:
+                version_detail = agent_detail.get("version_detail") or {}
+                invoke_config_resp = version_detail.get("invoke_config") or {}
+                access_endpoint = invoke_config_resp.get("access_endpoint")
+                if access_endpoint:
+                    data_endpoint = access_endpoint
+        else:
+            agent_info = control_client.find_agent_by_name(agent_name)
+            if agent_info:
+                agent_id = agent_info.get("id")
+                if agent_id:
+                    agent_detail = control_client.find_agent_by_id(agent_id)
+                    if agent_detail:
+                        version_detail = agent_detail.get("version_detail") or {}
+                        invoke_config_resp = version_detail.get("invoke_config") or {}
+                        access_endpoint = invoke_config_resp.get("access_endpoint")
+                        if access_endpoint:
+                            data_endpoint = access_endpoint
+
+    if data_endpoint:
+        data_endpoint = _ensure_https(data_endpoint)
+
+    return data_endpoint
 
 
 class InvokeMode(str, Enum):
@@ -75,29 +179,41 @@ def invoke_agent(
                 timeout=timeout,
             )
         else:
+            agent_name, region, agent_id, auth_type = _resolve_agent_info(agent_name, region)
+
             if agent_name is None:
-                config_path = get_config_file_path()
-                if config_path.exists():
-                    agent_config = get_agent(None)
-                    if agent_config is not None:
-                        agent_name = agent_config.base.name
-                        region = region or agent_config.base.region
+                echo_error("No agent specified and no default agent configured")
+                console.print("[dim]Specify --agent or set a default agent in config[/dim]")
+                return False
 
-                if agent_name is None:
-                    echo_error("No agent specified and no default agent configured")
-                    console.print("[dim]Specify --agent or set a default agent in config[/dim]")
-                    return False
-
-            actual_region = region or "cn-north-4"
+            actual_region = region or get_region()
             actual_session_id = session_id or str(uuid.uuid4())
 
-            console.print()
-            echo_info("Invoke Request", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]")
+            data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id)
 
-            from agentarts.sdk.utils.constant import get_data_plane_endpoint
+            if not data_endpoint:
+                echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent [yellow]{agent_name} {actual_region}[/yellow]")
+                console.print("[dim]Set AGENTARTS_RUNTIME_DATA_ENDPOINT environment variable or ensure agent is deployed[/dim]")
+                return False
 
-            data_endpoint = get_data_plane_endpoint(actual_region)
-            client = RuntimeClient(data_endpoint=data_endpoint)
+            sign_mode = SignMode.SDK_HMAC_SHA256
+            if auth_type and auth_type.upper() == "IAM":
+                sign_mode = SignMode.V11_HMAC_SHA256
+            else:
+                # 非 IAM 认证需要 bearer token
+                if not bearer_token:
+                    echo_error("Bearer token is required for non-IAM authentication")
+                    console.print("[dim]Specify --bearer-token or set BEARER_TOKEN environment variable[/dim]")
+                    return False
+
+            echo_info("Invoke Request", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]\n[cyan]Auth Type:[/cyan] [dim]{auth_type or 'None'}[/dim]")
+
+            client = RuntimeClient(
+                data_endpoint=data_endpoint,
+                verify_ssl=False,
+                sign_mode=sign_mode,
+                region_id=actual_region,
+            )
 
             result = client.invoke_agent(
                 agent_name=agent_name,
@@ -172,27 +288,40 @@ def status_agent(
                 echo_error(f"Status: {status}")
                 return False
         else:
-            if agent_name is None:
-                config_path = get_config_file_path()
-                if config_path.exists():
-                    agent_config = get_agent(None)
-                    if agent_config is not None:
-                        agent_name = agent_config.base.name
-                        region = region or agent_config.base.region
+            agent_name, region, agent_id, auth_type = _resolve_agent_info(agent_name, region)
 
-                if agent_name is None:
-                    echo_error("No agent specified")
+            if agent_name is None:
+                echo_error("No agent specified")
+                return False
+
+            actual_region = region or get_region()
+
+            data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id)
+
+            if not data_endpoint:
+                echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent {agent_name}")
+                console.print("[dim]Set AGENTARTS_RUNTIME_DATA_ENDPOINT environment variable or ensure agent is deployed[/dim]")
+                return False
+
+            sign_mode = SignMode.SDK_HMAC_SHA256
+            if auth_type and auth_type.upper() == "IAM":
+                sign_mode = SignMode.V11_HMAC_SHA256
+            else:
+                # 非 IAM 认证需要 bearer token
+                if not bearer_token:
+                    echo_error("Bearer token is required for non-IAM authentication")
+                    console.print("[dim]Specify --bearer-token or set BEARER_TOKEN environment variable[/dim]")
                     return False
 
-            actual_region = region or "cn-north-4"
-
             console.print()
-            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]")
+            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]\n[cyan]Auth Type:[/cyan] [dim]{auth_type or 'None'}[/dim]")
 
-            from agentarts.sdk.utils.constant import get_data_plane_endpoint
-
-            data_endpoint = get_data_plane_endpoint(actual_region)
-            client = RuntimeClient(data_endpoint=data_endpoint)
+            client = RuntimeClient(
+                data_endpoint=data_endpoint,
+                verify_ssl=False,
+                sign_mode=sign_mode,
+                region_id=actual_region,
+            )
 
             result = client.ping_agent(
                 agent_name=agent_name,

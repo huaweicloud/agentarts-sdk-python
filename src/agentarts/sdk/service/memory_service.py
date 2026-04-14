@@ -70,7 +70,7 @@ class DataPlaneAuthenticationStrategy(AuthenticationStrategy):
                 "API Key is required for data plane operations. "
                 "Either pass api_key parameter or set HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable."
             )
-        headers["X-Auth-Token"] = api_key
+        headers["Authorization"] = f"Bearer {api_key}"
         
         if hasattr(self, 'client_request_id'):
             headers["X-Client-Request-ID"] = self.client_request_id

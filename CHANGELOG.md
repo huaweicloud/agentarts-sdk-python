@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Service module: HTTP server, WebSocket, streaming
 - Framework integration: LangChain, LangGraph, AutoGen, CrewAI
 - Cloud integration: Huawei Cloud client
-- CLI tool: init, dev, build, deploy, logs, config
+- CLI tool: init, dev, build, deploy, config
 - Monitoring: metrics and tracing
 
 ## [0.1.0] - 2026-03-28

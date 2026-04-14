@@ -17,7 +17,7 @@
     )
 
     # 创建客户端（需要 IAM Token）
-    client = MemoryClient(iam_token="your-token", region_name="cn-north-4")
+    client = MemoryClient(iam_token="your-token", region_name="cn-southwest-2")
 
     # 创建 Space
     space_request = SpaceCreateRequest(

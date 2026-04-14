@@ -31,13 +31,13 @@ class IAMClient:
         """
         # Import modules here to avoid dependency issues
         from huaweicloudsdkiam.v5 import IamClient
-        from huaweicloudsdkcore.region import Region
+        from huaweicloudsdkcore.region.region import Region
         from huaweicloudsdkcore.http.http_config import HttpConfig
-        from agentarts.sdk.utils.metadata import get_credentials
+        from agentarts.sdk.utils.metadata import create_credential
         from agentarts.sdk.utils.constant import get_region, get_iam_endpoint
         
         # Create credentials
-        credentials = get_credentials()
+        credentials = create_credential()
         
         # Create HTTP config with ignore_ssl_verification=True
         http_config = HttpConfig.get_default_config()
@@ -79,18 +79,20 @@ class IAMClient:
         Reference: https://support.huaweicloud.com/api-iam5/CreateAgencyV5.html
         """
         # Import modules here to avoid dependency issues
-        from huaweicloudsdkiam.v5.model import CreateAgencyV5Request
+        from huaweicloudsdkiam.v5.model import CreateAgencyV5Request, CreateAgencyReqBody
         
         # Get IAM client
         iam_client = self._get_iam_client()
         
         # Create request
-        request = CreateAgencyV5Request()
-        request.agency_name = agency_name
-        request.trust_policy = trust_policy
-        request.path = path
-        request.max_session_duration = max_session_duration
-        request.description = description
+        body = CreateAgencyReqBody(
+            agency_name=agency_name,
+            trust_policy=trust_policy,
+            path=path or "",
+            max_session_duration=max_session_duration or 3600,
+            description=description
+        )
+        request = CreateAgencyV5Request(body=body)
         
         # Call the API and return the response
         return iam_client.create_agency_v5(request)

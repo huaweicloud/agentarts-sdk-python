@@ -17,9 +17,9 @@ def deploy(
         typer.Option(
             "--mode",
             "-m",
-            help="Deploy mode: 'local' for local Docker, 'swr' for Huawei Cloud SWR (default)",
+            help="Deploy mode: 'local' for local Docker, 'cloud' for Huawei Cloud SWR (default)",
         ),
-    ] = "swr",
+    ] = "cloud",
     tag: Annotated[
         str,
         typer.Option("--tag", "-t", help="Docker image tag"),
@@ -49,7 +49,7 @@ def deploy(
     Deploy agent to Huawei Cloud or run locally.
 
     Two deployment modes are supported:
-    - swr (default): Build image, push to SWR, create AgentArts runtime
+    - cloud (default): Build image, push to SWR, create AgentArts runtime
     - local: Build image and run in local Docker
 
     All parameters can be overridden via command-line options.
@@ -67,22 +67,22 @@ def deploy(
     Prerequisites:
     - Run 'agentarts config' first to generate configuration and Dockerfile
     - Docker must be installed and running
-    - For SWR mode: Set HUAWEICLOUD_SDK_AK and HUAWEICLOUD_SDK_SK environment variables
+    - For cloud mode: Set HUAWEICLOUD_SDK_AK and HUAWEICLOUD_SDK_SK environment variables
 
     Examples:
         agentarts deploy
         agentarts deploy --agent my-agent
         agentarts deploy --mode local --local-port 8080
-        agentarts deploy --mode swr --tag v1.0.0
+        agentarts deploy --mode cloud --tag v1.0.0
         agentarts deploy --swr-org my-org --swr-repo my-repo
         agentarts deploy --description "My custom agent"
     """
-    deploy_mode = deploy_op.DeployMode.SWR
+    deploy_mode = deploy_op.DeployMode.CLOUD
     if mode.lower() == "local":
         deploy_mode = deploy_op.DeployMode.LOCAL
-    elif mode.lower() != "swr":
+    elif mode.lower() != "cloud":
         console = deploy_op.console
-        console.print(f"[red]Error: Invalid mode '{mode}'. Use 'local' or 'swr'.[/red]")
+        console.print(f"[red]Error: Invalid mode '{mode}'. Use 'local' or 'cloud'.[/red]")
         raise typer.Exit(1)
 
     success = deploy_op.deploy_project(

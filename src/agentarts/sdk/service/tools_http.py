@@ -22,8 +22,6 @@ class ToolsAPIError(BaseException):
 class ControlToolsHttpClient(BaseHTTPClient):
     def __init__(self, region_name: str, endpoint_url: str):
         request_config = RequestConfig(base_url=endpoint_url, verify_ssl=False)
-        if not HUAWEICLOUD_SDK_AK or not HUAWEICLOUD_SDK_SK:
-            raise RuntimeError("HUAWEICLOUD_SDK_AK and HUAWEICLOUD_SDK_SK are required")
         super().__init__(request_config, open_ak_sk=True)
         self.region_name = region_name
     
@@ -101,7 +99,7 @@ class DataToolsHttpClient(BaseHTTPClient):
         
         启动代码解释器会话
         """ 
-        endpoint = f"v1/code-interpreters/{code_interpreter_name}/sessions-start"
+        endpoint = f"/v1/code-interpreters/{code_interpreter_name}/sessions-start"
         headers = {
             "Authorization": f"Bearer {api_key}"
         }
@@ -116,7 +114,7 @@ class DataToolsHttpClient(BaseHTTPClient):
         
         停止代码解释器会话
         """
-        endpoint = f"v1/code-interpreters/{code_interpreter_name}/sessions-stop"
+        endpoint = f"/v1/code-interpreters/{code_interpreter_name}/sessions-stop"
         headers = {
             "x-HW-Agentarts-Code-Interpreter-Session-Id": session_id,
             "Authorization": f"Bearer {api_key}"
@@ -132,7 +130,7 @@ class DataToolsHttpClient(BaseHTTPClient):
         
         获取代码解释器会话详情
         """
-        endpoint = f"v1/code-interpreters/{code_interpreter_name}/sessions-get"
+        endpoint = f"/v1/code-interpreters/{code_interpreter_name}/sessions-get"
         headers = {
             "x-HW-Agentarts-Code-Interpreter-Session-Id": session_id,
             "Authorization": f"Bearer {api_key}"
@@ -154,7 +152,7 @@ class DataToolsHttpClient(BaseHTTPClient):
         
         调用代码解释器会话
         """
-        endpoint = f"v1/code-interpreters/{code_interpreter_name}/invoke"
+        endpoint = f"/v1/code-interpreters/{code_interpreter_name}/invoke"
         headers = {
             "x-HW-Agentarts-Code-Interpreter-Session-Id": session_id,
             "Authorization": f"Bearer {api_key}"

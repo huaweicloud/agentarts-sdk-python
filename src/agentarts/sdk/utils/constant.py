@@ -150,7 +150,7 @@ def get_control_plane_endpoint(region: str = None) -> str:
 
 def get_runtime_data_plane_endpoint() -> str:
     """
-    Get the AgentArts runtime data plane endpoint URL.
+    Get the AgentArts data plane endpoint URL.
 
     Args:
         endpoint: Custom data plane endpoint URL. If not provided,
@@ -161,20 +161,7 @@ def get_runtime_data_plane_endpoint() -> str:
     """
     return AGENTARTS_RUNTIME_DATA_ENDPOINT
 
-
-def get_data_plane_endpoint() -> str:
-    """
-    Get the AgentArts data plane endpoint URL (alias for runtime).
-
-    This is an alias for get_runtime_data_plane_endpoint() for backward
-    compatibility.
-
-    Returns:
-        The data plane endpoint URL, or empty string if not configured.
-    """
-    return get_runtime_data_plane_endpoint()
-
-def get_code_interpreter_data_plane_endpoint() -> str:
+def get_code_interpreter_data_plane_endpoint(endpoint: str = None) -> str:
     """
     Get the AgentArts data plane endpoint URL.
 
@@ -187,6 +174,8 @@ def get_code_interpreter_data_plane_endpoint() -> str:
     """
     if AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT:
         return AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT
+    if endpoint:
+        return endpoint
     return AGENTARTS_RUNTIME_DATA_ENDPOINT
 
 def get_memory_endpoint(

@@ -4,6 +4,7 @@ from typing import Optional
 
 from rich.console import Console
 
+from agentarts.sdk.utils.constant import get_region
 from agentarts.toolkit.operations.runtime.config import get_agent, get_config_file_path
 from agentarts.toolkit.utils.common import echo_error, echo_success, echo_info
 
@@ -37,7 +38,7 @@ def destroy_agent(
                 echo_error("No agent specified")
                 return False
 
-        actual_region = region or "cn-north-4"
+        actual_region = region or get_region()
 
         console.print()
         echo_info("Destroy Agent", f"[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Region:[/cyan] [yellow]{actual_region}[/yellow]")
@@ -46,7 +47,7 @@ def destroy_agent(
         from agentarts.sdk.utils.constant import get_control_plane_endpoint
 
         control_endpoint = get_control_plane_endpoint(actual_region)
-        client = RuntimeClient(control_endpoint=control_endpoint)
+        client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=False)
 
         result = client.delete_agent_by_name(agent_name=agent_name)
 

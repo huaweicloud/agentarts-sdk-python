@@ -66,7 +66,7 @@ def create_mcp_gateway(
     Create a new MCP gateway
 
     Examples:
-        agentarts mcp create-mcp-gateway --name my-gateway --description "My MCP Gateway"
+        agentarts mcp-gateway create-mcp-gateway --name my-gateway --description "My MCP Gateway"
     """
     try:
         authorizer_config = _parse_json(authorizer_configuration)
@@ -103,19 +103,17 @@ def update_mcp_gateway(
     description: Annotated[Optional[str], typer.Option("--description", "-d", help="Gateway description")] = None,
     authorizer_configuration: Annotated[Optional[str], typer.Option("--authorizer-configuration", help="Authorizer configuration (JSON format)")] = None,
     log_delivery_configuration: Annotated[Optional[str], typer.Option("--log-delivery-configuration", help="Log delivery configuration (JSON format)")] = None,
-    outbound_network_configuration: Annotated[Optional[str], typer.Option("--outbound-network-configuration", help="Outbound network configuration (JSON format)")] = None,
     tags: Annotated[List[str], typer.Option("--tags", help="Gateway tags")] = None,
 ):
     """
     Update an existing MCP gateway
 
     Examples:
-        agentarts mcp update-mcp-gateway 123 --description "Updated description"
+        agentarts mcp-gateway update-mcp-gateway 123 --description "Updated description"
     """
     try:
         authorizer_config = _parse_json(authorizer_configuration)
         log_delivery_config = _parse_json(log_delivery_configuration)
-        outbound_network_config = _parse_json(outbound_network_configuration)
 
         client = _get_mcp_gateway_client()
         result = client.update_mcp_gateway(
@@ -123,7 +121,6 @@ def update_mcp_gateway(
             description=description,
             authorizer_configuration=authorizer_config,
             log_delivery_configuration=log_delivery_config,
-            outbound_network_configuration=outbound_network_config,
             tags=list(tags) if tags else [],
         )
 
@@ -146,7 +143,7 @@ def delete_mcp_gateway(
     Delete an MCP gateway
 
     Examples:
-        agentarts mcp delete-mcp-gateway 123
+        agentarts mcp-gateway delete-mcp-gateway 123
     """
     try:
         echo_warning(f"Are you sure you want to delete gateway {gateway_id}? This action cannot be undone.")
@@ -173,7 +170,7 @@ def get_mcp_gateway(
     Get details of an MCP gateway
 
     Examples:
-        agentarts mcp get-mcp-gateway 123
+        agentarts mcp-gateway get-mcp-gateway 123
     """
     try:
         client = _get_mcp_gateway_client()
@@ -201,7 +198,7 @@ def list_mcp_gateways(
     List MCP gateways
 
     Examples:
-        agentarts mcp list-mcp-gateways --limit 10
+        agentarts mcp-gateway list-mcp-gateways --limit 10
     """
     try:
         if offset is None:
@@ -251,7 +248,7 @@ def create_mcp_gateway_target(
     Create a new MCP gateway target
 
     Examples:
-        agentarts mcp create-mcp-gateway-target 123 --name my-target
+        agentarts mcp-gateway create-mcp-gateway-target 123 --name my-target
     """
     try:
         target_config = _parse_json(target_configuration)
@@ -290,7 +287,7 @@ def update_mcp_gateway_target(
     Update an existing MCP gateway target
 
     Examples:
-        agentarts mcp update-mcp-gateway-target 123 456 --name updated-target
+        agentarts mcp-gateway update-mcp-gateway-target 123 456 --name updated-target
     """
     try:
         target_config = _parse_json(target_configuration)
@@ -326,7 +323,7 @@ def delete_mcp_gateway_target(
     Delete an MCP gateway target
 
     Examples:
-        agentarts mcp delete-mcp-gateway-target 123 456
+        agentarts mcp-gateway delete-mcp-gateway-target 123 456
     """
     try:
         echo_warning(f"Are you sure you want to delete target {target_id} from gateway {gateway_id}? This action cannot be undone.")
@@ -357,7 +354,7 @@ def get_mcp_gateway_target(
     Get details of an MCP gateway target
 
     Examples:
-        agentarts mcp get-mcp-gateway-target 123 456
+        agentarts mcp-gateway get-mcp-gateway-target 123 456
     """
     try:
         client = _get_mcp_gateway_client()
@@ -385,7 +382,7 @@ def list_mcp_gateway_targets(
     List MCP gateway targets
 
     Examples:
-        agentarts mcp list-mcp-gateway-targets 123 --limit 10
+        agentarts mcp-gateway list-mcp-gateway-targets 123 --limit 10
     """
     try:
         if offset is None:

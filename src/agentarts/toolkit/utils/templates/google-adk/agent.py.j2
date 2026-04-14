@@ -2,11 +2,27 @@
 {{ name }} - Google ADK Agent Implementation
 
 An agent built using Google ADK framework, wrapped with AgentArts SDK runtime.
+
+Environment Variables:
+    GOOGLE_API_KEY: Your Google API key for Gemini access (required)
+        - Get it from: https://aistudio.google.com/app/apikey
+        - Set in .agentarts_config.yaml under runtime.environment_variables
+    GOOGLE_MODEL_NAME: Model name to use (optional, default: gemini-2.0-flash)
+        - Examples: gemini-2.0-flash, gemini-1.5-pro, gemini-1.5-flash
 """
 
+import os
 from typing import Dict, Any, Optional
 
-from agentarts.sdk.runtime import AgentArtsRuntimeApp, RequestContext
+from agentarts.sdk import AgentArtsRuntimeApp, RequestContext
+
+api_key = os.environ.get("GOOGLE_API_KEY")
+if not api_key:
+    raise ValueError(
+        "GOOGLE_API_KEY environment variable is not set. "
+        "Please set it in .agentarts_config.yaml under runtime.environment_variables, "
+        "or export it directly: export GOOGLE_API_KEY=your_api_key"
+    )
 
 app = AgentArtsRuntimeApp()
 
@@ -14,9 +30,9 @@ app = AgentArtsRuntimeApp()
 class GoogleADKAgent:
     """Google ADK-based Agent implementation."""
 
-    def __init__(self, model: str = "gemini-2.0-flash"):
+    def __init__(self):
         self.name = "{{ name }}"
-        self.model = model
+        self.model = os.environ.get("GOOGLE_MODEL_NAME", "gemini-2.0-flash")
         self._agent = None
 
     def _setup_agent(self):
@@ -121,12 +137,6 @@ def _get_agent() -> GoogleADKAgent:
     return _agent
 
 
-@app.ping
-def ping():
-    """Health check endpoint."""
-    return "healthy"
-
-
 @app.entrypoint
 async def handler(payload: Dict[str, Any], context: RequestContext = None) -> Dict[str, Any]:
     """
@@ -139,16 +149,11 @@ async def handler(payload: Dict[str, Any], context: RequestContext = None) -> Di
     Returns:
         Response dictionary
     """
-    query = payload.get("query", payload.get("input", ""))
+    query = payload.get("message", "")
     system_instruction = payload.get("system_instruction")
     
     agent = _get_agent()
     return await agent.run(query, system_instruction=system_instruction)
-
-
-def create_agent():
-    """Create agent instance for runtime."""
-    return app
 
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from typing import Any, Dict, Generator, List, Optional, Union
 
 from src.agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
-from src.agentarts.sdk.utils.constant import get_control_plane_endpoint, get_data_plane_endpoint, get_region
+from src.agentarts.sdk.utils.constant import get_control_plane_endpoint, get_code_interpreter_data_plane_endpoint, get_region
 
 
 DEFAULT_TIMEOUT = 900  # 默认15分
@@ -36,16 +36,15 @@ class CodeInterpreter:
         control_plane_client : 用于与控制面API交互
         data_plane_client : 用于与数据面API交互
     """
-    
-    def __init__(self, region: str) -> None:
+    def __init__(self, region: Optional[str], data_endpoint: Optional[str] = None) -> None:
         """支持在指定的region中初始化代码解释器客户端
 
         Args:
             region: 指定的区域
+            data_endpoint: 数据面端点，可选，如果不提供则从环境变量AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT中获取
 
         """
-        if not region:
-            region = get_region()
+        region = region or get_region()
         
         # 管理代码解释器的控制面客户端
         self.control_plane_client = ControlToolsHttpClient(
@@ -54,9 +53,12 @@ class CodeInterpreter:
         )
 
         # 管理代码解释器的数据面客户端
+        # 优先级：环境变量 > 参数 > 默认值
+        endpoint_url = get_code_interpreter_data_plane_endpoint(endpoint=data_endpoint)
+        
         self.data_plane_client = DataToolsHttpClient(
             region_name=region,
-            endpoint_url=get_data_plane_endpoint()
+            endpoint_url=endpoint_url
         )
         
         self._code_interpreter_name = None
@@ -353,7 +355,7 @@ class CodeInterpreter:
             "session_timeout": session_timeout,
         }
         if api_key is None:
-            api_key = os.getenv("API_KEY")
+            api_key = os.getenv("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
         response = self.data_plane_client.start_session(
             code_interpreter_name=code_interpreter_name,
             api_key=api_key,
@@ -395,7 +397,7 @@ class CodeInterpreter:
         if not code_interpreter_name or not session_id:
             raise ValueError("code_interpreter_name and session_id are required")
         if api_key is None:
-            api_key = os.getenv("API_KEY")
+            api_key = os.getenv("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
         result = self.data_plane_client.get_session(
             code_interpreter_name=code_interpreter_name,
             session_id=session_id,
@@ -471,7 +473,7 @@ class CodeInterpreter:
         }
 
         if api_key is None:
-            api_key = os.getenv("API_KEY")
+            api_key = os.getenv("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
         
         result = self.data_plane_client.invoke(
             code_interpreter_name=self.code_interpreter_name,
@@ -838,18 +840,27 @@ class CodeInterpreter:
         return result
     
 @contextmanager
-def code_session(region: str, code_interpreter_name: str) -> Generator[CodeInterpreter, None, None]:
+def code_session(
+    region: str, 
+    code_interpreter_name: str,
+    api_key: Optional[str] = None
+) -> Generator[CodeInterpreter, None, None]:
     """代码解释器会话上下文管理器
     
     Args:
-        region (str): region名称，如"cn-north-4"
+        region (str): region名称，如"cn-southwest-2"
         code_interpreter_name (str): 代码解释器名称
+        api_key (Optional[str]): API Key，如果不提供则从环境变量HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY中获取
     
     Yields:
         CodeInterpreter: 会话启动完成的代码解释器实例
         
     Example:
-        >>> with code_session("cn-north-4", "my-code-interpreter-name") as client:
+        >>> with code_session("cn-southwest-2", "my-code-interpreter-name") as client:
+        >>>     client.execute_code("print('Hello, World!')")
+        >>> 
+        >>> # 传入 API Key
+        >>> with code_session("cn-southwest-2", "my-code-interpreter-name", api_key="your-api-key") as client:
         >>>     client.execute_code("print('Hello, World!')")
     """
 
@@ -857,10 +868,11 @@ def code_session(region: str, code_interpreter_name: str) -> Generator[CodeInter
     default_session_name = "default-session-name"
     client.start_session(
         code_interpreter_name=code_interpreter_name, 
-        session_name=default_session_name
+        session_name=default_session_name,
+        api_key=api_key
     )
 
     try:
         yield client
     finally:
-        client.stop_session()
+        client.stop_session(api_key=api_key)

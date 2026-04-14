@@ -28,6 +28,7 @@ from .inner.config import (
 )
 from .inner.controlplane import _ControlPlane
 from .inner.dataplane import _DataPlane
+from ..utils.constant import get_region
 
 
 class MemoryClient:
@@ -79,7 +80,7 @@ class MemoryClient:
 
     def __init__(
             self,
-            region_name: Optional[str] = "cn-north-4",
+            region_name: Optional[str],
             api_key: Optional[str] = None
     ):
         """
@@ -94,7 +95,7 @@ class MemoryClient:
           when Space management API is first called
 
         Args:
-            region_name: Huawei Cloud region name, default "cn-north-4"
+            region_name: Huawei Cloud region name, default "cn-southwest-2"
             api_key: API Key for data plane authentication (optional, falls back
                 to HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable)
 
@@ -122,7 +123,7 @@ class MemoryClient:
             >>> # Specify region
             >>> client = MemoryClient(region_name="cn-east-3", api_key="your-api-key")
         """
-        self.region_name = region_name
+        self.region_name = region_name or get_region()
 
         self._control_plane = None  # Lazy loading
         self._data_plane = _DataPlane(region_name=region_name, api_key=api_key)
