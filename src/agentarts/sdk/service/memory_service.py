@@ -51,7 +51,7 @@ class DataPlaneAuthenticationStrategy(AuthenticationStrategy):
     def setup_credentials(self, region_name: str):
         """Data plane does not require AK/SK credentials."""
         self.credentials = None
-        logger.info("Data plane endpoint: credentials will be handled via API_KEY in headers")
+        logger.info("Data plane endpoint: credentials will be handled via HUAWEICLOUD_SDK_MEMORY_API_KEY in headers")
     
     def setup_session_hooks(self, session: requests.Session):
         """Data plane does not require special session hooks."""
@@ -61,7 +61,7 @@ class DataPlaneAuthenticationStrategy(AuthenticationStrategy):
         """Get headers with API_KEY authentication."""
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "huaweicloud-agentarts-sdk-python/0.0.1",
+            "User-Agent": "agentarts-sdk-python/0.0.1",
         }
         
         api_key = self._api_key or os.getenv('HUAWEICLOUD_SDK_MEMORY_API_KEY')
@@ -113,7 +113,7 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
         """Control plane does not require additional headers (handled by SDK automatically)."""
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "huaweicloud-agentarts-sdk/0.0.1",
+            "User-Agent": "agentarts-sdk/0.0.1",
         }
         
         if hasattr(self, 'client_request_id'):

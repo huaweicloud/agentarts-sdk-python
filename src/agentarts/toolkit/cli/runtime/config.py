@@ -248,7 +248,7 @@ def set(
 
     Examples:
         agentarts config set base.region cn-southwest-2
-        agentarts config set base.name my-agent --agent my-agent
+        agentarts config set base.name new-name --agent old-name
     """
     success = config_op.set_config_value(key, value, agent)
     if not success:

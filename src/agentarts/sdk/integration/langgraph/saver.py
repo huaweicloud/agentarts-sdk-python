@@ -10,15 +10,18 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
-from agentarts.sdk.memory import MemoryClient, TextMessage
+from agentarts.sdk.memory import MemoryClient
 from agentarts.sdk.integration.langgraph.config import CheckpointerConfig
 from agentarts.sdk.integration.langgraph.converter import (
     langgraph_messages_to_memory,
     memory_to_langgraph_message,
 )
 from agentarts.sdk.utils.constant import get_region
+
 
 logger = logging.getLogger(__name__)
 
@@ -144,13 +147,15 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         and builds a checkpoint tuple.
         
         Args:
-            config: Runnable config containing thread_id
+            config: Runnable config containing thread_id and optionally checkpoint_id
             
         Returns:
             CheckpointTuple if messages found, None otherwise
         """
         runtime_config = self._get_runtime_config(config)
         session_id = runtime_config.session_id
+        
+        checkpoint_id_from_config = config.get("configurable", {}).get("checkpoint_id")
 
         try:
             messages = self._client.get_last_k_messages(
@@ -177,19 +182,47 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         if not langgraph_messages:
             return None
 
+        step = 0
+        source = "loop"
+        checkpoint_id = str(uuid.uuid4())
+        checkpoint_ts = datetime.now(timezone.utc).isoformat()
+        if messages:
+            last_msg = messages[-1]
+            if hasattr(last_msg, 'meta') and last_msg.meta:
+                try:
+                    meta = json.loads(last_msg.meta)
+                    step = meta.get("step", 0)
+                    source = meta.get("source", "loop")
+                    checkpoint_id = meta.get("checkpoint_id", checkpoint_id)
+                    checkpoint_ts = meta.get("checkpoint_ts", checkpoint_ts)
+                except (json.JSONDecodeError, TypeError):
+                    logger.debug(f"Failed to parse meta: {last_msg.meta}")
+        
+        if checkpoint_id_from_config:
+            if checkpoint_id_from_config != checkpoint_id:
+                logger.debug(
+                    f"Requested checkpoint_id {checkpoint_id_from_config} "
+                    f"does not match latest {checkpoint_id}"
+                )
+                return None
+
         checkpoint = Checkpoint(
             v=1,
-            id=str(hash(str(langgraph_messages))),
-            ts="",
+            id=checkpoint_id,
+            ts=checkpoint_ts,
             channel_values={"messages": langgraph_messages},
             channel_versions={"messages": 1},
             versions_seen={},
+            step=-1,
+            pending_sends=[],
+            parents={},
         )
 
         metadata = CheckpointMetadata(
-            source="agentarts_memory",
-            thread_id=runtime_config.thread_id,
-            message_count=len(langgraph_messages),
+            source=source,
+            step=step,
+            writes={},
+            parents={},
         )
 
         return CheckpointTuple(
@@ -229,7 +262,23 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         messages = channel_values.get("messages", [])
         if not messages:
             return config
-        cloud_messages = langgraph_messages_to_memory(messages, runtime_config.actor_id, runtime_config.assistant_id)
+
+        step = metadata.get("step", 0)
+        source = metadata.get("source", "loop")
+        checkpoint_id = checkpoint.get("id", str(uuid.uuid4()))
+        checkpoint_ts = checkpoint.get("ts", datetime.now(timezone.utc).isoformat())
+        checkpoint_meta = json.dumps({
+            "step": step,
+            "source": source,
+            "checkpoint_id": checkpoint_id,
+            "checkpoint_ts": checkpoint_ts,
+        }, ensure_ascii=False)
+        cloud_messages = langgraph_messages_to_memory(
+            messages, 
+            runtime_config.actor_id, 
+            runtime_config.assistant_id,
+            meta=checkpoint_meta
+        )
 
         try:
             self._client.add_messages(
@@ -320,19 +369,39 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         if not langgraph_messages:
             return []
 
+        step = 0
+        source = "loop"
+        checkpoint_id = str(uuid.uuid4())
+        checkpoint_ts = datetime.now(timezone.utc).isoformat()
+        if messages:
+            last_msg = messages[-1]
+            if hasattr(last_msg, 'meta') and last_msg.meta:
+                try:
+                    meta = json.loads(last_msg.meta)
+                    step = meta.get("step", 0)
+                    source = meta.get("source", "loop")
+                    checkpoint_id = meta.get("checkpoint_id", checkpoint_id)
+                    checkpoint_ts = meta.get("checkpoint_ts", checkpoint_ts)
+                except (json.JSONDecodeError, TypeError):
+                    logger.debug(f"Failed to parse meta: {last_msg.meta}")
+
         checkpoint = Checkpoint(
             v=1,
-            id=str(hash(str(langgraph_messages))),
-            ts="",
+            id=checkpoint_id,
+            ts=checkpoint_ts,
             channel_values={"messages": langgraph_messages},
             channel_versions={"messages": 1},
             versions_seen={},
+            step=-1,
+            pending_sends=[],
+            parents={},
         )
 
         metadata = CheckpointMetadata(
-            source="agentarts_memory",
-            thread_id=runtime_config.thread_id,
-            message_count=len(langgraph_messages),
+            source=source,
+            step=step,
+            writes={},
+            parents={},
         )
 
         return [

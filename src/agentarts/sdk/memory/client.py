@@ -80,7 +80,7 @@ class MemoryClient:
 
     def __init__(
             self,
-            region_name: Optional[str],
+            region_name: Optional[str] = None,
             api_key: Optional[str] = None
     ):
         """

@@ -665,6 +665,7 @@ class RuntimeClient:
         agent_name: str,
         bearer_token: Optional[str] = None,
         endpoint: Optional[str] = None,
+        session_id: Optional[str] = None,
         timeout: int = 900,
     ) -> Union[Dict[str, Any], Iterator[str]]:
         """
@@ -678,15 +679,21 @@ class RuntimeClient:
             agent_name: The agent to ping.
             bearer_token: Optional bearer token for ``Authorization`` header.
             endpoint: Optional endpoint name, appended as a query parameter.
+            session_id: Session identifier for stateful agents,
+                passed as the ``SESSION_HEADER`` header.
             timeout: Request timeout in seconds.
 
         Returns:
             A ``dict`` with at least a ``status`` field (e.g. ``"Healthy"``),
             or an ``Iterator[str]`` for SSE streaming responses.
         """
+        from agentarts.sdk.runtime.model import SESSION_HEADER
+
         headers: Dict[str, str] = {}
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
+        if session_id:
+            headers[SESSION_HEADER] = session_id
 
         params: Dict[str, Any] = {}
         if endpoint:
@@ -807,6 +814,7 @@ class LocalRuntimeClient(BaseHTTPClient):
         self,
         bearer_token: Optional[str] = None,
         endpoint: Optional[str] = None,
+        session_id: Optional[str] = None,
         timeout: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
@@ -815,16 +823,21 @@ class LocalRuntimeClient(BaseHTTPClient):
         Args:
             bearer_token: Optional bearer token for ``Authorization`` header.
             endpoint: Optional endpoint name.
+            session_id: Session identifier for stateful agents.
             timeout: Request timeout in seconds.
 
         Returns:
             A ``dict`` with a ``status`` field indicating health status.
         """
+        from agentarts.sdk.runtime.model import SESSION_HEADER
+
         path = "/ping"
 
         headers: Dict[str, str] = {}
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
+        if session_id:
+            headers[SESSION_HEADER] = session_id
 
         params: Dict[str, Any] = {}
         if endpoint:

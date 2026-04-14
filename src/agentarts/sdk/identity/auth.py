@@ -182,7 +182,7 @@ def require_sts_token(
         Decorator function
 
     Example:
-        >>> from agentarts import require_sts_token, StsCredentials
+        >>> from agentarts.sdk import require_sts_token
         >>> @require_sts_token(provider_name="huaweicloud-iam", agency_session_name="example-session")
         ... async def access_resource(sts_credentials: StsCredentials | None = None):
         ...     print(f"AK: {sts_credentials.access_key_id}")
