@@ -46,7 +46,7 @@ def status(
     ] = None,
     bearer_token: Annotated[
         Optional[str],
-        typer.Option("--bearer-token", help="Bearer token for authentication"),
+        typer.Option("--bearer-token", "-bt", help="Bearer token for authentication"),
     ] = None,
 ):
     """
@@ -62,6 +62,8 @@ def status(
         agentarts status --mode local --port 8080
         agentarts status --endpoint custom-endpoint
         agentarts status --session my-session-123
+        agentarts status --bearer-token my-token
+        agentarts status -bt my-token
     """
     status_mode = InvokeMode.CLOUD
     if mode.lower() == "local":
