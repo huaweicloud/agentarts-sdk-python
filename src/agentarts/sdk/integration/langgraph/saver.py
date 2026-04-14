@@ -177,6 +177,18 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         if not langgraph_messages:
             return None
 
+        step = 0
+        source = "loop"
+        if messages:
+            last_msg = messages[-1]
+            if hasattr(last_msg, 'parts') and last_msg.parts:
+                for part in last_msg.parts:
+                    if isinstance(part, dict) and "meta" in part:
+                        meta = part.get("meta", {})
+                        step = meta.get("step", 0)
+                        source = meta.get("source", "loop")
+                        break
+
         checkpoint = Checkpoint(
             v=1,
             id=str(hash(str(langgraph_messages))),
@@ -190,9 +202,10 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         )
 
         metadata = CheckpointMetadata(
-            source="agentarts_memory",
-            thread_id=runtime_config.thread_id,
-            message_count=len(langgraph_messages),
+            source=source,
+            step=step,
+            writes={},
+            parents={},
         )
 
         return CheckpointTuple(
@@ -232,7 +245,19 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         messages = channel_values.get("messages", [])
         if not messages:
             return config
-        cloud_messages = langgraph_messages_to_memory(messages, runtime_config.actor_id, runtime_config.assistant_id)
+
+        step = metadata.get("step", 0)
+        source = metadata.get("source", "loop")
+        checkpoint_meta = {
+            "step": step,
+            "source": source,
+        }
+        cloud_messages = langgraph_messages_to_memory(
+            messages, 
+            runtime_config.actor_id, 
+            runtime_config.assistant_id,
+            meta=checkpoint_meta
+        )
 
         try:
             self._client.add_messages(
@@ -323,6 +348,18 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         if not langgraph_messages:
             return []
 
+        step = 0
+        source = "loop"
+        if messages:
+            last_msg = messages[-1]
+            if hasattr(last_msg, 'parts') and last_msg.parts:
+                for part in last_msg.parts:
+                    if isinstance(part, dict) and "meta" in part:
+                        meta = part.get("meta", {})
+                        step = meta.get("step", 0)
+                        source = meta.get("source", "loop")
+                        break
+
         checkpoint = Checkpoint(
             v=1,
             id=str(hash(str(langgraph_messages))),
@@ -336,9 +373,10 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         )
 
         metadata = CheckpointMetadata(
-            source="agentarts_memory",
-            thread_id=runtime_config.thread_id,
-            message_count=len(langgraph_messages),
+            source=source,
+            step=step,
+            writes={},
+            parents={},
         )
 
         return [

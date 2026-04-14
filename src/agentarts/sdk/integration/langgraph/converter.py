@@ -213,7 +213,8 @@ def langgraph_messages_to_memory(
     messages: List[BaseMessage],
     actor_id: Optional[str] = None,
     assistant_id: Optional[str] = None,
-) -> List[Union[TextMessage, ToolCallMessage, ToolResultMessage]]:
+    meta: Optional[Dict[str, Any]] = None,
+) -> List[Dict[str, Any]]:
     """
     Convert a list of LangGraph messages to AgentArts Memory messages.
     
@@ -221,14 +222,22 @@ def langgraph_messages_to_memory(
         messages: List of LangGraph messages
         actor_id: Actor ID for the messages
         assistant_id: Assistant ID for the messages
+        meta: Optional metadata to attach to each message
         
     Returns:
-        List of AgentArts Memory messages
+        List of AgentArts Memory messages (as dictionaries)
     """
-    return [
-        langgraph_to_memory_message(msg, actor_id, assistant_id)
-        for msg in messages
-    ]
+    result = []
+    for msg in messages:
+        memory_msg = langgraph_to_memory_message(msg, actor_id, assistant_id)
+        msg_dict = memory_msg.to_dict()
+        if meta:
+            if "parts" in msg_dict and isinstance(msg_dict["parts"], list):
+                for part in msg_dict["parts"]:
+                    if isinstance(part, dict):
+                        part["meta"] = meta
+        result.append(msg_dict)
+    return result
 
 
 def memory_messages_to_langgraph(
