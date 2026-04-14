@@ -124,7 +124,7 @@ create_mcp_gateway(
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| name | str | 否 | TestGateway-{random} | 网关名称 |
+| name | str | 否 | gateway-{random} | 网关名称 |
 | description | str | 否 | None | 网关描述 |
 | protocol_type | str | 否 | mcp | 协议类型 |
 | authorizer_type | str | 否 | iam | 授权器类型（custom_jwt/iam/api_key） |
@@ -249,7 +249,7 @@ create_mcp_gateway_target(
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | gateway_id | str | 是 | - | 网关 ID |
-| name | str | 否 | TestGatewayTarget-{random} | 目标名称 |
+| name | str | 否 | target-{random} | 目标名称 |
 | description | str | 否 | None | 目标描述 |
 | target_configuration | Dict | 否 | None | 目标配置 |
 | credential_provider_configuration | Dict | 否 | {"credential_provider_type": "none"} | 凭证提供者配置 |
