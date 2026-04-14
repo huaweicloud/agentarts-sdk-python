@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.9.27,<0.10.0"]
+build-backend = "uv_build"
 
 [project]
 name = "huaweicloud-agentarts-sdk"
@@ -44,6 +44,7 @@ dependencies = [
     "huaweicloudsdkcore>=3.1.0",
     "huaweicloudsdkiam>=3.1.0",
     "huaweicloudsdkswr>=3.1.0",
+    "huaweicloudsdkagentidentity",
     "fastapi>=0.104.0",
     "starlette>=0.46.2",
     "uvicorn[standard]>=0.24.0",
@@ -74,6 +75,7 @@ dev = [
     "types-PyYAML>=6.0.0",
     "types-redis>=4.6.0",
     "ruff>=0.1.0",
+    "ty>=0.0.14",
 ]
 
 [project.optional-dependencies]
@@ -128,12 +130,9 @@ Changelog = "https://github.com/huaweicloud/agentarts-sdk-python/blob/main/CHANG
 [project.scripts]
 agentarts = "agentarts.toolkit.main:cli"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-include = ["agentarts*"]
-
-[tool.setuptools.package-data]
-agentarts = ["py.typed"]
+[tool.uv.build-backend]
+module-name = "agentarts"
+module-root = "src"
 
 [tool.black]
 line-length = 100
@@ -294,5 +293,8 @@ ignore = [
 "tests/*" = ["ARG", "S101"]
 "__init__.py" = ["F401"]
 
+[tool.uv.workspace]
+members = ["examples/sdk/*", "libs/huaweicloudsdkagentidentity"]
+
 [tool.uv.sources]
-huaweicloudsdkagentidentity = { path = "libs/huaweicloudsdkagentidentity-3.1.184-py3-none-any.whl" }
+huaweicloudsdkagentidentity = { workspace = true }
