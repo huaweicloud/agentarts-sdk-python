@@ -4,9 +4,10 @@ include CHANGELOG.md
 include CONTRIBUTING.md
 include pyproject.toml
 
-recursive-include agentarts *.py
-recursive-include agentarts *.pyi
-recursive-include agentarts py.typed
+recursive-include src/agentarts *.py
+recursive-include src/agentarts *.pyi
+recursive-include src/agentarts py.typed
+recursive-include src/huaweicloudsdkagentidentity *.py
 
 recursive-include tests *.py
 
