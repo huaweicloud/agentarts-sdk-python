@@ -182,3 +182,142 @@ class TestIntegrationModule:
         assert memory_to_langgraph_message is not None
         assert langgraph_messages_to_memory is not None
         assert memory_messages_to_langgraph is not None
+
+
+class TestMessageMetaField:
+    """Tests for message meta field support."""
+
+    def test_text_message_with_meta(self):
+        """Test creating TextMessage with meta field."""
+        from agentarts.sdk.memory import TextMessage
+        
+        msg = TextMessage(role="user", content="Hello", meta='{"key": "value"}')
+        
+        assert msg.role == "user"
+        assert msg.content == "Hello"
+        assert msg.meta == '{"key": "value"}'
+
+    def test_tool_call_message_with_meta(self):
+        """Test creating ToolCallMessage with meta field."""
+        from agentarts.sdk.memory import ToolCallMessage
+        
+        msg = ToolCallMessage(
+            id="call-123",
+            name="search",
+            arguments='{"query": "test"}',
+            meta='{"checkpoint_id": "cp-456"}',
+        )
+        
+        assert msg.id == "call-123"
+        assert msg.name == "search"
+        assert msg.meta == '{"checkpoint_id": "cp-456"}'
+
+    def test_tool_result_message_with_meta(self):
+        """Test creating ToolResultMessage with meta field."""
+        from agentarts.sdk.memory import ToolResultMessage
+        
+        msg = ToolResultMessage(
+            tool_call_id="call-123",
+            content="Result",
+            meta='{"checkpoint_ts": "2024-01-01T00:00:00"}',
+        )
+        
+        assert msg.tool_call_id == "call-123"
+        assert msg.content == "Result"
+        assert msg.meta == '{"checkpoint_ts": "2024-01-01T00:00:00"}'
+
+    def test_text_message_to_dict_includes_meta(self):
+        """Test that to_dict includes meta field."""
+        from agentarts.sdk.memory import TextMessage
+        
+        msg = TextMessage(role="user", content="Hello", meta='{"key": "value"}')
+        result = msg.to_dict()
+        
+        assert "meta" in result
+        assert result["meta"] == '{"key": "value"}'
+
+    def test_text_message_to_dict_excludes_none_meta(self):
+        """Test that to_dict excludes meta when None."""
+        from agentarts.sdk.memory import TextMessage
+        
+        msg = TextMessage(role="user", content="Hello")
+        result = msg.to_dict()
+        
+        assert "meta" not in result
+
+
+class TestConfigIsEmptyMethods:
+    """Tests for is_empty() methods in config models."""
+
+    def test_custom_jwt_auth_config_is_empty(self):
+        """Test CustomJWTAuthConfig.is_empty() method."""
+        from agentarts.toolkit.utils.runtime.config import CustomJWTAuthConfig
+        
+        config = CustomJWTAuthConfig()
+        assert config.is_empty() is True
+        
+        config_with_url = CustomJWTAuthConfig(discovery_url="https://example.com")
+        assert config_with_url.is_empty() is False
+        
+        config_with_audience = CustomJWTAuthConfig(allowed_audience=["aud1"])
+        assert config_with_audience.is_empty() is False
+
+    def test_auth_config_is_empty(self):
+        """Test AuthConfig.is_empty() method."""
+        from agentarts.toolkit.utils.runtime.config import (
+            AuthConfig,
+            CustomJWTAuthConfig,
+            APIKeyAuthConfig,
+            APIKeyPair,
+        )
+        
+        config = AuthConfig()
+        assert config.is_empty() is True
+        
+        config_with_jwt = AuthConfig(
+            custom_jwt=CustomJWTAuthConfig(discovery_url="https://example.com")
+        )
+        assert config_with_jwt.is_empty() is False
+        
+        config_with_key = AuthConfig(
+            key_auth=APIKeyAuthConfig(api_keys=[APIKeyPair(api_key="key1")])
+        )
+        assert config_with_key.is_empty() is False
+
+    def test_inbound_identity_config_to_dict_excludes_empty(self):
+        """Test InboundIdentityConfig.to_dict() excludes empty config."""
+        from agentarts.toolkit.utils.runtime.config import (
+            InboundIdentityConfig,
+            AuthConfig,
+        )
+        
+        config = InboundIdentityConfig(
+            authorizer_type="IAM",
+            authorizer_configuration=AuthConfig(),
+        )
+        
+        result = config.to_dict()
+        
+        assert result["authorizer_type"] == "IAM"
+        assert "authorizer_configuration" not in result
+
+    def test_inbound_identity_config_to_dict_includes_non_empty(self):
+        """Test InboundIdentityConfig.to_dict() includes non-empty config."""
+        from agentarts.toolkit.utils.runtime.config import (
+            InboundIdentityConfig,
+            AuthConfig,
+            CustomJWTAuthConfig,
+        )
+        
+        config = InboundIdentityConfig(
+            authorizer_type="CUSTOM_JWT",
+            authorizer_configuration=AuthConfig(
+                custom_jwt=CustomJWTAuthConfig(discovery_url="https://example.com")
+            ),
+        )
+        
+        result = config.to_dict()
+        
+        assert result["authorizer_type"] == "CUSTOM_JWT"
+        assert "authorizer_configuration" in result
+        assert "custom_jwt" in result["authorizer_configuration"]

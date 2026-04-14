@@ -270,3 +270,166 @@ class TestEnvironmentVariableLoading:
         """PYTHON_BASE_IMAGE is read from environment via os.getenv."""
         monkeypatch.setenv("PYTHON_BASE_IMAGE", "python:3.12-slim")
         assert os.getenv("PYTHON_BASE_IMAGE") == "python:3.12-slim"
+
+
+# ============================================================
+# _ensure_https Tests
+# ============================================================
+
+class TestEnsureHttps:
+    """Tests for _ensure_https() function."""
+
+    def test_adds_https_prefix(self):
+        """Adds https:// prefix when missing."""
+        from agentarts.sdk.utils.constant import _ensure_https
+        
+        result = _ensure_https("example.com")
+        assert result == "https://example.com"
+
+    def test_adds_https_prefix_to_endpoint_with_path(self):
+        """Adds https:// prefix to endpoint with path."""
+        from agentarts.sdk.utils.constant import _ensure_https
+        
+        result = _ensure_https("example.com/api/v1")
+        assert result == "https://example.com/api/v1"
+
+    def test_preserves_existing_https(self):
+        """Preserves existing https:// prefix."""
+        from agentarts.sdk.utils.constant import _ensure_https
+        
+        result = _ensure_https("https://example.com")
+        assert result == "https://example.com"
+
+    def test_preserves_existing_http(self):
+        """Preserves existing http:// prefix."""
+        from agentarts.sdk.utils.constant import _ensure_https
+        
+        result = _ensure_https("http://example.com")
+        assert result == "http://example.com"
+
+    def test_returns_empty_string_unchanged(self):
+        """Returns empty string unchanged."""
+        from agentarts.sdk.utils.constant import _ensure_https
+        
+        result = _ensure_https("")
+        assert result == ""
+
+    def test_returns_none_unchanged(self):
+        """Returns None unchanged."""
+        from agentarts.sdk.utils.constant import _ensure_https
+        
+        result = _ensure_https(None)
+        assert result is None
+
+
+# ============================================================
+# get_runtime_data_plane_endpoint Tests (with _ensure_https)
+# ============================================================
+
+class TestGetRuntimeDataPlaneEndpointWithHttps:
+    """Tests for get_runtime_data_plane_endpoint() with https protection."""
+
+    def test_adds_https_to_env_endpoint(self, monkeypatch):
+        """Adds https:// to env endpoint without protocol."""
+        from agentarts.sdk.utils.constant import get_runtime_data_plane_endpoint
+        
+        monkeypatch.setenv("AGENTARTS_RUNTIME_DATA_ENDPOINT", "data.example.com")
+        result = get_runtime_data_plane_endpoint()
+        assert result == "https://data.example.com"
+
+    def test_preserves_https_in_env_endpoint(self, monkeypatch):
+        """Preserves https:// in env endpoint."""
+        from agentarts.sdk.utils.constant import get_runtime_data_plane_endpoint
+        
+        monkeypatch.setenv("AGENTARTS_RUNTIME_DATA_ENDPOINT", "https://data.example.com")
+        result = get_runtime_data_plane_endpoint()
+        assert result == "https://data.example.com"
+
+
+# ============================================================
+# get_code_interpreter_data_plane_endpoint Tests (with _ensure_https)
+# ============================================================
+
+class TestGetCodeInterpreterDataPlaneEndpointWithHttps:
+    """Tests for get_code_interpreter_data_plane_endpoint() with https protection."""
+
+    def test_adds_https_to_code_interpreter_endpoint(self, monkeypatch):
+        """Adds https:// to code interpreter endpoint."""
+        from agentarts.sdk.utils.constant import get_code_interpreter_data_plane_endpoint
+        
+        monkeypatch.setenv("AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT", "code.example.com")
+        result = get_code_interpreter_data_plane_endpoint()
+        assert result == "https://code.example.com"
+
+    def test_adds_https_to_runtime_fallback(self, monkeypatch):
+        """Adds https:// to runtime endpoint fallback."""
+        from agentarts.sdk.utils.constant import get_code_interpreter_data_plane_endpoint
+        
+        monkeypatch.delenv("AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT", raising=False)
+        monkeypatch.setenv("AGENTARTS_RUNTIME_DATA_ENDPOINT", "runtime.example.com")
+        result = get_code_interpreter_data_plane_endpoint()
+        assert result == "https://runtime.example.com"
+
+
+# ============================================================
+# get_iam_endpoint Tests (with _ensure_https)
+# ============================================================
+
+class TestGetIamEndpointWithHttps:
+    """Tests for get_iam_endpoint() with https protection."""
+
+    def test_adds_https_to_env_iam_endpoint(self, monkeypatch):
+        """Adds https:// to env IAM endpoint."""
+        from agentarts.sdk.utils.constant import get_iam_endpoint
+        
+        monkeypatch.setenv("HUAWEICLOUD_SDK_IAM_ENDPOINT", "iam.example.com")
+        result = get_iam_endpoint()
+        assert result == "https://iam.example.com"
+
+
+# ============================================================
+# get_swr_endpoint Tests (with _ensure_https)
+# ============================================================
+
+class TestGetSwrEndpointWithHttps:
+    """Tests for get_swr_endpoint() with https protection."""
+
+    def test_adds_https_to_env_swr_endpoint(self, monkeypatch):
+        """Adds https:// to env SWR endpoint."""
+        from agentarts.sdk.utils.constant import get_swr_endpoint
+        
+        monkeypatch.setenv("HUAWEICLOUD_SDK_SWR_ENDPOINT", "swr.example.com")
+        result = get_swr_endpoint()
+        assert result == "https://swr.example.com"
+
+
+# ============================================================
+# get_identity_endpoint Tests (with _ensure_https)
+# ============================================================
+
+class TestGetIdentityEndpointWithHttps:
+    """Tests for get_identity_endpoint() with https protection."""
+
+    def test_adds_https_to_env_identity_endpoint(self, monkeypatch):
+        """Adds https:// to env identity endpoint."""
+        from agentarts.sdk.utils.constant import get_identity_endpoint
+        
+        monkeypatch.setenv("HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT", "identity.example.com")
+        result = get_identity_endpoint()
+        assert result == "https://identity.example.com"
+
+
+# ============================================================
+# get_memory_endpoint Tests (with _ensure_https)
+# ============================================================
+
+class TestGetMemoryEndpointWithHttps:
+    """Tests for get_memory_endpoint() with https protection."""
+
+    def test_adds_https_to_env_memory_endpoint(self, monkeypatch):
+        """Adds https:// to env memory endpoint."""
+        from agentarts.sdk.utils.constant import get_memory_endpoint
+        
+        monkeypatch.setenv("AGENTARTS_MEMORY_DATA_ENDPOINT", "memory.example.com")
+        result = get_memory_endpoint("data")
+        assert result == "https://memory.example.com"
