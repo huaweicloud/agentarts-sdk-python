@@ -1,4 +1,4 @@
-""" AgentArts Tools HTTP Client"""
+"""AgentArts Tools HTTP Client"""
 
 from typing import Any, Dict, Optional
 
@@ -8,11 +8,11 @@ class ToolsAPIError(BaseException):
     
     def __init__(self, status_code: int, error_msg: str):
         """
-        初始化ToolsAPIError异常
+        Initialize ToolsAPIError exception.
 
         Args:
-            status_code (int): HTTP状态码
-            error_msg (str): 错误信息
+            status_code (int): HTTP status code
+            error_msg (str): Error message
         """
         self.status_code = status_code
         self.error_msg = error_msg
@@ -27,8 +27,7 @@ class ControlToolsHttpClient(BaseHTTPClient):
     def create_code_interpreter(self, request_params: Dict) -> Dict[Any, Any]:
         """POST v1/core/code-interpreters/
         
-        创建代码解释器
-
+        Create a code interpreter.
         """
         endpoint = f"/v1/core/code-interpreters"
         response = self.post(url=endpoint, json=request_params)
@@ -40,8 +39,7 @@ class ControlToolsHttpClient(BaseHTTPClient):
     def list_code_interpreters(self, request_params: Dict) -> Dict[Any, Any]:
         """GET v1/core/code-interpreters/
         
-        列出所有代码解释器
-
+        List all code interpreters.
         """
         endpoint = f"/v1/core/code-interpreters"
         response = self.get(url=endpoint, params=request_params)
@@ -53,8 +51,7 @@ class ControlToolsHttpClient(BaseHTTPClient):
     def update_code_interpreter(self, code_interpreter_id: str, request_params: Dict) -> Dict[Any, Any]:
         """PUT v1/core/code-interpreters/{code_interpreter_id}
         
-        更新代码解释器
-
+        Update a code interpreter.
         """
         endpoint = f"/v1/core/code-interpreters/{code_interpreter_id}"
         response = self.put(url=endpoint, json=request_params)
@@ -66,8 +63,7 @@ class ControlToolsHttpClient(BaseHTTPClient):
     def get_code_interpreter(self, code_interpreter_id: str) -> Dict[Any, Any]:
         """GET v1/core/code-interpreters/{code_interpreter_id}
         
-        获取代码解释器详情
-
+        Get code interpreter details.
         """ 
         endpoint = f"/v1/core/code-interpreters/{code_interpreter_id}"
         response = self.get(url=endpoint)
@@ -79,8 +75,7 @@ class ControlToolsHttpClient(BaseHTTPClient):
     def delete_code_interpreter(self, code_interpreter_id: str):
         """DELETE v1/core/code-interpreters/{code_interpreter_id}
         
-        删除代码解释器
-
+        Delete a code interpreter.
         """
         endpoint = f"/v1/core/code-interpreters/{code_interpreter_id}"
         response = self.delete(url=endpoint)
@@ -96,7 +91,7 @@ class DataToolsHttpClient(BaseHTTPClient):
     def start_session(self, code_interpreter_name: str, api_key: str, request_params: Dict) -> Dict[Any, Any]:
         """PUT v1/code-interpreters/{code_interpreter_name}/sessions-start
         
-        启动代码解释器会话
+        Start a code interpreter session.
         """ 
         endpoint = f"/v1/code-interpreters/{code_interpreter_name}/sessions-start"
         headers = {
@@ -111,7 +106,7 @@ class DataToolsHttpClient(BaseHTTPClient):
     def stop_session(self, code_interpreter_name: str, session_id: str, api_key: str) -> Dict[Any, Any]:
         """POST v1/code-interpreters/{code_interpreter_name}/sessions-stop
         
-        停止代码解释器会话
+        Stop a code interpreter session.
         """
         endpoint = f"/v1/code-interpreters/{code_interpreter_name}/sessions-stop"
         headers = {
@@ -127,7 +122,7 @@ class DataToolsHttpClient(BaseHTTPClient):
     def get_session(self, code_interpreter_name: str, session_id: str, api_key: str) -> Dict[Any, Any]:
         """GET v1/code-interpreters/{code_interpreter_name}/sessions-get
         
-        获取代码解释器会话详情
+        Get code interpreter session details.
         """
         endpoint = f"/v1/code-interpreters/{code_interpreter_name}/sessions-get"
         headers = {
@@ -149,7 +144,7 @@ class DataToolsHttpClient(BaseHTTPClient):
     ) -> Dict[Any, Any]:
         """POST v1/code-interpreters/{code_interpreter_name}/invoke
         
-        调用代码解释器会话
+        Invoke a code interpreter session.
         """
         endpoint = f"/v1/code-interpreters/{code_interpreter_name}/invoke"
         headers = {
@@ -161,4 +156,3 @@ class DataToolsHttpClient(BaseHTTPClient):
             raise ToolsAPIError(response.status_code, response.error)
         else:
             return response.data
-

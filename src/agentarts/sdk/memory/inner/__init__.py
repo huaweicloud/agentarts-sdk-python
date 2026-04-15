@@ -1,11 +1,11 @@
 """
-Inner modules - 内部实现，不对外暴露
+Inner modules - Internal implementation, not exposed externally.
 """
 
 from .controlplane import _ControlPlane
 from .dataplane import _DataPlane
 
-# 内部使用，不对外暴露
+# Internal use only, not exposed externally
 _ControlPlane, _DataPlane
 
-__all__ = []  # 不导出任何内容
+__all__ = []  # Do not export any content

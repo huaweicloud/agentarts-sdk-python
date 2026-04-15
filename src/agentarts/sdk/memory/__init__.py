@@ -1,10 +1,10 @@
 """Agent Memory SDK - v2.0
-根据实际 API 规范整改，与华为云 Memory 服务对接
+Refactored according to actual API specifications, integrates with Huawei Cloud Memory Service.
 
-推荐使用：
-- MemoryClient: 统一入口，提供所有方法
+Recommended usage:
+- MemoryClient: Unified entry point, provides all methods.
 
-示例：
+Example:
     from agentarts.sdk.memory import (
         MemoryClient,
         SpaceCreateRequest,
@@ -16,10 +16,10 @@
         FilePart,
     )
 
-    # 创建客户端（需要 IAM Token）
+    # Create client (requires IAM Token)
     client = MemoryClient(iam_token="your-token", region_name="cn-southwest-2")
 
-    # 创建 Space
+    # Create Space
     space_request = SpaceCreateRequest(
         name="my-space",
         message_ttl_hours=168,
@@ -28,13 +28,13 @@
     space = client.create_space(space_request)
 """
 
-# 公共接口
+# Public interface
 from .client import MemoryClient
 
-# 数据类型（新版）
+# Data types
 from .inner.config import (
-    # ==================== 请求类型 ====================
-    SpaceCreateRequest,  # 面向用户的版本
+    # ==================== Request types ====================
+    SpaceCreateRequest,
     SpaceUpdateRequest,
     SessionCreateRequest,
     AddMessagesRequest,
@@ -45,31 +45,31 @@ from .inner.config import (
     DataMessage,
     TextMessage,
 
-    # ==================== 响应类型 ====================
-    SpaceInfo,  # Space返回信息
-    SpaceListResponse,  # Space列表响应
-    SessionInfo,  # Session返回信息
-    SessionListResponse,  # Session列表响应
-    MessageInfo,  # Message返回信息
-    MessageListResponse,  # Message列表响应
-    MessageBatchResponse,  # Message批量响应
-    MemoryInfo,  # Memory返回信息
-    MemoryListResponse,  # Memory列表响应
-    MemorySearchResponse,  # Memory搜索响应
-    ContextChainResponse,  # 上下文链响应
-    ContextCompressionResponse,  # 上下文压缩响应
-    ApiKeyInfo,  # API Key返回信息
+    # ==================== Response types ====================
+    SpaceInfo,
+    SpaceListResponse,
+    SessionInfo,
+    SessionListResponse,
+    MessageInfo,
+    MessageListResponse,
+    MessageBatchResponse,
+    MemoryInfo,
+    MemoryListResponse,
+    MemorySearchResponse,
+    ContextChainResponse,
+    ContextCompressionResponse,
+    ApiKeyInfo,
 )
 
-# 内部类（高级用户）
+# Internal classes (for advanced users)
 from ..service.memory_service import MemoryHttpService
 
 __all__ = [
-    # ==================== 主入口 ====================
+    # ==================== Main entry point ====================
     "MemoryClient",
 
-    # ==================== 请求类型 ====================
-    "SpaceCreateRequest",  # 面向用户的版本
+    # ==================== Request types ====================
+    "SpaceCreateRequest",
     "SpaceUpdateRequest",
     "SessionCreateRequest",
     "AddMessagesRequest",
@@ -77,26 +77,26 @@ __all__ = [
     "AssetRef",
     "DataMessage",
 
-    # ==================== SDK专用消息类型 ====================
-    "TextMessage",  # SDK文本消息 - 便于使用和扩展
+    # ==================== SDK-specific message types ====================
+    "TextMessage",
     "ToolCallMessage",
     "ToolResultMessage",
 
-    # ==================== 响应类型 ====================
-    "SpaceInfo",  # Space返回信息
-    "SpaceListResponse",  # Space列表响应
-    "SessionInfo",  # Session返回信息
-    "SessionListResponse",  # Session列表响应
-    "MessageInfo",  # Message返回信息
-    "MessageListResponse",  # Message列表响应
-    "MessageBatchResponse",  # Message批量响应
-    "MemoryInfo",  # Memory返回信息
-    "MemoryListResponse",  # Memory列表响应
-    "MemorySearchResponse",  # Memory搜索响应
-    "ContextChainResponse",  # 上下文链响应
-    "ContextCompressionResponse",  # 上下文压缩响应
-    "ApiKeyInfo",  # API Key返回信息
+    # ==================== Response types ====================
+    "SpaceInfo",
+    "SpaceListResponse",
+    "SessionInfo",
+    "SessionListResponse",
+    "MessageInfo",
+    "MessageListResponse",
+    "MessageBatchResponse",
+    "MemoryInfo",
+    "MemoryListResponse",
+    "MemorySearchResponse",
+    "ContextChainResponse",
+    "ContextCompressionResponse",
+    "ApiKeyInfo",
 
-    # ==================== 内部类（高级用户）====================
+    # ==================== Internal classes (for advanced users) ====================
     "MemoryHttpService"
 ]

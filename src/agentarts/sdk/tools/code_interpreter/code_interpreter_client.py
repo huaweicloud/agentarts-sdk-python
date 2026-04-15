@@ -1,14 +1,15 @@
-"""与代码解释器沙箱服务交互的客户端
+"""Client for interacting with the Code Interpreter sandbox service.
 
-此模块用于提供一个客户端给华为与代码解释器，支持应用在一个受管理的沙箱环境中启动，停止，调用代码等操作
+This module provides a client for Huawei Cloud Code Interpreter, supporting
+operations like starting, stopping, and invoking code in a managed sandbox environment.
 
-控制面
-管理代码解释器的全生命周期
-（创建、列表、更新、获取、删除）
+Control Plane:
+    Manages the full lifecycle of code interpreters
+    (create, list, update, get, delete)
 
-数据面
-管理代码解释器会话的全生命周期
-（创建、停止、获取、调用）
+Data Plane:
+    Manages the full lifecycle of code interpreter sessions
+    (create, stop, get, invoke)
 """
 import base64
 import logging
@@ -21,39 +22,42 @@ from agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHt
 from agentarts.sdk.utils.constant import get_control_plane_endpoint, get_code_interpreter_data_plane_endpoint, get_region
 
 
-DEFAULT_TIMEOUT = 900  # 默认15分
-DEFAULT_PATH = "/home/user" # 默认路径，当前仅能在此路径下载上传等操作
+DEFAULT_TIMEOUT = 900  # Default 15 minutes
+DEFAULT_PATH = "/home/user"  # Default path, currently only supports upload/download in this path
 
 logger = logging.getLogger(__name__)
 
 
 class CodeInterpreter:
-    """与代码解释器沙箱服务交互的客户端
+    """Client for interacting with the Code Interpreter sandbox service.
 
-    客户端能处理代码解释器沙箱会话的整个生命周期和方法调用，在一个安全，受管理的环境中提供执行代码，上传下载文件，安装依赖等功能的接口
+    This client handles the full lifecycle and method invocations for code interpreter
+    sandbox sessions, providing interfaces for executing code, uploading/downloading files,
+    installing dependencies, and more in a secure, managed environment.
 
     Attributes:
-        control_plane_client : 用于与控制面API交互
-        data_plane_client : 用于与数据面API交互
+        control_plane_client: Client for interacting with control plane API
+        data_plane_client: Client for interacting with data plane API
     """
+
     def __init__(self, region: Optional[str], data_endpoint: Optional[str] = None) -> None:
-        """支持在指定的region中初始化代码解释器客户端
+        """Initialize the code interpreter client in the specified region.
 
         Args:
-            region: 指定的区域
-            data_endpoint: 数据面端点，可选，如果不提供则从环境变量AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT中获取
-
+            region: The specified region
+            data_endpoint: Data plane endpoint, optional. If not provided,
+                will be retrieved from environment variable AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT
         """
         region = region or get_region()
         
-        # 管理代码解释器的控制面客户端
+        # Control plane client for managing code interpreters
         self.control_plane_client = ControlToolsHttpClient(
             region_name=region,
             endpoint_url=get_control_plane_endpoint()
         )
 
-        # 管理代码解释器的数据面客户端
-        # 优先级：环境变量 > 参数 > 默认值
+        # Data plane client for managing code interpreter sessions
+        # Priority: environment variable > parameter > default value
         endpoint_url = get_code_interpreter_data_plane_endpoint(endpoint=data_endpoint)
         
         self.data_plane_client = DataToolsHttpClient(
@@ -66,37 +70,37 @@ class CodeInterpreter:
 
     @property
     def code_interpreter_name(self) -> Optional[str]:
-        """获取当前代码解释器的名称
+        """Get the current code interpreter name.
         
         Returns:
-            Optional[str]: 当前代码解释器的名称，如果没有则返回None
+            Optional[str]: The current code interpreter name, or None if not set
         """
         return self._code_interpreter_name
     
     @code_interpreter_name.setter
     def code_interpreter_name(self, name: str) -> None:
-        """设置当前代码解释器的名称
+        """Set the current code interpreter name.
 
         Args:
-            name (str): 代码解释器的名称
+            name (str): The code interpreter name
         """
         self._code_interpreter_name = name
         
     @property
     def session_id(self) -> Optional[str]:
-        """获取当前会话的ID
+        """Get the current session ID.
         
         Returns:
-            Optional[str]: 当前会话的ID，如果没有则返回None
+            Optional[str]: The current session ID, or None if not set
         """ 
         return self._session_id
     
     @session_id.setter
     def session_id(self, session_id: str) -> None:
-        """设置当前会话的ID
+        """Set the current session ID.
 
         Args:
-            session_id (str): 会话ID
+            session_id (str): The session ID
         """
         self._session_id = session_id
 
@@ -112,34 +116,34 @@ class CodeInterpreter:
         agent_gateway_id: Optional[str] = None,
         tags: Optional[List[Dict]] = None,
     ) -> Dict:
-        """创建自定义代码解释器
+        """Create a custom code interpreter.
 
-        通过控制面创建一个新的代码解释器
+        Creates a new code interpreter through the control plane.
 
         Args:
-            name (str): 代码解释器的名称，必须符合特定的命名规则
-            api_key_name (str): API Key 的名称
-            description (Optional[str]): 代码解释器的描述信息
-            auth_type (Optional[str]): 认证类型，例如 "API_KEY"
-            execution_agency_name (Optional[str]): IAM委托名
-            observability (Optional[Dict]): 可观测性配置，例如日志和监控设置
-            network_config (Optional[Dict]): 网络配置，例如 VPC 和安全组设置
-            agent_gateway_id (Optional[str]): 关联的 Agent Gateway ID
-            tags (Optional[List[Dict]]): 标签列表，每个标签是一个包含 "key" 和 "value" 的字典
+            name (str): The code interpreter name, must follow specific naming rules
+            api_key_name (str): The API Key name
+            description (Optional[str]): The code interpreter description
+            auth_type (Optional[str]): Authentication type, e.g., "API_KEY"
+            execution_agency_name (Optional[str]): IAM agency name
+            observability (Optional[Dict]): Observability configuration, e.g., logging and monitoring settings
+            network_config (Optional[Dict]): Network configuration, e.g., VPC and security group settings
+            agent_gateway_id (Optional[str]): Associated Agent Gateway ID
+            tags (Optional[List[Dict]]): Tag list, each tag is a dict containing "key" and "value"
         
         Returns:
-            Dict: 包含新创建的代码解释器信息的字典
-                - id(str): 代码解释器的ID
-                - name(str): 代码解释器的名称
-                - description(str): 代码解释器的描述信息
-                - created_at(str): 代码解释器的创建时间
-                - updated_at(str): 代码解释器的更新时间
-                - execution_agency_name(str): IAM委托名
-                - workload_identity(Dict): 工作负载认证信息
-                - access_endpoint(str): 代码解释器的访问域名
-                - observability(Dict): 可观测性配置(日志+指标)
-                - tags(List[Dict]): 标签列表，每个标签是一个包含 "key" 和 "value" 的字典
-                - network_config(Dict): 网络配置，例如 VPC 和安全组设置
+            Dict: Dictionary containing the newly created code interpreter information
+                - id(str): Code interpreter ID
+                - name(str): Code interpreter name
+                - description(str): Code interpreter description
+                - created_at(str): Code interpreter creation time
+                - updated_at(str): Code interpreter update time
+                - execution_agency_name(str): IAM agency name
+                - workload_identity(Dict): Workload identity information
+                - access_endpoint(str): Code interpreter access endpoint
+                - observability(Dict): Observability configuration (logs + metrics)
+                - tags(List[Dict]): Tag list, each tag is a dict containing "key" and "value"
+                - network_config(Dict): Network configuration, e.g., VPC and security group settings
 
         Example:
             >>> code_interpreter = client.create_code_interpreter(
@@ -186,19 +190,19 @@ class CodeInterpreter:
         sort_key: str = None,
         sort_dir: str = None,
     ) -> Dict:
-        """查询代码解释器列表
+        """List code interpreters.
         
         Args:
-            name (str): 根据名称模糊查询代码解释器列表
-            limit (int): 每页返回的代码解释器数量，默认10
-            offset (int): 分页偏移量，默认0
-            sort_key (str): 排序字段，必须是created_at或updated_at
-            sort_dir (str): 排序方向，必须是asc或desc
+            name (str): Fuzzy search by name
+            limit (int): Number of code interpreters per page, default 10
+            offset (int): Pagination offset, default 0
+            sort_key (str): Sort field, must be 'created_at' or 'updated_at'
+            sort_dir (str): Sort direction, must be 'asc' or 'desc'
         
         Returns:
-            Dict: 包含代码解释器列表和分页信息的字典
-                - total_count(int): 符合查询条件的代码解释器总数
-                - items(List[Dict]): 代码解释器列表
+            Dict: Dictionary containing code interpreter list and pagination info
+                - total_count(int): Total number of code interpreters matching the query
+                - items(List[Dict]): Code interpreter list
         
         Example:
             >>> result = client.list_code_interpreters(
@@ -235,26 +239,26 @@ class CodeInterpreter:
         observability: Optional[Dict] = None,
         tags: Optional[List[Dict]] = None,
     ) -> Dict:
-        """更新代码解释器的可观测性配置和标签信息
+        """Update code interpreter observability configuration and tags.
 
         Args:
-            code_interpreter_id (str): 代码解释器的ID
-            observability (Dict): 可观测性配置(日志+指标)，可选
-            tags (List[Dict]): 标签列表，每个标签是一个包含 "key" 和 "value" 的字典，可选
+            code_interpreter_id (str): The code interpreter ID
+            observability (Dict): Observability configuration (logs + metrics), optional
+            tags (List[Dict]): Tag list, each tag is a dict containing "key" and "value", optional
         
         Returns:
-            Dict: 包含更新后代码解释器信息的字典
-                - id(str): 代码解释器的ID
-                - name(str): 代码解释器的名称
-                - description(str): 代码解释器的描述信息
-                - created_at(str): 代码解释器的创建时间
-                - updated_at(str): 代码解释器的更新时间
-                - execution_agency_name(str): IAM委托名
-                - agent_gateway_id(str): 代码解释器所属的智能体网关ID
-                - workload_identity(Dict): 工作负载认证信息
-                - access_endpoint(str): 代码解释器的访问域名
-                - observability(Dict): 可观测性配置(日志+指标)
-                - tags(List[Dict]): 标签列表，每个标签是一个包含 "key" 和 "value" 的字典
+            Dict: Dictionary containing the updated code interpreter information
+                - id(str): Code interpreter ID
+                - name(str): Code interpreter name
+                - description(str): Code interpreter description
+                - created_at(str): Code interpreter creation time
+                - updated_at(str): Code interpreter update time
+                - execution_agency_name(str): IAM agency name
+                - agent_gateway_id(str): Agent Gateway ID that the code interpreter belongs to
+                - workload_identity(Dict): Workload identity information
+                - access_endpoint(str): Code interpreter access endpoint
+                - observability(Dict): Observability configuration (logs + metrics)
+                - tags(List[Dict]): Tag list, each tag is a dict containing "key" and "value"
         
         Example:
             >>> result = client.update_code_interpreter(
@@ -276,27 +280,27 @@ class CodeInterpreter:
         return result
 
     def get_code_interpreter(self, code_interpreter_id: str) -> Dict:
-        """获取代码解释器详情
+        """Get code interpreter details.
         
         Args:
-            code_interpreter_id (str): 代码解释器的ID
+            code_interpreter_id (str): The code interpreter ID
         
         Returns:
-            Dict: 包含代码解释器详情的字典
-                - id(str): 代码解释器的ID
-                - name(str): 代码解释器的名称
-                - description(str): 代码解释器的描述信息
-                - created_at(str): 代码解释器的创建时间
-                - updated_at(str): 代码解释器的更新时间
-                - execution_agency_name(str): IAM委托名
-                - agent_gateway_id(str): 代码解释器所属的智能体网关ID
-                - workload_identity(Dict): 工作负载认证信息
-                - access_endpoint(str): 代码解释器的访问域名
-                - observability(Dict): 可观测性配置(日志+指标)
-                - tags(List[Dict]): 标签列表，每个标签是一个包含 "key" 和 "value" 的字典
-                - auth_tyoe(str): 工具认证方式
-                - api_key_name(str): API Key名称
-                - network_config(Dict): 网络配置，例如 VPC 和安全组设置
+            Dict: Dictionary containing code interpreter details
+                - id(str): Code interpreter ID
+                - name(str): Code interpreter name
+                - description(str): Code interpreter description
+                - created_at(str): Code interpreter creation time
+                - updated_at(str): Code interpreter update time
+                - execution_agency_name(str): IAM agency name
+                - agent_gateway_id(str): Agent Gateway ID that the code interpreter belongs to
+                - workload_identity(Dict): Workload identity information
+                - access_endpoint(str): Code interpreter access endpoint
+                - observability(Dict): Observability configuration (logs + metrics)
+                - tags(List[Dict]): Tag list, each tag is a dict containing "key" and "value"
+                - auth_type(str): Tool authentication method
+                - api_key_name(str): API Key name
+                - network_config(Dict): Network configuration, e.g., VPC and security group settings
         
         Example:
             >>> result = client.get_code_interpreter(
@@ -310,10 +314,10 @@ class CodeInterpreter:
         return result
 
     def delete_code_interpreter(self, code_interpreter_id: str) -> None:
-        """删除指定代码解释器
+        """Delete a specified code interpreter.
         
         Args:
-            code_interpreter_id (str): 代码解释器的ID
+            code_interpreter_id (str): The code interpreter ID
 
         Example:
             >>> client.delete_code_interpreter(
@@ -332,19 +336,20 @@ class CodeInterpreter:
         api_key: Optional[str] = None,
         session_timeout: Optional[int] = DEFAULT_TIMEOUT
     ) -> str:
-        """启动代码解释器会话
+        """Start a code interpreter session.
 
-        根据提供的参数初始化一个新的代码解释器会话，并返回会话ID
+        Initializes a new code interpreter session with the provided parameters
+        and returns the session ID.
 
         Args:
-            code_interpreter_name (str): 代码解释器的名称，用于识别和管理会话，名称唯一
-            session_name (str): 会话名称
-            api_key (Optional[str]): 认证使用的API Key，如果不提供则从环境变量API_KEY中获取
-            session_timeout (Optional[int]): 会话超时时间，单位为秒，
-                默认15分钟，最小值为60秒，最大值为86400秒（24小时）
+            code_interpreter_name (str): The code interpreter name, used to identify and manage sessions, must be unique
+            session_name (str): The session name
+            api_key (Optional[str]): API Key for authentication, if not provided will be retrieved from environment variable API_KEY
+            session_timeout (Optional[int]): Session timeout in seconds,
+                default 15 minutes, minimum 60 seconds, maximum 86400 seconds (24 hours)
         
         Returns:
-            session_id (str): 会话ID
+            session_id (str): The session ID
         
         Example:
             >>> session_id = client.start_session(
@@ -374,20 +379,20 @@ class CodeInterpreter:
             session_id: Optional[str] = None,
             api_key: Optional[str] = None
     ) -> Dict:
-        """获取代码解释器会话详情
+        """Get code interpreter session details.
         
         Args:
-            code_interpreter_name (str): 代码解释器的名称，用于识别和管理会话，名称唯一
-            session_id (Optional[str]): 会话ID，默认使用当前会话ID
-            api_key (Optional[str]): 认证使用的API Key，如果不提供则从环境变量API_KEY中获取
+            code_interpreter_name (str): The code interpreter name, used to identify and manage sessions, must be unique
+            session_id (Optional[str]): The session ID, defaults to current session ID
+            api_key (Optional[str]): API Key for authentication, if not provided will be retrieved from environment variable API_KEY
         
         Returns:
-            Dict: 包含会话详情的字典
-                - code_interpreter_id(str): 代码解释器的ID
-                - created_at(str): 会话的创建时间
-                - session_name(str): 会话名称
-                - session_id(str): 会话ID
-                - session_timeout(int): 会话超时时间，单位为秒
+            Dict: Dictionary containing session details
+                - code_interpreter_id(str): Code interpreter ID
+                - created_at(str): Session creation time
+                - session_name(str): Session name
+                - session_id(str): Session ID
+                - session_timeout(int): Session timeout in seconds
 
         Example:
             >>> session_info = client.get_session(
@@ -409,15 +414,15 @@ class CodeInterpreter:
         return result
     
     def stop_session(self, api_key: Optional[str] = None) -> bool:
-        """停止当前代码解释器会话
+        """Stop the current code interpreter session.
 
-        终止任何活跃的会话并清除会话状态
+        Terminates any active session and clears session state.
         
         Args:
-            api_key (Optional[str]): 认证使用的API Key，如果不提供则从环境变量API_KEY中获取
+            api_key (Optional[str]): API Key for authentication, if not provided will be retrieved from environment variable API_KEY
         
         Returns:
-            bool: 没有活跃会话时返回True，否则返回False
+            bool: Returns True when no active session, otherwise False after stopping
         
         Example:
             >>> client.stop_session()
@@ -445,17 +450,17 @@ class CodeInterpreter:
             arguments: Dict,
             api_key: Optional[str] = None
     ) -> Dict[str, Any]:
-        """调用代码解释器会话
+        """Invoke a code interpreter session.
 
-        如果没有活跃会话，将在调用请求前自动启动一个会话
+        If there is no active session, one will be automatically started before the invocation.
 
         Args:
-            operate_type (str): 调用方法名，"execute_code"或"execute_command"等
-            arguments (Dict): 调用参数，根据operate_type不同而不同
-            api_key (Optional[str]): 认证使用的API Key，如果不提供则从环境变量API_KEY中获取
+            operate_type (str): The operation method name, e.g., "execute_code" or "execute_command"
+            arguments (Dict): Invocation arguments, varies based on operate_type
+            api_key (Optional[str]): API Key for authentication, if not provided will be retrieved from environment variable API_KEY
         
         Returns:
-            result[Dict]: 包含调用结果的字典
+            result[Dict]: Dictionary containing the invocation result
         
         Example:
             >>> result = client.invoke(
@@ -492,24 +497,24 @@ class CodeInterpreter:
             language: str = "python",
             clear_context: bool = False,
     ) -> Dict[str, Any]:
-        """在代码解释器中执行代码
+        """Execute code in the code interpreter.
         
         Args:
-            code (str): 要执行的代码
-            language (str): 代码的语言，默认"python"，当前支持python
-            clear_context (bool): 是否在执行前清除上下文，默认False
+            code (str): The code to execute
+            language (str): The programming language, default "python", currently supports python
+            clear_context (bool): Whether to clear context before execution, default False
         
         Returns:
-            result[Dict]: 包含stdout， stderr， exitcode信息的字典
+            result[Dict]: Dictionary containing stdout, stderr, and exit_code information
         
-        Example: # 执行Python代码
+        Example:
             >>> result = client.execute_code('''
             ...     import pandas as pd
             ...     df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})
             ...     print(df.describe())
             ... '''
             >>> )
-            >>> # 清除上下文
+            >>> # Clear context
             >>> result = client.execute_code("x = 10", clear_context=True)
         """
         valid_languages = ["python"]
@@ -529,27 +534,27 @@ class CodeInterpreter:
         return result
     
     def execute_command(self, command: str) -> Dict[str, Any]:
-        """在代码解释器中执行命令
+        """Execute a command in the code interpreter.
         
         Args:
-            command (str): 要执行的命令
+            command (str): The command to execute
         
         Returns:
-            result[Dict]: 包含命令执行结果的字典
+            result[Dict]: Dictionary containing the command execution result
         
         Example: 
-            >>> # 列出所有文件
+            >>> # List all files
             >>> result = client.execute_command("ls -la")
 
-            >>> # 检查python版本
+            >>> # Check python version
             >>> result = client.execute_command("python --version")
         """
-        # 定义允许的安全字符
+        # Define allowed safe characters
         pattern = r"^[a-zA-Z0-9_\-\.=\s\/\.:]+$"
         if not re.match(pattern, command):
             raise ValueError("Invalid command format")
 
-        # 检查常见的注入模式
+        # Check for common injection patterns
         strict_block_pattrns = [
         ]
 
@@ -572,23 +577,25 @@ class CodeInterpreter:
             content: Union[str, bytes],
             description: str = "",
     ) -> Dict[str, Any]:
-        """上传文件到代码解释器
+        """Upload a file to the code interpreter.
         
         Args:
-            path (str): 文件路径，支持绝对路径和相对路径，必须以"/"开头，当前仅支持/home/user路径下文件上传
-            content (Union[str, bytes]): 文件内容，可以是字符串或二进制数据，二进制内容将被Base64编码
-            description (str): 文件描述，此字段可用于LLMs理解数据结构
-                                （例如： "CSV" with columns: data, revenue, product_id）
+            path (str): File path, supports absolute and relative paths, must start with "/",
+                currently only supports file upload under /home/user path
+            content (Union[str, bytes]): File content, can be string or binary data,
+                binary content will be Base64 encoded
+            description (str): File description, this field can be used for LLMs to understand data structure
+                                (e.g., "CSV with columns: date, revenue, product_id")
         
         Returns:
-            result[Dict]: 包含文件上传结果的字典
+            result[Dict]: Dictionary containing the file upload result
         
         Example:
-            >>> # 上传CSV文件
+            >>> # Upload a CSV file
             ... result = client.upload_file(
             ...     path="/home/user/my-file.csv",
-            ...     content="data, revenue\\n2026-01-01, 1000\\n2026-01-02, 2000"),
-            >>>     description='Daily sales data with columns: data, revenue')
+            ...     content="date, revenue\\n2026-01-01, 1000\\n2026-01-02, 2000"),
+            >>>     description='Daily sales data with columns: date, revenue')
         """
         
         if not path.startswith("/"):
@@ -598,7 +605,7 @@ class CodeInterpreter:
             if not path.startswith(DEFAULT_PATH):
                 raise ValueError(f"Invalid path. Path must start with {DEFAULT_PATH}")
         
-        # 处理二进制内容
+        # Handle binary content
         if isinstance(content, bytes):
             file_content = {"path": path, "blob": base64.b64encode(content).decode("utf-8")}
         else:
@@ -621,21 +628,23 @@ class CodeInterpreter:
             self,
             files: List[Dict[str, str]]
     ) -> Dict[str, Any]:
-        """上传多个文件到代码解释器
+        """Upload multiple files to the code interpreter.
         
-        此操作为原子化，所有文件上传成功或失败，不会部分上传
+        This operation is atomic, all files will be uploaded successfully or fail together,
+        no partial uploads.
         
         Args:
-            files (List[Dict[str, str]]): 文件路径和内容的列表，每个文件包含"path"和"content"键
-                - "path": 文件路径，支持绝对路径和相对路径，必须以"/"开头，当前仅支持/home/user路径下文件上传
-                - "content": 文件内容（string 或 bytes）
-                - "description": 文件描述，此字段可用于LLMs理解数据结构
+            files (List[Dict[str, str]]): List of file paths and contents, each file contains "path" and "content" keys
+                - "path": File path, supports absolute and relative paths, must start with "/",
+                    currently only supports file upload under /home/user path
+                - "content": File content (string or bytes)
+                - "description": File description, this field can be used for LLMs to understand data structure
         
         Returns:
-            result[Dict]: 包含文件上传结果的字典
+            result[Dict]: Dictionary containing the file upload result
         
         Example:
-            >>> # 上传多个文件
+            >>> # Upload multiple files
             ... result = client.upload_files([
             ...     {"path": "/data.txt", "content": "Hello, World!"},
             ...     {"path": "/home/user/my-binary-file", "content": b"123456"}
@@ -653,7 +662,7 @@ class CodeInterpreter:
                 if not path.startswith(DEFAULT_PATH):
                     raise ValueError(f"Invalid path. Path must start with {DEFAULT_PATH}")
             
-            # 处理二进制内容
+            # Handle binary content
             if isinstance(content, bytes):
                 file_content = {"path": path, "blob": base64.b64encode(content).decode("utf-8")}
             else:
@@ -675,16 +684,17 @@ class CodeInterpreter:
             self,
             path: str
     ) -> Union[str, bytes]:
-        """从代码解释器下载文件
+        """Download a file from the code interpreter.
         
         Args:
-            path (str): 文件路径，必须以"/"开头，当前仅支持/home/user路径下文件下载
+            path (str): File path, must start with "/",
+                currently only supports file download under /home/user path
         
         Returns:
-            content[Union[str, bytes]]: 文件内容, 文本文件或字节文件（图片，PDF等）
+            content[Union[str, bytes]]: File content, text file or binary file (images, PDFs, etc.)
         
         Example:
-            >>> # 下载文件
+            >>> # Download a file
             ... content = client.download_file("/home/user/data.txt")
         """
         
@@ -699,16 +709,16 @@ class CodeInterpreter:
             }
         )
 
-        # 提取文件内容
+        # Extract file content
         if "stream" not in result:
-            raise FileNotFoundError(f"Cloud not read file: {path}")
+            raise FileNotFoundError(f"Could not read file: {path}")
 
         for event in result["stream"]:
             if "result" not in event:
-                raise FileNotFoundError(f"Cloud not read file: {path}")
+                raise FileNotFoundError(f"Could not read file: {path}")
             for content_item in event["result"].get("contents", []):
                 if content_item.get("type") != "resource":
-                    raise FileNotFoundError(f"Cloud could not read file: {path}")
+                    raise FileNotFoundError(f"Could not read file: {path}")
                 resource = content_item.get("resource", {})
                 if "text" in resource:
                     return resource["text"]
@@ -718,22 +728,24 @@ class CodeInterpreter:
                         return raw.decode("utf-8")
                     except ValueError:
                         return raw
-        raise FileNotFoundError(f"Cloud not read file: {path}")
+        raise FileNotFoundError(f"Could not read file: {path}")
     
     def download_files(
             self,
             paths: List[str]
     ) -> Dict[str, Union[str, bytes]]:
-        """从代码解释器下载多个文件（仅支持/home/user路径下文件下载）
+        """Download multiple files from the code interpreter.
         
         Args:
-            paths (List[str]): 文件路径列表，每个路径必须以"/"开头，当前仅支持/home/user路径下文件下载
+            paths (List[str]): List of file paths, each path must start with "/",
+                currently only supports file download under /home/user path
         
         Returns:
-            files[Dict[str, Union[str, bytes]]]: 包含文件路径和内容的字典，键为文件路径，值为文件内容（文本或字节）
+            files[Dict[str, Union[str, bytes]]]: Dictionary containing file paths and contents,
+                keys are file paths, values are file contents (text or bytes)
         
         Example:
-            >>> # 下载多个文件
+            >>> # Download multiple files
             >>> files = client.download_files(["/home/user/data.txt", "/home/user/my-binary-file"])
         """
         
@@ -774,23 +786,24 @@ class CodeInterpreter:
             packages: List[str],
             upgrade: bool = False
     ) -> Dict[str, Any]:
-        """在代码解释器中安装Python包
+        """Install Python packages in the code interpreter.
         
         Args:
-            packages (List[str]): 要安装的Python包列表，支持版本指定，如["requests", "numpy==1.24.3"]
-            upgrade (bool, optional): 是否升级已安装的包，默认False
+            packages (List[str]): List of Python packages to install, supports version specification,
+                e.g., ["requests", "numpy==1.24.3"]
+            upgrade (bool, optional): Whether to upgrade installed packages, default False
         
         Returns:
-            result[Dict[str, Any]]: 包含命令执行结果的字典
+            result[Dict[str, Any]]: Dictionary containing the command execution result
         
         Example:
-            >>> # 安装多个Python包
+            >>> # Install multiple Python packages
             >>> result = client.install_packages(["requests", "numpy"])
 
-            >>> # 安装指定版本的包
+            >>> # Install specific versions
             >>> result = client.install_packages(["requests==2.26.0", "numpy==1.24.3"])
 
-            >>> # 升级已安装的包
+            >>> # Upgrade installed packages
             >>> result = client.install_packages(["requests", "numpy"], upgrade=True)
         """
         
@@ -815,19 +828,20 @@ class CodeInterpreter:
         return result
     
     def clear_context(self) -> Dict[str, Any]:
-        """清除代码解释器上下文
+        """Clear the code interpreter context.
 
-        重置代码解释器到一个全新的状态，清除所有之前已经定义的变量，包导入和函数定义
+        Resets the code interpreter to a fresh state, clearing all previously
+        defined variables, package imports, and function definitions.
 
-        注意：仅对Python代码有效
+        Note: Only effective for Python code.
         
         Returns:
-            result[Dict[str, Any]]: 包含命令执行结果的字典
+            result[Dict[str, Any]]: Dictionary containing the command execution result
         
         Example:
             >>> client.execute_code("x = 10")
             >>> client.execute_code("print(x)")
-            >>> # 清除上下文
+            >>> # Clear context
             >>> result = client.clear_context()
             >>> client.execute_code("print(x)")
         """
@@ -848,21 +862,22 @@ def code_session(
     code_interpreter_name: str,
     api_key: Optional[str] = None
 ) -> Generator[CodeInterpreter, None, None]:
-    """代码解释器会话上下文管理器
+    """Code interpreter session context manager.
     
     Args:
-        region (str): region名称，如"cn-southwest-2"
-        code_interpreter_name (str): 代码解释器名称
-        api_key (Optional[str]): API Key，如果不提供则从环境变量HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY中获取
+        region (str): Region name, e.g., "cn-southwest-2"
+        code_interpreter_name (str): Code interpreter name
+        api_key (Optional[str]): API Key, if not provided will be retrieved from
+            environment variable HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY
     
     Yields:
-        CodeInterpreter: 会话启动完成的代码解释器实例
+        CodeInterpreter: Code interpreter instance with session started
         
     Example:
         >>> with code_session("cn-southwest-2", "my-code-interpreter-name") as client:
         >>>     client.execute_code("print('Hello, World!')")
         >>> 
-        >>> # 传入 API Key
+        >>> # With API Key
         >>> with code_session("cn-southwest-2", "my-code-interpreter-name", api_key="your-api-key") as client:
         >>>     client.execute_code("print('Hello, World!')")
     """
