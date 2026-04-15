@@ -44,7 +44,7 @@ class ControlToolsHttpClient(BaseHTTPClient):
 
         """
         endpoint = f"/v1/core/code-interpreters"
-        response = self.get(url=endpoint, json=request_params)
+        response = self.get(url=endpoint, params=request_params)
         if not response.success:
             raise ToolsAPIError(response.status_code, response.error)
         else:
@@ -90,11 +90,11 @@ class ControlToolsHttpClient(BaseHTTPClient):
 
 class DataToolsHttpClient(BaseHTTPClient):
     def __init__(self, region_name: str, endpoint_url: str):
-        super().__init__(RequestConfig(base_url=endpoint_url))
+        super().__init__(RequestConfig(base_url=endpoint_url, verify_ssl=False))
         self.region_name = region_name
     
     def start_session(self, code_interpreter_name: str, api_key: str, request_params: Dict) -> Dict[Any, Any]:
-        """POST v1/code-interpreters/{code_interpreter_name}/sessions-start
+        """PUT v1/code-interpreters/{code_interpreter_name}/sessions-start
         
         启动代码解释器会话
         """ 
@@ -102,7 +102,7 @@ class DataToolsHttpClient(BaseHTTPClient):
         headers = {
             "Authorization": f"Bearer {api_key}"
         }
-        response = self.post(url=endpoint, json=request_params, headers=headers)
+        response = self.put(url=endpoint, json=request_params, headers=headers)
         if not response.success:
             raise ToolsAPIError(response.status_code, response.error)
         else:
