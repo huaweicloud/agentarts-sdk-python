@@ -42,7 +42,7 @@ class AuthenticationStrategy(ABC):
         pass
     
     def sign_request(self, method: str, url: str, headers: Dict[str, str], 
-                     body: Optional[bytes] = None) -> Dict[str, str]:
+                     body: Optional[bytes] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
         """
         Sign the HTTP request. Override in subclasses that need signing.
         
@@ -51,6 +51,7 @@ class AuthenticationStrategy(ABC):
             url: Full URL
             headers: Request headers (will be modified in place)
             body: Request body as bytes
+            params: Query parameters as dict
             
         Returns:
             Updated headers dict with signature
@@ -149,7 +150,7 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
         return "control"
     
     def sign_request(self, method: str, url: str, headers: Dict[str, str],
-                     body: Optional[bytes] = None) -> Dict[str, str]:
+                     body: Optional[bytes] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
         """
         Sign the HTTP request using SDK-HMAC-SHA256 algorithm.
         
@@ -161,6 +162,7 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
             url: Full URL
             headers: Request headers
             body: Request body as bytes
+            params: Query parameters as dict
             
         Returns:
             Updated headers dict with signature
@@ -175,8 +177,10 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
         host = parsed_url.netloc
         resource_path = parsed_url.path or "/"
         
-        if parsed_url.query:
-            resource_path += f"?{parsed_url.query}"
+        query_params_list = []
+        if params:
+            for key, value in params.items():
+                query_params_list.append((key, value))
         
         sdk_request = SdkRequest(
             method=method,
@@ -185,7 +189,7 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
             resource_path=resource_path,
             header_params=headers,
             body=body.decode('utf-8') if body else None,
-            query_params=[],
+            query_params=query_params_list,
         )
         
         signed_request = self._signer.sign(sdk_request)
@@ -315,6 +319,7 @@ class MemoryHttpService:
             url=url,
             headers=final_headers,
             body=body_bytes,
+            params=params,
         )
 
         try:
