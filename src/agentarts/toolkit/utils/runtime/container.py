@@ -356,6 +356,7 @@ def generate_dockerfile(
     entrypoint: Optional[str] = None,
     port: int = 8080,
     output_path: str = "Dockerfile",
+    region: Optional[str] = None,
 ) -> bool:
     """
     Generate Dockerfile from template.
@@ -366,6 +367,7 @@ def generate_dockerfile(
         entrypoint: Entrypoint in format "module:function" (e.g., "app:main")
         port: Port to expose
         output_path: Output path for Dockerfile
+        region: Huawei Cloud region (e.g., "cn-southwest-2")
 
     Returns:
         True if successful, False otherwise
@@ -379,6 +381,7 @@ def generate_dockerfile(
         dependency_file=dependency_file,
         entrypoint=entrypoint,
         port=port,
+        region=region,
     )
 
     dockerfile_path = Path.cwd() / output_path

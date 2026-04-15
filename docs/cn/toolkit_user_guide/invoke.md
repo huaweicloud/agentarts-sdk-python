@@ -15,7 +15,7 @@
 | `--port` | `-p` | 本地模式端口 | `8080` |
 | `--endpoint` | `-e` | 指定端点名称 | 无 |
 | `--session` | `-s` | 会话 ID（用于有状态 Agent） | 自动生成 UUID |
-| `--token` | `-t` | Bearer 认证令牌 | 无 |
+| `--bearer-token` | `-bt` | Bearer 认证令牌 | 无 |
 | `--timeout` | - | 请求超时时间（秒） | `900` |
 
 ## 调用模式
@@ -109,7 +109,7 @@ agentarts invoke '{"message": "继续之前的对话"}' --agent my-agent --sessi
 ### 示例 7: 使用 Bearer Token 认证
 
 ```bash
-agentarts invoke '{"message": "你好"}' --agent my-agent --token "your-token"
+agentarts invoke '{"message": "你好"}' --agent my-agent --bearer-token "your-token"
 ```
 
 ### 示例 8: 指定端点调用
@@ -192,7 +192,7 @@ runtime:
 Agent 配置为其他认证类型时，需要提供 Bearer Token：
 
 ```bash
-agentarts invoke '{"message": "你好"}' --agent my-agent --token "your-token"
+agentarts invoke '{"message": "你好"}' --agent my-agent --bearer-token "your-token"
 ```
 
 ## 会话管理

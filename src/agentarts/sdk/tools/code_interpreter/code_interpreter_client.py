@@ -17,8 +17,8 @@ import re
 from contextlib import contextmanager
 from typing import Any, Dict, Generator, List, Optional, Union
 
-from src.agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
-from src.agentarts.sdk.utils.constant import get_control_plane_endpoint, get_code_interpreter_data_plane_endpoint, get_region
+from agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
+from agentarts.sdk.utils.constant import get_control_plane_endpoint, get_code_interpreter_data_plane_endpoint, get_region
 
 
 DEFAULT_TIMEOUT = 900  # 默认15分

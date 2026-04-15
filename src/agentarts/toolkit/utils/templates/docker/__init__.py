@@ -20,6 +20,7 @@ def render_dockerfile(
     user_name: str = "appuser",
     user_id: int = 1000,
     group_id: int = 1000,
+    region: Optional[str] = None,
 ) -> str:
     """
     Render Dockerfile from template.
@@ -32,11 +33,17 @@ def render_dockerfile(
         user_name: Non-root user name (default: appuser)
         user_id: Non-root user ID (default: 1000)
         group_id: Non-root group ID (default: 1000)
+        region: Huawei Cloud region (e.g., "cn-southwest-2")
 
     Returns:
         Rendered Dockerfile content
     """
     template = get_dockerfile_template()
+
+    if region:
+        env_section = f"# Set Huawei Cloud region\nENV HUAWEICLOUD_SDK_REGION={region}"
+    else:
+        env_section = "# No region specified"
 
     user_section = f"""# Create non-root user for security
 RUN groupadd -g {group_id} {user_name} && \\
@@ -60,6 +67,7 @@ RUN pip install --no-cache-dir -r {dependency_file}"""
 
     content = template.format(
         base_image=base_image,
+        env_section=env_section,
         user_section=user_section,
         chown_section=chown_section,
         dependency_section=dependency_section,

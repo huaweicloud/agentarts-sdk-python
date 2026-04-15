@@ -1,6 +1,7 @@
 """Invoke operation implementation"""
 
 import json
+import os
 import uuid
 from enum import Enum
 from typing import Any, Dict, Iterator, Optional, Tuple, Union
@@ -8,7 +9,7 @@ from typing import Any, Dict, Iterator, Optional, Tuple, Union
 from rich.console import Console
 from rich.panel import Panel
 
-from agentarts.sdk.utils.constant import get_region, get_runtime_data_plane_endpoint, get_control_plane_endpoint
+from agentarts.sdk.utils.constant import get_region, get_runtime_data_plane_endpoint, get_control_plane_endpoint, _ensure_https
 from agentarts.sdk.service.http_client import SignMode
 from agentarts.toolkit.operations.runtime.config import (
     get_agent,
@@ -19,15 +20,6 @@ from agentarts.toolkit.utils.common import echo_error, echo_success, echo_info, 
 from agentarts.sdk.service.runtime_client import LocalRuntimeClient, RuntimeClient
 
 console = Console()
-
-
-def _ensure_https(endpoint: str) -> str:
-    """Ensure endpoint has https:// prefix."""
-    if not endpoint:
-        return endpoint
-    if not endpoint.startswith(("http://", "https://")):
-        return f"https://{endpoint}"
-    return endpoint
 
 
 def _resolve_agent_info(
@@ -163,6 +155,8 @@ def invoke_agent(
         echo_error("Payload must be valid JSON")
         return False
 
+    actual_bearer_token = bearer_token or os.environ.get("BEARER_TOKEN")
+
     try:
         if mode == InvokeMode.LOCAL:
             local_port = port or 8080
@@ -174,7 +168,7 @@ def invoke_agent(
             result = client.invoke_agent(
                 payload=payload,
                 session_id=session_id,
-                bearer_token=bearer_token,
+                bearer_token=actual_bearer_token,
                 endpoint=endpoint,
                 timeout=timeout,
             )
@@ -200,8 +194,7 @@ def invoke_agent(
             if auth_type and auth_type.upper() == "IAM":
                 sign_mode = SignMode.V11_HMAC_SHA256
             else:
-                # 非 IAM 认证需要 bearer token
-                if not bearer_token:
+                if not actual_bearer_token:
                     echo_error("Bearer token is required for non-IAM authentication")
                     console.print("[dim]Specify --bearer-token or set BEARER_TOKEN environment variable[/dim]")
                     return False
@@ -219,7 +212,7 @@ def invoke_agent(
                 agent_name=agent_name,
                 session_id=actual_session_id,
                 payload=payload,
-                bearer_token=bearer_token,
+                bearer_token=actual_bearer_token,
                 endpoint=endpoint,
                 timeout=timeout,
             )
@@ -253,6 +246,8 @@ def status_agent(
     mode: InvokeMode = InvokeMode.CLOUD,
     region: Optional[str] = None,
     port: Optional[int] = None,
+    endpoint: Optional[str] = None,
+    session_id: Optional[str] = None,
     bearer_token: Optional[str] = None,
 ) -> bool:
     """
@@ -263,21 +258,28 @@ def status_agent(
         mode: Invoke mode (local or cloud)
         region: Huawei Cloud region (for cloud mode)
         port: Local port (for local mode)
+        endpoint: Optional endpoint name
+        session_id: Session ID for stateful agents (auto-generated if None)
         bearer_token: Optional bearer token
 
     Returns:
         True if healthy, False otherwise
     """
+    actual_session_id = session_id or str(uuid.uuid4())
+    actual_bearer_token = bearer_token or os.environ.get("BEARER_TOKEN")
+    
     try:
         if mode == InvokeMode.LOCAL:
             local_port = port or 8080
             client = LocalRuntimeClient(port=local_port)
 
             console.print()
-            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Local[/yellow]\n[cyan]Endpoint:[/cyan] [white]localhost:{local_port}[/white]")
+            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Local[/yellow]\n[cyan]Endpoint:[/cyan] [white]localhost:{local_port}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]")
 
             result = client.ping_agent(
-                bearer_token=bearer_token,
+                bearer_token=actual_bearer_token,
+                endpoint=endpoint,
+                session_id=actual_session_id,
             )
 
             status = result.get("status", "Unknown")
@@ -307,14 +309,13 @@ def status_agent(
             if auth_type and auth_type.upper() == "IAM":
                 sign_mode = SignMode.V11_HMAC_SHA256
             else:
-                # 非 IAM 认证需要 bearer token
-                if not bearer_token:
+                if not actual_bearer_token:
                     echo_error("Bearer token is required for non-IAM authentication")
                     console.print("[dim]Specify --bearer-token or set BEARER_TOKEN environment variable[/dim]")
                     return False
 
             console.print()
-            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]\n[cyan]Auth Type:[/cyan] [dim]{auth_type or 'None'}[/dim]")
+            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]\n[cyan]Auth Type:[/cyan] [dim]{auth_type or 'None'}[/dim]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]")
 
             client = RuntimeClient(
                 data_endpoint=data_endpoint,
@@ -325,7 +326,9 @@ def status_agent(
 
             result = client.ping_agent(
                 agent_name=agent_name,
-                bearer_token=bearer_token,
+                bearer_token=actual_bearer_token,
+                endpoint=endpoint,
+                session_id=actual_session_id,
             )
 
             if isinstance(result, dict):

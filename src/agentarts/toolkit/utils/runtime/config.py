@@ -136,7 +136,8 @@ class VpcConfig(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        return self.model_dump(mode="json", exclude_none=True)
+        data = self.model_dump(mode="json", exclude_none=True)
+        return {k: v for k, v in data.items() if v != [] and v != {}}
 
 
 class NetworkConfig(BaseModel):
@@ -157,7 +158,8 @@ class NetworkConfig(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        return self.model_dump(mode="json", exclude_none=True)
+        data = self.model_dump(mode="json", exclude_none=True)
+        return {k: v for k, v in data.items() if v != [] and v != {}}
 
 
 class APIKeyPair(BaseModel):
@@ -178,7 +180,8 @@ class APIKeyPair(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        return self.model_dump(mode="json", exclude_none=True)
+        data = self.model_dump(mode="json", exclude_none=True)
+        return {k: v for k, v in data.items() if v != [] and v != {}}
 
 
 class APIKeyAuthConfig(BaseModel):
@@ -218,6 +221,22 @@ class CustomJWTAuthConfig(BaseModel):
         "extra": "allow",
     }
 
+    def is_empty(self) -> bool:
+        """Check if all fields are empty (default values)."""
+        return (
+            self.discovery_url is None
+            and not self.allowed_audience
+            and not self.allowed_clients
+            and not self.allowed_scopes
+        )
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary, excluding empty values."""
+        if self.is_empty():
+            return {}
+        data = self.model_dump(mode="json", exclude_none=True)
+        return {k: v for k, v in data.items() if v != [] and v != {}}
+
 
 class AuthConfig(BaseModel):
     """Authentication configuration."""
@@ -234,6 +253,25 @@ class AuthConfig(BaseModel):
     model_config = {
         "extra": "allow",
     }
+
+    def is_empty(self) -> bool:
+        """Check if all fields are empty."""
+        custom_jwt_empty = self.custom_jwt is None or self.custom_jwt.is_empty()
+        key_auth_empty = self.key_auth is None or not (self.key_auth.api_keys or [])
+        return custom_jwt_empty and key_auth_empty
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert configuration to dictionary, excluding empty values."""
+        result = {}
+        if self.custom_jwt and not self.custom_jwt.is_empty():
+            jwt_dict = self.custom_jwt.to_dict()
+            if jwt_dict:
+                result["custom_jwt"] = jwt_dict
+        if self.key_auth and self.key_auth.api_keys:
+            keys = [k.to_dict() for k in self.key_auth.api_keys if k.to_dict()]
+            if keys:
+                result["key_auth"] = {"api_keys": keys}
+        return result
 
 
 class InboundIdentityConfig(BaseModel):
@@ -255,7 +293,12 @@ class InboundIdentityConfig(BaseModel):
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
-        return self.model_dump(mode="json", exclude_none=True)
+        result = {"authorizer_type": self.authorizer_type}
+        if self.authorizer_configuration and not self.authorizer_configuration.is_empty():
+            auth_dict = self.authorizer_configuration.to_dict()
+            if auth_dict:
+                result["authorizer_configuration"] = auth_dict
+        return result
 
 
 class ArtifactSourceConfig(BaseModel):

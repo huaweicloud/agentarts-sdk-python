@@ -36,9 +36,17 @@ def status(
         Optional[int],
         typer.Option("--port", "-p", help="Local port (for local mode, default: 8080)"),
     ] = None,
+    endpoint: Annotated[
+        Optional[str],
+        typer.Option("--endpoint", "-e", help="Endpoint name"),
+    ] = None,
+    session_id: Annotated[
+        Optional[str],
+        typer.Option("--session", "-s", help="Session ID for stateful agents"),
+    ] = None,
     bearer_token: Annotated[
         Optional[str],
-        typer.Option("--token", "-t", help="Bearer token for authentication"),
+        typer.Option("--bearer-token", "-bt", help="Bearer token for authentication"),
     ] = None,
 ):
     """
@@ -52,6 +60,10 @@ def status(
         agentarts status
         agentarts status --agent my-agent
         agentarts status --mode local --port 8080
+        agentarts status --endpoint custom-endpoint
+        agentarts status --session my-session-123
+        agentarts status --bearer-token my-token
+        agentarts status -bt my-token
     """
     status_mode = InvokeMode.CLOUD
     if mode.lower() == "local":
@@ -65,6 +77,8 @@ def status(
         mode=status_mode,
         region=region,
         port=port,
+        endpoint=endpoint,
+        session_id=session_id,
         bearer_token=bearer_token,
     )
 
@@ -107,7 +121,7 @@ def invoke(
     ] = None,
     bearer_token: Annotated[
         Optional[str],
-        typer.Option("--token", "-t", help="Bearer token for authentication"),
+        typer.Option("--bearer-token", help="Bearer token for authentication"),
     ] = None,
     timeout: Annotated[
         int,

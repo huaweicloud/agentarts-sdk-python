@@ -248,7 +248,7 @@ export HUAWEICLOUD_SDK_REGION_AGENTIDENTITY_CN_SOUTHWEST_301="https://agent-iden
 
 ```python
 from typing import Optional
-from agentarts import require_access_token, require_api_key, require_sts_token
+from agentarts.sdk import require_access_token, require_api_key, require_sts_token
 from agentarts.sdk.identity.types import StsCredentials
 
 
@@ -291,7 +291,7 @@ async def access_huawei_resource(sts_credentials: Optional[StsCredentials] = Non
 使用 `IdentityClient` 进行手动控制，例如在 Web 回调中完成会话绑定。
 
 ```python
-from agentarts import IdentityClient
+from agentarts.sdk import IdentityClient
 from huaweicloudsdkagentidentity.v1.model import UserIdentifier
 
 client = IdentityClient(region="cn-north-4")
@@ -324,7 +324,7 @@ client.complete_resource_token_auth(
 `AgentIdentityContext` 管理当前请求的执行上下文，例如当前用户 ID 或回调 URL。
 
 ```python
-from agentarts import AgentArtsRuntimeContext
+from agentarts.sdk import AgentArtsRuntimeContext
 
 # 在调用装饰函数之前设置上下文
 AgentArtsRuntimeContext.set_user_id("user-123")

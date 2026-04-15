@@ -124,7 +124,7 @@ def create_agentarts_runtime(
                 "port": port or 8080,
             }
 
-        agent_description = description or f"Agent deployed from {swr_image}"
+        agent_description = description or f"Agent created by AgentArts SDK Toolkit, deployed from {swr_image}"
 
         agent = client.create_or_update_agent(
             agent_name=agent_name,

@@ -18,88 +18,45 @@ Example:
 import os
 
 
-# ============================================================
-# Huawei Cloud Credentials
-# ============================================================
+ENV_HUAWEICLOUD_SDK_AK = "HUAWEICLOUD_SDK_AK"
+ENV_HUAWEICLOUD_SDK_SK = "HUAWEICLOUD_SDK_SK"
+ENV_HUAWEICLOUD_SDK_SECURITY_TOKEN = "HUAWEICLOUD_SDK_SECURITY_TOKEN"
+ENV_HUAWEICLOUD_SDK_REGION = "HUAWEICLOUD_SDK_REGION"
+ENV_HUAWEICLOUD_REGION = "HUAWEICLOUD_REGION"
+ENV_OS_REGION_NAME = "OS_REGION_NAME"
 
-HUAWEICLOUD_SDK_AK = os.getenv("HUAWEICLOUD_SDK_AK")
-"""Huawei Cloud Access Key ID for API authentication."""
+ENV_HUAWEICLOUD_SDK_IDP_ID = "HUAWEICLOUD_SDK_IDP_ID"
+ENV_HUAWEICLOUD_SDK_ID_TOKEN_FILE = "HUAWEICLOUD_SDK_ID_TOKEN_FILE"
+ENV_HUAWEICLOUD_SDK_PROJECT_ID = "HUAWEICLOUD_SDK_PROJECT_ID"
 
-HUAWEICLOUD_SDK_SK = os.getenv("HUAWEICLOUD_SDK_SK")
-"""Huawei Cloud Secret Access Key for API authentication."""
+ENV_AGENTARTS_CONTROL_ENDPOINT = "AGENTARTS_CONTROL_ENDPOINT"
+ENV_AGENTARTS_RUNTIME_DATA_ENDPOINT = "AGENTARTS_RUNTIME_DATA_ENDPOINT"
+ENV_AGENTARTS_MEMORY_DATA_ENDPOINT = "AGENTARTS_MEMORY_DATA_ENDPOINT"
+ENV_AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT = "AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT"
 
-HUAWEICLOUD_SDK_SECURITY_TOKEN = os.getenv("HUAWEICLOUD_SDK_SECURITY_TOKEN")
-"""Security token for temporary credentials (STS). Required when using
-temporary AK/SK obtained from the Security Token Service."""
+ENV_HUAWEICLOUD_SDK_IAM_ENDPOINT = "HUAWEICLOUD_SDK_IAM_ENDPOINT"
+ENV_HUAWEICLOUD_SDK_SWR_ENDPOINT = "HUAWEICLOUD_SDK_SWR_ENDPOINT"
+ENV_HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT = "HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT"
 
-HUAWEICLOUD_SDK_REGION = os.getenv("HUAWEICLOUD_SDK_REGION")
-"""Huawei Cloud region for API requests. Defaults to "cn-southwest-2"."""
-
-# ============================================================
-# Huawei Cloud Identity Provider (IDP) Settings
-# ============================================================
-
-HUAWEICLOUD_SDK_IDP_ID = os.getenv("HUAWEICLOUD_SDK_IDP_ID")
-"""Identity Provider ID for federated authentication."""
-
-HUAWEICLOUD_SDK_ID_TOKEN_FILE = os.getenv("HUAWEICLOUD_SDK_ID_TOKEN_FILE")
-"""Path to the ID token file used for federated authentication."""
-
-HUAWEICLOUD_SDK_PROJECT_ID = os.getenv("HUAWEICLOUD_SDK_PROJECT_ID")
-"""Huawei Cloud project ID. Used to scope API requests to a specific project."""
+ENV_PYTHON_BASE_IMAGE = "PYTHON_BASE_IMAGE"
 
 
-# ============================================================
-# AgentArts Service Endpoints
-# ============================================================
+def _ensure_https(endpoint: str) -> str:
+    """
+    Ensure endpoint has https:// prefix.
 
-AGENTARTS_CONTROL_ENDPOINT = os.getenv("AGENTARTS_CONTROL_ENDPOINT")
-"""AgentArts control plane endpoint. Override this to use a custom control
-plane URL. If not set, the endpoint is derived from the region.
+    Args:
+        endpoint: The endpoint URL to check.
 
-Example: https://agentarts.cn-southwest-2.myhuaweicloud.com
-"""
+    Returns:
+        The endpoint URL with https:// prefix.
+    """
+    if not endpoint:
+        return endpoint
+    if not endpoint.startswith(("http://", "https://")):
+        return f"https://{endpoint}"
+    return endpoint
 
-AGENTARTS_RUNTIME_DATA_ENDPOINT = os.getenv("AGENTARTS_RUNTIME_DATA_ENDPOINT")
-"""AgentArts runtime data plane endpoint. Used for agent execution
-and data exchange during runtime."""
-
-AGENTARTS_MEMORY_DATA_ENDPOINT = os.getenv("AGENTARTS_MEMORY_DATA_ENDPOINT")
-"""AgentArts memory data plane endpoint. Override this to use a custom
-memory service URL. If not set, the endpoint is derived from the
-region and space ID."""
-
-AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT = os.getenv("AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT")
-
-# ============================================================
-# Huawei Cloud Service Endpoints
-# ============================================================
-
-HUAWEICLOUD_SDK_IAM_ENDPOINT = os.getenv("HUAWEICLOUD_SDK_IAM_ENDPOINT")
-"""Huawei Cloud IAM (Identity and Access Management) endpoint.
-Override this to use a custom IAM endpoint for authentication."""
-
-HUAWEICLOUD_SDK_SWR_ENDPOINT = os.getenv("HUAWEICLOUD_SDK_SWR_ENDPOINT")
-"""Huawei Cloud SWR (Software Repository for Container) endpoint.
-Used for container image management during deployment."""
-
-HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT = os.getenv("HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT")
-
-# ============================================================
-# Runtime Settings
-# ============================================================
-
-PYTHON_BASE_IMAGE = os.getenv("PYTHON_BASE_IMAGE")
-"""Base Docker image for Python agent runtime. Override this to use
-a custom base image for agent deployment.
-
-Example: swr.cn-southwest-2.myhuaweicloud.com/my-python-base:3.12
-"""
-
-
-# ============================================================
-# Helper Functions
-# ============================================================
 
 def get_region() -> str:
     """
@@ -111,14 +68,12 @@ def get_region() -> str:
     3. OS_REGION_NAME (OpenStack compatibility)
 
     Returns:
-        The region string (e.g., "cn-southwest-2"), or empty string if not set.
+        The region string (e.g., "cn-southwest-2"), or default region if not set.
     """
-    if HUAWEICLOUD_SDK_REGION:
-        return HUAWEICLOUD_SDK_REGION
-    region_env = os.getenv("HUAWEICLOUD_REGION")
+    region_env = os.getenv(ENV_HUAWEICLOUD_SDK_REGION) or os.getenv(ENV_HUAWEICLOUD_REGION)
     if region_env:
         return region_env
-    os_region = os.getenv("OS_REGION_NAME")
+    os_region = os.getenv(ENV_OS_REGION_NAME)
     if os_region:
         return os_region
     return "cn-southwest-2"
@@ -142,8 +97,9 @@ def get_control_plane_endpoint(region: str = None) -> str:
         >>> get_control_plane_endpoint("cn-southwest-2")
         "https://agentarts.cn-southwest-2.myhuaweicloud.com"
     """
-    if AGENTARTS_CONTROL_ENDPOINT:
-        return AGENTARTS_CONTROL_ENDPOINT
+    endpoint = os.getenv(ENV_AGENTARTS_CONTROL_ENDPOINT)
+    if endpoint:
+        return _ensure_https(endpoint)
     region = region or get_region()
     return f"https://agentarts.{region}.myhuaweicloud.com"
 
@@ -152,18 +108,16 @@ def get_runtime_data_plane_endpoint() -> str:
     """
     Get the AgentArts data plane endpoint URL.
 
-    Args:
-        endpoint: Custom data plane endpoint URL. If not provided,
-                  uses AGENTARTS_RUNTIME_DATA_ENDPOINT from environment.
-
     Returns:
         The data plane endpoint URL, or empty string if not configured.
     """
-    return AGENTARTS_RUNTIME_DATA_ENDPOINT
+    endpoint = os.getenv(ENV_AGENTARTS_RUNTIME_DATA_ENDPOINT) or ""
+    return _ensure_https(endpoint)
+
 
 def get_code_interpreter_data_plane_endpoint(endpoint: str = None) -> str:
     """
-    Get the AgentArts data plane endpoint URL.
+    Get the AgentArts code interpreter data plane endpoint URL.
 
     Args:
         endpoint: Custom data plane endpoint URL. If not provided,
@@ -172,11 +126,14 @@ def get_code_interpreter_data_plane_endpoint(endpoint: str = None) -> str:
     Returns:
         The data plane endpoint URL, or empty string if not configured.
     """
-    if AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT:
-        return AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT
+    code_endpoint = os.getenv(ENV_AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT)
+    if code_endpoint:
+        return _ensure_https(code_endpoint)
     if endpoint:
-        return endpoint
-    return AGENTARTS_RUNTIME_DATA_ENDPOINT
+        return _ensure_https(endpoint)
+    runtime_endpoint = os.getenv(ENV_AGENTARTS_RUNTIME_DATA_ENDPOINT) or ""
+    return _ensure_https(runtime_endpoint)
+
 
 def get_memory_endpoint(
     endpoint_type: str = "control",
@@ -213,8 +170,9 @@ def get_memory_endpoint(
     if endpoint_type == "control":
         return get_control_plane_endpoint(region)
     elif endpoint_type == "data":
-        if AGENTARTS_MEMORY_DATA_ENDPOINT:
-            return AGENTARTS_MEMORY_DATA_ENDPOINT
+        memory_endpoint = os.getenv(ENV_AGENTARTS_MEMORY_DATA_ENDPOINT)
+        if memory_endpoint:
+            return _ensure_https(memory_endpoint)
         if not space_id:
             raise ValueError("space_id is required for data endpoint")
         region = region or get_region()
@@ -241,10 +199,12 @@ def get_iam_endpoint(region: str = None) -> str:
         >>> get_iam_endpoint("cn-southwest-2")
         "https://iam.cn-southwest-2.myhuaweicloud.com"
     """
-    if HUAWEICLOUD_SDK_IAM_ENDPOINT:
-        return HUAWEICLOUD_SDK_IAM_ENDPOINT
+    endpoint = os.getenv(ENV_HUAWEICLOUD_SDK_IAM_ENDPOINT)
+    if endpoint:
+        return _ensure_https(endpoint)
     region = region or get_region()
     return f"https://iam.{region}.myhuaweicloud.com"
+
 
 def get_swr_endpoint(region: str = None) -> str:
     """
@@ -264,16 +224,18 @@ def get_swr_endpoint(region: str = None) -> str:
         >>> get_swr_endpoint("cn-southwest-2")
         "https://swr-api.cn-southwest-2.myhuaweicloud.com"
     """
-    if HUAWEICLOUD_SDK_SWR_ENDPOINT:
-        return HUAWEICLOUD_SDK_SWR_ENDPOINT
+    endpoint = os.getenv(ENV_HUAWEICLOUD_SDK_SWR_ENDPOINT)
+    if endpoint:
+        return _ensure_https(endpoint)
     region = region or get_region()
     return f"https://swr-api.{region}.myhuaweicloud.com"
 
+
 def get_identity_endpoint(region: str = None) -> str:
     """
-    Get the Huawei Cloud SWR (Software Repository for Container) endpoint URL.
+    Get the Huawei Cloud Agent Identity endpoint URL.
 
-    If HUAWEICLOUD_SDK_SWR_ENDPOINT is set, returns that value directly.
+    If HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT is set, returns that value directly.
     Otherwise, constructs the endpoint from the region.
 
     Args:
@@ -281,13 +243,39 @@ def get_identity_endpoint(region: str = None) -> str:
                  If not provided, auto-detected from environment.
 
     Returns:
-        The SWR endpoint URL.
+        The Agent Identity endpoint URL.
 
     Example:
-        >>> get_swr_endpoint("cn-southwest-2")
+        >>> get_identity_endpoint("cn-southwest-2")
         "https://agent-identity.cn-southwest-2.myhuaweicloud.com"
     """
-    if HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT:
-        return HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT
+    endpoint = os.getenv(ENV_HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT)
+    if endpoint:
+        return _ensure_https(endpoint)
     region = region or get_region()
     return f"https://agent-identity.{region}.myhuaweicloud.com"
+
+
+def get_ak() -> str:
+    """Get Huawei Cloud Access Key ID from environment."""
+    return os.getenv(ENV_HUAWEICLOUD_SDK_AK) or ""
+
+
+def get_sk() -> str:
+    """Get Huawei Cloud Secret Access Key from environment."""
+    return os.getenv(ENV_HUAWEICLOUD_SDK_SK) or ""
+
+
+def get_security_token() -> str:
+    """Get Huawei Cloud Security Token from environment (for STS)."""
+    return os.getenv(ENV_HUAWEICLOUD_SDK_SECURITY_TOKEN) or ""
+
+
+def get_project_id() -> str:
+    """Get Huawei Cloud Project ID from environment."""
+    return os.getenv(ENV_HUAWEICLOUD_SDK_PROJECT_ID) or ""
+
+
+def get_python_base_image() -> str:
+    """Get Python base image from environment."""
+    return os.getenv(ENV_PYTHON_BASE_IMAGE) or ""

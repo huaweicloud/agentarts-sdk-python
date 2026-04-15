@@ -1,5 +1,6 @@
 """Config operation implementation"""
 
+import platform as platform_module
 from pathlib import Path
 from typing import List, Optional
 
@@ -16,6 +17,35 @@ from agentarts.toolkit.utils.runtime.config import (
 console = Console()
 
 CONFIG_FILE_NAME = ".agentarts_config.yaml"
+
+
+def detect_platform() -> str:
+    """
+    Detect the current platform architecture.
+
+    Returns:
+        str: Platform string (e.g., 'linux/amd64', 'linux/arm64')
+    """
+    machine = platform_module.machine().lower()
+    system = platform_module.system().lower()
+
+    if system == "linux":
+        if machine in ("aarch64", "arm64"):
+            return "linux/arm64"
+        elif machine in ("x86_64", "amd64"):
+            return "linux/amd64"
+    elif system == "darwin":
+        if machine in ("aarch64", "arm64"):
+            return "linux/arm64"
+        elif machine in ("x86_64", "amd64"):
+            return "linux/amd64"
+    elif system == "windows":
+        if machine in ("amd64", "x86_64"):
+            return "linux/amd64"
+        elif machine in ("arm64", "aarch64"):
+            return "linux/arm64"
+
+    return "linux/amd64"
 
 
 def detect_dependency_file() -> str:
@@ -204,19 +234,21 @@ def add_agent(
         
         final_region = existing_dict.get("base", {}).get("region", "cn-southwest-2")
         final_org = existing_dict.get("swr_config", {}).get("organization", "agentarts-org")
-        final_repo = existing_dict.get("swr_config", {}).get("repository", name)
+        final_repo = existing_dict.get("swr_config", {}).get("repository", f"agent_{name}")
         
         artifact_url = f"swr.{final_region}.myhuaweicloud.com/{final_org}/{final_repo}:latest"
         existing_dict.setdefault("runtime", {}).setdefault("artifact_source", {})["url"] = artifact_url
         
         agent_config = AgentArtsConfig.from_dict(existing_dict)
     else:
+        detected_platform = detect_platform()
         agent_config = AgentArtsConfig(
             base=BaseConfig(
                 name=name,
                 entrypoint=entrypoint,
                 region=region,
                 dependency_file=dependency_file,
+                platform=detected_platform,
             ),
             swr_config=SWRConfig(
                 organization=swr_organization,
@@ -228,7 +260,7 @@ def add_agent(
         
         final_region = region or "cn-southwest-2"
         final_org = swr_organization or "agentarts-org"
-        final_repo = swr_repository or name
+        final_repo = swr_repository or f"agent_{name}"
         
         artifact_url = f"swr.{final_region}.myhuaweicloud.com/{final_org}/{final_repo}:latest"
         agent_config_dict = agent_config.to_dict()
@@ -380,9 +412,22 @@ def set_config_value(key: str, value: str, agent_name: Optional[str] = None) -> 
 
     try:
         updated_config = AgentArtsConfig.from_dict(config_dict)
-        config.agents[agent_name] = updated_config
+        
+        if key == "base.name" and value != agent_name:
+            config.agents[value] = updated_config
+            del config.agents[agent_name]
+            
+            if config.default_agent == agent_name:
+                config.default_agent = value
+            
+            console.print(f"[green]Done:[/green] Renamed agent [cyan]{agent_name}[/cyan] to [cyan]{value}[/cyan]")
+            agent_name = value
+        else:
+            config.agents[agent_name] = updated_config
+        
         if save_config(config):
-            console.print(f"[green]Done:[/green] Set [cyan]{key}[/cyan] = [yellow]{value}[/yellow] for agent [cyan]{agent_name}[/cyan]")
+            if key != "base.name":
+                console.print(f"[green]Done:[/green] Set [cyan]{key}[/cyan] = [yellow]{value}[/yellow] for agent [cyan]{agent_name}[/cyan]")
             return True
     except Exception as e:
         console.print(f"[red]Error: Failed to set configuration: {e}[/red]")
@@ -460,6 +505,7 @@ def generate_dockerfile(agent_name: Optional[str] = None, output_path: Optional[
     base_image = agent_config.base.base_image
     dependency_file = agent_config.base.dependency_file
     entrypoint = agent_config.base.entrypoint
+    region = agent_config.base.region
     port = agent_config.runtime.invoke_config.port if agent_config.runtime.invoke_config else 8080
 
     return _generate_dockerfile(
@@ -468,4 +514,5 @@ def generate_dockerfile(agent_name: Optional[str] = None, output_path: Optional[
         entrypoint=entrypoint,
         port=port,
         output_path=output_path or "Dockerfile",
+        region=region,
     )

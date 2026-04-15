@@ -28,7 +28,7 @@
 | `--region` | `-r` | 华为云区域 | 否，默认 cn-southwest-2 |
 | `--dependency-file` | `-d` | 依赖文件路径 | 否，自动检测 |
 | `--swr-org` | 无 | SWR 组织名称 | 否，默认 agentarts-org |
-| `--swr-repo` | 无 | SWR 仓库名称 | 否，默认与 Agent 名称相同 |
+| `--swr-repo` | 无 | SWR 仓库名称 | 否，默认 `agent_{Agent名称}` |
 | `--set-default` | 无 | 设置为默认 Agent | 否，默认是 |
 
 ### config get
