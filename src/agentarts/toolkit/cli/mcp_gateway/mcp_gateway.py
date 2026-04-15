@@ -60,7 +60,6 @@ def create_mcp_gateway(
     authorizer_configuration: Annotated[Optional[str], typer.Option("--authorizer-configuration", help="Authorizer configuration (JSON format)")] = None,
     log_delivery_configuration: Annotated[Optional[str], typer.Option("--log-delivery-configuration", help="Log delivery configuration (JSON format)")] = None,
     outbound_network_configuration: Annotated[Optional[str], typer.Option("--outbound-network-configuration", help="Outbound network configuration (JSON format)")] = None,
-    tags: Annotated[List[str], typer.Option("--tags", help="Gateway tags")] = None,
 ):
     """
     Create a new MCP gateway
@@ -83,7 +82,6 @@ def create_mcp_gateway(
             authorizer_configuration=authorizer_config,
             log_delivery_configuration=log_delivery_config,
             outbound_network_configuration=outbound_network_config,
-            tags=list(tags) if tags else [],
         )
 
         if result.success:
@@ -103,7 +101,6 @@ def update_mcp_gateway(
     description: Annotated[Optional[str], typer.Option("--description", "-d", help="Gateway description")] = None,
     authorizer_configuration: Annotated[Optional[str], typer.Option("--authorizer-configuration", help="Authorizer configuration (JSON format)")] = None,
     log_delivery_configuration: Annotated[Optional[str], typer.Option("--log-delivery-configuration", help="Log delivery configuration (JSON format)")] = None,
-    tags: Annotated[List[str], typer.Option("--tags", help="Gateway tags")] = None,
 ):
     """
     Update an existing MCP gateway
@@ -121,7 +118,6 @@ def update_mcp_gateway(
             description=description,
             authorizer_configuration=authorizer_config,
             log_delivery_configuration=log_delivery_config,
-            tags=list(tags) if tags else [],
         )
 
         if result.success:
@@ -190,7 +186,6 @@ def list_mcp_gateways(
     name: Annotated[Optional[str], typer.Option("--name", help="Gateway name")] = None,
     status: Annotated[Optional[str], typer.Option("--status", help="Gateway status")] = None,
     gateway_id: Annotated[Optional[str], typer.Option("--gateway-id", help="Gateway ID")] = None,
-    tags: Annotated[Optional[str], typer.Option("--tags", help="Gateway tags")] = None,
     limit: Annotated[Optional[int], typer.Option("--limit", help="Limit for pagination (default: 50, min: 1, max: 50)")] = None,
     offset: Annotated[Optional[int], typer.Option("--offset", help="Offset for pagination (default: 0, min: 0, max: 1000000)")] = None,
 ):
@@ -220,7 +215,6 @@ def list_mcp_gateways(
             name=name,
             status=status,
             gateway_id=gateway_id,
-            tags=tags,
             limit=limit,
             offset=offset,
         )
