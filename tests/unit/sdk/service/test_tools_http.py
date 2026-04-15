@@ -5,8 +5,8 @@ from agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHt
 from agentarts.sdk.service.http_client import RequestResult
 
 class TestToolsHttpClient(unittest.TestCase):
-    @patch("agentarts.sdk.service.tools_http.HUAWEICLOUD_SDK_AK")
-    @patch("agentarts.sdk.service.tools_http.HUAWEICLOUD_SDK_SK")
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_AK")
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_SK")
     def setUp(self, mock_ak, mock_sk):
         mock_ak = "test_ak"
         mock_sk = "test_sk"
@@ -236,7 +236,7 @@ class TestToolsHttpClient(unittest.TestCase):
             url=f"/v1/core/code-interpreters/{code_interpreter_id}"
         )
 
-    @patch.object(DataToolsHttpClient, "post")
+    @patch.object(DataToolsHttpClient, "put")
     def test_start_session(self, mock_post):
         """测试start_session方法"""
         # Arrange
@@ -272,7 +272,7 @@ class TestToolsHttpClient(unittest.TestCase):
         self.assertEqual(result, mock_post.return_value.data)
         mock_post.assert_called_once_with(
             url=f"/v1/code-interpreters/{code_interpreter_name}/sessions-start",
-            data=request_params,
+            json=request_params,
             headers = {"Authorization": f"Bearer {api_key}"}
         )
     
@@ -386,7 +386,7 @@ class TestToolsHttpClient(unittest.TestCase):
         params = {
             "operate_type": "execute_code",
             "arguments": {
-                "clearContext": False,
+                "clear_context": False,
                 "code": "print('hello world')",
                 "language": "python"
             }
