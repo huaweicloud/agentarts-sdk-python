@@ -14,6 +14,7 @@ import requests
 
 from .http_client import APIException
 from ..utils.constant import get_memory_endpoint, get_region
+from ..utils.signer import SDKSigner
 
 logger = logging.getLogger(__name__)
 
@@ -112,10 +113,9 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
         self._region_name = region_name
         try:
             from agentarts.sdk.utils.metadata import create_credential
-            from huaweicloudsdkcore.signer.signer import Signer
             
             self.credentials = create_credential()
-            self._signer = Signer(self.credentials)
+            self._signer = SDKSigner(credentials=self.credentials)
             logger.info(f"Successfully loaded AK/SK credentials for region {region_name}")
         except ImportError as e:
             raise ValueError(
@@ -154,8 +154,7 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
         """
         Sign the HTTP request using SDK-HMAC-SHA256 algorithm.
         
-        This method uses the same signing approach as BaseHTTPClient._sign_request_sdk(),
-        leveraging huaweicloudsdkcore.signer.signer.Signer for request signing.
+        This method uses SDKSigner utility for request signing.
         
         Args:
             method: HTTP method
@@ -170,34 +169,19 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
         if not self._signer:
             return headers
         
-        from huaweicloudsdkcore.sdk_request import SdkRequest
+        body_str = body.decode('utf-8') if body else None
         
-        parsed_url = urlparse(url)
-        schema = parsed_url.scheme or "https"
-        host = parsed_url.netloc
-        resource_path = parsed_url.path or "/"
-        
-        query_params_list = []
+        params_list = None
         if params:
-            for key, value in params.items():
-                query_params_list.append((key, value))
+            params_list = [(k, v) for k, v in params.items()]
         
-        sdk_request = SdkRequest(
+        return self._signer.sign(
             method=method,
-            schema=schema,
-            host=host,
-            resource_path=resource_path,
-            header_params=headers,
-            body=body.decode('utf-8') if body else None,
-            query_params=query_params_list,
+            url=url,
+            headers=headers,
+            body=body_str,
+            query_params=params_list,
         )
-        
-        signed_request = self._signer.sign(sdk_request)
-        
-        if hasattr(signed_request, 'header_params') and signed_request.header_params:
-            headers.update(signed_request.header_params)
-        
-        return headers
 
 
 class MemoryAPIException(APIException):

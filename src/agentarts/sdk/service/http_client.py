@@ -22,6 +22,8 @@ from urllib.parse import urlparse, quote, unquote
 
 import requests
 
+from ..utils.signer import SDKSigner
+
 _STREAM_CONTENT_TYPES = {"text/event-stream", "application/x-ndjson"}
 
 
@@ -173,6 +175,7 @@ class BaseHTTPClient:
         self._region_id = region_id
         self._signer = None
         self._credentials = None
+        self._sdk_signer = None
 
     def _urlencode(self, s: str) -> str:
         """URL encode with safe characters."""
@@ -318,27 +321,9 @@ class BaseHTTPClient:
 
     def _sign_request_sdk(self, method: str, full_url: str, **kwargs) -> dict:
         """Sign the HTTP request using SDK-HMAC-SHA256 algorithm (with body)."""
-        try:
-            from huaweicloudsdkcore.signer.signer import Signer
-            from huaweicloudsdkcore.sdk_request import SdkRequest
-        except ImportError as e:
-            raise ImportError(
-                "Huawei Cloud SDK is required for AK/SK signing. "
-                "Install it with: pip install huaweicloudsdkcore>=3.1.0"
-            ) from e
-
-        from agentarts.sdk.utils.metadata import create_credential
-
-        if not self._signer:
-            self._credentials = create_credential()
-            self._signer = Signer(self._credentials)
-
-        parsed_url = urlparse(full_url)
-        schema = parsed_url.scheme
-        host = parsed_url.netloc
-        resource_path = parsed_url.path
-        if parsed_url.query:
-            resource_path += f"?{parsed_url.query}"
+        if not self._sdk_signer:
+            from agentarts.sdk.utils.metadata import create_credential
+            self._sdk_signer = SDKSigner(credentials=create_credential())
 
         headers = kwargs.get("headers", {}) or {}
         data = kwargs.get("data")
@@ -348,7 +333,6 @@ class BaseHTTPClient:
         if data is not None:
             if isinstance(data, dict):
                 import urllib.parse
-
                 body = urllib.parse.urlencode(data)
                 if "Content-Type" not in headers:
                     headers["Content-Type"] = "application/x-www-form-urlencoded"
@@ -356,37 +340,26 @@ class BaseHTTPClient:
                 body = data
         elif json_data is not None:
             import json
-
             body = json.dumps(json_data)
             if "Content-Type" not in headers:
                 headers["Content-Type"] = "application/json"
 
-        schema = schema or "https"
-        host = host or ""
-        resource_path = resource_path or "/"
-
-        query_params_list = []
         query_params = kwargs.get("params")
+        params_list = None
         if query_params:
-            for key, value in query_params.items():
-                query_params_list.append((key, value))
+            params_list = [(k, v) for k, v in query_params.items()]
 
-        sdk_request = SdkRequest(
+        signed_headers = self._sdk_signer.sign(
             method=method,
-            schema=schema,
-            host=host,
-            resource_path=resource_path,
-            header_params=headers,
+            url=full_url,
+            headers=headers,
             body=body,
-            query_params=query_params_list,
+            query_params=params_list,
         )
-
-        signed_request = self._signer.sign(sdk_request)
 
         if "headers" not in kwargs or kwargs["headers"] is None:
             kwargs["headers"] = {}
-        if hasattr(signed_request, "header_params") and signed_request.header_params:
-            kwargs["headers"].update(signed_request.header_params)
+        kwargs["headers"].update(signed_headers)
 
         return kwargs
 
