@@ -386,7 +386,7 @@ class TestToolsHttpClient(unittest.TestCase):
         params = {
             "operate_type": "execute_code",
             "arguments": {
-                "clearContext": False,
+                "clear_context": False,
                 "code": "print('hello world')",
                 "language": "python"
             }
