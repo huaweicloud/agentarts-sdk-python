@@ -120,9 +120,10 @@ class RuntimeClient:
         """Raise on unsuccessful response and return parsed data."""
         if not result.success:
             log.error(
-                "%s failed: status=%s, error=%s",
+                "%s failed: status=%s, data=%s, error=%s",
                 operation,
                 result.status_code,
+                result.data,
                 result.error,
             )
             raise RuntimeError(
@@ -155,9 +156,10 @@ class RuntimeClient:
         """
         if not result.success:
             log.error(
-                "%s failed: status=%s, error=%s",
+                "%s failed: status=%s, data=%s error=%s",
                 operation,
                 result.status_code,
+                result.data,
                 result.error,
             )
             raise RuntimeError(
