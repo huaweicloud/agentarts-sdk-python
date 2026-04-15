@@ -88,12 +88,6 @@ def handler(payload: dict):
         }
 
 
-@app.ping
-def health_check():
-    """Health check handler."""
-    return "healthy"
-
-
 if __name__ == "__main__":
     print("Starting Code Interpreter Agent Example...")
     print("Required environment variables:")

@@ -31,12 +31,6 @@ def handler(payload: dict):
     }
 
 
-@app.ping
-def health_check():
-    """Health check handler."""
-    return "healthy"
-
-
 if __name__ == "__main__":
     print("Starting Basic Agent Example...")
     print("Endpoints:")
