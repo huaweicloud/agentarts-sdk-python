@@ -44,7 +44,7 @@ class ControlToolsHttpClient(BaseHTTPClient):
 
         """
         endpoint = f"/v1/core/code-interpreters"
-        response = self.get(url=endpoint, json=request_params)
+        response = self.get(url=endpoint, params=request_params)
         if not response.success:
             raise ToolsAPIError(response.status_code, response.error)
         else:

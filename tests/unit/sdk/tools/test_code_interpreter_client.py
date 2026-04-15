@@ -13,8 +13,8 @@ from agentarts.sdk.tools.code_interpreter import CodeInterpreter
 from agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
 
 class TestCodeInterpreterClient(unittest.TestCase):
-    @patch("agentarts.sdk.service.tools_http.ENV_HUAWEICLOUD_SDK_AK")
-    @patch("agentarts.sdk.service.tools_http.ENV_HUAWEICLOUD_SDK_SK")
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_AK")
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_SK")
     @patch("agentarts.sdk.utils.constant.get_control_plane_endpoint")
     @patch("agentarts.sdk.utils.constant.get_code_interpreter_data_plane_endpoint")
     def setUp(self, mock_get_data_plane_endpoint, mock_get_control_plane_endpoint, mock_sk, mock_ak):
