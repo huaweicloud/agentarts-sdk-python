@@ -1,5 +1,6 @@
 """Init operation implementation"""
 
+import platform as platform_module
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -22,6 +23,35 @@ TEMPLATES = {
     "langgraph": "langgraph",
     "google-adk": "google-adk",
 }
+
+
+def detect_platform() -> str:
+    """
+    Detect the current platform architecture.
+
+    Returns:
+        str: Platform string (e.g., 'linux/amd64', 'linux/arm64')
+    """
+    machine = platform_module.machine().lower()
+    system = platform_module.system().lower()
+
+    if system == "linux":
+        if machine in ("aarch64", "arm64"):
+            return "linux/arm64"
+        elif machine in ("x86_64", "amd64"):
+            return "linux/amd64"
+    elif system == "darwin":
+        if machine in ("aarch64", "arm64"):
+            return "linux/arm64"
+        elif machine in ("x86_64", "amd64"):
+            return "linux/amd64"
+    elif system == "windows":
+        if machine in ("amd64", "x86_64"):
+            return "linux/amd64"
+        elif machine in ("arm64", "aarch64"):
+            return "linux/arm64"
+
+    return "linux/amd64"
 
 
 def init_project(
@@ -61,7 +91,7 @@ def init_project(
     create_agent_file(project_path, template, name)
     create_requirements_file(project_path, template)
     create_config_file(project_path, name, template, region, swr_org, swr_repo)
-    create_dockerfile(project_path, template)
+    create_dockerfile(project_path, template, region)
 
     echo_success(f"Project '{name}' created successfully!")
     
@@ -126,7 +156,8 @@ def create_config_file(
     """Create .agentarts_config.yaml configuration file."""
     actual_region = region or "cn-southwest-2"
     actual_swr_org = swr_org or "agentarts-org"
-    actual_swr_repo = swr_repo or name
+    actual_swr_repo = swr_repo or f"agent_{name}"
+    detected_platform = detect_platform()
 
     artifact_url = f"swr.{actual_region}.myhuaweicloud.com/{actual_swr_org}/{actual_swr_repo}:latest"
 
@@ -147,7 +178,7 @@ agents:
       name: {name}
       entrypoint: agent:app
       dependency_file: requirements.txt
-      platform: linux/amd64
+      platform: {detected_platform}
       language: python3
       base_image: python:3.10-slim
       region: {actual_region}
@@ -249,15 +280,17 @@ def get_template_env_vars(template: str) -> List[Dict[str, str]]:
     return template_env_vars.get(template, [])
 
 
-def create_dockerfile(project_path: Path, template: str) -> None:
+def create_dockerfile(project_path: Path, template: str, region: Optional[str] = None) -> None:
     """Create Dockerfile for the project."""
     from agentarts.toolkit.utils.templates.docker import render_dockerfile
 
+    actual_region = region or "cn-southwest-2"
     dockerfile_content = render_dockerfile(
         base_image="python:3.10-slim",
         dependency_file="requirements.txt",
         entrypoint="agent:app",
         port=8080,
+        region=actual_region,
     )
 
     dockerfile_path = project_path / "Dockerfile"

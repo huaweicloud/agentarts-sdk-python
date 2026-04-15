@@ -34,7 +34,7 @@ Attributes:
     expiration: The expiration time of the credentials
 
 Example:
-    >>> from agentarts import require_sts_token, StsCredentials
+    >>> from agentarts.sdk.identity import require_sts_token, StsCredentials
     >>> @require_sts_token(provider_name="huaweicloud-iam", agency_session_name="example-session")
     ... async def my_func(sts_credentials: StsCredentials | None = None):
     ...     print(sts_credentials.access_key_id)
@@ -49,7 +49,7 @@ class OAuth2Vendor(StrEnum):
     Values are sourced from the SDK's CredentialProviderVendor class constants.
 
     Example:
-        >>> from agentarts import OAuth2Vendor
+        >>> from agentarts.sdk.identity import OAuth2Vendor
         >>> OAuth2Vendor.GOOGLEOAUTH2
         'GoogleOauth2'
     """

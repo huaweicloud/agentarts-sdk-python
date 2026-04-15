@@ -11,12 +11,20 @@
 | 参数 | 简写 | 说明 | 默认值 |
 |------|------|------|--------|
 | `--agent` | `-a` | Agent 名称 | 使用默认 Agent |
-| `--region` | `-r` | 华为云区域 | 从配置文件读取 |
-| `--environment` | `-e` | 部署环境 | `production` |
-| `--skip-build` | 无 | 跳过镜像构建 | `false` |
-| `--skip-push` | 无 | 跳过镜像推送 | `false` |
-| `--dry-run` | 无 | 仅显示部署计划，不执行 | `false` |
-| `--yes` | `-y` | 跳过确认提示 | `false` |
+| `--mode` | `-m` | 部署模式（local/cloud） | `cloud` |
+| `--tag` | `-t` | Docker 镜像标签 | `latest` |
+| `--port` | `-p` | 服务端口（覆盖配置） | 从配置文件读取 |
+| `--local-port` | `-l` | 本地端口映射（本地模式） | 从配置文件读取 |
+| `--swr-org` | 无 | SWR 组织（覆盖配置） | 从配置文件读取 |
+| `--swr-repo` | 无 | SWR 仓库（覆盖配置） | 从配置文件读取 |
+| `--description` | `-d` | Agent 描述（覆盖配置） | 从配置文件读取 |
+
+### 部署模式说明
+
+| 模式 | 说明 |
+|------|------|
+| `cloud` | 构建镜像、推送至 SWR、创建 AgentArts 运行时（默认） |
+| `local` | 构建镜像并在本地 Docker 中运行 |
 
 ## 部署流程
 
@@ -74,13 +82,13 @@ Endpoint: https://agentarts.cn-southwest-2.myhuaweicloud.com/v1/agent/my-agent
 
 ## 使用示例
 
-### 示例 1: 基本部署
+### 示例 1: 基本部署（云端模式）
 
 ```bash
 agentarts deploy
 ```
 
-使用默认 Agent 和配置进行部署。
+使用默认 Agent 和配置进行云端部署。
 
 ### 示例 2: 指定 Agent 部署
 
@@ -93,76 +101,72 @@ agentarts deploy --agent my-agent
 agentarts deploy -a my-agent
 ```
 
-### 示例 3: 指定区域部署
+### 示例 3: 本地模式部署
 
 ```bash
-agentarts deploy --region cn-southwest-2
+agentarts deploy --mode local
 ```
 
 或使用简写：
 ```bash
-agentarts deploy -r cn-southwest-2
+agentarts deploy -m local
 ```
 
-### 示例 4: 指定环境部署
+### 示例 4: 本地模式指定端口
 
 ```bash
-agentarts deploy --environment production
+agentarts deploy --mode local --local-port 8080
 ```
 
 或使用简写：
 ```bash
-agentarts deploy -e production
+agentarts deploy -m local -l 8080
 ```
 
-### 示例 5: 完整参数部署
+### 示例 5: 指定镜像标签
+
+```bash
+agentarts deploy --tag v1.0.0
+```
+
+或使用简写：
+```bash
+agentarts deploy -t v1.0.0
+```
+
+### 示例 6: 指定 SWR 组织和仓库
+
+```bash
+agentarts deploy --swr-org my-org --swr-repo my-repo
+```
+
+### 示例 7: 指定 Agent 描述
+
+```bash
+agentarts deploy --description "My custom agent"
+```
+
+或使用简写：
+```bash
+agentarts deploy -d "My custom agent"
+```
+
+### 示例 8: 完整参数部署
 
 ```bash
 agentarts deploy \
   --agent my-agent \
-  --region cn-southwest-2 \
-  --environment production
+  --mode cloud \
+  --tag v1.0.0 \
+  --swr-org my-org \
+  --swr-repo my-repo \
+  --description "My custom agent"
 ```
 
-### 示例 6: 跳过确认部署
+### 示例 9: 使用 launch 别名
 
 ```bash
-agentarts deploy --yes
-```
-
-或使用简写：
-```bash
-agentarts deploy -y
-```
-
-### 示例 7: 仅查看部署计划
-
-```bash
-agentarts deploy --dry-run
-```
-
-输出部署计划但不执行实际部署操作。
-
-### 示例 8: 跳过镜像构建
-
-```bash
-agentarts deploy --skip-build
-```
-
-使用已有镜像进行部署，适用于镜像已构建的情况。
-
-### 示例 9: 跳过镜像推送
-
-```bash
-agentarts deploy --skip-push
-```
-
-仅更新 Agent 配置，不推送新镜像。
-
-### 示例 10: 使用 launch 别名
-
-```bash
-agentarts launch --agent my-agent --region cn-southwest-2
+agentarts launch --agent my-agent
 ```
 
 `launch` 命令与 `deploy` 功能完全相同。

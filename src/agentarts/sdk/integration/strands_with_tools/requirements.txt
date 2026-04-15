@@ -1,4 +1,0 @@
-hw-agentarts-sdk
-strands-agents>=0.1.8
-strands-agents-tools>=0.1.6
-openai

@@ -3,7 +3,7 @@ requires = ["uv_build>=0.9.27,<0.10.0"]
 build-backend = "uv_build"
 
 [project]
-name = "huaweicloud-agentarts-sdk"
+name = "agentarts-sdk"
 version = "0.1.0"
 description = "Huawei Cloud AgentArts SDK - Build, deploy and manage AI agents with cloud capabilities"
 readme = "README.md"
@@ -44,7 +44,6 @@ dependencies = [
     "huaweicloudsdkcore>=3.1.0",
     "huaweicloudsdkiam>=3.1.0",
     "huaweicloudsdkswr>=3.1.0",
-    "huaweicloudsdkagentidentity",
     "fastapi>=0.104.0",
     "starlette>=0.46.2",
     "uvicorn[standard]>=0.24.0",
@@ -85,8 +84,9 @@ langchain = [
     "langchain-community>=0.0.10",
 ]
 langgraph = [
-    "langgraph>=0.0.20",
+    "langgraph>=1.0.0",
     "langchain>=0.1.0",
+    "langchain-core>=0.1.0",
 ]
 autogen = [
     "pyautogen>=0.2.0",
@@ -117,7 +117,7 @@ docs = [
     "myst-parser>=2.0.0",
 ]
 all = [
-    "huaweicloud-agentarts-sdk[langchain,langgraph,autogen,crewai,vector-stores,database,monitoring,huaweicloud,dev,docs]",
+    "agentarts-sdk[langchain,langgraph,autogen,crewai,vector-stores,database,monitoring,huaweicloud,dev,docs]",
 ]
 
 [project.urls]
@@ -131,7 +131,7 @@ Changelog = "https://github.com/huaweicloud/agentarts-sdk-python/blob/main/CHANG
 agentarts = "agentarts.toolkit.main:cli"
 
 [tool.uv.build-backend]
-module-name = "agentarts"
+module-name = ["agentarts", "huaweicloudsdkagentidentity"]
 module-root = "src"
 
 [tool.black]
@@ -294,7 +294,6 @@ ignore = [
 "__init__.py" = ["F401"]
 
 [tool.uv.workspace]
-members = ["examples/sdk/*", "libs/huaweicloudsdkagentidentity"]
+members = ["examples/sdk/*"]
 
 [tool.uv.sources]
-huaweicloudsdkagentidentity = { workspace = true }

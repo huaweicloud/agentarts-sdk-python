@@ -38,6 +38,7 @@ def langgraph_to_memory_message(
     message: BaseMessage,
     actor_id: Optional[str] = None,
     assistant_id: Optional[str] = None,
+    meta: Optional[str] = None,
 ) -> Union[TextMessage, ToolCallMessage, ToolResultMessage]:
     """
     Convert a LangGraph message to an AgentArts Memory message.
@@ -53,6 +54,7 @@ def langgraph_to_memory_message(
         message: LangGraph message (HumanMessage, AIMessage, etc.)
         actor_id: Actor ID for the message
         assistant_id: Assistant ID for the message
+        meta: Optional metadata string to attach to the message
         
     Returns:
         AgentArts Memory message (TextMessage, ToolCallMessage, ToolResultMessage)
@@ -73,6 +75,7 @@ def langgraph_to_memory_message(
             content=message.content,
             actor_id=actor_id,
             assistant_id=assistant_id,
+            meta=meta,
         )
     
     elif isinstance(message, AIMessage):
@@ -81,6 +84,7 @@ def langgraph_to_memory_message(
                 id=message.tool_calls[0].get("id", ""),
                 name=message.tool_calls[0].get("name", ""),
                 arguments=json.dumps(message.tool_calls[0].get("args", {}), ensure_ascii=False),
+                meta=meta,
             )
         
         return TextMessage(
@@ -88,6 +92,7 @@ def langgraph_to_memory_message(
             content=message.content,
             actor_id=actor_id,
             assistant_id=assistant_id,
+            meta=meta,
         )
     
     elif isinstance(message, SystemMessage):
@@ -96,18 +101,21 @@ def langgraph_to_memory_message(
             content=message.content,
             actor_id=actor_id,
             assistant_id=assistant_id,
+            meta=meta,
         )
     
     elif isinstance(message, ToolMessage):
         return ToolResultMessage(
             tool_call_id=message.tool_call_id,
             content=str(message.content),
+            meta=meta,
         )
     
     elif isinstance(message, FunctionMessage):
         return ToolResultMessage(
             tool_call_id=message.name,
             content=str(message.content),
+            meta=meta,
         )
     elif isinstance(message, ChatMessage):
         role = message.role
@@ -123,6 +131,7 @@ def langgraph_to_memory_message(
             content=str(message.content),
             actor_id=actor_id,
             assistant_id=assistant_id,
+            meta=meta,
         )
     else:
         return TextMessage(
@@ -130,6 +139,7 @@ def langgraph_to_memory_message(
             content=str(message.content),
             actor_id=actor_id,
             assistant_id=assistant_id,
+            meta=meta,
         )
 
 
@@ -213,6 +223,7 @@ def langgraph_messages_to_memory(
     messages: List[BaseMessage],
     actor_id: Optional[str] = None,
     assistant_id: Optional[str] = None,
+    meta: Optional[str] = None,
 ) -> List[Union[TextMessage, ToolCallMessage, ToolResultMessage]]:
     """
     Convert a list of LangGraph messages to AgentArts Memory messages.
@@ -221,12 +232,13 @@ def langgraph_messages_to_memory(
         messages: List of LangGraph messages
         actor_id: Actor ID for the messages
         assistant_id: Assistant ID for the messages
+        meta: Optional metadata string to attach to each message
         
     Returns:
-        List of AgentArts Memory messages
+        List of AgentArts Memory message objects
     """
     return [
-        langgraph_to_memory_message(msg, actor_id, assistant_id)
+        langgraph_to_memory_message(msg, actor_id, assistant_id, meta=meta)
         for msg in messages
     ]
 

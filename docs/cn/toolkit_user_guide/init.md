@@ -19,7 +19,7 @@
 | `--path` | `-p` | 项目创建路径 | `.` (当前目录) |
 | `--region` | `-r` | 华为云区域 | `cn-southwest-2` |
 | `--swr-org` | 无 | SWR 组织名称 | `agentarts-org` |
-| `--swr-repo` | 无 | SWR 仓库名称 | 与项目名称相同 |
+| `--swr-repo` | 无 | SWR 仓库名称 | `agent_{项目名称}` |
 
 ### 模板类型
 
