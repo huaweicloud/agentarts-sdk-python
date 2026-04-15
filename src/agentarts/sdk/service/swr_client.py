@@ -103,7 +103,7 @@ class SWRClient:
                 .with_region(swr_region) \
                 .with_http_config(http_config) \
                 .build()
-
+            self._client.with_credentials(credentials)
             return self._client
 
         except ImportError as e:
