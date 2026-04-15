@@ -132,7 +132,6 @@ create_mcp_gateway(
 | authorizer_configuration | Dict | 否 | None | 授权器配置 |
 | log_delivery_configuration | Dict | 否 | {"enabled": False} | 日志投递配置 |
 | outbound_network_configuration | Dict | 否 | {"network_mode": "public"} | 出站网络配置 |
-| tags | List[str] | 否 | None | 网关标签 |
 
 **返回值**：`RequestResult` 对象
 
@@ -148,8 +147,7 @@ update_mcp_gateway(
     description: Optional[str] = None,
     authorizer_configuration: Optional[Dict[str, Any]] = None,
     log_delivery_configuration: Optional[Dict[str, Any]] = None,
-    outbound_network_configuration: Optional[Dict[str, Any]] = None,
-    tags: Optional[List[str]] = None
+    outbound_network_configuration: Optional[Dict[str, Any]] = None
 ) -> RequestResult
 ```
 
@@ -162,7 +160,6 @@ update_mcp_gateway(
 | authorizer_configuration | Dict | 否 | None | 授权器配置 |
 | log_delivery_configuration | Dict | 否 | None | 日志投递配置 |
 | outbound_network_configuration | Dict | 否 | None | 出站网络配置 |
-| tags | List[str] | 否 | None | 网关标签 |
 
 **返回值**：`RequestResult` 对象
 
@@ -209,7 +206,6 @@ list_mcp_gateways(
     name: Optional[str] = None,
     status: Optional[str] = None,
     gateway_id: Optional[str] = None,
-    tags: Optional[str] = None,
     limit: Optional[int] = None,
     offset: Optional[int] = None
 ) -> RequestResult
@@ -222,7 +218,6 @@ list_mcp_gateways(
 | name | str | 否 | None | 网关名称过滤器 |
 | status | str | 否 | None | 网关状态过滤器 |
 | gateway_id | str | 否 | None | 网关 ID 过滤器 |
-| tags | str | 否 | None | 网关标签过滤器 |
 | limit | int | 否 | None | 结果的最大数量 |
 | offset | int | 否 | None | 分页偏移量 |
 

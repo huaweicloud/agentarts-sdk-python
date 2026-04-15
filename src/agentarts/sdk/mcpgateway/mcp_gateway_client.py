@@ -39,8 +39,7 @@ class MCPGatewayClient(BaseHTTPClient):
         agency_name: Optional[str] = None,
         authorizer_configuration: Optional[Dict[str, Any]] = None,
         log_delivery_configuration: Optional[Dict[str, Any]] = None,
-        outbound_network_configuration: Optional[Dict[str, Any]] = None,
-        tags: Optional[List[str]] = None
+        outbound_network_configuration: Optional[Dict[str, Any]] = None
     ) -> RequestResult:
         """
         Create a new MCP gateway.
@@ -54,7 +53,6 @@ class MCPGatewayClient(BaseHTTPClient):
             authorizer_configuration: Authorizer configuration
             log_delivery_configuration: Log delivery configuration
             outbound_network_configuration: Outbound network configuration
-            tags: Gateway tags
         
         Returns:
             RequestResult: Result of the API call
@@ -78,15 +76,16 @@ class MCPGatewayClient(BaseHTTPClient):
                 "Statement": [
                     {
                         "Action": [
-                            "agentIdentity::getWorkloadAccessToken",
-                            "agentIdentity::getWorkloadAccessToken",
-                            "agentIdentity::getWorkloadAccessToken",
-                            "agentIdentity::getWorkloadAccessToken",
-                            "agentIdentity::getWorkloadAccessToken",
                             "csms:secret:getVersion"
+                            "agentIdentity::getAuthorizerConfiguration",
+                            "agentIdentity::getResourceApiKey",
+                            "agentIdentity::getResourceOauth2Token",
+                            "agentIdentity::getResourceStsToken",
                         ],
                         "Effect": "Allow",
-                        "Principal": {}
+                        "Principal": {
+                            "Service": ["service.SandboxMetadata"]
+                        }
                     }
                 ]
             }
@@ -122,8 +121,7 @@ class MCPGatewayClient(BaseHTTPClient):
             "agency_name": agency_name,
             "authorizer_configuration": authorizer_configuration,
             "log_delivery_configuration": log_delivery_configuration,
-            "outbound_network_configuration": outbound_network_configuration,
-            "tags": tags
+            "outbound_network_configuration": outbound_network_configuration
         }
         
         # Remove None values
@@ -136,8 +134,7 @@ class MCPGatewayClient(BaseHTTPClient):
         gateway_id: str,
         description: Optional[str] = None,
         authorizer_configuration: Optional[Dict[str, Any]] = None,
-        log_delivery_configuration: Optional[Dict[str, Any]] = None,
-        tags: Optional[List[str]] = None
+        log_delivery_configuration: Optional[Dict[str, Any]] = None
     ) -> RequestResult:
         """
         Update an existing MCP gateway.
@@ -147,7 +144,6 @@ class MCPGatewayClient(BaseHTTPClient):
             description: Gateway description
             authorizer_configuration: Authorizer configuration
             log_delivery_configuration: Log delivery configuration
-            tags: Gateway tags
             
         Returns:
             RequestResult: Result of the API call
@@ -160,22 +156,19 @@ class MCPGatewayClient(BaseHTTPClient):
         if all(param is None for param in [
             description,
             authorizer_configuration,
-            log_delivery_configuration,
-            tags
+            log_delivery_configuration
         ]):
             updateable_fields = [
                 "description",
                 "authorizer_configuration",
-                "log_delivery_configuration",
-                "tags"
+                "log_delivery_configuration"
             ]
             raise ValueError(f"At least one parameter must be provided for update. Available fields: {', '.join(updateable_fields)}")
         
         payload = {
             "description": description,
             "authorizer_configuration": authorizer_configuration,
-            "log_delivery_configuration": log_delivery_configuration,
-            "tags": tags
+            "log_delivery_configuration": log_delivery_configuration
         }
         
         # Remove None values
@@ -212,7 +205,6 @@ class MCPGatewayClient(BaseHTTPClient):
         name: Optional[str] = None,
         status: Optional[str] = None,
         gateway_id: Optional[str] = None,
-        tags: Optional[str] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None
     ) -> RequestResult:
@@ -223,7 +215,6 @@ class MCPGatewayClient(BaseHTTPClient):
             name: Gateway name filter
             status: Gateway status filter
             gateway_id: Gateway ID filter
-            tags: Gateway tags filter
             limit: Maximum number of results
             offset: Offset for pagination
             
@@ -234,7 +225,6 @@ class MCPGatewayClient(BaseHTTPClient):
             "name": name,
             "status": status,
             "gateway_id": gateway_id,
-            "tags": tags,
             "limit": limit,
             "offset": offset
         }
