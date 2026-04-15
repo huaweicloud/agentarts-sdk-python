@@ -254,6 +254,25 @@ class BaseHTTPClient:
         arr.sort()
         return arr
 
+    def _get_security_token(self) -> Optional[str]:
+        """Get security token from credentials if available.
+        
+        Returns:
+            Security token string or None if not available.
+        """
+        if not self._credentials:
+            return None
+        
+        security_token = getattr(self._credentials, 'security_token', None)
+        if security_token:
+            return security_token
+        
+        security_token = getattr(self._credentials, 'securityToken', None)
+        if security_token:
+            return security_token
+        
+        return None
+
     def _sign_request_v11(self, method: str, full_url: str, **kwargs) -> dict:
         """Sign the HTTP request using V11-HMAC-SHA256 algorithm (without body)."""
         if not self._credentials:
@@ -276,6 +295,10 @@ class BaseHTTPClient:
         headers["host"] = host
         headers["x-sdk-date"] = timestamp
         headers["x-sdk-content-sha256"] = "UNSIGNED-PAYLOAD"
+
+        security_token = self._get_security_token()
+        if security_token:
+            headers["X-Security-Token"] = security_token
 
         signed_headers = self._signed_headers(headers)
         canonical_request = (

@@ -55,6 +55,25 @@ class SDKSigner:
         """Get credentials."""
         return self._credentials
     
+    def _get_security_token(self) -> Optional[str]:
+        """Get security token from credentials if available.
+        
+        Returns:
+            Security token string or None if not available.
+        """
+        if not self._credentials:
+            return None
+        
+        security_token = getattr(self._credentials, 'security_token', None)
+        if security_token:
+            return security_token
+        
+        security_token = getattr(self._credentials, 'securityToken', None)
+        if security_token:
+            return security_token
+        
+        return None
+    
     def sign(
         self,
         method: str,
@@ -99,6 +118,10 @@ class SDKSigner:
         
         if hasattr(signed_request, 'header_params') and signed_request.header_params:
             headers.update(signed_request.header_params)
+        
+        security_token = self._get_security_token()
+        if security_token:
+            headers["X-Security-Token"] = security_token
         
         return headers
 
