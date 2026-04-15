@@ -221,6 +221,9 @@ class CodeInterpreter:
             "sort_dir": sort_dir,
         }
 
+        # Remove None values
+        request_params = {k: v for k, v in request_params.items() if v is not None}
+
         result = self.control_plane_client.list_code_interpreters(
             request_params=request_params
         )
@@ -424,7 +427,7 @@ class CodeInterpreter:
             return True
 
         if api_key is None:
-            api_key = os.getenv("API_KEY")
+            api_key = os.getenv("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
         self.data_plane_client.stop_session(
             code_interpreter_name=self.code_interpreter_name,
