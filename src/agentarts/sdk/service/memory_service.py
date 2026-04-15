@@ -4,15 +4,11 @@ This module provides a service class for interacting with Huawei Cloud's Memory 
 using requests and HTTP authentication.
 """
 
-import hashlib
-import hmac
-import datetime
-import json as json_module
 import logging
 import os
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional, Union
-from urllib.parse import urlparse, quote, unquote
+from urllib.parse import urlparse
 
 import requests
 
@@ -103,20 +99,29 @@ class DataPlaneAuthenticationStrategy(AuthenticationStrategy):
 
 
 class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
-    """Control plane authentication strategy with AK/SK signing."""
+    """Control plane authentication strategy with AK/SK signing using SDK-HMAC-SHA256."""
     
     def __init__(self):
         self.credentials = None
         self._region_name = None
+        self._signer = None
     
     def setup_credentials(self, region_name: str):
-        """Setup AK/SK credentials."""
+        """Setup AK/SK credentials and signer."""
         self._region_name = region_name
         try:
             from agentarts.sdk.utils.metadata import create_credential
-            credentials = create_credential()
-            self.credentials = credentials
+            from huaweicloudsdkcore.signer.signer import Signer
+            
+            self.credentials = create_credential()
+            self._signer = Signer(self.credentials)
             logger.info(f"Successfully loaded AK/SK credentials for region {region_name}")
+        except ImportError as e:
+            raise ValueError(
+                f"Huawei Cloud SDK is required for control plane signing. "
+                f"Install it with: pip install huaweicloudsdkcore>=3.1.0. "
+                f"Error: {e}"
+            )
         except Exception as e:
             raise ValueError(
                 f"Failed to load AK/SK credentials for control plane. "
@@ -127,83 +132,6 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
     def setup_session_hooks(self, session: requests.Session):
         """Setup control plane authentication hooks."""
         pass
-    
-    def _urlencode(self, s: str) -> str:
-        """URL encode with safe characters."""
-        return quote(s, safe="~")
-    
-    def _get_timestamp(self) -> str:
-        """Get current timestamp in SDK format."""
-        return datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    
-    def _hex_encode_sha256(self, data: bytes) -> str:
-        """Hex encode SHA256 hash."""
-        return hashlib.sha256(data).hexdigest()
-    
-    def _hkdf(self, key: str, secret: str, info: str, length: int = 32) -> str:
-        """Derive signing key using HKDF algorithm."""
-        salt = bytearray(key, "utf-8")
-        ikm = bytearray(secret, "utf-8")
-        info_bytes = bytearray(info, "utf-8")
-
-        prk = hmac.new(salt, ikm, hashlib.sha256).digest()
-
-        okm = b""
-        t = b""
-        for i in range(1, (length + 32) // 32 + 1):
-            new_info = t + info_bytes + bytes([i])
-            t = hmac.new(prk, new_info, hashlib.sha256).digest()
-            okm += t
-
-        return okm[:length].hex()
-    
-    def _canonical_uri(self, path: str) -> str:
-        """Build canonical URI path."""
-        patterns = unquote(path).split("/")
-        uri = []
-        for value in patterns:
-            uri.append(self._urlencode(value))
-        url_path = "/".join(uri)
-        if url_path and url_path[-1] != "/":
-            url_path = url_path + "/"
-        return url_path
-
-    def _canonical_query_string(self, query_params: Optional[Dict[str, Any]]) -> str:
-        """Build canonical query string."""
-        if not query_params:
-            return ""
-
-        keys = sorted(query_params.keys())
-        arr = []
-        for key in keys:
-            ke = self._urlencode(key)
-            value = query_params[key]
-            if isinstance(value, list):
-                sorted_values = sorted(str(v) for v in value)
-                for v in sorted_values:
-                    arr.append(f"{ke}={self._urlencode(v)}")
-            else:
-                arr.append(f"{ke}={self._urlencode(str(value))}")
-        return "&".join(arr)
-
-    def _canonical_headers(self, headers: Dict[str, str], signed_headers: list) -> str:
-        """Build canonical headers string."""
-        _headers = {}
-        for k, v in headers.items():
-            key_lower = k.lower()
-            value_stripped = v.strip()
-            _headers[key_lower] = value_stripped
-
-        arr = []
-        for k in signed_headers:
-            arr.append(f"{k}:{_headers.get(k, '')}")
-        return "\n".join(arr) + "\n"
-
-    def _signed_headers(self, headers: Dict[str, str]) -> list:
-        """Get sorted list of signed header names."""
-        arr = [k.lower() for k in headers.keys()]
-        arr.sort()
-        return arr
     
     def get_headers(self) -> Dict[str, str]:
         """Get base headers for control plane requests."""
@@ -223,7 +151,10 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
     def sign_request(self, method: str, url: str, headers: Dict[str, str],
                      body: Optional[bytes] = None) -> Dict[str, str]:
         """
-        Sign the HTTP request using V11-HMAC-SHA256 algorithm.
+        Sign the HTTP request using SDK-HMAC-SHA256 algorithm.
+        
+        This method uses the same signing approach as BaseHTTPClient._sign_request_sdk(),
+        leveraging huaweicloudsdkcore.signer.signer.Signer for request signing.
         
         Args:
             method: HTTP method
@@ -234,62 +165,33 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
         Returns:
             Updated headers dict with signature
         """
-        if not self.credentials:
+        if not self._signer:
             return headers
         
+        from huaweicloudsdkcore.sdk_request import SdkRequest
+        
         parsed_url = urlparse(url)
+        schema = parsed_url.scheme or "https"
         host = parsed_url.netloc
-        path = parsed_url.path or "/"
+        resource_path = parsed_url.path or "/"
         
-        timestamp = self._get_timestamp()
-        date_str = timestamp[:8]
-        
-        headers["host"] = host
-        headers["x-sdk-date"] = timestamp
-        headers["x-sdk-content-sha256"] = "UNSIGNED-PAYLOAD"
-        
-        query_params = {}
         if parsed_url.query:
-            for pair in parsed_url.query.split("&"):
-                if "=" in pair:
-                    key, value = pair.split("=", 1)
-                    query_params[key] = value
-
-        signed_headers = self._signed_headers(headers)
-        canonical_request = (
-            f"{method.upper()}\n"
-            f"{self._canonical_uri(path)}\n"
-            f"{self._canonical_query_string(query_params)}\n"
-            f"{self._canonical_headers(headers, signed_headers)}\n"
-            f"{';'.join(signed_headers)}\n"
-            f"UNSIGNED-PAYLOAD"
+            resource_path += f"?{parsed_url.query}"
+        
+        sdk_request = SdkRequest(
+            method=method,
+            schema=schema,
+            host=host,
+            resource_path=resource_path,
+            header_params=headers,
+            body=body.decode('utf-8') if body else None,
+            query_params=[],
         )
-
-        credential_scope = f"{date_str}/{self._region_name}/apic"
-        hashed_canonical_request = self._hex_encode_sha256(canonical_request.encode("utf-8"))
-
-        string_to_sign = (
-            f"V11-HMAC-SHA256\n"
-            f"{timestamp}\n"
-            f"{credential_scope}\n"
-            f"{hashed_canonical_request}"
-        )
-
-        real_use_secret = self._hkdf(self.credentials.ak, self.credentials.sk, credential_scope)
-        signature = hmac.new(
-            real_use_secret.encode("utf-8"),
-            string_to_sign.encode("utf-8"),
-            hashlib.sha256
-        ).hexdigest()
-
-        authorization = (
-            f"V11-HMAC-SHA256 "
-            f"Credential={self.credentials.ak}/{credential_scope}, "
-            f"SignedHeaders={';'.join(signed_headers)}, "
-            f"Signature={signature}"
-        )
-
-        headers["Authorization"] = authorization
+        
+        signed_request = self._signer.sign(sdk_request)
+        
+        if hasattr(signed_request, 'header_params') and signed_request.header_params:
+            headers.update(signed_request.header_params)
         
         return headers
 
@@ -401,8 +303,9 @@ class MemoryHttpService:
         text_data = None
         if data is not None:
             if isinstance(data, dict):
+                import json
                 json_data = data
-                body_bytes = json_module.dumps(data).encode('utf-8')
+                body_bytes = json.dumps(data).encode('utf-8')
             else:
                 text_data = data
                 body_bytes = data.encode('utf-8') if isinstance(data, str) else data
