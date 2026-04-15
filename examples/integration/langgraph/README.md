@@ -19,7 +19,7 @@ python langgraph_agent.py
 # 使用 AgentArts Memory 模式
 export USE_AGENTARTS_MEMORY=true
 export AGENTARTS_MEMORY_SPACE_ID="your-space-id"
-export AGENTARTS_MEMORY_DATA_ENDPOINT="https://your-space.memory.cn-southwest-2.agentarts.myhuaweicloud.com"
+export HUAWEICLOUD_SDK_MEMORY_API_KEY="your-api-key"
 python langgraph_agent.py
 ```
 
@@ -48,14 +48,21 @@ curl http://localhost:8080/threads/xxx/history
 
 ## 环境变量
 
+### 基础配置（必需）
+
 | 变量名 | 说明 | 必需 |
 |-------|------|------|
 | `OPENAI_API_KEY` | OpenAI API Key | 是 |
 | `OPENAI_MODEL_NAME` | 模型名称 | 否（默认 gpt-4o-mini） |
 | `OPENAI_BASE_URL` | API Base URL | 否 |
+
+### AgentArts Memory 配置（可选）
+
+| 变量名 | 说明 | 必需 |
+|-------|------|------|
 | `USE_AGENTARTS_MEMORY` | 是否使用 AgentArts Memory | 否（默认 false） |
 | `AGENTARTS_MEMORY_SPACE_ID` | Memory Space ID | 使用 Memory 时必需 |
-| `AGENTARTS_MEMORY_DATA_ENDPOINT` | Memory 服务地址 | 使用 Memory 时必需 |
+| `HUAWEICLOUD_SDK_MEMORY_API_KEY` | Memory API Key | 使用 Memory 时必需 |
 
 ## 两种模式对比
 

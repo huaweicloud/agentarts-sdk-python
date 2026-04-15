@@ -4,9 +4,6 @@ import os
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from agentarts.sdk import AgentApp, AgentContext
-from agentarts.sdk.memory import TextMessage
-
 app = FastAPI(title="Basic Agent Example")
 
 
@@ -26,7 +23,7 @@ async def chat(request: ChatRequest):
     Simple chat endpoint that echoes back the message.
     
     This is a minimal example showing how to create an agent
-    using AgentArts SDK with FastAPI.
+    using FastAPI that can be deployed with AgentArts Toolkit.
     """
     session_id = request.session_id or "default-session"
     

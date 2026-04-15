@@ -10,97 +10,7 @@ from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import tool
 
-from agentarts.sdk.code_interpreter import CodeInterpreterClient
-
 app = FastAPI(title="LangChain Agent with AgentArts Tools")
-
-code_interpreter = CodeInterpreterClient()
-
-
-@tool
-def execute_python_code(code: str) -> str:
-    """
-    Execute Python code and return the result.
-    
-    Use this tool when you need to perform calculations,
-    data analysis, or any Python operations.
-    
-    Args:
-        code: Python code to execute
-        
-    Returns:
-        Execution result including stdout and any errors
-    """
-    result = code_interpreter.execute_code(
-        code=code,
-        language="python",
-        session_id="langchain-session",
-    )
-    
-    output = result.get("stdout", "")
-    error = result.get("stderr", "")
-    
-    if error:
-        return f"Error: {error}\nOutput: {output}"
-    return output
-
-
-@tool
-def calculate(expression: str) -> str:
-    """
-    Evaluate a mathematical expression.
-    
-    Args:
-        expression: Mathematical expression to evaluate (e.g., "2 + 2", "sqrt(16)")
-        
-    Returns:
-        The result of the calculation
-    """
-    code = f"""
-import math
-result = {expression}
-print(result)
-"""
-    result = code_interpreter.execute_code(
-        code=code,
-        language="python",
-        session_id="calc-session",
-    )
-    
-    return result.get("stdout", "").strip() or "Could not evaluate expression"
-
-
-def create_agent():
-    """
-    Create a LangChain agent with AgentArts tools.
-    
-    This example demonstrates:
-    - Creating custom tools using AgentArts Code Interpreter
-    - Building a tool-calling agent with LangChain
-    - Using OpenAI as the LLM backend
-    """
-    llm = ChatOpenAI(
-        model=os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini"),
-        api_key=os.getenv("OPENAI_API_KEY"),
-        base_url=os.getenv("OPENAI_BASE_URL"),
-        temperature=0,
-    )
-    
-    tools = [execute_python_code, calculate]
-    
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are a helpful assistant with access to Python code execution. "
-                   "Use the tools to help answer questions that require calculations or data processing."),
-        ("human", "{input}"),
-        ("placeholder", "{agent_scratchpad}"),
-    ])
-    
-    agent = create_tool_calling_agent(llm, tools, prompt)
-    
-    return AgentExecutor(agent=agent, tools=tools, verbose=True)
-
-
-agent_executor = create_agent()
 
 
 class ChatRequest(BaseModel):
@@ -113,15 +23,115 @@ class ChatResponse(BaseModel):
     intermediate_steps: Optional[List[dict]] = None
 
 
+def create_agent_with_tools():
+    """
+    Create a LangChain agent with custom tools.
+    
+    This example demonstrates:
+    - Creating custom tools using LangChain's @tool decorator
+    - Building a tool-calling agent with LangChain
+    - Using OpenAI as the LLM backend
+    
+    Note: For Code Interpreter integration, you need to:
+    1. Create a Code Interpreter instance in Huawei Cloud
+    2. Set environment variables for authentication
+    """
+    llm = ChatOpenAI(
+        model=os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini"),
+        api_key=os.getenv("OPENAI_API_KEY"),
+        base_url=os.getenv("OPENAI_BASE_URL"),
+        temperature=0,
+    )
+    
+    @tool
+    def calculate(expression: str) -> str:
+        """
+        Evaluate a mathematical expression.
+        
+        Use this tool for mathematical calculations.
+        
+        Args:
+            expression: Mathematical expression to evaluate (e.g., "2 + 2", "sqrt(16)")
+            
+        Returns:
+            The result of the calculation
+        """
+        import math
+        
+        allowed_names = {
+            "sqrt": math.sqrt,
+            "sin": math.sin,
+            "cos": math.cos,
+            "tan": math.tan,
+            "pi": math.pi,
+            "e": math.e,
+            "log": math.log,
+            "log10": math.log10,
+            "exp": math.exp,
+            "pow": pow,
+            "abs": abs,
+            "round": round,
+            "floor": math.floor,
+            "ceil": math.ceil,
+        }
+        
+        try:
+            result = eval(expression, {"__builtins__": {}}, allowed_names)
+            return str(result)
+        except Exception as e:
+            return f"Error evaluating expression: {str(e)}"
+    
+    @tool
+    def get_current_time() -> str:
+        """
+        Get the current date and time.
+        
+        Returns:
+            Current date and time as a string
+        """
+        from datetime import datetime
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    @tool
+    def word_count(text: str) -> str:
+        """
+        Count the number of words in a text.
+        
+        Args:
+            text: The text to count words in
+            
+        Returns:
+            The word count
+        """
+        words = text.split()
+        return f"The text contains {len(words)} words."
+    
+    tools = [calculate, get_current_time, word_count]
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a helpful assistant with access to tools for calculations, "
+                   "time, and text analysis. Use the tools when appropriate to help answer questions."),
+        ("human", "{input}"),
+        ("placeholder", "{agent_scratchpad}"),
+    ])
+    
+    agent = create_tool_calling_agent(llm, tools, prompt)
+    
+    return AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+
+agent_executor = create_agent_with_tools()
+
+
 @app.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     """
-    Chat endpoint using LangChain agent with code execution tools.
+    Chat endpoint using LangChain agent with tools.
     
     The agent can:
-    - Execute Python code for calculations
-    - Perform data analysis
-    - Solve mathematical problems
+    - Perform mathematical calculations
+    - Get current time
+    - Count words in text
     """
     result = agent_executor.invoke({"input": request.message})
     
@@ -150,4 +160,17 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
+    
+    print("Starting LangChain Agent Example...")
+    print("")
+    print("Required environment variables:")
+    print("  - OPENAI_API_KEY: OpenAI API Key")
+    print("  - OPENAI_MODEL_NAME: Model name (default: gpt-4o-mini)")
+    print("  - OPENAI_BASE_URL: API Base URL (optional)")
+    print("")
+    print("Available tools:")
+    print("  - calculate: Evaluate mathematical expressions")
+    print("  - get_current_time: Get current date and time")
+    print("  - word_count: Count words in text")
+    
     uvicorn.run(app, host="0.0.0.0", port=8080)

@@ -1,6 +1,6 @@
 # LangChain Integration Example
 
-展示如何将 LangChain 与 AgentArts Code Interpreter 集成，创建具有代码执行能力的 Agent。
+展示如何使用 LangChain 创建带有工具的 Agent。
 
 ## 快速开始
 
@@ -12,7 +12,6 @@ pip install -r requirements.txt
 export OPENAI_API_KEY="your-api-key"
 export OPENAI_MODEL_NAME="gpt-4o-mini"
 export OPENAI_BASE_URL="https://api.openai.com/v1"  # 可选
-export AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT="https://code-interpreter.cn-southwest-2.myhuaweicloud.com"
 
 # 运行 Agent
 python langchain_agent.py
@@ -26,10 +25,15 @@ curl -X POST http://localhost:8080/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "What is the square root of 144?"}'
 
-# 数据分析
+# 获取时间
 curl -X POST http://localhost:8080/chat \
   -H "Content-Type: application/json" \
-  -d '{"message": "Calculate the average of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]"}'
+  -d '{"message": "What time is it?"}'
+
+# 文本分析
+curl -X POST http://localhost:8080/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Count the words in: Hello World, this is a test."}'
 
 # 查看中间步骤
 curl -X POST http://localhost:8080/chat \
@@ -39,15 +43,16 @@ curl -X POST http://localhost:8080/chat \
 
 ## 功能说明
 
-- `/chat` - 聊天接口，Agent 可以执行 Python 代码来回答问题
+- `/chat` - 聊天接口，Agent 可以使用工具来回答问题
 - `/health` - 健康检查
 
-## 工具说明
+## 可用工具
 
-Agent 配备了两个工具：
+Agent 配备了三个工具：
 
-1. **execute_python_code** - 执行任意 Python 代码
-2. **calculate** - 计算数学表达式
+1. **calculate** - 计算数学表达式（支持 sqrt, sin, cos, tan, log 等）
+2. **get_current_time** - 获取当前日期和时间
+3. **word_count** - 统计文本中的单词数
 
 ## 环境变量
 
@@ -56,17 +61,16 @@ Agent 配备了两个工具：
 | `OPENAI_API_KEY` | OpenAI API Key | 是 |
 | `OPENAI_MODEL_NAME` | 模型名称 | 否（默认 gpt-4o-mini） |
 | `OPENAI_BASE_URL` | API Base URL | 否 |
-| `AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT` | Code Interpreter 地址 | 是 |
 
 ## 示例对话
 
 ```
 User: What is the factorial of 10?
 Agent: Let me calculate that for you.
-[Uses execute_python_code tool]
+[Uses calculate tool]
 Agent: The factorial of 10 is 3,628,800.
 
-User: Generate a plot of sin(x) for x from 0 to 2π
-Agent: [Uses execute_python_code tool to generate and save the plot]
-Agent: I've created a plot of sin(x). You can find it in the session files.
+User: What time is it?
+Agent: [Uses get_current_time tool]
+Agent: The current time is 2024-01-15 10:30:45.
 ```
