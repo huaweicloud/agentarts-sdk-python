@@ -1,25 +1,14 @@
 """LangGraph Integration Example - Agent with persistent state using AgentArts Memory"""
 
 import os
-from fastapi import FastAPI
-from pydantic import BaseModel
+from agentarts.sdk import AgentArtsRuntimeApp
 
 from langgraph.graph import StateGraph, MessagesState
 from langgraph.checkpoint.memory import MemorySaver
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 
-app = FastAPI(title="LangGraph Agent with AgentArts Memory")
-
-
-class ChatRequest(BaseModel):
-    message: str
-    thread_id: str = None
-
-
-class ChatResponse(BaseModel):
-    response: str
-    thread_id: str
+app = AgentArtsRuntimeApp()
 
 
 def create_agent_with_local_memory():
@@ -110,65 +99,58 @@ else:
     memory_mode = "Local"
 
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+@app.entrypoint
+def handler(payload: dict):
     """
-    Chat endpoint using LangGraph agent with persistent state.
+    Chat entrypoint using LangGraph agent with persistent state.
     
     The conversation state is persisted using:
     - AgentArts Memory Service (when USE_AGENTARTS_MEMORY=true)
     - Local in-memory saver (default for development)
+    
+    Args:
+        payload: The input payload containing:
+            - message: The user message
+            - thread_id: Optional thread ID for conversation continuity
+            
+    Returns:
+        dict: Response with reply and thread_id
     """
-    thread_id = request.thread_id or os.urandom(8).hex()
+    message = payload.get("message", "")
+    thread_id = payload.get("thread_id")
+    
+    if not message:
+        return {
+            "error": "message is required",
+            "thread_id": thread_id or "",
+        }
+    
+    import os as _os
+    thread_id = thread_id or _os.urandom(8).hex()
     
     config = {"configurable": {"thread_id": thread_id}}
     
     result = agent.invoke(
-        {"messages": [HumanMessage(content=request.message)]},
+        {"messages": [HumanMessage(content=message)]},
         config=config,
     )
     
     last_message = result["messages"][-1]
     response_text = last_message.content if hasattr(last_message, "content") else str(last_message)
     
-    return ChatResponse(
-        response=response_text,
-        thread_id=thread_id,
-    )
-
-
-@app.get("/threads/{thread_id}/history")
-async def get_thread_history(thread_id: str):
-    """Get conversation history for a thread."""
-    config = {"configurable": {"thread_id": thread_id}}
-    
-    state = agent.get_state(config)
-    
-    messages = []
-    for msg in state.values.get("messages", []):
-        messages.append({
-            "role": msg.type if hasattr(msg, "type") else "unknown",
-            "content": msg.content if hasattr(msg, "content") else str(msg),
-        })
-    
     return {
+        "response": response_text,
         "thread_id": thread_id,
-        "messages": messages,
     }
 
 
-@app.get("/health")
-async def health():
-    """Health check endpoint."""
-    return {
-        "status": "healthy",
-        "memory_mode": memory_mode,
-    }
+@app.ping
+def health_check():
+    """Health check handler."""
+    return "healthy"
 
 
 if __name__ == "__main__":
-    import uvicorn
-    
     print(f"Starting LangGraph agent with memory mode: {memory_mode}")
     print("")
     print("Required environment variables:")
@@ -180,5 +162,9 @@ if __name__ == "__main__":
     print("  - USE_AGENTARTS_MEMORY=true")
     print("  - AGENTARTS_MEMORY_SPACE_ID: Memory Space ID")
     print("  - HUAWEICLOUD_SDK_MEMORY_API_KEY: API Key for Memory Service")
+    print("")
+    print("Endpoints:")
+    print("  - POST /invocations - Invoke the agent")
+    print("  - GET  /ping         - Health check")
     
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    handler.run(host="0.0.0.0", port=8080)

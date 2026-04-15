@@ -1,6 +1,6 @@
 # Basic Agent Example
 
-最简单的 Agent 示例，展示如何使用 AgentArts SDK 创建一个基础的 FastAPI Agent。
+最简单的 Agent 示例，展示如何使用 AgentArts SDK 创建一个基础 Agent。
 
 ## 快速开始
 
@@ -16,18 +16,38 @@ python agent.py
 
 ```bash
 # 健康检查
-curl http://localhost:8080/health
+curl http://localhost:8080/ping
 
-# 发送消息
-curl -X POST http://localhost:8080/chat \
+# 调用 Agent
+curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
   -d '{"message": "Hello, Agent!"}'
 ```
 
-## 功能说明
+## 端点说明
 
-- `/chat` - 简单的聊天接口，返回用户发送的消息
-- `/health` - 健康检查接口
+- `POST /invocations` - 调用 Agent 入口点
+- `GET /ping` - 健康检查端点
+
+## 代码结构
+
+```python
+from agentarts.sdk import AgentArtsRuntimeApp
+
+app = AgentArtsRuntimeApp()
+
+@app.entrypoint
+def handler(payload: dict):
+    # 处理请求
+    return {"response": "..."}
+
+@app.ping
+def health_check():
+    return "healthy"
+
+if __name__ == "__main__":
+    handler.run(host="0.0.0.0", port=8080)
+```
 
 ## 部署
 

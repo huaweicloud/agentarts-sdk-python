@@ -1,46 +1,46 @@
 """Basic Agent Example - Simple agent using AgentArts SDK"""
 
 import os
-from fastapi import FastAPI
-from pydantic import BaseModel
+from agentarts.sdk import AgentArtsRuntimeApp
 
-app = FastAPI(title="Basic Agent Example")
-
-
-class ChatRequest(BaseModel):
-    message: str
-    session_id: str = None
+app = AgentArtsRuntimeApp()
 
 
-class ChatResponse(BaseModel):
-    response: str
-    session_id: str
-
-
-@app.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+@app.entrypoint
+def handler(payload: dict):
     """
-    Simple chat endpoint that echoes back the message.
+    Simple entrypoint that echoes back the message.
     
     This is a minimal example showing how to create an agent
-    using FastAPI that can be deployed with AgentArts Toolkit.
+    using AgentArts SDK Runtime App.
+    
+    Args:
+        payload: The input payload containing 'message' field
+        
+    Returns:
+        dict: Response with echoed message
     """
-    session_id = request.session_id or "default-session"
+    message = payload.get("message", "")
+    session_id = payload.get("session_id", "default-session")
     
-    response_text = f"You said: {request.message}"
+    response_text = f"You said: {message}"
     
-    return ChatResponse(
-        response=response_text,
-        session_id=session_id,
-    )
+    return {
+        "response": response_text,
+        "session_id": session_id,
+    }
 
 
-@app.get("/health")
-async def health():
-    """Health check endpoint."""
-    return {"status": "healthy"}
+@app.ping
+def health_check():
+    """Health check handler."""
+    return "healthy"
 
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    print("Starting Basic Agent Example...")
+    print("Endpoints:")
+    print("  - POST /invocations - Invoke the agent")
+    print("  - GET  /ping         - Health check")
+    
+    handler.run(host="0.0.0.0", port=8080)

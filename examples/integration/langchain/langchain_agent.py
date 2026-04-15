@@ -1,26 +1,14 @@
 """LangChain Integration Example - Agent with tools using AgentArts SDK"""
 
 import os
-from typing import List, Optional
-from fastapi import FastAPI
-from pydantic import BaseModel
+from agentarts.sdk import AgentArtsRuntimeApp
 
 from langchain_openai import ChatOpenAI
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import tool
 
-app = FastAPI(title="LangChain Agent with AgentArts Tools")
-
-
-class ChatRequest(BaseModel):
-    message: str
-    include_intermediate_steps: bool = False
-
-
-class ChatResponse(BaseModel):
-    response: str
-    intermediate_steps: Optional[List[dict]] = None
+app = AgentArtsRuntimeApp()
 
 
 def create_agent_with_tools():
@@ -31,10 +19,6 @@ def create_agent_with_tools():
     - Creating custom tools using LangChain's @tool decorator
     - Building a tool-calling agent with LangChain
     - Using OpenAI as the LLM backend
-    
-    Note: For Code Interpreter integration, you need to:
-    1. Create a Code Interpreter instance in Huawei Cloud
-    2. Set environment variables for authentication
     """
     llm = ChatOpenAI(
         model=os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini"),
@@ -123,20 +107,36 @@ def create_agent_with_tools():
 agent_executor = create_agent_with_tools()
 
 
-@app.post("/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+@app.entrypoint
+def handler(payload: dict):
     """
-    Chat endpoint using LangChain agent with tools.
+    Chat entrypoint using LangChain agent with tools.
     
     The agent can:
     - Perform mathematical calculations
     - Get current time
     - Count words in text
+    
+    Args:
+        payload: The input payload containing:
+            - message: The user message
+            - include_intermediate_steps: Whether to include tool calls (default: false)
+            
+    Returns:
+        dict: Response with reply and optional intermediate steps
     """
-    result = agent_executor.invoke({"input": request.message})
+    message = payload.get("message", "")
+    include_intermediate_steps = payload.get("include_intermediate_steps", False)
+    
+    if not message:
+        return {
+            "error": "message is required",
+        }
+    
+    result = agent_executor.invoke({"input": message})
     
     intermediate_steps = None
-    if request.include_intermediate_steps:
+    if include_intermediate_steps:
         intermediate_steps = [
             {
                 "tool": step[0].tool,
@@ -146,21 +146,19 @@ async def chat(request: ChatRequest):
             for step in result.get("intermediate_steps", [])
         ]
     
-    return ChatResponse(
-        response=result["output"],
-        intermediate_steps=intermediate_steps,
-    )
+    return {
+        "response": result["output"],
+        "intermediate_steps": intermediate_steps,
+    }
 
 
-@app.get("/health")
-async def health():
-    """Health check endpoint."""
-    return {"status": "healthy"}
+@app.ping
+def health_check():
+    """Health check handler."""
+    return "healthy"
 
 
 if __name__ == "__main__":
-    import uvicorn
-    
     print("Starting LangChain Agent Example...")
     print("")
     print("Required environment variables:")
@@ -172,5 +170,9 @@ if __name__ == "__main__":
     print("  - calculate: Evaluate mathematical expressions")
     print("  - get_current_time: Get current date and time")
     print("  - word_count: Count words in text")
+    print("")
+    print("Endpoints:")
+    print("  - POST /invocations - Invoke the agent")
+    print("  - GET  /ping         - Health check")
     
-    uvicorn.run(app, host="0.0.0.0", port=8080)
+    handler.run(host="0.0.0.0", port=8080)

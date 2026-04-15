@@ -21,24 +21,28 @@ python agent_with_memory.py
 
 ```bash
 # 发送消息（会自动创建 session）
-curl -X POST http://localhost:8080/chat \
+curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
   -d '{"message": "Hello!"}'
 
 # 使用相同 session 继续对话
-curl -X POST http://localhost:8080/chat \
+curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
   -d '{"message": "What did I say before?", "session_id": "xxx"}'
-
-# 查看对话历史
-curl http://localhost:8080/spaces/your-space-id/sessions/xxx/history
 ```
 
-## 功能说明
+## 端点说明
 
-- `/chat` - 聊天接口，自动存储对话历史
-- `/spaces/{space_id}/sessions/{session_id}/history` - 获取对话历史
-- `/health` - 健康检查
+- `POST /invocations` - 调用 Agent，自动存储对话历史
+- `GET /ping` - 健康检查端点
+
+## 请求参数
+
+| 参数 | 说明 | 必需 |
+|------|------|------|
+| `message` | 用户消息 | 是 |
+| `session_id` | 会话 ID（不传则自动创建） | 否 |
+| `space_id` | Memory Space ID（或设置环境变量） | 是 |
 
 ## 环境变量
 
