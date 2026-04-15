@@ -203,6 +203,7 @@ class MemoryHttpService:
             timeout: int = 30,
             api_key: Optional[str] = None,
             verify_ssl: bool = False,
+            enable_signing: Optional[bool] = None,
     ):
         """Initialize Memory HTTP service with region and authentication strategy.
         
@@ -213,6 +214,9 @@ class MemoryHttpService:
             timeout: Request timeout in seconds
             api_key: API Key for data plane authentication (optional, falls back to environment variable)
             verify_ssl: Whether to verify SSL certificates (default: False)
+            enable_signing: Whether to enable request signing. If None, automatically enabled 
+                           for control plane and disabled for data plane. Set to True/False 
+                           to explicitly control signing behavior.
             
         Raises:
             ValueError: If required credentials are not available
@@ -222,12 +226,19 @@ class MemoryHttpService:
         self.timeout = timeout
         self.verify_ssl = verify_ssl
         self._api_key = api_key
+        self._endpoint_type = endpoint_type
+        
+        if enable_signing is None:
+            self._enable_signing = (endpoint_type == "control")
+        else:
+            self._enable_signing = enable_signing
 
         self.session = requests.Session()
 
         self._auth_strategy = self._create_authentication_strategy(endpoint_type)
 
-        self._auth_strategy.setup_credentials(self.region_name)
+        if self._enable_signing:
+            self._auth_strategy.setup_credentials(self.region_name)
         self.credentials = self._auth_strategy.credentials
         
         self._auth_strategy.setup_session_hooks(self.session)
@@ -298,13 +309,14 @@ class MemoryHttpService:
                 text_data = data
                 body_bytes = data.encode('utf-8') if isinstance(data, str) else data
 
-        final_headers = self._auth_strategy.sign_request(
-            method=method,
-            url=url,
-            headers=final_headers,
-            body=body_bytes,
-            params=params,
-        )
+        if self._enable_signing:
+            final_headers = self._auth_strategy.sign_request(
+                method=method,
+                url=url,
+                headers=final_headers,
+                body=body_bytes,
+                params=params,
+            )
 
         try:
             response = self.session.request(
@@ -676,4 +688,9 @@ class MemoryHttpService:
     @property
     def endpoint_type(self) -> str:
         """Get endpoint type."""
-        return self._auth_strategy.get_endpoint_type()
+        return self._endpoint_type
+    
+    @property
+    def enable_signing(self) -> bool:
+        """Get whether signing is enabled."""
+        return self._enable_signing
