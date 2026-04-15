@@ -21,30 +21,37 @@ python langchain_agent.py
 
 ```bash
 # 简单计算
-curl -X POST http://localhost:8080/chat \
+curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
   -d '{"message": "What is the square root of 144?"}'
 
 # 获取时间
-curl -X POST http://localhost:8080/chat \
+curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
   -d '{"message": "What time is it?"}'
 
 # 文本分析
-curl -X POST http://localhost:8080/chat \
+curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
   -d '{"message": "Count the words in: Hello World, this is a test."}'
 
 # 查看中间步骤
-curl -X POST http://localhost:8080/chat \
+curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
   -d '{"message": "What is 2^10?", "include_intermediate_steps": true}'
 ```
 
-## 功能说明
+## 端点说明
 
-- `/chat` - 聊天接口，Agent 可以使用工具来回答问题
-- `/health` - 健康检查
+- `POST /invocations` - 调用 Agent，可以使用工具来回答问题
+- `GET /ping` - 健康检查端点
+
+## 请求参数
+
+| 参数 | 说明 | 必需 |
+|------|------|------|
+| `message` | 用户消息 | 是 |
+| `include_intermediate_steps` | 是否包含工具调用步骤 | 否（默认 false） |
 
 ## 可用工具
 

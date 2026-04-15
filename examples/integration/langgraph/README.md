@@ -27,24 +27,27 @@ python langgraph_agent.py
 
 ```bash
 # 发送消息
-curl -X POST http://localhost:8080/chat \
+curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
   -d '{"message": "Hello, who are you?"}'
 
 # 使用相同 thread 继续对话
-curl -X POST http://localhost:8080/chat \
+curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
   -d '{"message": "What did we talk about?", "thread_id": "xxx"}'
-
-# 查看对话历史
-curl http://localhost:8080/threads/xxx/history
 ```
 
-## 功能说明
+## 端点说明
 
-- `/chat` - 聊天接口，使用 LangGraph 管理对话状态
-- `/threads/{thread_id}/history` - 获取对话历史
-- `/health` - 健康检查（显示当前使用的存储模式）
+- `POST /invocations` - 调用 Agent，使用 LangGraph 管理对话状态
+- `GET /ping` - 健康检查端点
+
+## 请求参数
+
+| 参数 | 说明 | 必需 |
+|------|------|------|
+| `message` | 用户消息 | 是 |
+| `thread_id` | 线程 ID（不传则自动创建） | 否 |
 
 ## 环境变量
 
