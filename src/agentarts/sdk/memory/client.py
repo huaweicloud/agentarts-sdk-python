@@ -81,7 +81,8 @@ class MemoryClient:
     def __init__(
             self,
             region_name: Optional[str] = None,
-            api_key: Optional[str] = None
+            api_key: Optional[str] = None,
+            verify_ssl: bool = False,
     ):
         """
         Initialize Memory Client.
@@ -95,9 +96,10 @@ class MemoryClient:
           when Space management API is first called
 
         Args:
-            region_name: Huawei Cloud region name, default "cn-southwest-2"
+            region_name: Huawei Cloud region name, auto-detected from environment if not provided
             api_key: API Key for data plane authentication (optional, falls back
                 to HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable)
+            verify_ssl: Whether to verify SSL certificates (default: False)
 
         Environment Variables:
             HUAWEICLOUD_SDK_AK: Access Key, required for control plane API
@@ -124,9 +126,14 @@ class MemoryClient:
             >>> client = MemoryClient(region_name="cn-east-3", api_key="your-api-key")
         """
         self.region_name = region_name or get_region()
+        self._verify_ssl = verify_ssl
 
         self._control_plane = None  # Lazy loading
-        self._data_plane = _DataPlane(region_name=region_name, api_key=api_key)
+        self._data_plane = _DataPlane(
+            region_name=region_name,
+            api_key=api_key,
+            verify_ssl=verify_ssl,
+        )
         self._control_plane_init_lock = threading.Lock()
 
     def _ensure_control_plane_initialized(self, region_name: str):
@@ -138,7 +145,10 @@ class MemoryClient:
         """
         with self._control_plane_init_lock:
             if self._control_plane is None:
-                self._control_plane = _ControlPlane(region_name=region_name)
+                self._control_plane = _ControlPlane(
+                    region_name=region_name,
+                    verify_ssl=self._verify_ssl,
+                )
 
     # ==================== Control Plane - Space Management ====================
 

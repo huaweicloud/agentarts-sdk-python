@@ -45,18 +45,25 @@ class _DataPlane:
     Data Plane API - Based on Huawei Cloud backend API implementation.
     """
 
-    def __init__(self, region_name: Optional[str] = None, api_key: Optional[str] = None):
+    def __init__(
+            self,
+            region_name: Optional[str] = None,
+            api_key: Optional[str] = None,
+            verify_ssl: bool = False,
+    ):
         """
         Initialize data plane.
 
         Args:
-            region_name: Huawei Cloud region name (optional)
+            region_name: Huawei Cloud region name, auto-detected from environment if not provided
             api_key: API Key for data plane authentication (optional, falls back to environment variable)
+            verify_ssl: Whether to verify SSL certificates (default: False)
         """
         self.client = MemoryHttpService(
             region_name=region_name,
             endpoint_type="data",
-            api_key=api_key
+            api_key=api_key,
+            verify_ssl=verify_ssl,
         )
         logger.info("DataPlane initialized")
 

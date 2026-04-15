@@ -11,7 +11,6 @@ from agentarts.sdk.memory import (
 app = AgentArtsRuntimeApp()
 
 memory_client = MemoryClient(
-    region_name=os.getenv("HUAWEICLOUD_SDK_REGION", "cn-southwest-2"),
     api_key=os.getenv("HUAWEICLOUD_SDK_MEMORY_API_KEY"),
 )
 

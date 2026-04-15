@@ -12,7 +12,7 @@ from typing import Any, Dict, Optional, Union
 import requests
 
 from .http_client import APIException
-from ..utils.constant import get_memory_endpoint
+from ..utils.constant import get_memory_endpoint, get_region
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
         return headers
     
     def get_endpoint_type(self) -> str:
-        return "manager"
+        return "control"
 
 
 class MemoryAPIException(APIException):
@@ -136,31 +136,39 @@ class MemoryHttpService:
     Compatible with HttpClient interface from memory/inner/httpclient.py
     """
 
-    def __init__(self, region_name: str = "cn-north-4", endpoint: Optional[str] = None, 
-                 endpoint_type: str = "manager", timeout: int = 30, api_key: Optional[str] = None):
+    def __init__(
+            self,
+            region_name: Optional[str] = None,
+            endpoint: Optional[str] = None,
+            endpoint_type: str = "control",
+            timeout: int = 30,
+            api_key: Optional[str] = None,
+            verify_ssl: bool = False,
+    ):
         """Initialize Memory HTTP service with region and authentication strategy.
         
         Args:
-            region_name: Huawei Cloud region name
+            region_name: Huawei Cloud region name, auto-detected from environment if not provided
             endpoint: Custom endpoint URL (for development/testing)
-            endpoint_type: "manager" for control plane, "data" for data plane
+            endpoint_type: "control" for control plane, "data" for data plane
             timeout: Request timeout in seconds
             api_key: API Key for data plane authentication (optional, falls back to environment variable)
+            verify_ssl: Whether to verify SSL certificates (default: False)
             
         Raises:
             ValueError: If required credentials are not available
         """
-        self.region_name = region_name
+        self.region_name = region_name or get_region()
         self._endpoint = endpoint
         self.timeout = timeout
-        self.verify_ssl = True
+        self.verify_ssl = verify_ssl
         self._api_key = api_key
 
         self.session = requests.Session()
 
         self._auth_strategy = self._create_authentication_strategy(endpoint_type)
 
-        self._auth_strategy.setup_credentials(region_name)
+        self._auth_strategy.setup_credentials(self.region_name)
         self.credentials = self._auth_strategy.credentials
         
         self._auth_strategy.setup_session_hooks(self.session)

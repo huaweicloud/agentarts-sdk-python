@@ -28,16 +28,22 @@ class _ControlPlane:
         >>> # This class is used internally by MemoryClient
     """
 
-    def __init__(self, region_name: Optional[str] = None):
+    def __init__(
+            self,
+            region_name: Optional[str] = None,
+            verify_ssl: bool = False,
+    ):
         """
         Initialize control plane.
 
         Args:
-            region_name: Huawei Cloud region name (optional)
+            region_name: Huawei Cloud region name, auto-detected from environment if not provided
+            verify_ssl: Whether to verify SSL certificates (default: False)
         """
         self.client = MemoryHttpService(
             region_name=region_name,
-            endpoint_type="manager"
+            endpoint_type="control",
+            verify_ssl=verify_ssl,
         )
         logger.info("ControlPlane initialized")
 
