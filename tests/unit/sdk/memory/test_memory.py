@@ -1,6 +1,5 @@
 """Tests for memory module"""
 
-import pytest
 
 
 def test_memory_client_import():
@@ -22,10 +21,10 @@ def test_memory_client_creation():
 def test_memory_types_import():
     """Test that memory types can be imported"""
     from agentarts.sdk.memory import (
+        MessageRequest,
+        SessionCreateRequest,
         SpaceCreateRequest,
         SpaceUpdateRequest,
-        SessionCreateRequest,
-        MessageRequest,
     )
 
     assert SpaceCreateRequest is not None

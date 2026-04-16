@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 
 def test_code_interpreter_import():
     """Test that CodeInterpreter can be imported"""
