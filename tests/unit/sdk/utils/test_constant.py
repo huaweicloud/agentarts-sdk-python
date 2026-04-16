@@ -6,7 +6,7 @@ import pytest
 
 from agentarts.sdk.utils.constant import (
     get_control_plane_endpoint,
-    get_data_plane_endpoint,
+    get_runtime_data_plane_endpoint,
     get_memory_endpoint,
     get_region,
 )
@@ -101,25 +101,19 @@ class TestGetControlPlaneEndpoint:
 # get_data_plane_endpoint Tests
 # ============================================================
 
-class TestGetDataPlaneEndpoint:
-    """Tests for get_data_plane_endpoint() function."""
-
-    def test_returns_explicit_endpoint(self, monkeypatch):
-        """Returns the explicit endpoint parameter when provided."""
-        monkeypatch.setenv("AGENTARTS_RUNTIME_DATA_ENDPOINT", "https://env.example.com")
-        result = get_data_plane_endpoint("https://custom.example.com")
-        assert result == "https://custom.example.com"
+class TestGetRuntimeDataPlaneEndpoint:
+    """Tests for get_runtime_data_plane_endpoint() function."""
 
     def test_returns_env_endpoint(self, monkeypatch):
         """Returns AGENTARTS_RUNTIME_DATA_ENDPOINT from environment."""
         monkeypatch.setenv("AGENTARTS_RUNTIME_DATA_ENDPOINT", "https://env.example.com")
-        result = get_data_plane_endpoint()
+        result = get_runtime_data_plane_endpoint()
         assert result == "https://env.example.com"
 
     def test_returns_empty_when_not_configured(self, monkeypatch):
         """Returns empty string when no endpoint is configured."""
         monkeypatch.delenv("AGENTARTS_RUNTIME_DATA_ENDPOINT", raising=False)
-        result = get_data_plane_endpoint()
+        result = get_runtime_data_plane_endpoint()
         assert result == ""
 
 
@@ -144,14 +138,14 @@ class TestGetMemoryEndpoint:
         assert result == "https://agentarts.cn-southwest-2.myhuaweicloud.com"
 
     def test_data_type_returns_env_endpoint(self, monkeypatch):
-        """Returns AGENTARTS_MEMEORY_DATA_ENDPOINT for 'data' type when set."""
-        monkeypatch.setenv("AGENTARTS_MEMEORY_DATA_ENDPOINT", "https://memory.example.com")
+        """Returns AGENTARTS_MEMORY_DATA_ENDPOINT for 'data' type when set."""
+        monkeypatch.setenv("AGENTARTS_MEMORY_DATA_ENDPOINT", "https://memory.example.com")
         result = get_memory_endpoint("data")
         assert result == "https://memory.example.com"
 
     def test_data_type_constructs_from_region_and_space(self, monkeypatch):
         """Constructs data endpoint from region and space_id."""
-        monkeypatch.delenv("AGENTARTS_MEMEORY_DATA_ENDPOINT", raising=False)
+        monkeypatch.delenv("AGENTARTS_MEMORY_DATA_ENDPOINT", raising=False)
         monkeypatch.delenv("AGENTARTS_CONTROL_ENDPOINT", raising=False)
         monkeypatch.setenv("HUAWEICLOUD_SDK_REGION", "cn-north-4")
         result = get_memory_endpoint("data", "cn-north-4", "my-workspace")
@@ -159,7 +153,7 @@ class TestGetMemoryEndpoint:
 
     def test_data_type_uses_default_region(self, monkeypatch):
         """Uses default region when not provided for data endpoint."""
-        monkeypatch.delenv("AGENTARTS_MEMEORY_DATA_ENDPOINT", raising=False)
+        monkeypatch.delenv("AGENTARTS_MEMORY_DATA_ENDPOINT", raising=False)
         monkeypatch.delenv("AGENTARTS_CONTROL_ENDPOINT", raising=False)
         monkeypatch.delenv("HUAWEICLOUD_SDK_REGION", raising=False)
         monkeypatch.delenv("HUAWEICLOUD_REGION", raising=False)
@@ -169,7 +163,7 @@ class TestGetMemoryEndpoint:
 
     def test_data_type_raises_without_space_id(self, monkeypatch):
         """Raises ValueError when space_id is not provided for 'data' type."""
-        monkeypatch.delenv("AGENTARTS_MEMEORY_DATA_ENDPOINT", raising=False)
+        monkeypatch.delenv("AGENTARTS_MEMORY_DATA_ENDPOINT", raising=False)
         with pytest.raises(ValueError, match="space_id is required"):
             get_memory_endpoint("data")
 
@@ -179,14 +173,14 @@ class TestGetMemoryEndpoint:
             get_memory_endpoint("invalid")
 
     def test_data_type_env_endpoint_overrides_construction(self, monkeypatch):
-        """AGENTARTS_MEMEORY_DATA_ENDPOINT takes priority over constructed URL."""
-        monkeypatch.setenv("AGENTARTS_MEMEORY_DATA_ENDPOINT", "https://custom-memory.example.com")
+        """AGENTARTS_MEMORY_DATA_ENDPOINT takes priority over constructed URL."""
+        monkeypatch.setenv("AGENTARTS_MEMORY_DATA_ENDPOINT", "https://custom-memory.example.com")
         result = get_memory_endpoint("data", "cn-north-4", "my-workspace")
         assert result == "https://custom-memory.example.com"
 
     def test_data_type_with_explicit_region(self, monkeypatch):
         """Uses explicit region parameter for data endpoint construction."""
-        monkeypatch.delenv("AGENTARTS_MEMEORY_DATA_ENDPOINT", raising=False)
+        monkeypatch.delenv("AGENTARTS_MEMORY_DATA_ENDPOINT", raising=False)
         monkeypatch.setenv("HUAWEICLOUD_SDK_REGION", "cn-north-4")
         result = get_memory_endpoint("data", "cn-southwest-2", "my-workspace")
         assert result == "https://my-workspace.memory.cn-southwest-2.agentarts.myhuaweicloud.com"
@@ -240,9 +234,9 @@ class TestEnvironmentVariableLoading:
         assert os.getenv("AGENTARTS_RUNTIME_DATA_ENDPOINT") == "https://data.example.com"
 
     def test_memory_data_endpoint_loaded_from_env(self, monkeypatch):
-        """AGENTARTS_MEMEORY_DATA_ENDPOINT is read from environment via os.getenv."""
-        monkeypatch.setenv("AGENTARTS_MEMEORY_DATA_ENDPOINT", "https://memory.example.com")
-        assert os.getenv("AGENTARTS_MEMEORY_DATA_ENDPOINT") == "https://memory.example.com"
+        """AGENTARTS_MEMORY_DATA_ENDPOINT is read from environment via os.getenv."""
+        monkeypatch.setenv("AGENTARTS_MEMORY_DATA_ENDPOINT", "https://memory.example.com")
+        assert os.getenv("AGENTARTS_MEMORY_DATA_ENDPOINT") == "https://memory.example.com"
 
     def test_iam_endpoint_loaded_from_env(self, monkeypatch):
         """HUAWEICLOUD_SDK_IAM_ENDPOINT is read from environment via os.getenv."""

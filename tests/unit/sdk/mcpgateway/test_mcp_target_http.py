@@ -20,14 +20,12 @@ class TestMCPGatewayClient:
     @patch("agentarts.sdk.mcpgateway.mcp_gateway_client.MCPGatewayClient.post")
     def test_create_mcp_gateway_target(self, mock_post):
         """Test create_mcp_gateway_target method"""
-        # Mock response
         mock_post.return_value = RequestResult(
             success=True,
             status_code=201,
             data={"id": "456", "name": "TestGatewayTarget-1234"}
         )
 
-        # Test with parameters
         result = self.client.create_mcp_gateway_target(
             gateway_id="123",
             name="TestTarget",
@@ -41,14 +39,12 @@ class TestMCPGatewayClient:
     @patch("agentarts.sdk.mcpgateway.mcp_gateway_client.MCPGatewayClient.put")
     def test_update_mcp_gateway_target(self, mock_put):
         """Test update_mcp_gateway_target method"""
-        # Mock response
         mock_put.return_value = RequestResult(
             success=True,
             status_code=200,
             data={"id": "456", "name": "UpdatedTarget"}
         )
 
-        # Test with valid parameters
         result = self.client.update_mcp_gateway_target(
             gateway_id="123",
             target_id="456",
@@ -70,13 +66,12 @@ class TestMCPGatewayClient:
                 name=name,
                 description=description,
                 target_configuration=target_config,
-                credential_configuration=credential_config
+                credential_provider_configuration=credential_config
             )
 
     @patch("agentarts.sdk.mcpgateway.mcp_gateway_client.MCPGatewayClient.delete")
     def test_delete_mcp_gateway_target(self, mock_delete):
         """Test delete_mcp_gateway_target method"""
-        # Mock response
         mock_delete.return_value = RequestResult(
             success=True,
             status_code=204
@@ -85,12 +80,11 @@ class TestMCPGatewayClient:
         result = self.client.delete_mcp_gateway_target(gateway_id="123", target_id="456")
 
         assert result.success
-        mock_delete.assert_called_once_with("/gateways/123/target/456")
+        mock_delete.assert_called_once_with("/gateways/123/targets/456")
 
     @patch("agentarts.sdk.mcpgateway.mcp_gateway_client.MCPGatewayClient.get")
     def test_get_mcp_gateway_target(self, mock_get):
         """Test get_mcp_gateway_target method"""
-        # Mock response
         mock_get.return_value = RequestResult(
             success=True,
             status_code=200,
@@ -101,12 +95,11 @@ class TestMCPGatewayClient:
 
         assert result.success
         assert result.data["id"] == "456"
-        mock_get.assert_called_once_with("/gateways/123/target/456")
+        mock_get.assert_called_once_with("/gateways/123/targets/456")
 
     @patch("agentarts.sdk.mcpgateway.mcp_gateway_client.MCPGatewayClient.get")
     def test_list_mcp_gateway_targets(self, mock_get):
         """Test list_mcp_gateway_targets method"""
-        # Mock response
         mock_get.return_value = RequestResult(
             success=True,
             status_code=200,

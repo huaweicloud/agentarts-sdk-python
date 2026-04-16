@@ -182,7 +182,7 @@ class TestAddAgent:
 
         config = load_config()
         agent = config.get_agent("my-agent")
-        assert agent.swr_config.repository == "agent_my-agent"
+        assert agent.swr_config.repository is None
 
     def test_sets_as_default_when_first_agent(self, tmp_path, monkeypatch):
         """Sets as default when it's the first agent."""

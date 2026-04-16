@@ -22,22 +22,22 @@ class TestDetectPlatform:
         result = detect_platform()
         assert result in ("linux/amd64", "linux/arm64")
 
-    @patch("platform_module.machine", return_value="x86_64")
-    @patch("platform_module.system", return_value="Linux")
+    @patch("platform.machine", return_value="x86_64")
+    @patch("platform.system", return_value="Linux")
     def test_linux_amd64(self, mock_system, mock_machine):
         """Returns linux/amd64 for x86_64 Linux."""
         result = detect_platform()
         assert result == "linux/amd64"
 
-    @patch("platform_module.machine", return_value="aarch64")
-    @patch("platform_module.system", return_value="Linux")
+    @patch("platform.machine", return_value="aarch64")
+    @patch("platform.system", return_value="Linux")
     def test_linux_arm64(self, mock_system, mock_machine):
         """Returns linux/arm64 for aarch64 Linux."""
         result = detect_platform()
         assert result == "linux/arm64"
 
-    @patch("platform_module.machine", return_value="amd64")
-    @patch("platform_module.system", return_value="Windows")
+    @patch("platform.machine", return_value="amd64")
+    @patch("platform.system", return_value="Windows")
     def test_windows_amd64(self, mock_system, mock_machine):
         """Returns linux/amd64 for amd64 Windows."""
         result = detect_platform()

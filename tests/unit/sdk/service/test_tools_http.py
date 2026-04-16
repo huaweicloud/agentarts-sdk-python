@@ -111,7 +111,7 @@ class TestToolsHttpClient(unittest.TestCase):
         assert result == mock_get.return_value.data
         mock_get.assert_called_once_with(
             url="/v1/core/code-interpreters",
-            json={
+            params={
                 "offset": 0,
                 "limit": 10
             }

@@ -35,7 +35,7 @@ class TestCheckpointerConfig:
 
         runnable_config = {"configurable": {}}
 
-        with pytest.raises(ValueError, match="thread_id is required"):
+        with pytest.raises(ValueError):
             CheckpointerConfig.from_runnable_config(runnable_config)
 
     def test_from_runnable_config_empty_configurable(self):

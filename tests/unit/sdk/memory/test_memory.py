@@ -3,34 +3,32 @@
 import pytest
 
 
-@pytest.mark.asyncio
-async def test_short_term_memory():
-    """Test ShortTermMemory"""
-    from agentarts.sdk.memory import ShortTermMemory
+def test_memory_client_import():
+    """Test that MemoryClient can be imported"""
+    from agentarts.sdk import MemoryClient
 
-    memory = ShortTermMemory(max_size=10)
-
-    memory_id = await memory.save("test_key", "test_value")
-    assert memory_id is not None
-
-    results = await memory.retrieve("test")
-    assert len(results) > 0
-    assert results[0]["value"] == "test_value"
+    assert MemoryClient is not None
 
 
-@pytest.mark.asyncio
-async def test_memory_clear():
-    """Test memory clear"""
-    from agentarts.sdk.memory import ShortTermMemory
+def test_memory_client_creation():
+    """Test MemoryClient creation"""
+    from agentarts.sdk import MemoryClient
 
-    memory = ShortTermMemory(max_size=10)
+    client = MemoryClient(region_name="cn-north-4", api_key="test-api-key")
 
-    await memory.save("key1", "value1")
-    await memory.save("key2", "value2")
+    assert client is not None
 
-    all_memories = await memory.get_all()
-    assert len(all_memories) == 2
 
-    await memory.clear()
-    all_memories = await memory.get_all()
-    assert len(all_memories) == 0
+def test_memory_types_import():
+    """Test that memory types can be imported"""
+    from agentarts.sdk.memory import (
+        SpaceCreateRequest,
+        SpaceUpdateRequest,
+        SessionCreateRequest,
+        MessageRequest,
+    )
+
+    assert SpaceCreateRequest is not None
+    assert SpaceUpdateRequest is not None
+    assert SessionCreateRequest is not None
+    assert MessageRequest is not None

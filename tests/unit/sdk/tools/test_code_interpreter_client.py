@@ -991,7 +991,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         self.code_interpreter_client.code_interpreter_name = "test-code-interpreter-name"
         self.code_interpreter_client.session_id = "test-session-id"
         path = "/home/user/non-existent.csv"
-        error_message = f"Cloud not read file: {path}"
+        error_message = f"Could not read file: {path}"
 
         # Act & Assert
         with pytest.raises(FileNotFoundError, match=error_message):

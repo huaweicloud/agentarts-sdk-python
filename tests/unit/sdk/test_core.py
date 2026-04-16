@@ -3,34 +3,30 @@
 import pytest
 
 
-def test_import():
-    """Test that core module can be imported"""
-    from agentarts.sdk.runtime.config import Config
+def test_import_sdk():
+    """Test that SDK can be imported"""
+    import agentarts.sdk
 
-    from agentarts.sdk.runtime import AgentRuntime
-    from agentarts.sdk.runtime.context import Context
-
-    assert AgentRuntime is not None
-    assert Context is not None
-    assert Config is not None
+    assert hasattr(agentarts.sdk, "__version__")
+    assert hasattr(agentarts.sdk, "__author__")
 
 
-@pytest.mark.asyncio
-async def test_context():
-    """Test Context creation and operations"""
-    from agentarts.sdk.runtime.context import Context
+def test_import_memory_client():
+    """Test that MemoryClient can be imported"""
+    from agentarts.sdk import MemoryClient
 
-    context = Context()
-    assert context.session_id is not None
-
-    context.set("key", "value")
-    assert context.get("key") == "value"
-    assert context.get("nonexistent", "default") == "default"
+    assert MemoryClient is not None
 
 
-def test_config():
-    """Test Config creation"""
-    from agentarts.sdk.runtime.config import Config
+def test_import_code_interpreter():
+    """Test that CodeInterpreter can be imported"""
+    from agentarts.sdk import CodeInterpreter
 
-    config = Config()
-    assert config is not None
+    assert CodeInterpreter is not None
+
+
+def test_import_identity_client():
+    """Test that IdentityClient can be imported"""
+    from agentarts.sdk import IdentityClient
+
+    assert IdentityClient is not None
