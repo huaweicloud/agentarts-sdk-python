@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,15 +14,15 @@ class CustomOauth2ProviderConfigInput:
     sensitive_list = []
 
     openapi_types = {
-        'client_id': 'str',
-        'client_secret': 'str',
-        'oauth2_discovery': 'Oauth2Discovery'
+        "client_id": "str",
+        "client_secret": "str",
+        "oauth2_discovery": "Oauth2Discovery"
     }
 
     attribute_map = {
-        'client_id': 'client_id',
-        'client_secret': 'client_secret',
-        'oauth2_discovery': 'oauth2_discovery'
+        "client_id": "client_id",
+        "client_secret": "client_secret",
+        "oauth2_discovery": "oauth2_discovery"
     }
 
     def __init__(self, client_id=None, client_secret=None, oauth2_discovery=None):
@@ -35,11 +34,11 @@ class CustomOauth2ProviderConfigInput:
         :type client_id: str
         :param client_secret: Client secret for OAuth2 application.
         :type client_secret: str
-        :param oauth2_discovery: 
+        :param oauth2_discovery:
         :type oauth2_discovery: :class:`huaweicloudsdkagentidentity.v1.Oauth2Discovery`
         """
-        
-        
+
+
 
         self._client_id = None
         self._client_secret = None
@@ -118,10 +117,7 @@ class CustomOauth2ProviderConfigInput:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -130,11 +126,10 @@ class CustomOauth2ProviderConfigInput:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

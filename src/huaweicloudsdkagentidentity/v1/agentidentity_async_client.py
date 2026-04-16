@@ -1,18 +1,16 @@
-# coding: utf-8
 
-from __future__ import absolute_import
 
 import importlib
 import warnings
 
 from huaweicloudsdkcore.client import Client, ClientBuilder
-from huaweicloudsdkcore.utils import http_utils
 from huaweicloudsdkcore.sdk_stream_request import SdkStreamRequest
+from huaweicloudsdkcore.utils import http_utils
 
 try:
     from huaweicloudsdkcore.invoker.invoker import AsyncInvoker
 except ImportError as e:
-    warnings.warn(str(e) + ", please check if you are using the same versions of 'huaweicloudsdkcore' and 'huaweicloudsdkagentidentity'")
+    warnings.warn(str(e) + ", please check if you are using the same versions of 'huaweicloudsdkcore' and 'huaweicloudsdkagentidentity'", stacklevel=2)
 
 
 class AgentIdentityAsyncClient(Client):
@@ -26,10 +24,11 @@ class AgentIdentityAsyncClient(Client):
             client_builder = ClientBuilder(cls)
         else:
             if clazz.__name__ != "AgentIdentityAsyncClient":
-                raise TypeError("client type error, support client type is AgentIdentityAsyncClient")
+                msg = "client type error, support client type is AgentIdentityAsyncClient"
+                raise TypeError(msg)
             client_builder = ClientBuilder(clazz)
 
-        
+
 
         return client_builder
 
@@ -37,7 +36,7 @@ class AgentIdentityAsyncClient(Client):
         r"""创建API密钥凭证提供者
 
         Creates a new API key credential provider.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -75,17 +74,16 @@ class AgentIdentityAsyncClient(Client):
         form_params = {}
 
         body = None
-        if 'body' in local_var_params:
-            body = local_var_params['body']
+        if "body" in local_var_params:
+            body = local_var_params["body"]
         if isinstance(request, SdkStreamRequest):
             body = request.get_file_stream()
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -102,7 +100,7 @@ class AgentIdentityAsyncClient(Client):
         r"""删除API密钥凭证提供者
 
         Deletes an API key credential provider.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -132,8 +130,8 @@ class AgentIdentityAsyncClient(Client):
         collection_formats = {}
 
         path_params = {}
-        if 'credential_provider_name' in local_var_params:
-            path_params['credential_provider_name'] = local_var_params['credential_provider_name']
+        if "credential_provider_name" in local_var_params:
+            path_params["credential_provider_name"] = local_var_params["credential_provider_name"]
 
         query_params = []
 
@@ -147,10 +145,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -167,7 +164,7 @@ class AgentIdentityAsyncClient(Client):
         r"""查询API密钥凭证提供者详情
 
         Gets details of an API key credential provider.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -197,8 +194,8 @@ class AgentIdentityAsyncClient(Client):
         collection_formats = {}
 
         path_params = {}
-        if 'credential_provider_name' in local_var_params:
-            path_params['credential_provider_name'] = local_var_params['credential_provider_name']
+        if "credential_provider_name" in local_var_params:
+            path_params["credential_provider_name"] = local_var_params["credential_provider_name"]
 
         query_params = []
 
@@ -212,10 +209,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -232,7 +228,7 @@ class AgentIdentityAsyncClient(Client):
         r"""查询API密钥凭证提供者列表
 
         Lists API key credential providers.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -264,10 +260,10 @@ class AgentIdentityAsyncClient(Client):
         path_params = {}
 
         query_params = []
-        if 'limit' in local_var_params:
-            query_params.append(('limit', local_var_params['limit']))
-        if 'marker' in local_var_params:
-            query_params.append(('marker', local_var_params['marker']))
+        if "limit" in local_var_params:
+            query_params.append(("limit", local_var_params["limit"]))
+        if "marker" in local_var_params:
+            query_params.append(("marker", local_var_params["marker"]))
 
         header_params = {}
 
@@ -279,10 +275,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -299,7 +294,7 @@ class AgentIdentityAsyncClient(Client):
         r"""更新API密钥凭证提供者
 
         Updates the API key of an existing API key credential provider.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -329,8 +324,8 @@ class AgentIdentityAsyncClient(Client):
         collection_formats = {}
 
         path_params = {}
-        if 'credential_provider_name' in local_var_params:
-            path_params['credential_provider_name'] = local_var_params['credential_provider_name']
+        if "credential_provider_name" in local_var_params:
+            path_params["credential_provider_name"] = local_var_params["credential_provider_name"]
 
         query_params = []
 
@@ -339,17 +334,16 @@ class AgentIdentityAsyncClient(Client):
         form_params = {}
 
         body = None
-        if 'body' in local_var_params:
-            body = local_var_params['body']
+        if "body" in local_var_params:
+            body = local_var_params["body"]
         if isinstance(request, SdkStreamRequest):
             body = request.get_file_stream()
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -366,7 +360,7 @@ class AgentIdentityAsyncClient(Client):
         r"""Confirm user authentication session for OAuth2.0 tokens
 
         Confirms the user authentication session to obtain OAuth2.0 tokens for a resource
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -404,17 +398,16 @@ class AgentIdentityAsyncClient(Client):
         form_params = {}
 
         body = None
-        if 'body' in local_var_params:
-            body = local_var_params['body']
+        if "body" in local_var_params:
+            body = local_var_params["body"]
         if isinstance(request, SdkStreamRequest):
             body = request.get_file_stream()
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -431,7 +424,7 @@ class AgentIdentityAsyncClient(Client):
         r"""Retrieve API key from resource credential provider
 
         Retrieves the API key associated with a specified resource credential provider
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -469,17 +462,16 @@ class AgentIdentityAsyncClient(Client):
         form_params = {}
 
         body = None
-        if 'body' in local_var_params:
-            body = local_var_params['body']
+        if "body" in local_var_params:
+            body = local_var_params["body"]
         if isinstance(request, SdkStreamRequest):
             body = request.get_file_stream()
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -496,7 +488,7 @@ class AgentIdentityAsyncClient(Client):
         r"""Retrieve OAuth2.0 token from resource credential provider
 
         Returns the OAuth2.0 token for the specified resource using the configured flow
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -534,17 +526,16 @@ class AgentIdentityAsyncClient(Client):
         form_params = {}
 
         body = None
-        if 'body' in local_var_params:
-            body = local_var_params['body']
+        if "body" in local_var_params:
+            body = local_var_params["body"]
         if isinstance(request, SdkStreamRequest):
             body = request.get_file_stream()
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -561,7 +552,7 @@ class AgentIdentityAsyncClient(Client):
         r"""Retrieve STS credentials from STS credential provider
 
         Retrieves temporary STS credentials from a specified STS credential provider
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -599,17 +590,16 @@ class AgentIdentityAsyncClient(Client):
         form_params = {}
 
         body = None
-        if 'body' in local_var_params:
-            body = local_var_params['body']
+        if "body" in local_var_params:
+            body = local_var_params["body"]
         if isinstance(request, SdkStreamRequest):
             body = request.get_file_stream()
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -626,7 +616,7 @@ class AgentIdentityAsyncClient(Client):
         r"""OAuth2.0 Pushed Authorization Request (PAR) standard authorize API
 
         Core OAuth2 authorization endpoint following RFC 9126 PAR spec, only accepts authorization request via request_uri parameter to trigger user authorization flow
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -658,8 +648,8 @@ class AgentIdentityAsyncClient(Client):
         path_params = {}
 
         query_params = []
-        if 'request_uri' in local_var_params:
-            query_params.append(('request_uri', local_var_params['request_uri']))
+        if "request_uri" in local_var_params:
+            query_params.append(("request_uri", local_var_params["request_uri"]))
 
         header_params = {}
 
@@ -671,10 +661,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -691,7 +680,7 @@ class AgentIdentityAsyncClient(Client):
         r"""OAuth2.0 Standard Authorization Callback API
 
         OAuth2 redirect callback endpoint to receive authorization result after user consent/denial
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -721,18 +710,18 @@ class AgentIdentityAsyncClient(Client):
         collection_formats = {}
 
         path_params = {}
-        if 'credential_provider_id' in local_var_params:
-            path_params['credential_provider_id'] = local_var_params['credential_provider_id']
+        if "credential_provider_id" in local_var_params:
+            path_params["credential_provider_id"] = local_var_params["credential_provider_id"]
 
         query_params = []
-        if 'code' in local_var_params:
-            query_params.append(('code', local_var_params['code']))
-        if 'state' in local_var_params:
-            query_params.append(('state', local_var_params['state']))
-        if 'error' in local_var_params:
-            query_params.append(('error', local_var_params['error']))
-        if 'error_description' in local_var_params:
-            query_params.append(('error_description', local_var_params['error_description']))
+        if "code" in local_var_params:
+            query_params.append(("code", local_var_params["code"]))
+        if "state" in local_var_params:
+            query_params.append(("state", local_var_params["state"]))
+        if "error" in local_var_params:
+            query_params.append(("error", local_var_params["error"]))
+        if "error_description" in local_var_params:
+            query_params.append(("error_description", local_var_params["error_description"]))
 
         header_params = {}
 
@@ -744,10 +733,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -764,7 +752,7 @@ class AgentIdentityAsyncClient(Client):
         r"""创建OAuth2凭证提供者
 
         Creates a new OAuth2 credential provider.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -802,17 +790,16 @@ class AgentIdentityAsyncClient(Client):
         form_params = {}
 
         body = None
-        if 'body' in local_var_params:
-            body = local_var_params['body']
+        if "body" in local_var_params:
+            body = local_var_params["body"]
         if isinstance(request, SdkStreamRequest):
             body = request.get_file_stream()
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -829,7 +816,7 @@ class AgentIdentityAsyncClient(Client):
         r"""删除OAuth2凭证提供者
 
         Deletes an OAuth2 credential provider.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -859,8 +846,8 @@ class AgentIdentityAsyncClient(Client):
         collection_formats = {}
 
         path_params = {}
-        if 'credential_provider_name' in local_var_params:
-            path_params['credential_provider_name'] = local_var_params['credential_provider_name']
+        if "credential_provider_name" in local_var_params:
+            path_params["credential_provider_name"] = local_var_params["credential_provider_name"]
 
         query_params = []
 
@@ -874,10 +861,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -894,7 +880,7 @@ class AgentIdentityAsyncClient(Client):
         r"""查询OAuth2凭证提供者详情
 
         Gets details of an OAuth2 credential provider.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -924,8 +910,8 @@ class AgentIdentityAsyncClient(Client):
         collection_formats = {}
 
         path_params = {}
-        if 'credential_provider_name' in local_var_params:
-            path_params['credential_provider_name'] = local_var_params['credential_provider_name']
+        if "credential_provider_name" in local_var_params:
+            path_params["credential_provider_name"] = local_var_params["credential_provider_name"]
 
         query_params = []
 
@@ -939,10 +925,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -959,7 +944,7 @@ class AgentIdentityAsyncClient(Client):
         r"""查询OAuth2凭证提供者列表
 
         Lists OAuth2 credential providers.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -991,10 +976,10 @@ class AgentIdentityAsyncClient(Client):
         path_params = {}
 
         query_params = []
-        if 'limit' in local_var_params:
-            query_params.append(('limit', local_var_params['limit']))
-        if 'marker' in local_var_params:
-            query_params.append(('marker', local_var_params['marker']))
+        if "limit" in local_var_params:
+            query_params.append(("limit", local_var_params["limit"]))
+        if "marker" in local_var_params:
+            query_params.append(("marker", local_var_params["marker"]))
 
         header_params = {}
 
@@ -1006,10 +991,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -1026,7 +1010,7 @@ class AgentIdentityAsyncClient(Client):
         r"""更新OAuth2凭证提供者
 
         Updates an existing OAuth2 credential provider.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -1056,8 +1040,8 @@ class AgentIdentityAsyncClient(Client):
         collection_formats = {}
 
         path_params = {}
-        if 'credential_provider_name' in local_var_params:
-            path_params['credential_provider_name'] = local_var_params['credential_provider_name']
+        if "credential_provider_name" in local_var_params:
+            path_params["credential_provider_name"] = local_var_params["credential_provider_name"]
 
         query_params = []
 
@@ -1066,17 +1050,16 @@ class AgentIdentityAsyncClient(Client):
         form_params = {}
 
         body = None
-        if 'body' in local_var_params:
-            body = local_var_params['body']
+        if "body" in local_var_params:
+            body = local_var_params["body"]
         if isinstance(request, SdkStreamRequest):
             body = request.get_file_stream()
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -1093,7 +1076,7 @@ class AgentIdentityAsyncClient(Client):
         r"""创建STS凭证提供者
 
         Creates a new STS credential provider.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -1131,17 +1114,16 @@ class AgentIdentityAsyncClient(Client):
         form_params = {}
 
         body = None
-        if 'body' in local_var_params:
-            body = local_var_params['body']
+        if "body" in local_var_params:
+            body = local_var_params["body"]
         if isinstance(request, SdkStreamRequest):
             body = request.get_file_stream()
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -1158,7 +1140,7 @@ class AgentIdentityAsyncClient(Client):
         r"""删除STS凭证提供者
 
         Deletes an STS credential provider.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -1188,8 +1170,8 @@ class AgentIdentityAsyncClient(Client):
         collection_formats = {}
 
         path_params = {}
-        if 'credential_provider_name' in local_var_params:
-            path_params['credential_provider_name'] = local_var_params['credential_provider_name']
+        if "credential_provider_name" in local_var_params:
+            path_params["credential_provider_name"] = local_var_params["credential_provider_name"]
 
         query_params = []
 
@@ -1203,10 +1185,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -1223,7 +1204,7 @@ class AgentIdentityAsyncClient(Client):
         r"""查询STS凭证提供者详情
 
         Gets details of an STS credential provider.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -1253,8 +1234,8 @@ class AgentIdentityAsyncClient(Client):
         collection_formats = {}
 
         path_params = {}
-        if 'credential_provider_name' in local_var_params:
-            path_params['credential_provider_name'] = local_var_params['credential_provider_name']
+        if "credential_provider_name" in local_var_params:
+            path_params["credential_provider_name"] = local_var_params["credential_provider_name"]
 
         query_params = []
 
@@ -1268,10 +1249,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -1288,7 +1268,7 @@ class AgentIdentityAsyncClient(Client):
         r"""查询STS凭证提供者列表
 
         Lists STS credential providers.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -1320,10 +1300,10 @@ class AgentIdentityAsyncClient(Client):
         path_params = {}
 
         query_params = []
-        if 'limit' in local_var_params:
-            query_params.append(('limit', local_var_params['limit']))
-        if 'marker' in local_var_params:
-            query_params.append(('marker', local_var_params['marker']))
+        if "limit" in local_var_params:
+            query_params.append(("limit", local_var_params["limit"]))
+        if "marker" in local_var_params:
+            query_params.append(("marker", local_var_params["marker"]))
 
         header_params = {}
 
@@ -1335,10 +1315,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -1355,7 +1334,7 @@ class AgentIdentityAsyncClient(Client):
         r"""更新STS凭证提供者
 
         Updates an existing STS credential provider.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -1385,8 +1364,8 @@ class AgentIdentityAsyncClient(Client):
         collection_formats = {}
 
         path_params = {}
-        if 'credential_provider_name' in local_var_params:
-            path_params['credential_provider_name'] = local_var_params['credential_provider_name']
+        if "credential_provider_name" in local_var_params:
+            path_params["credential_provider_name"] = local_var_params["credential_provider_name"]
 
         query_params = []
 
@@ -1395,17 +1374,16 @@ class AgentIdentityAsyncClient(Client):
         form_params = {}
 
         body = None
-        if 'body' in local_var_params:
-            body = local_var_params['body']
+        if "body" in local_var_params:
+            body = local_var_params["body"]
         if isinstance(request, SdkStreamRequest):
             body = request.get_file_stream()
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -1422,7 +1400,7 @@ class AgentIdentityAsyncClient(Client):
         r"""查询令牌保管库详情
 
         Gets details of a token vault.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -1452,8 +1430,8 @@ class AgentIdentityAsyncClient(Client):
         collection_formats = {}
 
         path_params = {}
-        if 'token_vault_id' in local_var_params:
-            path_params['token_vault_id'] = local_var_params['token_vault_id']
+        if "token_vault_id" in local_var_params:
+            path_params["token_vault_id"] = local_var_params["token_vault_id"]
 
         query_params = []
 
@@ -1467,10 +1445,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -1487,7 +1464,7 @@ class AgentIdentityAsyncClient(Client):
         r"""Create workload access token (not acting on behalf of a user)
 
         Retrieves a workload access token for agentic workloads that do not act on behalf of a user
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -1525,17 +1502,16 @@ class AgentIdentityAsyncClient(Client):
         form_params = {}
 
         body = None
-        if 'body' in local_var_params:
-            body = local_var_params['body']
+        if "body" in local_var_params:
+            body = local_var_params["body"]
         if isinstance(request, SdkStreamRequest):
             body = request.get_file_stream()
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -1552,7 +1528,7 @@ class AgentIdentityAsyncClient(Client):
         r"""Create workload access token using JWT (acting on behalf of a user)
 
         Retrieves a workload access token for agentic workloads acting on behalf of a user, using a JWT token
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -1590,17 +1566,16 @@ class AgentIdentityAsyncClient(Client):
         form_params = {}
 
         body = None
-        if 'body' in local_var_params:
-            body = local_var_params['body']
+        if "body" in local_var_params:
+            body = local_var_params["body"]
         if isinstance(request, SdkStreamRequest):
             body = request.get_file_stream()
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -1617,7 +1592,7 @@ class AgentIdentityAsyncClient(Client):
         r"""Create workload access token using user ID (acting on behalf of a user)
 
         Retrieves a workload access token for agentic workloads acting on behalf of a user, using the user&#39;s ID
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -1655,17 +1630,16 @@ class AgentIdentityAsyncClient(Client):
         form_params = {}
 
         body = None
-        if 'body' in local_var_params:
-            body = local_var_params['body']
+        if "body" in local_var_params:
+            body = local_var_params["body"]
         if isinstance(request, SdkStreamRequest):
             body = request.get_file_stream()
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -1682,7 +1656,7 @@ class AgentIdentityAsyncClient(Client):
         r"""创建工作负载身份
 
         Creates a new workload identity.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -1720,17 +1694,16 @@ class AgentIdentityAsyncClient(Client):
         form_params = {}
 
         body = None
-        if 'body' in local_var_params:
-            body = local_var_params['body']
+        if "body" in local_var_params:
+            body = local_var_params["body"]
         if isinstance(request, SdkStreamRequest):
             body = request.get_file_stream()
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -1747,7 +1720,7 @@ class AgentIdentityAsyncClient(Client):
         r"""删除工作负载身份
 
         Deletes a workload identity.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -1777,8 +1750,8 @@ class AgentIdentityAsyncClient(Client):
         collection_formats = {}
 
         path_params = {}
-        if 'workload_identity_name' in local_var_params:
-            path_params['workload_identity_name'] = local_var_params['workload_identity_name']
+        if "workload_identity_name" in local_var_params:
+            path_params["workload_identity_name"] = local_var_params["workload_identity_name"]
 
         query_params = []
 
@@ -1792,10 +1765,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -1812,7 +1784,7 @@ class AgentIdentityAsyncClient(Client):
         r"""查询工作负载身份详情
 
         Gets details of a workload identity.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -1842,8 +1814,8 @@ class AgentIdentityAsyncClient(Client):
         collection_formats = {}
 
         path_params = {}
-        if 'workload_identity_name' in local_var_params:
-            path_params['workload_identity_name'] = local_var_params['workload_identity_name']
+        if "workload_identity_name" in local_var_params:
+            path_params["workload_identity_name"] = local_var_params["workload_identity_name"]
 
         query_params = []
 
@@ -1857,10 +1829,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -1877,7 +1848,7 @@ class AgentIdentityAsyncClient(Client):
         r"""查询工作负载身份的授权配置
 
         Gets the authorizer configuration of a workload identity.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -1907,8 +1878,8 @@ class AgentIdentityAsyncClient(Client):
         collection_formats = {}
 
         path_params = {}
-        if 'workload_identity_name' in local_var_params:
-            path_params['workload_identity_name'] = local_var_params['workload_identity_name']
+        if "workload_identity_name" in local_var_params:
+            path_params["workload_identity_name"] = local_var_params["workload_identity_name"]
 
         query_params = []
 
@@ -1922,10 +1893,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -1942,7 +1912,7 @@ class AgentIdentityAsyncClient(Client):
         r"""查询工作负载身份列表
 
         Lists workload identities.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -1974,10 +1944,10 @@ class AgentIdentityAsyncClient(Client):
         path_params = {}
 
         query_params = []
-        if 'limit' in local_var_params:
-            query_params.append(('limit', local_var_params['limit']))
-        if 'marker' in local_var_params:
-            query_params.append(('marker', local_var_params['marker']))
+        if "limit" in local_var_params:
+            query_params.append(("limit", local_var_params["limit"]))
+        if "marker" in local_var_params:
+            query_params.append(("marker", local_var_params["marker"]))
 
         header_params = {}
 
@@ -1989,10 +1959,9 @@ class AgentIdentityAsyncClient(Client):
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats
@@ -2009,7 +1978,7 @@ class AgentIdentityAsyncClient(Client):
         r"""更新工作负载身份
 
         Updates an existing workload identity.
-        
+
         Please refer to HUAWEI cloud API Explorer for details.
 
 
@@ -2039,8 +2008,8 @@ class AgentIdentityAsyncClient(Client):
         collection_formats = {}
 
         path_params = {}
-        if 'workload_identity_name' in local_var_params:
-            path_params['workload_identity_name'] = local_var_params['workload_identity_name']
+        if "workload_identity_name" in local_var_params:
+            path_params["workload_identity_name"] = local_var_params["workload_identity_name"]
 
         query_params = []
 
@@ -2049,17 +2018,16 @@ class AgentIdentityAsyncClient(Client):
         form_params = {}
 
         body = None
-        if 'body' in local_var_params:
-            body = local_var_params['body']
+        if "body" in local_var_params:
+            body = local_var_params["body"]
         if isinstance(request, SdkStreamRequest):
             body = request.get_file_stream()
 
         response_headers = []
 
-        header_params['Content-Type'] = http_utils.select_header_content_type(
-            ['application/json'])
+        header_params["Content-Type"] = http_utils.select_header_content_type(
+            ["application/json"])
 
-        auth_settings = ['AccessKeyAuth']
 
         http_info["cname"] = cname
         http_info["collection_formats"] = collection_formats

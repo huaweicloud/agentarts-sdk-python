@@ -17,13 +17,12 @@ maintainers = [
 keywords = [
     "agent",
     "ai",
-    "llm",
+    "huawei-cloud",
+    "sdk",
     "langchain",
     "langgraph",
     "autogen",
     "crewai",
-    "huawei-cloud",
-    "sdk",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -73,6 +72,7 @@ dev = [
     "types-PyYAML>=6.0.0",
     "types-redis>=4.6.0",
     "ruff>=0.1.0",
+    "httpx>=0.25.0",
 ]
 
 [project.optional-dependencies]
@@ -123,7 +123,7 @@ all = [
 
 [project.urls]
 Homepage = "https://github.com/huaweicloud/agentarts-sdk-python"
-Documentation = "https://docs.huaweicloud.com/agentarts"
+Documentation = "https://github.com/huaweicloud/agentarts-sdk-python#readme"
 Repository = "https://github.com/huaweicloud/agentarts-sdk-python.git"
 Issues = "https://github.com/huaweicloud/agentarts-sdk-python/issues"
 Changelog = "https://github.com/huaweicloud/agentarts-sdk-python/blob/main/CHANGELOG.md"
@@ -288,8 +288,75 @@ ignore = [
     "E501",
     "PLR0913",
     "TRY003",
+    "RUF012",
+    "PLC0415",
+    "PLW1641",
+    "SLF001",
+    "RUF002",
+    "RUF001",
+    "RUF003",
+    "PLR2004",
+    "G004",
+    "INP001",
+    "TRY300",
+    "TRY301",
+    "TRY401",
+    "ARG001",
+    "ARG002",
+    "E402",
+    "PLR0911",
+    "PLR0912",
+    "PLR0915",
+    "PT011",
+    "PTH123",
+    "PTH118",
+    "PTH109",
+    "PTH110",
+    "B904",
+    "PLW1510",
+    "PLW2901",
+    "SIM102",
+    "SIM117",
+    "TRY004",
+    "E741",
+    "N806",
+    "PLC0206",
+    "B017",
+    "B018",
+    "DTZ001",
+    "DTZ005",
+    "E101",
+    "F811",
+    "N814",
+    "N818",
+    "W191",
+    "UP028",
+    "UP031",
+    "SIM105",
+    "PLW0108",
+    "RUF005",
+    "RUF022",
+    "RUF013",
+    "TC002",
+    "TC003",
+    "RSE102",
+    "PYI034",
+    "SIM108",
+    "TRY401",
+    "B028",
+    "EM101",
+    "EM102",
+    "C417",
+    "PT009",
+    "PT006",
+    "N818",
+    "TID252",
+    "RET504",
+    "RUF059",
+    "F841",
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["ARG", "S101"]
+"tests/*" = ["ARG", "S101", "F841", "PLR2004", "RUF059"]
 "__init__.py" = ["F401"]
+"examples/*" = ["ARG", "RUF002", "RUF001", "RUF003"]

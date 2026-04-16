@@ -3,12 +3,11 @@
 import os
 import sys
 from pathlib import Path
-from typing import Dict, Optional
 
 import yaml
 from rich.console import Console
 
-from agentarts.toolkit.utils.common import echo_error, echo_info, echo_step
+from agentarts.toolkit.utils.common import echo_error, echo_info
 
 console = Console()
 
@@ -17,8 +16,8 @@ def run_dev_server(
     port: int,
     host: str,
     reload: bool,
-    config_path: Optional[str],
-    env_vars: Optional[Dict[str, str]] = None,
+    config_path: str | None,
+    env_vars: dict[str, str] | None = None,
 ) -> bool:
     """
     Run development server.
@@ -63,8 +62,9 @@ def run_dev_server(
     console.print()
 
     try:
-        import uvicorn
         import importlib
+
+        import uvicorn
 
         sys.path.insert(0, os.getcwd())
 
@@ -96,7 +96,7 @@ def run_dev_server(
         return False
 
 
-def inject_environment_variables(config: dict, cli_env_vars: Optional[Dict[str, str]] = None) -> None:
+def inject_environment_variables(config: dict, cli_env_vars: dict[str, str] | None = None) -> None:
     """
     Inject environment variables from config and CLI.
 
@@ -107,7 +107,7 @@ def inject_environment_variables(config: dict, cli_env_vars: Optional[Dict[str, 
         cli_env_vars: Environment variables from command line
     """
     config_env_vars = get_config_env_vars(config)
-    
+
     for key, value in config_env_vars.items():
         if value is not None:
             os.environ[key] = str(value)
@@ -117,7 +117,7 @@ def inject_environment_variables(config: dict, cli_env_vars: Optional[Dict[str, 
             os.environ[key] = value
 
 
-def get_config_env_vars(config: dict) -> Dict[str, str]:
+def get_config_env_vars(config: dict) -> dict[str, str]:
     """
     Get environment variables from configuration.
 
@@ -128,7 +128,7 @@ def get_config_env_vars(config: dict) -> Dict[str, str]:
         Dictionary of environment variables
     """
     env_vars = {}
-    
+
     default_agent = config.get("default_agent")
     if not default_agent:
         agents = config.get("agents", {})
@@ -153,7 +153,7 @@ def get_config_env_vars(config: dict) -> Dict[str, str]:
     return env_vars
 
 
-def format_env_display(cli_env_vars: Optional[Dict[str, str]], config: dict) -> str:
+def format_env_display(cli_env_vars: dict[str, str] | None, config: dict) -> str:
     """
     Format environment variables for display.
 
@@ -165,10 +165,10 @@ def format_env_display(cli_env_vars: Optional[Dict[str, str]], config: dict) -> 
         Formatted string for display
     """
     config_env_vars = get_config_env_vars(config)
-    
+
     all_env_vars = {}
     all_env_vars.update(config_env_vars)
-    
+
     if cli_env_vars:
         all_env_vars.update(cli_env_vars)
 
@@ -179,7 +179,7 @@ def format_env_display(cli_env_vars: Optional[Dict[str, str]], config: dict) -> 
     for key, value in all_env_vars.items():
         is_from_cli = cli_env_vars and key in cli_env_vars
         source = "[green](CLI)[/green]" if is_from_cli else "[dim](config)[/dim]"
-        
+
         if value:
             display_value = value if len(str(value)) < 30 else str(value)[:27] + "..."
             masked_value = mask_sensitive_value(key, display_value)
@@ -203,17 +203,16 @@ def mask_sensitive_value(key: str, value: str) -> str:
     """
     sensitive_keywords = ["key", "secret", "token", "password", "credential"]
     key_lower = key.lower()
-    
+
     if any(keyword in key_lower for keyword in sensitive_keywords):
         if len(value) > 8:
             return value[:4] + "****" + value[-4:]
-        else:
-            return "****"
-    
+        return "****"
+
     return value
 
 
-def get_entrypoint(config: dict) -> Optional[str]:
+def get_entrypoint(config: dict) -> str | None:
     """
     Get entrypoint from configuration.
 
@@ -235,12 +234,11 @@ def get_entrypoint(config: dict) -> Optional[str]:
     agents = config.get("agents", {})
     agent_config = agents.get(default_agent, {})
     base_config = agent_config.get("base", {})
-    entrypoint = base_config.get("entrypoint")
-
-    return entrypoint
+    return base_config.get("entrypoint")
 
 
-def load_config(config_path: Optional[str]) -> dict:
+
+def load_config(config_path: str | None) -> dict:
     """
     Load configuration file.
 
@@ -250,10 +248,7 @@ def load_config(config_path: Optional[str]) -> dict:
     Returns:
         Configuration dictionary
     """
-    if config_path:
-        path = Path(config_path)
-    else:
-        path = Path(".agentarts_config.yaml")
+    path = Path(config_path) if config_path else Path(".agentarts_config.yaml")
 
     if path.exists():
         with open(path, encoding="utf-8") as f:

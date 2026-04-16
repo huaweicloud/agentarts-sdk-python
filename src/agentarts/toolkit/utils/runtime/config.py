@@ -6,7 +6,7 @@ All models use Pydantic for validation and serialization.
 """
 
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -30,19 +30,19 @@ class AuthType(str, Enum):
 class BaseConfig(BaseModel):
     """Base configuration with region and environment."""
 
-    name: Optional[str] = Field(
+    name: str | None = Field(
         default=None,
         description="Name of the AgentArts runtime",
     )
-    entrypoint: Optional[str] = Field(
+    entrypoint: str | None = Field(
         default=None,
         description="Entrypoint of the AgentArts runtime",
     )
-    dependency_file: Optional[str] = Field(
+    dependency_file: str | None = Field(
         default=None,
         description="Path to dependency file (e.g., requirements.txt, pyproject.toml)",
     )
-    region: Optional[str] = Field(
+    region: str | None = Field(
         default=None,
         description="Huawei Cloud region",
     )
@@ -76,7 +76,7 @@ class SWRConfig(BaseModel):
         default=False,
         description="Whether to automatically create the SWR organization if it doesn't exist",
     )
-    organization: Optional[str] = Field(
+    organization: str | None = Field(
         default=None,
         description="SWR organization name",
     )
@@ -84,7 +84,7 @@ class SWRConfig(BaseModel):
         default=False,
         description="Whether to automatically create the SWR repository if it doesn't exist",
     )
-    repository: Optional[str] = Field(
+    repository: str | None = Field(
         default=None,
         description="SWR repository name",
     )
@@ -117,15 +117,15 @@ class InvokeConfig(BaseModel):
 class VpcConfig(BaseModel):
     """VPC configuration."""
 
-    vpc_id: Optional[str] = Field(
+    vpc_id: str | None = Field(
         default=None,
         description="VPC ID",
     )
-    subnet_id: Optional[str] = Field(
+    subnet_id: str | None = Field(
         default=None,
         description="Subnet ID",
     )
-    security_group_id: Optional[List[str]] = Field(
+    security_group_id: list[str] | None = Field(
         default_factory=list,
         description="Security group IDs",
     )
@@ -134,10 +134,10 @@ class VpcConfig(BaseModel):
         "extra": "allow",
     }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary."""
         data = self.model_dump(mode="json", exclude_none=True)
-        return {k: v for k, v in data.items() if v != [] and v != {}}
+        return {k: v for k, v in data.items() if v not in ([], {})}
 
 
 class NetworkConfig(BaseModel):
@@ -147,7 +147,7 @@ class NetworkConfig(BaseModel):
         default="PUBLIC",
         description="Network mode, e.g., 'VPC' or 'PUBLIC'",
     )
-    vpc_config: Optional[VpcConfig] = Field(
+    vpc_config: VpcConfig | None = Field(
         default_factory=VpcConfig,
         description="VPC configuration details",
     )
@@ -156,20 +156,20 @@ class NetworkConfig(BaseModel):
         "extra": "allow",
     }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary."""
         data = self.model_dump(mode="json", exclude_none=True)
-        return {k: v for k, v in data.items() if v != [] and v != {}}
+        return {k: v for k, v in data.items() if v not in ([], {})}
 
 
 class APIKeyPair(BaseModel):
     """API key pair configuration."""
 
-    api_key: Optional[str] = Field(
+    api_key: str | None = Field(
         default=None,
         description="API key",
     )
-    api_key_name: Optional[str] = Field(
+    api_key_name: str | None = Field(
         default=None,
         description="API key name",
     )
@@ -178,16 +178,16 @@ class APIKeyPair(BaseModel):
         "extra": "allow",
     }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary."""
         data = self.model_dump(mode="json", exclude_none=True)
-        return {k: v for k, v in data.items() if v != [] and v != {}}
+        return {k: v for k, v in data.items() if v not in ([], {})}
 
 
 class APIKeyAuthConfig(BaseModel):
     """API key authentication configuration."""
 
-    api_keys: Optional[List[APIKeyPair]] = Field(
+    api_keys: list[APIKeyPair] | None = Field(
         default_factory=list,
         description="API keys for authentication",
     )
@@ -200,19 +200,19 @@ class APIKeyAuthConfig(BaseModel):
 class CustomJWTAuthConfig(BaseModel):
     """Custom JWT authentication configuration."""
 
-    discovery_url: Optional[str] = Field(
+    discovery_url: str | None = Field(
         default=None,
         description="Discovery URL for JWT authentication",
     )
-    allowed_audience: Optional[List[str]] = Field(
+    allowed_audience: list[str] | None = Field(
         default_factory=list,
         description="Allowed audiences for JWT authentication",
     )
-    allowed_clients: Optional[List[str]] = Field(
+    allowed_clients: list[str] | None = Field(
         default_factory=list,
         description="Allowed clients for JWT authentication",
     )
-    allowed_scopes: Optional[List[str]] = Field(
+    allowed_scopes: list[str] | None = Field(
         default_factory=list,
         description="Allowed scopes for JWT authentication",
     )
@@ -230,22 +230,22 @@ class CustomJWTAuthConfig(BaseModel):
             and not self.allowed_scopes
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary, excluding empty values."""
         if self.is_empty():
             return {}
         data = self.model_dump(mode="json", exclude_none=True)
-        return {k: v for k, v in data.items() if v != [] and v != {}}
+        return {k: v for k, v in data.items() if v not in ([], {})}
 
 
 class AuthConfig(BaseModel):
     """Authentication configuration."""
 
-    custom_jwt: Optional[CustomJWTAuthConfig] = Field(
+    custom_jwt: CustomJWTAuthConfig | None = Field(
         default_factory=CustomJWTAuthConfig,
         description="Custom JWT authentication configuration",
     )
-    key_auth: Optional[APIKeyAuthConfig] = Field(
+    key_auth: APIKeyAuthConfig | None = Field(
         default_factory=APIKeyAuthConfig,
         description="API key authentication configuration",
     )
@@ -260,7 +260,7 @@ class AuthConfig(BaseModel):
         key_auth_empty = self.key_auth is None or not (self.key_auth.api_keys or [])
         return custom_jwt_empty and key_auth_empty
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary, excluding empty values."""
         result = {}
         if self.custom_jwt and not self.custom_jwt.is_empty():
@@ -281,7 +281,7 @@ class InboundIdentityConfig(BaseModel):
         default=AuthType.IAM,
         description="Authentication type",
     )
-    authorizer_configuration: Optional[AuthConfig] = Field(
+    authorizer_configuration: AuthConfig | None = Field(
         default=None,
         description="Authorizer configuration",
     )
@@ -291,7 +291,7 @@ class InboundIdentityConfig(BaseModel):
         "extra": "allow",
     }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary."""
         result = {"authorizer_type": self.authorizer_type}
         if self.authorizer_configuration and not self.authorizer_configuration.is_empty():
@@ -304,11 +304,11 @@ class InboundIdentityConfig(BaseModel):
 class ArtifactSourceConfig(BaseModel):
     """Artifact source configuration."""
 
-    url: Optional[str] = Field(
+    url: str | None = Field(
         default=None,
         description="URL of the artifact source",
     )
-    commands: Optional[List[str]] = Field(
+    commands: list[str] | None = Field(
         default_factory=list,
         description="Commands to run when the artifact is deployed",
     )
@@ -317,7 +317,7 @@ class ArtifactSourceConfig(BaseModel):
         "extra": "allow",
     }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary."""
         return self.model_dump(mode="json", exclude_none=True)
 
@@ -328,7 +328,7 @@ class KeyValuePair(BaseModel):
     key: str = Field(
         description="Key",
     )
-    value: Optional[str] = Field(
+    value: str | None = Field(
         default=None,
         description="Value",
     )
@@ -397,7 +397,7 @@ class ObservabilityConfig(BaseModel):
         "extra": "allow",
     }
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary."""
         return self.model_dump(mode="json", exclude_none=True)
 
@@ -405,43 +405,43 @@ class ObservabilityConfig(BaseModel):
 class AgentArtsRuntimeConfig(BaseModel):
     """Runtime configuration for AgentArts."""
 
-    agent_id: Optional[str] = Field(
+    agent_id: str | None = Field(
         default=None,
         description="Agent ID",
     )
-    agent_gateway_id: Optional[str] = Field(
+    agent_gateway_id: str | None = Field(
         default=None,
         description="Agent gateway ID",
     )
-    execution_agency_name: Optional[str] = Field(
+    execution_agency_name: str | None = Field(
         default=None,
         description="Execution agency name",
     )
-    identity_configuration: Optional[InboundIdentityConfig] = Field(
+    identity_configuration: InboundIdentityConfig | None = Field(
         default_factory=InboundIdentityConfig,
         description="Identity configuration",
     )
-    network_config: Optional[NetworkConfig] = Field(
+    network_config: NetworkConfig | None = Field(
         default_factory=NetworkConfig,
         description="Network configuration",
     )
-    invoke_config: Optional[InvokeConfig] = Field(
+    invoke_config: InvokeConfig | None = Field(
         default_factory=InvokeConfig,
         description="Invoke configuration",
     )
-    observability: Optional[ObservabilityConfig] = Field(
+    observability: ObservabilityConfig | None = Field(
         default_factory=ObservabilityConfig,
         description="Observability configuration",
     )
-    artifact_source: Optional[ArtifactSourceConfig] = Field(
+    artifact_source: ArtifactSourceConfig | None = Field(
         default_factory=ArtifactSourceConfig,
         description="Artifact source configuration",
     )
-    environment_variables: Optional[List[KeyValuePair]] = Field(
+    environment_variables: list[KeyValuePair] | None = Field(
         default_factory=list,
         description="Environment variables configuration",
     )
-    tags: Optional[List[KeyValuePair]] = Field(
+    tags: list[KeyValuePair] | None = Field(
         default_factory=list,
         description="Tags configuration",
     )
@@ -487,8 +487,8 @@ class AgentArtsConfig(BaseModel):
     def to_yaml(self, path: str) -> None:
         """Save configuration to YAML file with ordered fields."""
         import yaml
-        
-        def order_dict(d: Dict[str, Any], key_order: List[str]) -> Dict[str, Any]:
+
+        def order_dict(d: dict[str, Any], key_order: list[str]) -> dict[str, Any]:
             """Reorder dictionary keys with specified order."""
             ordered = {}
             for key in key_order:
@@ -498,11 +498,11 @@ class AgentArtsConfig(BaseModel):
                 if key not in ordered:
                     ordered[key] = d[key]
             return ordered
-        
+
         data = self.model_dump(mode="json")
-        
+
         ordered_data = order_dict(data, ["default_agent", "agents"])
-        
+
         if "agents" in ordered_data:
             ordered_agents = {}
             for agent_name, agent_config in ordered_data["agents"].items():
@@ -520,16 +520,16 @@ class AgentArtsConfig(BaseModel):
                         ["agent_id", "agent_gateway_id", "execution_agency_name", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "environment_variables", "tags"]
                     )
             ordered_data["agents"] = ordered_agents
-        
+
         with open(path, "w", encoding="utf-8") as f:
             yaml.dump(ordered_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "AgentArtsConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "AgentArtsConfig":
         """Create configuration from dictionary."""
         return cls.model_validate(data)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary."""
         return self.model_dump(mode="json")
 
@@ -541,11 +541,11 @@ class AgentArtsConfigList(BaseModel):
     This is used to manage multiple agent configurations in a single file.
     """
 
-    default_agent: Optional[str] = Field(
+    default_agent: str | None = Field(
         default=None,
         description="Default AgentArts runtime name for toolkit operations",
     )
-    agents: Dict[str, AgentArtsConfig] = Field(
+    agents: dict[str, AgentArtsConfig] = Field(
         default_factory=dict,
         description="Dictionary of AgentArts runtime configurations",
     )
@@ -566,8 +566,8 @@ class AgentArtsConfigList(BaseModel):
     def to_yaml(self, path: str) -> None:
         """Save configuration to YAML file with ordered fields."""
         import yaml
-        
-        def order_dict(d: Dict[str, Any], key_order: List[str]) -> Dict[str, Any]:
+
+        def order_dict(d: dict[str, Any], key_order: list[str]) -> dict[str, Any]:
             """Reorder dictionary keys with specified order."""
             ordered = {}
             for key in key_order:
@@ -577,11 +577,11 @@ class AgentArtsConfigList(BaseModel):
                 if key not in ordered:
                     ordered[key] = d[key]
             return ordered
-        
+
         data = self.model_dump(mode="json")
-        
+
         ordered_data = order_dict(data, ["default_agent", "agents"])
-        
+
         if "agents" in ordered_data:
             ordered_agents = {}
             for agent_name, agent_config in ordered_data["agents"].items():
@@ -599,20 +599,20 @@ class AgentArtsConfigList(BaseModel):
                         ["invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "environment_variables", "tags"]
                     )
             ordered_data["agents"] = ordered_agents
-        
+
         with open(path, "w", encoding="utf-8") as f:
             yaml.dump(ordered_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "AgentArtsConfigList":
+    def from_dict(cls, data: dict[str, Any]) -> "AgentArtsConfigList":
         """Create configuration from dictionary."""
         return cls.model_validate(data)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary."""
         return self.model_dump(mode="json")
 
-    def get_agent(self, name: Optional[str] = None) -> Optional[AgentArtsConfig]:
+    def get_agent(self, name: str | None = None) -> AgentArtsConfig | None:
         """
         Get agent configuration by name.
 
@@ -657,7 +657,7 @@ class AgentArtsConfigList(BaseModel):
             return True
         return False
 
-    def list_agents(self) -> List[str]:
+    def list_agents(self) -> list[str]:
         """
         List all agent names.
 

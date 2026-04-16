@@ -2,6 +2,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from agentarts.sdk.identity.types import OAuth2Vendor
+from agentarts.sdk.service.identity.identity_client import IdentityClient
+
 # We expect these to be available in huaweicloudsdkagentidentity.v1
 from huaweicloudsdkagentidentity.v1 import (
     AgentIdentityClient,
@@ -11,9 +14,6 @@ from huaweicloudsdkagentidentity.v1 import (
     Oauth2CredentialProvider,
     Tag,
 )
-
-from agentarts.sdk.identity.types import OAuth2Vendor
-from agentarts.sdk.service.identity.identity_client import IdentityClient
 
 
 @pytest.fixture

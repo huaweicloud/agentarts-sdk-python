@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,19 +14,19 @@ class CustomJWTAuthorizerConfiguration:
     sensitive_list = []
 
     openapi_types = {
-        'discovery_url': 'str',
-        'allowed_audience': 'list[str]',
-        'allowed_clients': 'list[str]',
-        'allowed_scopes': 'list[str]',
-        'custom_claims': 'list[CustomClaimValidation]'
+        "discovery_url": "str",
+        "allowed_audience": "list[str]",
+        "allowed_clients": "list[str]",
+        "allowed_scopes": "list[str]",
+        "custom_claims": "list[CustomClaimValidation]"
     }
 
     attribute_map = {
-        'discovery_url': 'discovery_url',
-        'allowed_audience': 'allowed_audience',
-        'allowed_clients': 'allowed_clients',
-        'allowed_scopes': 'allowed_scopes',
-        'custom_claims': 'custom_claims'
+        "discovery_url": "discovery_url",
+        "allowed_audience": "allowed_audience",
+        "allowed_clients": "allowed_clients",
+        "allowed_scopes": "allowed_scopes",
+        "custom_claims": "custom_claims"
     }
 
     def __init__(self, discovery_url=None, allowed_audience=None, allowed_clients=None, allowed_scopes=None, custom_claims=None):
@@ -37,17 +36,17 @@ class CustomJWTAuthorizerConfiguration:
 
         :param discovery_url: This URL is used to fetch OpenID Connect configuration.
         :type discovery_url: str
-        :param allowed_audience: 
+        :param allowed_audience:
         :type allowed_audience: list[str]
-        :param allowed_clients: 
+        :param allowed_clients:
         :type allowed_clients: list[str]
-        :param allowed_scopes: 
+        :param allowed_scopes:
         :type allowed_scopes: list[str]
         :param custom_claims: Custom claim validation rules applied to inbound JWTs.
         :type custom_claims: list[:class:`huaweicloudsdkagentidentity.v1.CustomClaimValidation`]
         """
-        
-        
+
+
 
         self._discovery_url = None
         self._allowed_audience = None
@@ -170,10 +169,7 @@ class CustomJWTAuthorizerConfiguration:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -182,11 +178,10 @@ class CustomJWTAuthorizerConfiguration:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

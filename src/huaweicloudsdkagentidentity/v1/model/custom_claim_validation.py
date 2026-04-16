@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,15 +14,15 @@ class CustomClaimValidation:
     sensitive_list = []
 
     openapi_types = {
-        'authorizing_claim_match_value': 'AuthorizingClaimMatchValue',
-        'inbound_token_claim_name': 'str',
-        'inbound_token_claim_value_type': 'str'
+        "authorizing_claim_match_value": "AuthorizingClaimMatchValue",
+        "inbound_token_claim_name": "str",
+        "inbound_token_claim_value_type": "str"
     }
 
     attribute_map = {
-        'authorizing_claim_match_value': 'authorizing_claim_match_value',
-        'inbound_token_claim_name': 'inbound_token_claim_name',
-        'inbound_token_claim_value_type': 'inbound_token_claim_value_type'
+        "authorizing_claim_match_value": "authorizing_claim_match_value",
+        "inbound_token_claim_name": "inbound_token_claim_name",
+        "inbound_token_claim_value_type": "inbound_token_claim_value_type"
     }
 
     def __init__(self, authorizing_claim_match_value=None, inbound_token_claim_name=None, inbound_token_claim_value_type=None):
@@ -31,15 +30,15 @@ class CustomClaimValidation:
 
         The model defined in huaweicloud sdk
 
-        :param authorizing_claim_match_value: 
+        :param authorizing_claim_match_value:
         :type authorizing_claim_match_value: :class:`huaweicloudsdkagentidentity.v1.AuthorizingClaimMatchValue`
         :param inbound_token_claim_name: The name of the custom claim field to check.
         :type inbound_token_claim_name: str
         :param inbound_token_claim_value_type: The data type of the claim value to check for.
         :type inbound_token_claim_value_type: str
         """
-        
-        
+
+
 
         self._authorizing_claim_match_value = None
         self._inbound_token_claim_name = None
@@ -118,10 +117,7 @@ class CustomClaimValidation:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -130,11 +126,10 @@ class CustomClaimValidation:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

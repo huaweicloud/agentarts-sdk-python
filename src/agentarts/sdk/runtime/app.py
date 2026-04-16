@@ -28,27 +28,25 @@ import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from typing import (
+    TYPE_CHECKING,
     Any,
-    AsyncGenerator,
-    Callable,
-    Dict,
-    Generator,
     Literal,
-    Optional,
-    Sequence,
-    Union,
 )
 
 from starlette.applications import Starlette
-from starlette.middleware import Middleware
-from starlette.requests import Request
 from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route, WebSocket, WebSocketRoute
-from starlette.types import Lifespan
-from starlette.websockets import WebSocketDisconnect, WebSocket
+from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from .context import AgentArtsRuntimeContext, RequestContext
-from .model import ACCESS_TOKEN_HEADER, PingStatus, SESSION_HEADER, USER_ID_HEADER
+from .model import ACCESS_TOKEN_HEADER, SESSION_HEADER, USER_ID_HEADER, PingStatus
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Callable, Generator, Sequence
+
+    from starlette.middleware import Middleware
+    from starlette.requests import Request
+    from starlette.types import Lifespan
 
 log = logging.getLogger(__name__)
 
@@ -81,17 +79,17 @@ class AgentArtsRuntimeApp(Starlette):
     def __init__(
         self,
         debug: bool = False,
-        lifespan: Optional[Lifespan] = None,
-        middleware: Optional[Sequence[Middleware]] = None,
+        lifespan: Lifespan | None = None,
+        middleware: Sequence[Middleware] | None = None,
         protocol: Literal["http", "https"] = "http",
         max_concurrency: int = 15,
     ) -> None:
-        self.handlers: Dict[str, Callable] = {}
-        self._ping_handler: Optional[Callable] = None
-        self._ws_handler: Optional[Callable] = None
+        self.handlers: dict[str, Callable] = {}
+        self._ping_handler: Callable | None = None
+        self._ws_handler: Callable | None = None
         self._last_status_update_time: float = time.time()
-        self._force_ping_status: Optional[PingStatus] = None
-        self._active_tasks: Dict[int, Dict[str, Any]] = {}
+        self._force_ping_status: PingStatus | None = None
+        self._active_tasks: dict[int, dict[str, Any]] = {}
         self._task_counter_lock :threading.Lock = threading.Lock()
         self._invocation_semaphore = asyncio.Semaphore(max_concurrency)
         self._invocation_executor = ThreadPoolExecutor(
@@ -116,7 +114,7 @@ class AgentArtsRuntimeApp(Starlette):
     def entrypoint(self, func: Callable) -> Callable:
         """Register *func* as the main agent invocation handler."""
         self.handlers["main"] = func
-        func.run = lambda **kwargs: self.run(**kwargs)
+        func.run = self.run
         return func
 
     def ping(self, func: Callable) -> Callable:
@@ -154,17 +152,17 @@ class AgentArtsRuntimeApp(Starlette):
             The wrapped function that tracks task execution.
         """
         if not asyncio.iscoroutinefunction(func):
+            msg = "async_task decorator must be used with async functions"
             raise ValueError(
-                "async_task decorator must be used with async functions"
+                msg
             )
 
         async def wrapper(*args, **kwargs):
             task_id = self._add_task(func.__name__)
             try:
-                result = await func(*args, **kwargs)
-                return result
+                return await func(*args, **kwargs)
             except Exception as e:
-                self.logger.error("Async task %s (ID: %s) error: %s", func.__name__, task_id, e)
+                self.logger.exception("Async task %s (ID: %s) error: %s", func.__name__, task_id, e)
                 raise
             finally:
                 self._complete_task(task_id)
@@ -174,7 +172,7 @@ class AgentArtsRuntimeApp(Starlette):
         wrapper.__name__ = func.__name__
         return wrapper
 
-    def _add_task(self, name: str, metadata: Optional[Dict[str, Any]] = None) -> int:
+    def _add_task(self, name: str, metadata: dict[str, Any] | None = None) -> int:
         """
         Register a new task in the active tasks registry.
 
@@ -191,7 +189,7 @@ class AgentArtsRuntimeApp(Starlette):
                 "name": name,
                 "start_time": time.time(),
                 "metadata": metadata,
-            }   
+            }
             self._active_tasks[task_id] = task_info
         self.logger.debug("Async task start: %s(ID: %s)", name, task_id)
         return task_id
@@ -213,9 +211,8 @@ class AgentArtsRuntimeApp(Starlette):
                 duration = time.time() - removed.get("start_time", time.time())
                 self.logger.debug("Async task completed: %s(ID: %s, duration: %.3fs)", name, task_id, duration)
                 return True
-            else:
-                self.logger.warning("Async task not found in registry: %s", task_id)
-                return False
+            self.logger.warning("Async task not found in registry: %s", task_id)
+            return False
     def has_running_tasks(self) -> bool:
         """
         Check if there are any async tasks currently running.
@@ -230,7 +227,7 @@ class AgentArtsRuntimeApp(Starlette):
     # Request context helpers
     # ------------------------------------------------------------------
 
-    def _build_request_context(self, request: Union[Request, WebSocket]) -> RequestContext:
+    def _build_request_context(self, request: Request | WebSocket) -> RequestContext:
         """
         Extract authentication and session headers from the incoming
         request or websocket and populate :class:`AgentArtsRuntimeContext`.
@@ -350,7 +347,7 @@ class AgentArtsRuntimeApp(Starlette):
             )
         except Exception as exc:
             duration = time.time() - start_time
-            self.logger.error(
+            self.logger.exception(
                 "Invocation failed after %.3f s: %s: %s",
                 duration,
                 type(exc).__name__,
@@ -385,14 +382,13 @@ class AgentArtsRuntimeApp(Starlette):
                 args = (payload, request_context) if task_context else (payload,)
                 if asyncio.iscoroutinefunction(handler):
                     return await handler(*args)
-                else:
-                    loop = asyncio.get_event_loop()
-                    return await loop.run_in_executor(
-                        self._invocation_executor, handler, *args
-                    )
+                loop = asyncio.get_event_loop()
+                return await loop.run_in_executor(
+                    self._invocation_executor, handler, *args
+                )
             except Exception as exc:
                 handler_name = getattr(handler, "__name__", "unknown")
-                self.logger.error(
+                self.logger.exception(
                     "Handler '%s' execution failed: %s: %s",
                     handler_name,
                     type(exc).__name__,
@@ -415,11 +411,11 @@ class AgentArtsRuntimeApp(Starlette):
         """
         try:
             return json.dumps(obj, ensure_ascii=False, default=str)
-        except (TypeError, ValueError, UnicodeEncodeError) as exc:
+        except (TypeError, ValueError, UnicodeEncodeError):
             try:
                 return json.dumps(str(obj), ensure_ascii=False)
             except Exception as exc:
-                self.logger.error(
+                self.logger.exception(
                     "JSON serialization failed, falling back to str: %s: %s",
                     exc,
                     type(exc).__name__,
@@ -445,7 +441,7 @@ class AgentArtsRuntimeApp(Starlette):
             for chunk in gen:
                 yield self._convert_to_sse(chunk)
         except Exception as exc:
-            self.logger.error("Sync stream error: %s: %s", type(exc).__name__, exc)
+            self.logger.exception("Sync stream error: %s: %s", type(exc).__name__, exc)
             error_data = {
                 "error": str(exc),
                 "error_type": type(exc).__name__,
@@ -466,7 +462,7 @@ class AgentArtsRuntimeApp(Starlette):
             async for chunk in agen:
                 yield self._convert_to_sse(chunk)
         except Exception as exc:
-            self.logger.error("Async stream error: %s: %s", type(exc).__name__, exc)
+            self.logger.exception("Async stream error: %s: %s", type(exc).__name__, exc)
             error_data = {
                 "error": str(exc),
                 "error_type": type(exc).__name__,
@@ -502,7 +498,7 @@ class AgentArtsRuntimeApp(Starlette):
                 },
             )
         except Exception as exc:
-            self.logger.error("Ping handler failed: %s: %s", type(exc).__name__, exc)
+            self.logger.exception("Ping handler failed: %s: %s", type(exc).__name__, exc)
             return JSONResponse(
                 content={
                     "status": PingStatus.UNHEALTHY.value,
@@ -525,10 +521,7 @@ class AgentArtsRuntimeApp(Starlette):
         if self._ping_handler is not None:
             try:
                 result = self._ping_handler()
-                if isinstance(result, str):
-                    current_status = PingStatus(result)
-                else:
-                    current_status = result
+                current_status = PingStatus(result) if isinstance(result, str) else result
             except Exception as exc:
                 self.logger.warning("Custom Ping handler failed: %s: %s", type(exc).__name__, exc)
 
@@ -600,7 +593,7 @@ class AgentArtsRuntimeApp(Starlette):
     # Server lifecycle
     # ------------------------------------------------------------------
 
-    def run(self, host: Optional[str] = None, port: int = 8080, **kwargs: Any) -> None:
+    def run(self, host: str | None = None, port: int = 8080, **kwargs: Any) -> None:
         """
         Start the ASGI server (uvicorn) in a blocking call.
 

@@ -13,12 +13,12 @@ import typer
 from rich.console import Console
 from rich.logging import RichHandler
 
-from agentarts.toolkit.cli.runtime import init, dev, deploy
-from agentarts.toolkit.cli.runtime.config import config_app
-from agentarts.toolkit.cli.runtime.invoke import invoke, status
-from agentarts.toolkit.cli.runtime.destroy import destroy
 from agentarts.toolkit.cli.mcp_gateway import mcp_gateway
 from agentarts.toolkit.cli.memory.commands import memory_app
+from agentarts.toolkit.cli.runtime import deploy, dev, init
+from agentarts.toolkit.cli.runtime.config import config_app
+from agentarts.toolkit.cli.runtime.destroy import destroy
+from agentarts.toolkit.cli.runtime.invoke import invoke, status
 
 console = Console()
 
@@ -26,18 +26,18 @@ console = Console()
 def setup_logging(verbose: bool = False):
     """
     Configure logging for toolkit CLI.
-    
+
     Args:
         verbose: If True, set log level to DEBUG; otherwise INFO.
     """
     log_format = "%(message)s"
-    
+
     logging.basicConfig(
         level=logging.DEBUG if verbose else logging.INFO,
         format=log_format,
         handlers=[RichHandler(show_time=False, show_path=False, show_level=False, console=console)],
     )
-    
+
     logging.getLogger("urllib3").setLevel(logging.WARNING)
     logging.getLogger("huaweicloudsdkcore").setLevel(logging.WARNING)
 
@@ -73,12 +73,12 @@ def main(
         agentarts deploy -r cn-southwest-2 -e production
     """
     setup_logging(verbose=verbose)
-    
+
     if version:
         from agentarts import __version__
         console.print(f"agentarts version: [bold green]{__version__}[/bold green]")
-        raise typer.Exit()
-    
+        raise typer.Exit
+
     if ctx.invoked_subcommand is None:
         from agentarts import __version__
         console.print()
@@ -91,7 +91,7 @@ def main(
         console.print("  [cyan]agentarts --help[/cyan]     Show available commands")
         console.print("  [cyan]agentarts init --help[/cyan]  Show init command help")
         console.print()
-        raise typer.Exit()
+        raise typer.Exit
 
 
 app.command(name="init")(init)

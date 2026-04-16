@@ -1,27 +1,15 @@
 """Comprehensive unit tests for constant.py module"""
 
 import os
+
 import pytest
 
 from agentarts.sdk.utils.constant import (
-    HUAWEICLOUD_SDK_AK,
-    HUAWEICLOUD_SDK_SK,
-    HUAWEICLOUD_SDK_SECURITY_TOKEN,
-    HUAWEICLOUD_SDK_IDP_ID,
-    HUAWEICLOUD_SDK_ID_TOKEN_FILE,
-    HUAWEICLOUD_SDK_PROJECT_ID,
-    AGENTARTS_CONTROL_ENDPOINT,
-    AGENTARTS_RUNTIME_DATA_ENDPOINT,
-    AGENTARTS_MEMORY_DATA_ENDPOINT,
-    HUAWEICLOUD_SDK_IAM_ENDPOINT,
-    HUAWEICLOUD_SDK_SWR_ENDPOINT,
-    PYTHON_BASE_IMAGE,
-    get_region,
     get_control_plane_endpoint,
-    get_data_plane_endpoint,
     get_memory_endpoint,
+    get_region,
+    get_runtime_data_plane_endpoint,
 )
-
 
 # ============================================================
 # get_region Tests
@@ -113,25 +101,19 @@ class TestGetControlPlaneEndpoint:
 # get_data_plane_endpoint Tests
 # ============================================================
 
-class TestGetDataPlaneEndpoint:
-    """Tests for get_data_plane_endpoint() function."""
-
-    def test_returns_explicit_endpoint(self, monkeypatch):
-        """Returns the explicit endpoint parameter when provided."""
-        monkeypatch.setenv("AGENTARTS_RUNTIME_DATA_ENDPOINT", "https://env.example.com")
-        result = get_data_plane_endpoint("https://custom.example.com")
-        assert result == "https://custom.example.com"
+class TestGetRuntimeDataPlaneEndpoint:
+    """Tests for get_runtime_data_plane_endpoint() function."""
 
     def test_returns_env_endpoint(self, monkeypatch):
         """Returns AGENTARTS_RUNTIME_DATA_ENDPOINT from environment."""
         monkeypatch.setenv("AGENTARTS_RUNTIME_DATA_ENDPOINT", "https://env.example.com")
-        result = get_data_plane_endpoint()
+        result = get_runtime_data_plane_endpoint()
         assert result == "https://env.example.com"
 
     def test_returns_empty_when_not_configured(self, monkeypatch):
         """Returns empty string when no endpoint is configured."""
         monkeypatch.delenv("AGENTARTS_RUNTIME_DATA_ENDPOINT", raising=False)
-        result = get_data_plane_endpoint()
+        result = get_runtime_data_plane_endpoint()
         assert result == ""
 
 
@@ -156,14 +138,14 @@ class TestGetMemoryEndpoint:
         assert result == "https://agentarts.cn-southwest-2.myhuaweicloud.com"
 
     def test_data_type_returns_env_endpoint(self, monkeypatch):
-        """Returns AGENTARTS_MEMEORY_DATA_ENDPOINT for 'data' type when set."""
-        monkeypatch.setenv("AGENTARTS_MEMEORY_DATA_ENDPOINT", "https://memory.example.com")
+        """Returns AGENTARTS_MEMORY_DATA_ENDPOINT for 'data' type when set."""
+        monkeypatch.setenv("AGENTARTS_MEMORY_DATA_ENDPOINT", "https://memory.example.com")
         result = get_memory_endpoint("data")
         assert result == "https://memory.example.com"
 
     def test_data_type_constructs_from_region_and_space(self, monkeypatch):
         """Constructs data endpoint from region and space_id."""
-        monkeypatch.delenv("AGENTARTS_MEMEORY_DATA_ENDPOINT", raising=False)
+        monkeypatch.delenv("AGENTARTS_MEMORY_DATA_ENDPOINT", raising=False)
         monkeypatch.delenv("AGENTARTS_CONTROL_ENDPOINT", raising=False)
         monkeypatch.setenv("HUAWEICLOUD_SDK_REGION", "cn-north-4")
         result = get_memory_endpoint("data", "cn-north-4", "my-workspace")
@@ -171,7 +153,7 @@ class TestGetMemoryEndpoint:
 
     def test_data_type_uses_default_region(self, monkeypatch):
         """Uses default region when not provided for data endpoint."""
-        monkeypatch.delenv("AGENTARTS_MEMEORY_DATA_ENDPOINT", raising=False)
+        monkeypatch.delenv("AGENTARTS_MEMORY_DATA_ENDPOINT", raising=False)
         monkeypatch.delenv("AGENTARTS_CONTROL_ENDPOINT", raising=False)
         monkeypatch.delenv("HUAWEICLOUD_SDK_REGION", raising=False)
         monkeypatch.delenv("HUAWEICLOUD_REGION", raising=False)
@@ -181,7 +163,7 @@ class TestGetMemoryEndpoint:
 
     def test_data_type_raises_without_space_id(self, monkeypatch):
         """Raises ValueError when space_id is not provided for 'data' type."""
-        monkeypatch.delenv("AGENTARTS_MEMEORY_DATA_ENDPOINT", raising=False)
+        monkeypatch.delenv("AGENTARTS_MEMORY_DATA_ENDPOINT", raising=False)
         with pytest.raises(ValueError, match="space_id is required"):
             get_memory_endpoint("data")
 
@@ -191,14 +173,14 @@ class TestGetMemoryEndpoint:
             get_memory_endpoint("invalid")
 
     def test_data_type_env_endpoint_overrides_construction(self, monkeypatch):
-        """AGENTARTS_MEMEORY_DATA_ENDPOINT takes priority over constructed URL."""
-        monkeypatch.setenv("AGENTARTS_MEMEORY_DATA_ENDPOINT", "https://custom-memory.example.com")
+        """AGENTARTS_MEMORY_DATA_ENDPOINT takes priority over constructed URL."""
+        monkeypatch.setenv("AGENTARTS_MEMORY_DATA_ENDPOINT", "https://custom-memory.example.com")
         result = get_memory_endpoint("data", "cn-north-4", "my-workspace")
         assert result == "https://custom-memory.example.com"
 
     def test_data_type_with_explicit_region(self, monkeypatch):
         """Uses explicit region parameter for data endpoint construction."""
-        monkeypatch.delenv("AGENTARTS_MEMEORY_DATA_ENDPOINT", raising=False)
+        monkeypatch.delenv("AGENTARTS_MEMORY_DATA_ENDPOINT", raising=False)
         monkeypatch.setenv("HUAWEICLOUD_SDK_REGION", "cn-north-4")
         result = get_memory_endpoint("data", "cn-southwest-2", "my-workspace")
         assert result == "https://my-workspace.memory.cn-southwest-2.agentarts.myhuaweicloud.com"
@@ -252,9 +234,9 @@ class TestEnvironmentVariableLoading:
         assert os.getenv("AGENTARTS_RUNTIME_DATA_ENDPOINT") == "https://data.example.com"
 
     def test_memory_data_endpoint_loaded_from_env(self, monkeypatch):
-        """AGENTARTS_MEMEORY_DATA_ENDPOINT is read from environment via os.getenv."""
-        monkeypatch.setenv("AGENTARTS_MEMEORY_DATA_ENDPOINT", "https://memory.example.com")
-        assert os.getenv("AGENTARTS_MEMEORY_DATA_ENDPOINT") == "https://memory.example.com"
+        """AGENTARTS_MEMORY_DATA_ENDPOINT is read from environment via os.getenv."""
+        monkeypatch.setenv("AGENTARTS_MEMORY_DATA_ENDPOINT", "https://memory.example.com")
+        assert os.getenv("AGENTARTS_MEMORY_DATA_ENDPOINT") == "https://memory.example.com"
 
     def test_iam_endpoint_loaded_from_env(self, monkeypatch):
         """HUAWEICLOUD_SDK_IAM_ENDPOINT is read from environment via os.getenv."""
@@ -282,42 +264,42 @@ class TestEnsureHttps:
     def test_adds_https_prefix(self):
         """Adds https:// prefix when missing."""
         from agentarts.sdk.utils.constant import _ensure_https
-        
+
         result = _ensure_https("example.com")
         assert result == "https://example.com"
 
     def test_adds_https_prefix_to_endpoint_with_path(self):
         """Adds https:// prefix to endpoint with path."""
         from agentarts.sdk.utils.constant import _ensure_https
-        
+
         result = _ensure_https("example.com/api/v1")
         assert result == "https://example.com/api/v1"
 
     def test_preserves_existing_https(self):
         """Preserves existing https:// prefix."""
         from agentarts.sdk.utils.constant import _ensure_https
-        
+
         result = _ensure_https("https://example.com")
         assert result == "https://example.com"
 
     def test_preserves_existing_http(self):
         """Preserves existing http:// prefix."""
         from agentarts.sdk.utils.constant import _ensure_https
-        
+
         result = _ensure_https("http://example.com")
         assert result == "http://example.com"
 
     def test_returns_empty_string_unchanged(self):
         """Returns empty string unchanged."""
         from agentarts.sdk.utils.constant import _ensure_https
-        
+
         result = _ensure_https("")
         assert result == ""
 
     def test_returns_none_unchanged(self):
         """Returns None unchanged."""
         from agentarts.sdk.utils.constant import _ensure_https
-        
+
         result = _ensure_https(None)
         assert result is None
 
@@ -332,7 +314,7 @@ class TestGetRuntimeDataPlaneEndpointWithHttps:
     def test_adds_https_to_env_endpoint(self, monkeypatch):
         """Adds https:// to env endpoint without protocol."""
         from agentarts.sdk.utils.constant import get_runtime_data_plane_endpoint
-        
+
         monkeypatch.setenv("AGENTARTS_RUNTIME_DATA_ENDPOINT", "data.example.com")
         result = get_runtime_data_plane_endpoint()
         assert result == "https://data.example.com"
@@ -340,7 +322,7 @@ class TestGetRuntimeDataPlaneEndpointWithHttps:
     def test_preserves_https_in_env_endpoint(self, monkeypatch):
         """Preserves https:// in env endpoint."""
         from agentarts.sdk.utils.constant import get_runtime_data_plane_endpoint
-        
+
         monkeypatch.setenv("AGENTARTS_RUNTIME_DATA_ENDPOINT", "https://data.example.com")
         result = get_runtime_data_plane_endpoint()
         assert result == "https://data.example.com"
@@ -356,7 +338,7 @@ class TestGetCodeInterpreterDataPlaneEndpointWithHttps:
     def test_adds_https_to_code_interpreter_endpoint(self, monkeypatch):
         """Adds https:// to code interpreter endpoint."""
         from agentarts.sdk.utils.constant import get_code_interpreter_data_plane_endpoint
-        
+
         monkeypatch.setenv("AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT", "code.example.com")
         result = get_code_interpreter_data_plane_endpoint()
         assert result == "https://code.example.com"
@@ -364,7 +346,7 @@ class TestGetCodeInterpreterDataPlaneEndpointWithHttps:
     def test_adds_https_to_runtime_fallback(self, monkeypatch):
         """Adds https:// to runtime endpoint fallback."""
         from agentarts.sdk.utils.constant import get_code_interpreter_data_plane_endpoint
-        
+
         monkeypatch.delenv("AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT", raising=False)
         monkeypatch.setenv("AGENTARTS_RUNTIME_DATA_ENDPOINT", "runtime.example.com")
         result = get_code_interpreter_data_plane_endpoint()
@@ -381,7 +363,7 @@ class TestGetIamEndpointWithHttps:
     def test_adds_https_to_env_iam_endpoint(self, monkeypatch):
         """Adds https:// to env IAM endpoint."""
         from agentarts.sdk.utils.constant import get_iam_endpoint
-        
+
         monkeypatch.setenv("HUAWEICLOUD_SDK_IAM_ENDPOINT", "iam.example.com")
         result = get_iam_endpoint()
         assert result == "https://iam.example.com"
@@ -397,7 +379,7 @@ class TestGetSwrEndpointWithHttps:
     def test_adds_https_to_env_swr_endpoint(self, monkeypatch):
         """Adds https:// to env SWR endpoint."""
         from agentarts.sdk.utils.constant import get_swr_endpoint
-        
+
         monkeypatch.setenv("HUAWEICLOUD_SDK_SWR_ENDPOINT", "swr.example.com")
         result = get_swr_endpoint()
         assert result == "https://swr.example.com"
@@ -413,7 +395,7 @@ class TestGetIdentityEndpointWithHttps:
     def test_adds_https_to_env_identity_endpoint(self, monkeypatch):
         """Adds https:// to env identity endpoint."""
         from agentarts.sdk.utils.constant import get_identity_endpoint
-        
+
         monkeypatch.setenv("HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT", "identity.example.com")
         result = get_identity_endpoint()
         assert result == "https://identity.example.com"
@@ -429,7 +411,7 @@ class TestGetMemoryEndpointWithHttps:
     def test_adds_https_to_env_memory_endpoint(self, monkeypatch):
         """Adds https:// to env memory endpoint."""
         from agentarts.sdk.utils.constant import get_memory_endpoint
-        
+
         monkeypatch.setenv("AGENTARTS_MEMORY_DATA_ENDPOINT", "memory.example.com")
         result = get_memory_endpoint("data")
         assert result == "https://memory.example.com"

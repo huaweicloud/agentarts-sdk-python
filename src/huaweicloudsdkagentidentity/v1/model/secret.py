@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,13 +14,13 @@ class Secret:
     sensitive_list = []
 
     openapi_types = {
-        'secret_id': 'str',
-        'secret_name': 'str'
+        "secret_id": "str",
+        "secret_name": "str"
     }
 
     attribute_map = {
-        'secret_id': 'secret_id',
-        'secret_name': 'secret_name'
+        "secret_id": "secret_id",
+        "secret_name": "secret_name"
     }
 
     def __init__(self, secret_id=None, secret_name=None):
@@ -34,8 +33,8 @@ class Secret:
         :param secret_name: The secret name.
         :type secret_name: str
         """
-        
-        
+
+
 
         self._secret_id = None
         self._secret_name = None
@@ -94,10 +93,7 @@ class Secret:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -106,11 +102,10 @@ class Secret:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

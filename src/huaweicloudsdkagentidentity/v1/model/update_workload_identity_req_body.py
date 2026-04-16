@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,15 +14,15 @@ class UpdateWorkloadIdentityReqBody:
     sensitive_list = []
 
     openapi_types = {
-        'allowed_resource_oauth2_return_urls': 'list[str]',
-        'authorizer_configuration': 'AuthorizerConfiguration',
-        'tags': 'list[Tag]'
+        "allowed_resource_oauth2_return_urls": "list[str]",
+        "authorizer_configuration": "AuthorizerConfiguration",
+        "tags": "list[Tag]"
     }
 
     attribute_map = {
-        'allowed_resource_oauth2_return_urls': 'allowed_resource_oauth2_return_urls',
-        'authorizer_configuration': 'authorizer_configuration',
-        'tags': 'tags'
+        "allowed_resource_oauth2_return_urls": "allowed_resource_oauth2_return_urls",
+        "authorizer_configuration": "authorizer_configuration",
+        "tags": "tags"
     }
 
     def __init__(self, allowed_resource_oauth2_return_urls=None, authorizer_configuration=None, tags=None):
@@ -31,15 +30,15 @@ class UpdateWorkloadIdentityReqBody:
 
         The model defined in huaweicloud sdk
 
-        :param allowed_resource_oauth2_return_urls: 
+        :param allowed_resource_oauth2_return_urls:
         :type allowed_resource_oauth2_return_urls: list[str]
-        :param authorizer_configuration: 
+        :param authorizer_configuration:
         :type authorizer_configuration: :class:`huaweicloudsdkagentidentity.v1.AuthorizerConfiguration`
         :param tags: 自定义标签列表。
         :type tags: list[:class:`huaweicloudsdkagentidentity.v1.Tag`]
         """
-        
-        
+
+
 
         self._allowed_resource_oauth2_return_urls = None
         self._authorizer_configuration = None
@@ -117,10 +116,7 @@ class UpdateWorkloadIdentityReqBody:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -129,11 +125,10 @@ class UpdateWorkloadIdentityReqBody:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

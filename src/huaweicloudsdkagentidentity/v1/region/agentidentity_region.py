@@ -1,7 +1,7 @@
-# coding: utf-8
 
-from huaweicloudsdkcore.region.region import Region
 from huaweicloudsdkcore.region.provider import RegionProviderChain
+from huaweicloudsdkcore.region.region import Region
+
 
 class AgentIdentityRegion:
     _PROVIDER = RegionProviderChain.get_default_region_provider_chain("AGENTIDENTITY")
@@ -16,7 +16,8 @@ class AgentIdentityRegion:
     @classmethod
     def value_of(cls, region_id, static_fields=None):
         if not region_id:
-            raise KeyError("Unexpected empty parameter: region_id")
+            msg = "Unexpected empty parameter: region_id"
+            raise KeyError(msg)
 
         fields = static_fields or cls.static_fields
 
@@ -27,5 +28,8 @@ class AgentIdentityRegion:
         if region_id in fields:
             return fields.get(region_id)
 
-        raise KeyError("region_id '%s' is not in the following supported regions of service 'AgentIdentity': [%s]" % (
-            region_id, ", ".join(sorted(fields.keys()))))
+        msg = (
+            "region_id '{}' is not in the following supported regions of service 'AgentIdentity': [{}]".format(
+            region_id, ", ".join(sorted(fields.keys())))
+        )
+        raise KeyError(msg)

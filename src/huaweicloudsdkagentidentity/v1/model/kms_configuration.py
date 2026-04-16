@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,13 +14,13 @@ class KmsConfiguration:
     sensitive_list = []
 
     openapi_types = {
-        'key_type': 'KmsKeyType',
-        'kms_key_id': 'str'
+        "key_type": "KmsKeyType",
+        "kms_key_id": "str"
     }
 
     attribute_map = {
-        'key_type': 'key_type',
-        'kms_key_id': 'kms_key_id'
+        "key_type": "key_type",
+        "kms_key_id": "kms_key_id"
     }
 
     def __init__(self, key_type=None, kms_key_id=None):
@@ -29,13 +28,13 @@ class KmsConfiguration:
 
         The model defined in huaweicloud sdk
 
-        :param key_type: 
+        :param key_type:
         :type key_type: :class:`huaweicloudsdkagentidentity.v1.KmsKeyType`
         :param kms_key_id: The identifier of the KMS key used for the token vault.
         :type kms_key_id: str
         """
-        
-        
+
+
 
         self._key_type = None
         self._kms_key_id = None
@@ -91,10 +90,7 @@ class KmsConfiguration:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -103,11 +99,10 @@ class KmsConfiguration:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

@@ -1,18 +1,16 @@
 """Comprehensive unit tests for HTTP client module"""
 
 import json
+from unittest.mock import MagicMock, patch
 
 import pytest
-import requests
-from requests.exceptions import Timeout, RequestException, ConnectionError
-from unittest.mock import MagicMock, patch, call
+from requests.exceptions import ConnectionError, RequestException, Timeout
 
 from agentarts.sdk.service import (
     BaseHTTPClient,
     RequestConfig,
     RequestResult,
 )
-
 
 # ============================================================
 # RequestConfig Tests
@@ -923,7 +921,7 @@ class TestBaseHTTPClientStreaming:
         mock_request.return_value = mock_resp
 
         client = BaseHTTPClient(RequestConfig(base_url="https://api.example.com"))
-        result = client._request("GET", "/test")
+        client._request("GET", "/test")
 
         mock_resp.close.assert_called_once()
 

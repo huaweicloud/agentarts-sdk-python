@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,17 +14,17 @@ class Oauth2ProviderConfigOutput:
     sensitive_list = []
 
     openapi_types = {
-        'microsoft_oauth2_provider_config': 'MicrosoftOauth2ProviderConfigOutput',
-        'google_oauth2_provider_config': 'GoogleOauth2ProviderConfigOutput',
-        'github_oauth2_provider_config': 'GithubOauth2ProviderConfigOutput',
-        'custom_oauth2_provider_config': 'CustomOauth2ProviderConfigOutput'
+        "microsoft_oauth2_provider_config": "MicrosoftOauth2ProviderConfigOutput",
+        "google_oauth2_provider_config": "GoogleOauth2ProviderConfigOutput",
+        "github_oauth2_provider_config": "GithubOauth2ProviderConfigOutput",
+        "custom_oauth2_provider_config": "CustomOauth2ProviderConfigOutput"
     }
 
     attribute_map = {
-        'microsoft_oauth2_provider_config': 'microsoft_oauth2_provider_config',
-        'google_oauth2_provider_config': 'google_oauth2_provider_config',
-        'github_oauth2_provider_config': 'github_oauth2_provider_config',
-        'custom_oauth2_provider_config': 'custom_oauth2_provider_config'
+        "microsoft_oauth2_provider_config": "microsoft_oauth2_provider_config",
+        "google_oauth2_provider_config": "google_oauth2_provider_config",
+        "github_oauth2_provider_config": "github_oauth2_provider_config",
+        "custom_oauth2_provider_config": "custom_oauth2_provider_config"
     }
 
     def __init__(self, microsoft_oauth2_provider_config=None, google_oauth2_provider_config=None, github_oauth2_provider_config=None, custom_oauth2_provider_config=None):
@@ -33,17 +32,17 @@ class Oauth2ProviderConfigOutput:
 
         The model defined in huaweicloud sdk
 
-        :param microsoft_oauth2_provider_config: 
+        :param microsoft_oauth2_provider_config:
         :type microsoft_oauth2_provider_config: :class:`huaweicloudsdkagentidentity.v1.MicrosoftOauth2ProviderConfigOutput`
-        :param google_oauth2_provider_config: 
+        :param google_oauth2_provider_config:
         :type google_oauth2_provider_config: :class:`huaweicloudsdkagentidentity.v1.GoogleOauth2ProviderConfigOutput`
-        :param github_oauth2_provider_config: 
+        :param github_oauth2_provider_config:
         :type github_oauth2_provider_config: :class:`huaweicloudsdkagentidentity.v1.GithubOauth2ProviderConfigOutput`
-        :param custom_oauth2_provider_config: 
+        :param custom_oauth2_provider_config:
         :type custom_oauth2_provider_config: :class:`huaweicloudsdkagentidentity.v1.CustomOauth2ProviderConfigOutput`
         """
-        
-        
+
+
 
         self._microsoft_oauth2_provider_config = None
         self._google_oauth2_provider_config = None
@@ -138,10 +137,7 @@ class Oauth2ProviderConfigOutput:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -150,11 +146,10 @@ class Oauth2ProviderConfigOutput:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

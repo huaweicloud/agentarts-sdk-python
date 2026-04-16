@@ -33,9 +33,9 @@ try:
 except Exception:
     _HAS_WS = False
 
-from agentarts.sdk.runtime.app import AgentArtsRuntimeApp
-from agentarts.sdk.runtime.model import PingStatus
+import contextlib
 
+from agentarts.sdk.runtime.app import AgentArtsRuntimeApp
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -116,7 +116,8 @@ def error_app():
 
     @app.entrypoint
     def handle(payload: dict):
-        raise RuntimeError("Intentional failure for testing")
+        msg = "Intentional failure for testing"
+        raise RuntimeError(msg)
 
     return app
 
@@ -320,10 +321,8 @@ class TestPingIntegration:
             assert body["status"] == "HealthyBusy"
         finally:
             t.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await t
-            except asyncio.CancelledError:
-                pass
 
 
 # ---------------------------------------------------------------------------
@@ -418,8 +417,8 @@ class TestLangGraphAgentIntegration:
 
     @pytest.mark.asyncio
     async def test_langgraph_agent_invocation(self):
-        from langgraph.graph import StateGraph, START, END
-        from typing import Annotated
+
+        from langgraph.graph import END, START, StateGraph
         from typing_extensions import TypedDict
 
         class AgentState(TypedDict):
@@ -428,7 +427,7 @@ class TestLangGraphAgentIntegration:
 
         def node_a(state: AgentState) -> dict:
             messages = state.get("messages", [])
-            return {"messages": messages + ["node_a_processed"], "result": "processed_by_langgraph"}
+            return {"messages": [*messages, "node_a_processed"], "result": "processed_by_langgraph"}
 
         builder = StateGraph(AgentState)
         builder.add_node("a", node_a)
@@ -460,7 +459,7 @@ class TestLangGraphAgentIntegration:
 
     @pytest.mark.asyncio
     async def test_langgraph_agent_with_ping(self):
-        from langgraph.graph import StateGraph, START, END
+        from langgraph.graph import END, START, StateGraph
         from typing_extensions import TypedDict
 
         class State(TypedDict):

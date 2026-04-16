@@ -14,13 +14,13 @@ def get_dockerfile_template() -> str:
 
 def render_dockerfile(
     base_image: str = "python:3.10-slim",
-    dependency_file: Optional[str] = None,
-    entrypoint: Optional[str] = None,
+    dependency_file: str | None = None,
+    entrypoint: str | None = None,
     port: int = 8080,
     user_name: str = "appuser",
     user_id: int = 1000,
     group_id: int = 1000,
-    region: Optional[str] = None,
+    region: str | None = None,
 ) -> str:
     """
     Render Dockerfile from template.

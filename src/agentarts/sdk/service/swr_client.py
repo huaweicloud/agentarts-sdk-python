@@ -26,7 +26,7 @@ Usage::
 from __future__ import annotations
 
 import base64
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 from huaweicloudsdkcore.region.region import Region
 
@@ -50,9 +50,8 @@ class SWRClient:
     def __init__(
         self,
         region: str,
-        endpoint: Optional[str] = None,
+        endpoint: str | None = None,
     ) -> None:
-        from agentarts.sdk.utils.constant import get_swr_endpoint
 
         self._region = region
         self._endpoint = endpoint or get_swr_endpoint(region)
@@ -78,12 +77,12 @@ class SWRClient:
         try:
             import logging
             import warnings
-            
+
             logging.getLogger("huaweicloudsdkcore").setLevel(logging.ERROR)
             logging.getLogger("urllib3").setLevel(logging.ERROR)
             warnings.filterwarnings("ignore", message="Unverified HTTPS request")
             warnings.filterwarnings("ignore", category=Warning, module="urllib3")
-            
+
             from huaweicloudsdkcore.http.http_config import HttpConfig
             from huaweicloudsdkswr.v2 import SwrClient
             from huaweicloudsdkswr.v2.region.swr_region import SwrRegion
@@ -107,9 +106,12 @@ class SWRClient:
             return self._client
 
         except ImportError as e:
-            raise ImportError(
+            msg = (
                 "Huawei Cloud SWR SDK not installed. "
                 "Install it with: pip install huaweicloudsdkswr"
+            )
+            raise ImportError(
+                msg
             ) from e
 
     @staticmethod
@@ -123,7 +125,7 @@ class SWRClient:
             return obj.get(attr)
         return None
 
-    def get_organization(self, organization: str) -> Optional[Dict[str, Any]]:
+    def get_organization(self, organization: str) -> dict[str, Any] | None:
         """
         Get organization details.
 
@@ -153,7 +155,7 @@ class SWRClient:
     def create_organization(
         self,
         organization: str,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Create a new organization.
 
@@ -173,7 +175,7 @@ class SWRClient:
 
             body = CreateNamespaceRequestBody(namespace=organization)
             request = CreateNamespaceRequest(body=body)
-            response = client.create_namespace(request)
+            client.create_namespace(request)
 
             print(f"√ Created SWR organization: {organization}")
 
@@ -192,7 +194,7 @@ class SWRClient:
     def create_or_get_organization(
         self,
         organization: str,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Create or get organization.
 
@@ -216,7 +218,7 @@ class SWRClient:
         self,
         organization: str,
         repository: str,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Get repository details.
 
@@ -250,7 +252,7 @@ class SWRClient:
         organization: str,
         repository: str,
         is_public: bool = False,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Create a new repository.
 
@@ -275,7 +277,7 @@ class SWRClient:
                 is_public=is_public,
             )
             request = CreateRepoRequest(namespace=organization, body=body)
-            response = client.create_repo(request)
+            client.create_repo(request)
 
             print(f"√ Created SWR repository: {organization}/{repository}")
 
@@ -294,7 +296,7 @@ class SWRClient:
         organization: str,
         repository: str,
         is_public: bool = False,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Create or get repository.
 
@@ -316,7 +318,7 @@ class SWRClient:
 
         return self.create_repository(organization, repository, is_public)
 
-    def create_swr_secret(self) -> Tuple[str, str, str]:
+    def create_swr_secret(self) -> tuple[str, str, str]:
         """
         Create SWR secret for Docker login.
 

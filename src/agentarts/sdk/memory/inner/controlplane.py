@@ -5,16 +5,10 @@ Control plane: manages Space resource creation, query, update, deletion and poli
 """
 
 import logging
-from typing import Optional
 
-from ...service.memory_service import MemoryHttpService
-from .config import (
-    SpaceCreateRequest,
-    SpaceUpdateRequest,
-    SpaceInfo,
-    SpaceListResponse,
-    ApiKeyInfo
-)
+from agentarts.sdk.service.memory_service import MemoryHttpService
+
+from .config import ApiKeyInfo, SpaceCreateRequest, SpaceInfo, SpaceListResponse, SpaceUpdateRequest
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +24,7 @@ class _ControlPlane:
 
     def __init__(
             self,
-            region_name: Optional[str] = None,
+            region_name: str | None = None,
             verify_ssl: bool = False,
     ):
         """
@@ -50,10 +44,10 @@ class _ControlPlane:
     def _create_api_key(self) -> ApiKeyInfo:
         """
         Create API Key.
-        
+
         Returns:
             API Key information, containing id and api_key fields
-            
+
         Raises:
             Exception: If API Key creation fails
         """
@@ -83,7 +77,7 @@ class _ControlPlane:
             ... )
             >>> space = cp.create_space(request)
             >>> print(space['id'])
-            
+
             >>> # Create Space with private network access
             >>> request = SpaceCreateRequest(
             ...     name="private-space",
@@ -92,7 +86,7 @@ class _ControlPlane:
             ...     private_subnet_id="subnet-456"
             ... )
             >>> space = cp.create_space(request)
-            
+
             >>> # Disable public access
             >>> request = SpaceCreateRequest(
             ...     name="no-public-space",

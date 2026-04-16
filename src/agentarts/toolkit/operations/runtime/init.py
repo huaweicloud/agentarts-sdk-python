@@ -2,16 +2,14 @@
 
 import platform as platform_module
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from rich.console import Console
-from rich.panel import Panel
 
 from agentarts.toolkit.utils.common import (
-    echo_success,
     echo_info,
-    echo_step,
     echo_key_value,
+    echo_step,
+    echo_success,
 )
 from agentarts.toolkit.utils.templates.manager import template_manager
 
@@ -35,20 +33,15 @@ def detect_platform() -> str:
     machine = platform_module.machine().lower()
     system = platform_module.system().lower()
 
-    if system == "linux":
+    if system in {"linux", "darwin"}:
         if machine in ("aarch64", "arm64"):
             return "linux/arm64"
-        elif machine in ("x86_64", "amd64"):
-            return "linux/amd64"
-    elif system == "darwin":
-        if machine in ("aarch64", "arm64"):
-            return "linux/arm64"
-        elif machine in ("x86_64", "amd64"):
+        if machine in ("x86_64", "amd64"):
             return "linux/amd64"
     elif system == "windows":
         if machine in ("amd64", "x86_64"):
             return "linux/amd64"
-        elif machine in ("arm64", "aarch64"):
+        if machine in ("arm64", "aarch64"):
             return "linux/arm64"
 
     return "linux/amd64"
@@ -58,9 +51,9 @@ def init_project(
     template: str,
     name: str,
     path: str,
-    region: Optional[str] = None,
-    swr_org: Optional[str] = None,
-    swr_repo: Optional[str] = None,
+    region: str | None = None,
+    swr_org: str | None = None,
+    swr_repo: str | None = None,
 ) -> bool:
     """
     Initialize a new project.
@@ -94,7 +87,7 @@ def init_project(
     create_dockerfile(project_path, template, region)
 
     echo_success(f"Project '{name}' created successfully!")
-    
+
     echo_info(
         "Project structure",
         f"[cyan]{name}/[/cyan]\n"
@@ -107,14 +100,14 @@ def init_project(
     console.print()
     echo_step(1, "Navigate to project directory")
     console.print(f"    [cyan]cd {name}[/cyan]")
-    
+
     echo_step(2, "Install dependencies")
-    console.print(f"    [cyan]pip install -r requirements.txt[/cyan]")
-    
+    console.print("    [cyan]pip install -r requirements.txt[/cyan]")
+
     echo_step(3, "Edit agent.py to implement your agent logic")
-    
+
     echo_step(4, "Deploy to Huawei Cloud")
-    console.print(f"    [cyan]agentarts deploy[/cyan]")
+    console.print("    [cyan]agentarts deploy[/cyan]")
 
     return True
 
@@ -149,9 +142,9 @@ def create_config_file(
     project_path: Path,
     name: str,
     template: str,
-    region: Optional[str] = None,
-    swr_org: Optional[str] = None,
-    swr_repo: Optional[str] = None,
+    region: str | None = None,
+    swr_org: str | None = None,
+    swr_repo: str | None = None,
 ) -> None:
     """Create .agentarts_config.yaml configuration file."""
     actual_region = region or "cn-southwest-2"
@@ -234,7 +227,7 @@ agents:
     echo_key_value("Created", ".agentarts_config.yaml")
 
 
-def get_template_env_vars(template: str) -> List[Dict[str, str]]:
+def get_template_env_vars(template: str) -> list[dict[str, str]]:
     """Get required environment variables for a template."""
     template_env_vars = {
         "basic": [],
@@ -280,7 +273,7 @@ def get_template_env_vars(template: str) -> List[Dict[str, str]]:
     return template_env_vars.get(template, [])
 
 
-def create_dockerfile(project_path: Path, template: str, region: Optional[str] = None) -> None:
+def create_dockerfile(project_path: Path, template: str, region: str | None = None) -> None:
     """Create Dockerfile for the project."""
     from agentarts.toolkit.utils.templates.docker import render_dockerfile
 

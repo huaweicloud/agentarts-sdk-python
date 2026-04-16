@@ -12,15 +12,11 @@ Tests cover:
 - WebSocket endpoint (_handle_websocket)
 """
 
-import asyncio
 import json
-import sys
-import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from starlette.requests import Request
-from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import WebSocket
 from starlette.websockets import WebSocketDisconnect
 
@@ -120,7 +116,8 @@ class TestDecorators:
 
         @app.async_task
         async def failing_task():
-            raise ValueError("Task failed")
+            msg = "Task failed"
+            raise ValueError(msg)
 
         with pytest.raises(ValueError, match="Task failed"):
             await failing_task()
@@ -337,7 +334,8 @@ class TestSyncStreamHandler:
 
         def failing_generator():
             yield {"chunk": 1}
-            raise RuntimeError("Generator error")
+            msg = "Generator error"
+            raise RuntimeError(msg)
 
         results = list(app._sync_stream_handler(failing_generator()))
 
@@ -372,7 +370,8 @@ class TestAsyncStreamHandler:
 
         async def failing_async_generator():
             yield {"chunk": 1}
-            raise RuntimeError("Async generator error")
+            msg = "Async generator error"
+            raise RuntimeError(msg)
 
         results = []
         async for chunk in app._async_stream_handler(failing_async_generator()):
@@ -462,7 +461,8 @@ class TestHandleInvocation:
 
         @app.entrypoint
         def failing_handler(payload):
-            raise ValueError("Handler error")
+            msg = "Handler error"
+            raise ValueError(msg)
 
         mock_request = MagicMock(spec=Request)
         mock_request.json = AsyncMock(return_value={"input": "test"})
@@ -618,7 +618,7 @@ class TestHandleWebsocket:
 
         @app.websocket
         async def disconnecting_handler(websocket, context):
-            raise WebSocketDisconnect()
+            raise WebSocketDisconnect
 
         mock_websocket = MagicMock(spec=WebSocket)
         mock_websocket.headers = {}
@@ -654,11 +654,10 @@ class TestRun:
         """Test run uses 0.0.0.0 in Docker environment."""
         app = AgentArtsRuntimeApp()
 
-        with patch("os.path.exists", return_value=True):
-            with patch("uvicorn.run") as mock_run:
-                app.run()
-                call_kwargs = mock_run.call_args[1]
-                assert call_kwargs["host"] == "0.0.0.0"
+        with patch("os.path.exists", return_value=True), patch("uvicorn.run") as mock_run:
+            app.run()
+            call_kwargs = mock_run.call_args[1]
+            assert call_kwargs["host"] == "0.0.0.0"
 
 
 class TestInvokeHandler:
@@ -709,7 +708,8 @@ class TestInvokeHandler:
         app = AgentArtsRuntimeApp()
 
         def failing_handler(payload):
-            raise RuntimeError("Handler failed")
+            msg = "Handler failed"
+            raise RuntimeError(msg)
 
         context = RequestContext(session_id="test", request_id="req-1", request=None)
 

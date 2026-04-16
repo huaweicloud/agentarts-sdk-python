@@ -5,30 +5,31 @@ Main entry class providing all public methods.
 """
 
 import threading
-from typing import Optional, Dict, List, Any, Union
+from typing import Any
+
+from agentarts.sdk.utils.constant import get_region
 
 from .inner.config import (
-    SpaceCreateRequest,
-    SpaceUpdateRequest,
-    SessionCreateRequest,
-    SpaceInfo,
-    SpaceListResponse,
+    MemoryInfo,
+    MemoryListFilter,
+    MemoryListResponse,
+    MemorySearchFilter,
+    MemorySearchResponse,
+    MessageBatchResponse,
     MessageInfo,
     MessageListResponse,
-    MessageBatchResponse,
-    MemoryInfo,
-    MemoryListResponse,
-    MemorySearchResponse,
+    SessionCreateRequest,
+    SessionInfo,
+    SpaceCreateRequest,
+    SpaceInfo,
+    SpaceListResponse,
+    SpaceUpdateRequest,
     TextMessage,
     ToolCallMessage,
     ToolResultMessage,
-    MemorySearchFilter,
-    MemoryListFilter,
-    SessionInfo,
 )
 from .inner.controlplane import _ControlPlane
 from .inner.dataplane import _DataPlane
-from ..utils.constant import get_region
 
 
 class MemoryClient:
@@ -80,8 +81,8 @@ class MemoryClient:
 
     def __init__(
             self,
-            region_name: Optional[str] = None,
-            api_key: Optional[str] = None,
+            region_name: str | None = None,
+            api_key: str | None = None,
             verify_ssl: bool = False,
     ):
         """
@@ -156,16 +157,16 @@ class MemoryClient:
             self,
             name: str,
             message_ttl_hours: int = 168,
-            description: Optional[str] = None,
-            tags: Optional[List[Dict[str, str]]] = None,
-            memory_extract_idle_seconds: Optional[int] = None,
-            memory_extract_max_tokens: Optional[int] = None,
-            memory_extract_max_messages: Optional[int] = None,
+            description: str | None = None,
+            tags: list[dict[str, str]] | None = None,
+            memory_extract_idle_seconds: int | None = None,
+            memory_extract_max_tokens: int | None = None,
+            memory_extract_max_messages: int | None = None,
             public_access_enable: bool = True,
-            private_vpc_id: Optional[str] = None,
-            private_subnet_id: Optional[str] = None,
-            memory_strategies_builtin: Optional[List[str]] = None,
-            memory_strategies_customized: Optional[List[Dict[str, Any]]] = None
+            private_vpc_id: str | None = None,
+            private_subnet_id: str | None = None,
+            memory_strategies_builtin: list[str] | None = None,
+            memory_strategies_customized: list[dict[str, Any]] | None = None
     ) -> SpaceInfo:
         """
         Create Space.
@@ -351,15 +352,15 @@ class MemoryClient:
     def update_space(
             self,
             space_id: str,
-            name: Optional[str] = None,
-            description: Optional[str] = None,
-            message_ttl_hours: Optional[int] = None,
-            memory_extract_enabled: Optional[bool] = None,
-            memory_extract_idle_seconds: Optional[int] = None,
-            memory_extract_max_tokens: Optional[int] = None,
-            memory_extract_max_messages: Optional[int] = None,
-            tags: Optional[List[Dict[str, str]]] = None,
-            memory_strategies_builtin: Optional[List[str]] = None
+            name: str | None = None,
+            description: str | None = None,
+            message_ttl_hours: int | None = None,
+            memory_extract_enabled: bool | None = None,
+            memory_extract_idle_seconds: int | None = None,
+            memory_extract_max_tokens: int | None = None,
+            memory_extract_max_messages: int | None = None,
+            tags: list[dict[str, str]] | None = None,
+            memory_strategies_builtin: list[str] | None = None
     ) -> SpaceInfo:
         """
         Update Space configuration.
@@ -450,10 +451,10 @@ class MemoryClient:
     def create_memory_session(
             self,
             space_id: str,
-            id: Optional[str] = None,
-            actor_id: Optional[str] = None,
-            assistant_id: Optional[str] = None,
-            meta: Optional[Dict[str, Any]] = None
+            id: str | None = None,
+            actor_id: str | None = None,
+            assistant_id: str | None = None,
+            meta: dict[str, Any] | None = None
     ) -> SessionInfo:
         """
         Create Memory Session.
@@ -500,7 +501,7 @@ class MemoryClient:
             session_id: str,
             k: int,
             space_id: str
-    ) -> List[MessageInfo]:
+    ) -> list[MessageInfo]:
         """
         Get last K messages.
 
@@ -577,10 +578,10 @@ class MemoryClient:
             self,
             space_id: str,
             session_id: str,
-            messages: List[Union[TextMessage, ToolCallMessage, ToolResultMessage]],
+            messages: list[TextMessage | ToolCallMessage | ToolResultMessage],
             *,
-            timestamp: Optional[int] = None,
-            idempotency_key: Optional[str] = None,
+            timestamp: int | None = None,
+            idempotency_key: str | None = None,
             is_force_extract: bool = False
     ) -> MessageBatchResponse:
         """
@@ -693,7 +694,8 @@ class MemoryClient:
             if isinstance(msg, (TextMessage, ToolCallMessage, ToolResultMessage)):
                 message_requests.append(msg.to_dict())
             else:
-                raise ValueError(f"Unsupported message type: {type(msg)}")
+                msg = f"Unsupported message type: {type(msg)}"
+                raise ValueError(msg)
         return self._data_plane.add_messages(
             space_id,
             session_id,
@@ -706,7 +708,7 @@ class MemoryClient:
     def list_messages(
             self,
             space_id: str,
-            session_id: Optional[str] = None,
+            session_id: str | None = None,
             limit: int = 10,
             offset: int = 0
     ) -> MessageListResponse:
@@ -760,7 +762,7 @@ class MemoryClient:
     def search_memories(
             self,
             space_id: str,
-            filters: Optional[MemorySearchFilter] = None
+            filters: MemorySearchFilter | None = None
     ) -> MemorySearchResponse:
         """
         Search memories.
@@ -829,7 +831,7 @@ class MemoryClient:
             space_id: str,
             limit: int = 10,
             offset: int = 0,
-            filters: Optional[MemoryListFilter] = None
+            filters: MemoryListFilter | None = None
     ) -> MemoryListResponse:
         """
         List memory records.

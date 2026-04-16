@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,17 +14,17 @@ class GetResourceStsTokenResponseBodyCredentials:
     sensitive_list = []
 
     openapi_types = {
-        'access_key_id': 'str',
-        'expiration': 'datetime',
-        'secret_access_key': 'str',
-        'security_token': 'str'
+        "access_key_id": "str",
+        "expiration": "datetime",
+        "secret_access_key": "str",
+        "security_token": "str"
     }
 
     attribute_map = {
-        'access_key_id': 'access_key_id',
-        'expiration': 'expiration',
-        'secret_access_key': 'secret_access_key',
-        'security_token': 'security_token'
+        "access_key_id": "access_key_id",
+        "expiration": "expiration",
+        "secret_access_key": "secret_access_key",
+        "security_token": "security_token"
     }
 
     def __init__(self, access_key_id=None, expiration=None, secret_access_key=None, security_token=None):
@@ -42,8 +41,8 @@ class GetResourceStsTokenResponseBodyCredentials:
         :param security_token: The token that users must pass to the service API to use the temporary credentials
         :type security_token: str
         """
-        
-        
+
+
 
         self._access_key_id = None
         self._expiration = None
@@ -150,10 +149,7 @@ class GetResourceStsTokenResponseBodyCredentials:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -162,11 +158,10 @@ class GetResourceStsTokenResponseBodyCredentials:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

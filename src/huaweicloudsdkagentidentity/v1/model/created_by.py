@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,13 +14,13 @@ class CreatedBy:
     sensitive_list = []
 
     openapi_types = {
-        'type': 'str',
-        'identifier': 'str'
+        "type": "str",
+        "identifier": "str"
     }
 
     attribute_map = {
-        'type': 'type',
-        'identifier': 'identifier'
+        "type": "type",
+        "identifier": "identifier"
     }
 
     def __init__(self, type=None, identifier=None):
@@ -34,8 +33,8 @@ class CreatedBy:
         :param identifier: 工作负载身份创建者标识
         :type identifier: str
         """
-        
-        
+
+
 
         self._type = None
         self._identifier = None
@@ -94,10 +93,7 @@ class CreatedBy:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -106,11 +102,10 @@ class CreatedBy:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

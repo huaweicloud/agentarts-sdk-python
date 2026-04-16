@@ -1,7 +1,7 @@
 """Template manager for AgentArts projects."""
 
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
 
 TEMPLATES_DIR = Path(__file__).parent
 
@@ -39,8 +39,9 @@ class TemplateManager:
         template_path = self.get_template_path(template_type, filename)
 
         if not template_path.exists():
+            msg = f"Template file not found: {template_path}"
             raise FileNotFoundError(
-                f"Template file not found: {template_path}"
+                msg
             )
 
         return template_path.read_text(encoding="utf-8")
@@ -49,7 +50,7 @@ class TemplateManager:
         self,
         template_type: str,
         filename: str,
-        context: Optional[Dict[str, Any]] = None,
+        context: dict[str, Any] | None = None,
     ) -> str:
         """
         Render a template with context variables.

@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,19 +14,19 @@ class Oauth2CallbackRequest:
     sensitive_list = []
 
     openapi_types = {
-        'credential_provider_id': 'str',
-        'code': 'str',
-        'state': 'str',
-        'error': 'str',
-        'error_description': 'str'
+        "credential_provider_id": "str",
+        "code": "str",
+        "state": "str",
+        "error": "str",
+        "error_description": "str"
     }
 
     attribute_map = {
-        'credential_provider_id': 'credential_provider_id',
-        'code': 'code',
-        'state': 'state',
-        'error': 'error',
-        'error_description': 'error_description'
+        "credential_provider_id": "credential_provider_id",
+        "code": "code",
+        "state": "state",
+        "error": "error",
+        "error_description": "error_description"
     }
 
     def __init__(self, credential_provider_id=None, code=None, state=None, error=None, error_description=None):
@@ -46,8 +45,8 @@ class Oauth2CallbackRequest:
         :param error_description: OAuth2.0 Standard Error Description - human-readable error message, paired with error param, URL-encoded for safe transmission
         :type error_description: str
         """
-        
-        
+
+
 
         self._credential_provider_id = None
         self._code = None
@@ -181,10 +180,7 @@ class Oauth2CallbackRequest:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -193,11 +189,10 @@ class Oauth2CallbackRequest:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 
