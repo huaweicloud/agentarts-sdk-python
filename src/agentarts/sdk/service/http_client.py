@@ -337,7 +337,7 @@ class BaseHTTPClient:
             kwargs = self._sign_request(method, full_url, **kwargs)
 
         timeout = kwargs.pop("timeout", self._config.timeout)
-        print(kwargs.get("headers"))
+        
         try:
             response = self._session.request(
                 method,
