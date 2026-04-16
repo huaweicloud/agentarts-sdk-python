@@ -244,7 +244,7 @@ class BaseHTTPClient:
 
         if "headers" not in kwargs or kwargs["headers"] is None:
             kwargs["headers"] = {}
-        kwargs["headers"].update(headers)
+        kwargs["headers"] = headers
 
         return kwargs
 
