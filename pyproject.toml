@@ -17,13 +17,12 @@ maintainers = [
 keywords = [
     "agent",
     "ai",
-    "llm",
+    "huawei-cloud",
+    "sdk",
     "langchain",
     "langgraph",
     "autogen",
     "crewai",
-    "huawei-cloud",
-    "sdk",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -123,7 +122,7 @@ all = [
 
 [project.urls]
 Homepage = "https://github.com/huaweicloud/agentarts-sdk-python"
-Documentation = "https://docs.huaweicloud.com/agentarts"
+Documentation = "https://github.com/huaweicloud/agentarts-sdk-python#readme"
 Repository = "https://github.com/huaweicloud/agentarts-sdk-python.git"
 Issues = "https://github.com/huaweicloud/agentarts-sdk-python/issues"
 Changelog = "https://github.com/huaweicloud/agentarts-sdk-python/blob/main/CHANGELOG.md"
