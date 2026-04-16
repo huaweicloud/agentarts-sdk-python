@@ -12,17 +12,15 @@ response ``Content-Type`` header:
   ``iter_lines()`` or ``iter_bytes()`` to consume the body incrementally.
 """
 
-import hashlib
-import hmac
-import datetime
 from enum import Enum
 from typing import Any, Dict, Iterator, Optional
 from dataclasses import dataclass, field
-from urllib.parse import urlparse, quote, unquote
+from urllib.parse import urlparse
 
 import requests
 
 from ..utils.signer import SDKSigner
+from ..utils.signer_v11 import V11Signer
 
 _STREAM_CONTENT_TYPES = {"text/event-stream", "application/x-ndjson"}
 
@@ -177,83 +175,6 @@ class BaseHTTPClient:
         self._credentials = None
         self._sdk_signer = None
 
-    def _urlencode(self, s: str) -> str:
-        """URL encode with safe characters."""
-        return quote(s, safe="~")
-
-    def _get_timestamp(self) -> str:
-        """Get current timestamp in SDK format."""
-        return datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-
-    def _hex_encode_sha256(self, data: bytes) -> str:
-        """Hex encode SHA256 hash."""
-        return hashlib.sha256(data).hexdigest()
-
-    def _hkdf(self, key: str, secret: str, info: str, length: int = 32) -> str:
-        """Derive signing key using HKDF algorithm."""
-        salt = bytearray(key, "utf-8")
-        ikm = bytearray(secret, "utf-8")
-        info_bytes = bytearray(info, "utf-8")
-
-        prk = hmac.new(salt, ikm, hashlib.sha256).digest()
-
-        okm = b""
-        t = b""
-        for i in range(1, (length + 32) // 32 + 1):
-            new_info = t + info_bytes + bytes([i])
-            t = hmac.new(prk, new_info, hashlib.sha256).digest()
-            okm += t
-
-        return okm[:length].hex()
-
-    def _canonical_uri(self, path: str) -> str:
-        """Build canonical URI path."""
-        patterns = unquote(path).split("/")
-        uri = []
-        for value in patterns:
-            uri.append(self._urlencode(value))
-        url_path = "/".join(uri)
-        if url_path and url_path[-1] != "/":
-            url_path = url_path + "/"
-        return url_path
-
-    def _canonical_query_string(self, query_params: Optional[Dict[str, Any]]) -> str:
-        """Build canonical query string."""
-        if not query_params:
-            return ""
-
-        keys = sorted(query_params.keys())
-        arr = []
-        for key in keys:
-            ke = self._urlencode(key)
-            value = query_params[key]
-            if isinstance(value, list):
-                sorted_values = sorted(str(v) for v in value)
-                for v in sorted_values:
-                    arr.append(f"{ke}={self._urlencode(v)}")
-            else:
-                arr.append(f"{ke}={self._urlencode(str(value))}")
-        return "&".join(arr)
-
-    def _canonical_headers(self, headers: Dict[str, str], signed_headers: list) -> str:
-        """Build canonical headers string."""
-        _headers = {}
-        for k, v in headers.items():
-            key_lower = k.lower()
-            value_stripped = v.strip()
-            _headers[key_lower] = value_stripped
-
-        arr = []
-        for k in signed_headers:
-            arr.append(f"{k}:{_headers.get(k, '')}")
-        return "\n".join(arr) + "\n"
-
-    def _signed_headers(self, headers: Dict[str, str]) -> list:
-        """Get sorted list of signed header names."""
-        arr = [k.lower() for k in headers.keys()]
-        arr.sort()
-        return arr
-
     def _get_security_token(self) -> Optional[str]:
         """Get security token from credentials if available.
         
@@ -288,12 +209,8 @@ class BaseHTTPClient:
 
         query_params = kwargs.get("params", {})
 
-        timestamp = self._get_timestamp()
-        date_str = timestamp[:8]
-
         headers = kwargs.get("headers", {}) or {}
         headers["host"] = host
-        headers["x-sdk-date"] = timestamp
         headers["x-sdk-content-sha256"] = "UNSIGNED-PAYLOAD"
 
         header_keys_lower = {k.lower() for k in headers.keys()}
@@ -312,41 +229,18 @@ class BaseHTTPClient:
         if security_token:
             headers["X-Security-Token"] = security_token
 
-        signed_headers = self._signed_headers(headers)
-        canonical_request = (
-            f"{method.upper()}\n"
-            f"{self._canonical_uri(path)}\n"
-            f"{self._canonical_query_string(query_params)}\n"
-            f"{self._canonical_headers(headers, signed_headers)}\n"
-            f"{';'.join(signed_headers)}\n"
-            f"UNSIGNED-PAYLOAD"
+        signer = V11Signer(
+            ak=self._credentials.ak,
+            sk=self._credentials.sk,
+            region_id=self._region_id
         )
-
-        credential_scope = f"{date_str}/{self._region_id}/apic"
-        hashed_canonical_request = self._hex_encode_sha256(canonical_request.encode("utf-8"))
-
-        string_to_sign = (
-            f"V11-HMAC-SHA256\n"
-            f"{timestamp}\n"
-            f"{credential_scope}\n"
-            f"{hashed_canonical_request}"
+        
+        headers = signer.sign(
+            method=method,
+            path=path,
+            query_params=query_params,
+            headers=headers
         )
-
-        real_use_secret = self._hkdf(self._credentials.ak, self._credentials.sk, credential_scope)
-        signature = hmac.new(
-            real_use_secret.encode("utf-8"),
-            string_to_sign.encode("utf-8"),
-            hashlib.sha256
-        ).hexdigest()
-
-        authorization = (
-            f"V11-HMAC-SHA256 "
-            f"Credential={self._credentials.ak}/{credential_scope}, "
-            f"SignedHeaders={';'.join(signed_headers)}, "
-            f"Signature={signature}"
-        )
-
-        headers["Authorization"] = authorization
 
         if "headers" not in kwargs or kwargs["headers"] is None:
             kwargs["headers"] = {}
