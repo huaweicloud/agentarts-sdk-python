@@ -1,6 +1,5 @@
 """Tests for core module"""
 
-import pytest
 
 
 def test_import_sdk():

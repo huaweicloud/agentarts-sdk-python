@@ -6,9 +6,9 @@ import pytest
 
 from agentarts.sdk.utils.constant import (
     get_control_plane_endpoint,
-    get_runtime_data_plane_endpoint,
     get_memory_endpoint,
     get_region,
+    get_runtime_data_plane_endpoint,
 )
 
 # ============================================================

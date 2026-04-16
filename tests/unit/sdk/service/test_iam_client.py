@@ -4,8 +4,6 @@ Unit tests for IAM client
 
 from unittest.mock import Mock, patch
 
-import pytest
-
 
 class TestIAMClient:
     """Test IAM client"""
