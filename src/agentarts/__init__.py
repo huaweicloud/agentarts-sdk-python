@@ -7,7 +7,13 @@ Usage:
     from agentarts.sdk import AgentArtsRuntimeApp, CodeInterpreter, MemoryClient
 """
 
-__version__ = "0.1.0"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("agentarts-sdk")
+except PackageNotFoundError:
+    __version__ = "0.1.0"
+
 __author__ = "Huawei Cloud AgentArts Team"
 
 __all__ = [
