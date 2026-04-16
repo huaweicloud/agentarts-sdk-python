@@ -296,6 +296,18 @@ class BaseHTTPClient:
         headers["x-sdk-date"] = timestamp
         headers["x-sdk-content-sha256"] = "UNSIGNED-PAYLOAD"
 
+        header_keys_lower = {k.lower() for k in headers.keys()}
+        if "content-type" not in header_keys_lower:
+            if "json" in kwargs:
+                headers["content-type"] = "application/json"
+            elif "data" in kwargs:
+                if isinstance(kwargs["data"], dict):
+                    headers["content-type"] = "application/x-www-form-urlencoded"
+                else:
+                    headers["content-type"] = "application/octet-stream"
+            else:
+                headers["content-type"] = "application/json"
+
         security_token = self._get_security_token()
         if security_token:
             headers["X-Security-Token"] = security_token
