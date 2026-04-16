@@ -45,8 +45,7 @@ from agentarts.sdk.identity import (
     IdentityClient,
 )
 
-__version__ = "0.1.0"
-__author__ = "Huawei Cloud AgentArts Team"
+from agentarts import __version__, __author__
 
 __all__ = [
     "__version__",
