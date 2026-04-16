@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "agentarts-sdk"
-version = "0.1.0"
+version = "0.1.0.dev041601"
 description = "Huawei Cloud AgentArts SDK - Build, deploy and manage AI agents with cloud capabilities"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -44,9 +44,7 @@ dependencies = [
     "huaweicloudsdkcore>=3.1.0",
     "huaweicloudsdkiam>=3.1.0",
     "huaweicloudsdkswr>=3.1.0",
-    "fastapi>=0.104.0",
     "starlette>=0.46.2",
-    "uvicorn[standard]>=0.24.0",
     "pydantic>=2.10.0,<2.13.0",
     "pydantic-settings>=2.6.0,<2.9.0",
     "python-dotenv>=1.0.0",
@@ -77,6 +75,10 @@ dev = [
 ]
 
 [project.optional-dependencies]
+web = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+]
 langchain = [
     "langchain>=0.1.0",
     "langchain-core>=0.1.0",
@@ -116,7 +118,7 @@ docs = [
     "myst-parser>=2.0.0",
 ]
 all = [
-    "agentarts-sdk[langchain,langgraph,autogen,crewai,vector-stores,database,monitoring,huaweicloud,docs]",
+    "agentarts-sdk[web,langchain,langgraph,autogen,crewai,vector-stores,database,monitoring,huaweicloud,docs]",
 ]
 
 [project.urls]
