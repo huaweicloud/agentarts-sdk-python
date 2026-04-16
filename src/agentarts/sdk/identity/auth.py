@@ -55,29 +55,31 @@ def require_access_token(
     Returns:
         Decorator function
     """
-    client = IdentityClient(
-        region=get_region(), ignore_ssl_verification=ignore_ssl_verification
-    )
 
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs_func: Any) -> Any:
-            token = await _get_resource_oauth2_token()
+            client = IdentityClient(
+                region=get_region(), ignore_ssl_verification=ignore_ssl_verification
+            )
+            token = await _get_resource_oauth2_token(client)
             kwargs_func[into] = token
             return await func(*args, **kwargs_func)
 
         @wraps(func)
         def sync_wrapper(*args: Any, **kwargs_func: Any) -> Any:
-            token = run_async_in_sync_context(_get_resource_oauth2_token())
+            client = IdentityClient(
+                region=get_region(), ignore_ssl_verification=ignore_ssl_verification
+            )
+            token = run_async_in_sync_context(_get_resource_oauth2_token(client))
             kwargs_func[into] = token
             return func(*args, **kwargs_func)
 
-        # Return the appropriate wrapper based on a function type
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper
 
-    async def _get_resource_oauth2_token() -> str:
+    async def _get_resource_oauth2_token(client: IdentityClient) -> str:
         """Common token fetching logic."""
         return await client.get_resource_oauth2_token(
             provider_name=provider_name,
@@ -111,26 +113,29 @@ def require_api_key(
     Returns:
         Decorator function
     """
-    client = IdentityClient(
-        region=get_region(), ignore_ssl_verification=ignore_ssl_verification
-    )
 
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
-            kwargs[into] = _get_api_key()
+            client = IdentityClient(
+                region=get_region(), ignore_ssl_verification=ignore_ssl_verification
+            )
+            kwargs[into] = _get_api_key(client)
             return await func(*args, **kwargs)
 
         @wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
-            kwargs[into] = _get_api_key()
+            client = IdentityClient(
+                region=get_region(), ignore_ssl_verification=ignore_ssl_verification
+            )
+            kwargs[into] = _get_api_key(client)
             return func(*args, **kwargs)
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper
 
-    def _get_api_key():
+    def _get_api_key(client: IdentityClient):
         return client.get_resource_api_key(
             provider_name=provider_name,
             workload_access_token=_get_workload_access_token(client),
@@ -186,26 +191,29 @@ def require_sts_token(
         ...     print(f"AK: {sts_credentials.access_key_id}")
         ...     print(f"SK: {sts_credentials.secret_access_key}")
     """
-    client = IdentityClient(
-        region=get_region(), ignore_ssl_verification=ignore_ssl_verification
-    )
 
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
-            kwargs[into] = _get_sts_token()
+            client = IdentityClient(
+                region=get_region(), ignore_ssl_verification=ignore_ssl_verification
+            )
+            kwargs[into] = _get_sts_token(client)
             return await func(*args, **kwargs)
 
         @wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
-            kwargs[into] = _get_sts_token()
+            client = IdentityClient(
+                region=get_region(), ignore_ssl_verification=ignore_ssl_verification
+            )
+            kwargs[into] = _get_sts_token(client)
             return func(*args, **kwargs)
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper
 
-    def _get_sts_token() -> GetResourceStsTokenResponseBodyCredentials:
+    def _get_sts_token(client: IdentityClient) -> GetResourceStsTokenResponseBodyCredentials:
         return client.get_resource_sts_token(
             provider_name=provider_name,
             workload_access_token=_get_workload_access_token(client),
@@ -225,7 +233,6 @@ def _get_workload_access_token(client: IdentityClient) -> str:
     if token is not None:
         logger.info("Retrieved workload access token from context")
         return token
-    # workload access token context var was not set, so we should be running in a local dev environment
     logger.info(
         "No workload access token found in context. Falling back to local authentication setup."
     )
@@ -274,7 +281,6 @@ def _set_up_local_auth(client: IdentityClient) -> str:
         if user_id:
             logger.info("Using user id from context: %s", user_id)
         else:
-            # Fallback: User ID from config or generate
             user_id = config.user_id
             if user_id:
                 logger.info(
@@ -296,4 +302,3 @@ def _set_up_local_auth(client: IdentityClient) -> str:
     user_id = _ensure_user_id(config)
 
     return client.create_workload_access_token(workload_identity_name, user_id=user_id)
-
