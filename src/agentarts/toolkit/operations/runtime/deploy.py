@@ -1,35 +1,33 @@
 """Deploy operation implementation"""
 
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 
 from rich.console import Console
 from rich.panel import Panel
 
+from agentarts.sdk.service.runtime_client import RuntimeClient
+from agentarts.sdk.service.swr_client import SWRClient
 from agentarts.sdk.utils.constant import get_region
 from agentarts.toolkit.operations.runtime.config import (
     get_agent,
     get_config_file_path,
     load_config,
 )
-from agentarts.toolkit.utils.runtime.container import (
-    check_docker_available,
-    check_dockerfile_exists,
-    build_docker_image,
-    tag_image,
-    push_image,
-    login_to_registry,
-    run_container,
-)
 from agentarts.toolkit.utils.common import (
     echo_error,
-    echo_success,
     echo_info,
-    echo_step,
-    echo_key_value,
+    echo_success,
 )
-from agentarts.sdk.service.swr_client import SWRClient
-from agentarts.sdk.service.runtime_client import RuntimeClient
+from agentarts.toolkit.utils.runtime.container import (
+    build_docker_image,
+    check_docker_available,
+    check_dockerfile_exists,
+    login_to_registry,
+    push_image,
+    run_container,
+    tag_image,
+)
 
 console = Console()
 
@@ -45,10 +43,10 @@ def create_agentarts_runtime(
     agent_name: str,
     swr_image: str,
     region: str,
-    agent_config: Optional[Any] = None,
-    port: Optional[int] = None,
-    description: Optional[str] = None,
-) -> Optional[Dict]:
+    agent_config: Any | None = None,
+    port: int | None = None,
+    description: str | None = None,
+) -> dict | None:
     """
     Create or update AgentArts runtime using RuntimeClient.
 
@@ -152,14 +150,14 @@ def create_agentarts_runtime(
 
 
 def deploy_project(
-    agent_name: Optional[str] = None,
+    agent_name: str | None = None,
     mode: DeployMode = DeployMode.CLOUD,
     image_tag: str = "latest",
-    port: Optional[int] = None,
-    local_port: Optional[int] = None,
-    swr_org: Optional[str] = None,
-    swr_repo: Optional[str] = None,
-    description: Optional[str] = None,
+    port: int | None = None,
+    local_port: int | None = None,
+    swr_org: str | None = None,
+    swr_repo: str | None = None,
+    description: str | None = None,
 ) -> bool:
     """
     Deploy project.

@@ -1,18 +1,19 @@
 """Space operations - CRUD for Memory Space."""
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from agentarts.sdk.memory import (
     MemoryClient,
     SpaceInfo,
 )
+
 from .models import SpaceListResult, SpaceResult
 
 logger = logging.getLogger(__name__)
 
 
-def _get_client(region: Optional[str] = None) -> MemoryClient:
+def _get_client(region: str | None = None) -> MemoryClient:
     """Get MemoryClient instance.
 
     Uses Huawei Cloud SDK Core credential provider chain (AK/SK).
@@ -33,7 +34,7 @@ def _get_client(region: Optional[str] = None) -> MemoryClient:
     return MemoryClient(**kwargs)
 
 
-def _space_info_to_dict(space: SpaceInfo) -> Dict[str, Any]:
+def _space_info_to_dict(space: SpaceInfo) -> dict[str, Any]:
     """Convert SpaceInfo object to dictionary for backward compatibility."""
     return {
         "id": space.id,
@@ -59,17 +60,17 @@ def _space_info_to_dict(space: SpaceInfo) -> Dict[str, Any]:
 def create_space(
         name: str,
         message_ttl_hours: int = 168,
-        description: Optional[str] = None,
-        memory_extract_idle_seconds: Optional[int] = None,
-        memory_extract_max_tokens: Optional[int] = None,
-        memory_extract_max_messages: Optional[int] = None,
-        memory_strategies_builtin: Optional[List[str]] = None,
-        memory_strategies_customized: Optional[List[Dict[str, Any]]] = None,
-        tags: Optional[List[Dict[str, str]]] = None,
+        description: str | None = None,
+        memory_extract_idle_seconds: int | None = None,
+        memory_extract_max_tokens: int | None = None,
+        memory_extract_max_messages: int | None = None,
+        memory_strategies_builtin: list[str] | None = None,
+        memory_strategies_customized: list[dict[str, Any]] | None = None,
+        tags: list[dict[str, str]] | None = None,
         public_access_enable: bool = True,
-        private_vpc_id: Optional[str] = None,
-        private_subnet_id: Optional[str] = None,
-        region: Optional[str] = None,
+        private_vpc_id: str | None = None,
+        private_subnet_id: str | None = None,
+        region: str | None = None,
         **kwargs,
 ) -> SpaceResult:
     """Create a Memory Space.
@@ -126,7 +127,7 @@ def create_space(
             space=space_dict,
         )
     except Exception as e:
-        logger.error(f"Failed to create space: {e}")
+        logger.exception(f"Failed to create space: {e}")
         return SpaceResult(
             success=False,
             error=str(e),
@@ -135,7 +136,7 @@ def create_space(
 
 def get_space(
         space_id: str,
-        region: Optional[str] = None,
+        region: str | None = None,
 ) -> SpaceResult:
     """Get Space details.
 
@@ -158,7 +159,7 @@ def get_space(
             space=space_dict,
         )
     except Exception as e:
-        logger.error(f"Failed to get space {space_id}: {e}")
+        logger.exception(f"Failed to get space {space_id}: {e}")
         return SpaceResult(
             success=False,
             space_id=space_id,
@@ -169,7 +170,7 @@ def get_space(
 def list_spaces(
         limit: int = 20,
         offset: int = 0,
-        region: Optional[str] = None,
+        region: str | None = None,
 ) -> SpaceListResult:
     """List Spaces.
 
@@ -196,7 +197,7 @@ def list_spaces(
             total=total,
         )
     except Exception as e:
-        logger.error(f"Failed to list spaces: {e}")
+        logger.exception(f"Failed to list spaces: {e}")
         return SpaceListResult(
             success=False,
             error=str(e),
@@ -205,16 +206,16 @@ def list_spaces(
 
 def update_space(
         space_id: str,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        message_ttl_hours: Optional[int] = None,
-        enable_memory_extract: Optional[bool] = None,
-        memory_extract_idle_seconds: Optional[int] = None,
-        memory_extract_max_tokens: Optional[int] = None,
-        memory_extract_max_messages: Optional[int] = None,
-        memory_strategies_builtin: Optional[List[str]] = None,
-        tags: Optional[List[Dict[str, str]]] = None,
-        region: Optional[str] = None,
+        name: str | None = None,
+        description: str | None = None,
+        message_ttl_hours: int | None = None,
+        enable_memory_extract: bool | None = None,
+        memory_extract_idle_seconds: int | None = None,
+        memory_extract_max_tokens: int | None = None,
+        memory_extract_max_messages: int | None = None,
+        memory_strategies_builtin: list[str] | None = None,
+        tags: list[dict[str, str]] | None = None,
+        region: str | None = None,
         **kwargs,
 ) -> SpaceResult:
     """Update a Space.
@@ -262,7 +263,7 @@ def update_space(
             space=space_dict,
         )
     except Exception as e:
-        logger.error(f"Failed to update space {space_id}: {e}")
+        logger.exception(f"Failed to update space {space_id}: {e}")
         return SpaceResult(
             success=False,
             space_id=space_id,
@@ -272,7 +273,7 @@ def update_space(
 
 def delete_space(
         space_id: str,
-        region: Optional[str] = None,
+        region: str | None = None,
 ) -> SpaceResult:
     """Delete a Space.
 
@@ -293,7 +294,7 @@ def delete_space(
             space_id=space_id,
         )
     except Exception as e:
-        logger.error(f"Failed to delete space {space_id}: {e}")
+        logger.exception(f"Failed to delete space {space_id}: {e}")
         return SpaceResult(
             success=False,
             space_id=space_id,

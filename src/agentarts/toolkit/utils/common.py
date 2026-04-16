@@ -10,7 +10,7 @@ console = Console()
 
 def echo_error(message: str):
     """Echo error message in red with cross mark
-    
+
     Args:
         message: Error message to display
     """
@@ -19,7 +19,7 @@ def echo_error(message: str):
 
 def echo_success(message: str):
     """Echo success message in green with check mark
-    
+
     Args:
         message: Success message to display
     """
@@ -37,7 +37,7 @@ def echo_warning(message: str):
 
 def echo_info(title: str, message: str):
     """Echo info message in a panel box
-    
+
     Args:
         title: Title for the panel
         message: Info message to display
@@ -53,7 +53,7 @@ def echo_info(title: str, message: str):
 
 def echo_step(step_num: int, message: str):
     """Echo a step in a process
-    
+
     Args:
         step_num: Step number
         message: Step description
@@ -63,7 +63,7 @@ def echo_step(step_num: int, message: str):
 
 def echo_key_value(key: str, value: str, key_color: str = "cyan", value_color: str = "white"):
     """Echo a key-value pair in formatted style
-    
+
     Args:
         key: Key name
         value: Value

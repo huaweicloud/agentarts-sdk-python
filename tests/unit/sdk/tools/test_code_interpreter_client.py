@@ -9,8 +9,9 @@ from unittest.mock import patch
 
 import pytest
 
-from agentarts.sdk.tools.code_interpreter import CodeInterpreter
 from agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
+from agentarts.sdk.tools.code_interpreter import CodeInterpreter
+
 
 class TestCodeInterpreterClient(unittest.TestCase):
     @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_AK")
@@ -24,7 +25,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         mock_ak.return_value = "test_ak"
         mock_sk.return_value = "test-sk"
         self.code_interpreter_client = CodeInterpreter(region="test-region")
-    
+
     @patch.object(ControlToolsHttpClient, "create_code_interpreter")
     def test_create_code_interpreter_with_required_params(self, mock_create_code_interpreter):
         """测试create_code_interpreter方法，提供所有必填参数的情况"""
@@ -48,14 +49,14 @@ class TestCodeInterpreterClient(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(result, mock_create_code_interpreter.return_value)
+        assert result == mock_create_code_interpreter.return_value
         mock_create_code_interpreter.assert_called_once_with(
             request_params={
                 "name": "test-code-interpreter-name",
                 "api_key_name": "test-api-key-name"
             }
         )
-    
+
     @patch.object(ControlToolsHttpClient, "create_code_interpreter")
     def test_create_code_interpreter_with_all_params(self, mock_create_code_interpreter):
         """测试create_code_interpreter方法，提供所有参数的情况"""
@@ -128,14 +129,14 @@ class TestCodeInterpreterClient(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(result, mock_create_code_interpreter.return_value)
+        assert result == mock_create_code_interpreter.return_value
         mock_create_code_interpreter.assert_called_once_with(
             request_params={
                 "name": "test-code-interpreter-name",
                 "api_key_name": "test-api-key-name",
                 "description": "test-code-interpreter-description",
                 "auth_type": "API_KEY",
-                "execution_agency_name": "test-execution-agency-name", 
+                "execution_agency_name": "test-execution-agency-name",
                 "observability": {
                     "logs": {
                         "enable": True,
@@ -163,7 +164,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 ]
             }
         )
-    
+
     @patch.object(ControlToolsHttpClient, "list_code_interpreters")
     def test_list_code_interpreters_with_default_params(self, mock_list_code_interpreters):
         """测试list_code_interpreters方法，提供默认参数的情况"""
@@ -182,7 +183,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         result = self.code_interpreter_client.list_code_interpreters()
 
         # Assert
-        self.assertEqual(result, mock_list_code_interpreters.return_value)
+        assert result == mock_list_code_interpreters.return_value
         mock_list_code_interpreters.assert_called_once_with(
             request_params={
                 "limit": 10,
@@ -214,7 +215,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(result, mock_list_code_interpreters.return_value)
+        assert result == mock_list_code_interpreters.return_value
         mock_list_code_interpreters.assert_called_once_with(
             request_params={
                 "name": "test-name",
@@ -226,7 +227,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         )
 
     @patch.object(ControlToolsHttpClient, "update_code_interpreter")
-    def test_update_code_interpreter(self, mock_update_code_interpreter):  
+    def test_update_code_interpreter(self, mock_update_code_interpreter):
         """测试update_code_interpreter方法"""
         # Arrange
         mock_update_code_interpreter.return_value = {
@@ -263,7 +264,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             ]
         }
-        
+
         # Act
         result = self.code_interpreter_client.update_code_interpreter(
             code_interpreter_id="test-code-interpreter-id",
@@ -290,7 +291,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
             ]
         )
         # Assert
-        self.assertEqual(result, mock_update_code_interpreter.return_value)
+        assert result == mock_update_code_interpreter.return_value
         mock_update_code_interpreter.assert_called_once_with(
             code_interpreter_id="test-code-interpreter-id",
             request_params={
@@ -317,7 +318,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 ]
             }
         )
-    
+
     @patch.object(ControlToolsHttpClient, "get_code_interpreter")
     def test_get_code_interpreter(self, mock_get_code_interpreter):
         """测试get_code_interpreter方法"""
@@ -373,7 +374,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(result, mock_get_code_interpreter.return_value)
+        assert result == mock_get_code_interpreter.return_value
         mock_get_code_interpreter.assert_called_once_with(
             code_interpreter_id=code_interpreter_id
         )
@@ -391,7 +392,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         mock_delete_code_interpreter.assert_called_once_with(
             code_interpreter_id=code_interpreter_id
         )
-    
+
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "start_session")
     def test_start_session_with_default_params(self, mock_start_session, mock_getenv):
@@ -402,17 +403,17 @@ class TestCodeInterpreterClient(unittest.TestCase):
         test_session_name = "test-session-name"
         mock_start_session.return_value = {"session_id": test_session_id}
         mock_getenv.return_value = "test-api-key"
-       
+
         # Act
         result = self.code_interpreter_client.start_session(
             code_interpreter_name=test_code_interpreter_name,
             session_name=test_session_name
         )
-        
+
         # Assert
-        self.assertEqual(result, test_session_id)
-        self.assertEqual(self.code_interpreter_client.session_id, test_session_id)
-        self.assertEqual(self.code_interpreter_client.code_interpreter_name, test_code_interpreter_name)
+        assert result == test_session_id
+        assert self.code_interpreter_client.session_id == test_session_id
+        assert self.code_interpreter_client.code_interpreter_name == test_code_interpreter_name
         mock_start_session.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",
             api_key="test-api-key",
@@ -422,7 +423,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
             }
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
-    
+
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "start_session")
     def test_start_session_with_custom_params(self, mock_start_session, mock_getenv):
@@ -443,9 +444,9 @@ class TestCodeInterpreterClient(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(result, test_session_id)
-        self.assertEqual(self.code_interpreter_client.session_id, test_session_id)
-        self.assertEqual(self.code_interpreter_client.code_interpreter_name, test_code_interpreter_name)
+        assert result == test_session_id
+        assert self.code_interpreter_client.session_id == test_session_id
+        assert self.code_interpreter_client.code_interpreter_name == test_code_interpreter_name
         mock_start_session.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",
             api_key=test_api_key,
@@ -455,7 +456,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
             }
         )
         mock_getenv.assert_not_called()  # 因为我们提供了api_key，所以不应该调用getenv
-        
+
 
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "get_session")
@@ -480,14 +481,14 @@ class TestCodeInterpreterClient(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(response, mock_get_session.return_value)
+        assert response == mock_get_session.return_value
         mock_get_session.assert_called_once_with(
             code_interpreter_name=code_interpreter_name,
             session_id=session_id,
             api_key="test-api-key"
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
-        
+
     def test_get_session_with_no_params(self):
         """测试get_session方法，不提供参数的情况"""
         # Arrange
@@ -526,9 +527,9 @@ class TestCodeInterpreterClient(unittest.TestCase):
         self.code_interpreter_client.stop_session()
 
         # Assert
-        self.assertIsNone(self.code_interpreter_client.session_id)
-        self.assertIsNone(self.code_interpreter_client.code_interpreter_name)
-    
+        assert self.code_interpreter_client.session_id is None
+        assert self.code_interpreter_client.code_interpreter_name is None
+
 
     def test_invoke_with_no_existing_session(self):
         """测试invoke方法，无激活会话的情况"""
@@ -601,7 +602,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
             }
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
-    
+
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
     def test_execute_code_with_clear_context(self, mock_invoke, mock_getenv):
@@ -642,7 +643,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         self.code_interpreter_client.code_interpreter_name = "test-code-interpreter-name"
         self.code_interpreter_client.session_id = "test-session-id"
         language = "javascript"
-        error_message = f"Invalid language. Supported languages are: {', '.join(["python"])}"
+        error_message = f"Invalid language. Supported languages are: {', '.join(['python'])}"
 
         # Act & Assert
         with pytest.raises(ValueError, match=error_message):
@@ -680,7 +681,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
             }
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
-    
+
     @patch.object(os, "getenv")
     def test_execute_command_with_invalid_command(self, mock_getenv):
         """测试execute_command方法，提供无效命令的情况"""
@@ -771,7 +772,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
             }
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
-    
+
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
     def test_upload_file_with_relative_path(self, mock_invoke, mock_getenv):
@@ -860,7 +861,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
-    
+
     def test_upload_files_with_invalid_path(self):
         """测试upload_files方法，提供无效路径的情况"""
         # Arrange
@@ -928,7 +929,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             }
         )
-        self.assertEqual(response, text_content)
+        assert response == text_content
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
     @patch.object(os, "getenv")
@@ -977,9 +978,9 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 }
             }
         )
-        self.assertEqual(response, binary_content)
+        assert response == binary_content
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
-    
+
     @patch.object(DataToolsHttpClient, "invoke")
     def test_download_file_with_no_found_file(self, mock_invoke):
         """测试download_file方法，提供不存在的文件的情况"""
@@ -990,7 +991,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         self.code_interpreter_client.code_interpreter_name = "test-code-interpreter-name"
         self.code_interpreter_client.session_id = "test-session-id"
         path = "/home/user/non-existent.csv"
-        error_message = f"Cloud not read file: {path}"
+        error_message = f"Could not read file: {path}"
 
         # Act & Assert
         with pytest.raises(FileNotFoundError, match=error_message):
@@ -1002,7 +1003,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         self.code_interpreter_client.code_interpreter_name = "test-code-interpreter-name"
         self.code_interpreter_client.session_id = "test-session-id"
         path = "/var/invalid.csv"
-        error_message = f"Invalid path. Path must start with /home/user"
+        error_message = "Invalid path. Path must start with /home/user"
 
         # Act & Assert
         with pytest.raises(ValueError, match=error_message):
@@ -1022,14 +1023,14 @@ class TestCodeInterpreterClient(unittest.TestCase):
                                 "type": "resource",
                                 "resource": {
                                     "uri": "/home/user/data.csv",
-                                    "text": "col1, col2\n1, 2\n3, 4" 
+                                    "text": "col1, col2\n1, 2\n3, 4"
                                 }
                             },
                             {
                                 "type": "resource",
                                 "resource": {
                                     "uri": "/home/user/config.json",
-                                    "text": "{\"key\": \"value\"}" 
+                                    "text": '{"key": "value"}'
                                 }
                             }
                         ]
@@ -1044,7 +1045,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
 
         # Act
         self.code_interpreter_client.download_files(paths)
-        
+
         # Assert
         mock_invoke.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",
@@ -1058,7 +1059,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
             }
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
-    
+
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
     def test_download_files_with_binary_files(self, mock_invoke, mock_getenv):
@@ -1075,14 +1076,14 @@ class TestCodeInterpreterClient(unittest.TestCase):
                                 "type": "resource",
                                 "resource": {
                                     "uri": "/home/user/iamge-1.png",
-                                    "blob": encode_binary 
+                                    "blob": encode_binary
                                 }
                             },
                             {
                                 "type": "resource",
                                 "resource": {
                                     "uri": "/home/user/image-2.png",
-                                    "blob": encode_binary 
+                                    "blob": encode_binary
                                 }
                             }
                         ]
@@ -1097,7 +1098,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
 
         # Act
         self.code_interpreter_client.download_files(paths)
-        
+
         # Assert
         mock_invoke.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",
@@ -1111,19 +1112,19 @@ class TestCodeInterpreterClient(unittest.TestCase):
             }
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
-    
+
     def test_download_files_with_invalid_path(self):
         """测试download_files方法，提供无效路径的情况"""
         # Arrange
         self.code_interpreter_client.code_interpreter_name = "test-code-interpreter-name"
         self.code_interpreter_client.session_id = "test-session-id"
         paths = ["/var/user/data.csv", "/var/user/config.json"]
-        error_message = f"Invalid path. Path must start with /home/user"
+        error_message = "Invalid path. Path must start with /home/user"
 
         # Act & Assert
         with pytest.raises(ValueError, match=error_message):
             self.code_interpreter_client.download_files(paths)
-        
+
 
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
@@ -1138,7 +1139,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
 
         # Act
         self.code_interpreter_client.install_packages(packages)
-        
+
         # Assert
         mock_invoke.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",
@@ -1147,7 +1148,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
             arguments={
                 "operate_type": "execute_command",
                 "arguments": {
-                    "command": f"pip install {" ".join(packages)} "
+                    "command": f"pip install {' '.join(packages)} "
                 }
             }
         )
@@ -1166,7 +1167,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
 
         # Act
         self.code_interpreter_client.install_packages(packages)
-        
+
         # Assert
         mock_invoke.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",
@@ -1197,7 +1198,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
             packages=packages,
             upgrade=True
         )
-        
+
         # Assert
         mock_invoke.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",
@@ -1235,10 +1236,10 @@ class TestCodeInterpreterClient(unittest.TestCase):
         self.code_interpreter_client.code_interpreter_name = "test-code-interpreter-name"
         self.code_interpreter_client.session_id = "test-session-id"
         mock_getenv.return_value = "test-api-key"
-        
+
         # Act
         self.code_interpreter_client.clear_context()
-        
+
         # Assert
         mock_invoke.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",

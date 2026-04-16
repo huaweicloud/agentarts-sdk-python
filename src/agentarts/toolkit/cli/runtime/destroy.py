@@ -1,6 +1,6 @@
 """Destroy command definition"""
 
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 
@@ -9,11 +9,11 @@ from agentarts.toolkit.operations.runtime.destroy import destroy_agent
 
 def destroy(
     agent: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--agent", "-a", help="Agent name to destroy (uses default if not specified)"),
     ] = None,
     region: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--region", "-r", help="Huawei Cloud region"),
     ] = None,
     yes: Annotated[

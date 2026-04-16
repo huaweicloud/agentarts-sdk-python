@@ -1,6 +1,8 @@
 import json
-import pytest
 from pathlib import Path
+
+import pytest
+
 from agentarts.sdk.identity.config import Config
 
 
@@ -22,7 +24,7 @@ def test_config_save_load(tmp_path):
 
     # Check if file exists and has correct content
     assert config_file.exists()
-    with open(config_file, "r") as f:
+    with open(config_file) as f:
         data = json.load(f)
     assert data["workload_identity_name"] == "test-identity"
     assert data["user_id"] == "test-user"
@@ -47,4 +49,4 @@ def test_config_validation():
     config = Config()
     with pytest.raises(ValueError):
         # Use setattr to bypass static type checking for intentional invalid assignment
-        setattr(config, "user_id", {"not": "a string"})
+        config.user_id = {"not": "a string"}

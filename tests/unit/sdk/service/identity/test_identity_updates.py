@@ -1,13 +1,13 @@
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+from agentarts.sdk.service.identity.identity_client import IdentityClient
 from huaweicloudsdkagentidentity.v1 import (
     AgentIdentityClient,
     UpdateWorkloadIdentityResponse,
     WorkloadIdentity,
 )
-
-from agentarts.sdk.service.identity.identity_client import IdentityClient
 
 
 @pytest.fixture

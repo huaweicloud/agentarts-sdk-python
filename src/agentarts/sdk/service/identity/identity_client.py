@@ -1,11 +1,34 @@
 import asyncio
 import logging
 import uuid
-from typing import Any, Callable, Dict, List, Literal, Optional
+from collections.abc import Callable
+from typing import Any, Literal
 
+from huaweicloudsdkcore.exceptions.exceptions import (
+    SdkException,
+    ServiceResponseException,
+)
+from huaweicloudsdkcore.http.http_config import HttpConfig
+from huaweicloudsdkcore.region.region import Region
+from huaweicloudsdkcore.retry.backoff_strategy import BackoffStrategies
+from huaweicloudsdkcore.sdk_response import SdkResponse
+
+from agentarts.sdk.identity.types import (
+    OAuth2Discovery,
+    OAuth2Vendor,
+    StsCredentials,
+)
+from agentarts.sdk.service.identity.polling.token_poller import (
+    DefaultApiTokenPoller,
+    PollingResult,
+    PollingStatus,
+    TokenPoller,
+)
+from agentarts.sdk.utils.constant import get_identity_endpoint
 from huaweicloudsdkagentidentity.v1 import (
     AgentIdentityClient,
     ApiKeyCredentialProvider,
+    AuthorizerType,
     CompleteResourceTokenAuthRequest,
     CompleteResourceTokenAuthRequestBody,
     CompleteResourceTokenAuthResponse,
@@ -18,8 +41,15 @@ from huaweicloudsdkagentidentity.v1 import (
     CreateStsCredentialProviderReqBody,
     CreateStsCredentialProviderRequest,
     CreateStsCredentialProviderResponse,
-    StsCredentialProvider,
-    Tag,
+    CreateWorkloadAccessTokenForJwtRequest,
+    CreateWorkloadAccessTokenForJwtRequestBody,
+    CreateWorkloadAccessTokenForJwtResponse,
+    CreateWorkloadAccessTokenForUserIdRequest,
+    CreateWorkloadAccessTokenForUserIdRequestBody,
+    CreateWorkloadAccessTokenForUserIdResponse,
+    CreateWorkloadAccessTokenRequest,
+    CreateWorkloadAccessTokenRequestBody,
+    CreateWorkloadAccessTokenResponse,
     CreateWorkloadIdentityReqBody,
     CreateWorkloadIdentityRequest,
     CreateWorkloadIdentityResponse,
@@ -33,52 +63,20 @@ from huaweicloudsdkagentidentity.v1 import (
     GetResourceStsTokenRequest,
     GetResourceStsTokenRequestBody,
     GetResourceStsTokenResponse,
-    CreateWorkloadAccessTokenForJwtRequest,
-    CreateWorkloadAccessTokenForJwtRequestBody,
-    CreateWorkloadAccessTokenForJwtResponse,
-    CreateWorkloadAccessTokenForUserIdRequest,
-    CreateWorkloadAccessTokenForUserIdRequestBody,
-    CreateWorkloadAccessTokenForUserIdResponse,
-    CreateWorkloadAccessTokenRequest,
-    CreateWorkloadAccessTokenRequestBody,
-    CreateWorkloadAccessTokenResponse,
     GithubOauth2ProviderConfigInput,
     GoogleOauth2ProviderConfigInput,
     MicrosoftOauth2ProviderConfigInput,
     Oauth2CredentialProvider,
     Oauth2ProviderConfigInput,
+    StsCredentialProvider,
     StsTag,
+    Tag,
     UpdateWorkloadIdentityReqBody,
     UpdateWorkloadIdentityRequest,
     UpdateWorkloadIdentityResponse,
     UserIdentifier,
     WorkloadIdentity,
-    AuthorizerType,
 )
-from huaweicloudsdkagentidentity.v1.region.agentidentity_region import (
-    AgentIdentityRegion,
-)
-from huaweicloudsdkcore.exceptions.exceptions import (
-    SdkException,
-    ServiceResponseException,
-)
-from huaweicloudsdkcore.region.region import Region
-from huaweicloudsdkcore.http.http_config import HttpConfig
-from huaweicloudsdkcore.retry.backoff_strategy import BackoffStrategies
-from huaweicloudsdkcore.sdk_response import SdkResponse
-
-from agentarts.sdk.service.identity.polling.token_poller import (
-    DefaultApiTokenPoller,
-    PollingResult,
-    PollingStatus,
-    TokenPoller,
-)
-from agentarts.sdk.identity.types import (
-    OAuth2Discovery,
-    OAuth2Vendor,
-    StsCredentials,
-)
-from agentarts.sdk.utils.constant import get_identity_endpoint
 
 
 class IdentityClient:
@@ -87,8 +85,8 @@ class IdentityClient:
     def __init__(
         self,
         region: str,
-        ignore_ssl_verification: Optional[bool] = None,
-        client: Optional[AgentIdentityClient] = None,
+        ignore_ssl_verification: bool | None = None,
+        client: AgentIdentityClient | None = None,
     ) -> None:
         """Initialize the identity client with the specified region.
 
@@ -130,7 +128,7 @@ class IdentityClient:
 
     @staticmethod
     def _should_retry(
-        resp: Optional[SdkResponse], exception: Optional[SdkException]
+        resp: SdkResponse | None, exception: SdkException | None
     ) -> bool:
         """Determines if a request should be retried based on response or exception.
 
@@ -156,10 +154,10 @@ class IdentityClient:
 
     def create_workload_identity(
         self,
-        name: Optional[str] = None,
-        allowed_resource_oauth2_return_urls: Optional[List[str]] = None,
-        authorizer_type: Optional[str] = AuthorizerType.NONE,
-        authorizer_configuration: Optional[Any] = None,
+        name: str | None = None,
+        allowed_resource_oauth2_return_urls: list[str] | None = None,
+        authorizer_type: str | None = AuthorizerType.NONE,
+        authorizer_configuration: Any | None = None,
     ) -> WorkloadIdentity:
         """Create workload identity with optional name.
 
@@ -194,8 +192,8 @@ class IdentityClient:
     def update_workload_identity(
         self,
         name: str,
-        allowed_resource_oauth2_return_urls: Optional[List[str]] = None,
-        authorizer_configuration: Optional[Any] = None,
+        allowed_resource_oauth2_return_urls: list[str] | None = None,
+        authorizer_configuration: Any | None = None,
     ) -> WorkloadIdentity:
         """Updates an existing workload identity configuration.
 
@@ -253,9 +251,9 @@ class IdentityClient:
         vendor: OAuth2Vendor,
         client_id: str,
         client_secret: str,
-        tenant_id: Optional[str] = None,
-        oauth_discovery: Optional[OAuth2Discovery] = None,
-        tags: Optional[List[Tag]] = None,
+        tenant_id: str | None = None,
+        oauth_discovery: OAuth2Discovery | None = None,
+        tags: list[Tag] | None = None,
     ) -> Oauth2CredentialProvider:
         """Creates a new OAuth2 credential provider.
 
@@ -303,7 +301,8 @@ class IdentityClient:
                 )
             )
         else:
-            raise ValueError(f"Unsupported vendor: {vendor}")
+            msg = f"Unsupported vendor: {vendor}"
+            raise ValueError(msg)
 
         response: CreateOauth2CredentialProviderResponse = (
             self.client.create_oauth2_credential_provider(
@@ -323,7 +322,7 @@ class IdentityClient:
         self,
         name: str,
         agency_urn: str,
-        tags: Optional[List[Tag]] = None,
+        tags: list[Tag] | None = None,
     ) -> StsCredentialProvider:
         """Creates a new STS credential provider.
 
@@ -351,8 +350,8 @@ class IdentityClient:
     def create_workload_access_token(
         self,
         workload_name: str,
-        user_token: Optional[str] = None,
-        user_id: Optional[str] = None,
+        user_token: str | None = None,
+        user_id: str | None = None,
     ) -> str:
         """Get a workload access token using workload name and optionally user token.
 
@@ -421,15 +420,15 @@ class IdentityClient:
         self,
         *,
         provider_name: str,
-        scopes: Optional[List[str]] = None,
+        scopes: list[str] | None = None,
         workload_access_token: str,
-        on_auth_url: Optional[Callable[[str], Any]] = None,
+        on_auth_url: Callable[[str], Any] | None = None,
         auth_flow: Literal["M2M", "USER_FEDERATION"],
-        callback_url: Optional[str] = None,
+        callback_url: str | None = None,
         force_authentication: bool = False,
-        token_poller: Optional[TokenPoller] = None,
-        custom_state: Optional[str] = None,
-        custom_parameters: Optional[Dict[str, str]] = None,
+        token_poller: TokenPoller | None = None,
+        custom_state: str | None = None,
+        custom_parameters: dict[str, str] | None = None,
     ) -> str:
         """Get an OAuth2 access token for the specified provider.
 
@@ -456,7 +455,7 @@ class IdentityClient:
 
         # Helper to execute the SDK request
         def get_token(
-            current_session_uri: Optional[str] = None, is_polling: bool = False
+            current_session_uri: str | None = None, is_polling: bool = False
         ) -> GetResourceOauth2TokenResponse:
             # Note: force_authentication should only be true on the initial call, not while polling
             effective_force_auth = force_authentication if not is_polling else False
@@ -515,8 +514,9 @@ class IdentityClient:
 
             return await active_poller.poll_for_token()
 
+        msg = "Identity service did not return a token or an authorization URL."
         raise RuntimeError(
-            "Identity service did not return a token or an authorization URL."
+            msg
         )
 
     def get_resource_api_key(
@@ -555,11 +555,11 @@ class IdentityClient:
         provider_name: str,
         workload_access_token: str,
         agency_session_name: str,
-        duration_seconds: Optional[int] = None,
-        policy: Optional[str] = None,
-        source_identity: Optional[str] = None,
-        tags: Optional[List[StsTag]] = None,
-        transitive_tag_keys: Optional[List[str]] = None,
+        duration_seconds: int | None = None,
+        policy: str | None = None,
+        source_identity: str | None = None,
+        tags: list[StsTag] | None = None,
+        transitive_tag_keys: list[str] | None = None,
     ) -> StsCredentials:
         """Get STS token from the Identity service.
 

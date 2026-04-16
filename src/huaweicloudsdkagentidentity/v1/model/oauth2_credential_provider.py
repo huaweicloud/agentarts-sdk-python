@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,27 +14,27 @@ class Oauth2CredentialProvider:
     sensitive_list = []
 
     openapi_types = {
-        'name': 'str',
-        'urn': 'str',
-        'credential_provider_vendor': 'CredentialProviderVendor',
-        'client_secret': 'Secret',
-        'callback_url': 'str',
-        'created_at': 'datetime',
-        'updated_at': 'datetime',
-        'oauth2_provider_config_output': 'Oauth2ProviderConfigOutput',
-        'tags': 'list[Tag]'
+        "name": "str",
+        "urn": "str",
+        "credential_provider_vendor": "CredentialProviderVendor",
+        "client_secret": "Secret",
+        "callback_url": "str",
+        "created_at": "datetime",
+        "updated_at": "datetime",
+        "oauth2_provider_config_output": "Oauth2ProviderConfigOutput",
+        "tags": "list[Tag]"
     }
 
     attribute_map = {
-        'name': 'name',
-        'urn': 'urn',
-        'credential_provider_vendor': 'credential_provider_vendor',
-        'client_secret': 'client_secret',
-        'callback_url': 'callback_url',
-        'created_at': 'created_at',
-        'updated_at': 'updated_at',
-        'oauth2_provider_config_output': 'oauth2_provider_config_output',
-        'tags': 'tags'
+        "name": "name",
+        "urn": "urn",
+        "credential_provider_vendor": "credential_provider_vendor",
+        "client_secret": "client_secret",
+        "callback_url": "callback_url",
+        "created_at": "created_at",
+        "updated_at": "updated_at",
+        "oauth2_provider_config_output": "oauth2_provider_config_output",
+        "tags": "tags"
     }
 
     def __init__(self, name=None, urn=None, credential_provider_vendor=None, client_secret=None, callback_url=None, created_at=None, updated_at=None, oauth2_provider_config_output=None, tags=None):
@@ -47,9 +46,9 @@ class Oauth2CredentialProvider:
         :type name: str
         :param urn: 凭证提供者的唯一资源名称（URN）。
         :type urn: str
-        :param credential_provider_vendor: 
+        :param credential_provider_vendor:
         :type credential_provider_vendor: :class:`huaweicloudsdkagentidentity.v1.CredentialProviderVendor`
-        :param client_secret: 
+        :param client_secret:
         :type client_secret: :class:`huaweicloudsdkagentidentity.v1.Secret`
         :param callback_url: OAuth2 提供方认证完成后跳转回调的 URL。
         :type callback_url: str
@@ -57,13 +56,13 @@ class Oauth2CredentialProvider:
         :type created_at: datetime
         :param updated_at: Timestamp in RFC 3339 format (UTC)
         :type updated_at: datetime
-        :param oauth2_provider_config_output: 
+        :param oauth2_provider_config_output:
         :type oauth2_provider_config_output: :class:`huaweicloudsdkagentidentity.v1.Oauth2ProviderConfigOutput`
         :param tags: 自定义标签列表。
         :type tags: list[:class:`huaweicloudsdkagentidentity.v1.Tag`]
         """
-        
-        
+
+
 
         self._name = None
         self._urn = None
@@ -280,10 +279,7 @@ class Oauth2CredentialProvider:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -292,11 +288,10 @@ class Oauth2CredentialProvider:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

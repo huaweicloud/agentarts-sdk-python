@@ -1,19 +1,16 @@
 """Unit tests for init.py module"""
 
-import os
-import pytest
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from agentarts.toolkit.operations.runtime.init import (
-    detect_platform,
-    init_project,
+    TEMPLATES,
     create_agent_file,
-    create_requirements_file,
     create_config_file,
     create_dockerfile,
+    create_requirements_file,
+    detect_platform,
     get_template_env_vars,
-    TEMPLATES,
+    init_project,
 )
 
 
@@ -25,22 +22,22 @@ class TestDetectPlatform:
         result = detect_platform()
         assert result in ("linux/amd64", "linux/arm64")
 
-    @patch("platform_module.machine", return_value="x86_64")
-    @patch("platform_module.system", return_value="Linux")
+    @patch("platform.machine", return_value="x86_64")
+    @patch("platform.system", return_value="Linux")
     def test_linux_amd64(self, mock_system, mock_machine):
         """Returns linux/amd64 for x86_64 Linux."""
         result = detect_platform()
         assert result == "linux/amd64"
 
-    @patch("platform_module.machine", return_value="aarch64")
-    @patch("platform_module.system", return_value="Linux")
+    @patch("platform.machine", return_value="aarch64")
+    @patch("platform.system", return_value="Linux")
     def test_linux_arm64(self, mock_system, mock_machine):
         """Returns linux/arm64 for aarch64 Linux."""
         result = detect_platform()
         assert result == "linux/arm64"
 
-    @patch("platform_module.machine", return_value="amd64")
-    @patch("platform_module.system", return_value="Windows")
+    @patch("platform.machine", return_value="amd64")
+    @patch("platform.system", return_value="Windows")
     def test_windows_amd64(self, mock_system, mock_machine):
         """Returns linux/amd64 for amd64 Windows."""
         result = detect_platform()
@@ -89,17 +86,17 @@ class TestCreateDockerfile:
     def test_creates_dockerfile_with_region(self, tmp_path):
         """Creates Dockerfile with region environment variable."""
         create_dockerfile(tmp_path, "basic", region="cn-north-4")
-        
+
         dockerfile_path = tmp_path / "Dockerfile"
         assert dockerfile_path.exists()
-        
+
         content = dockerfile_path.read_text()
         assert "HUAWEICLOUD_SDK_REGION=cn-north-4" in content
 
     def test_creates_dockerfile_with_default_region(self, tmp_path):
         """Creates Dockerfile with default region when not specified."""
         create_dockerfile(tmp_path, "basic")
-        
+
         dockerfile_path = tmp_path / "Dockerfile"
         content = dockerfile_path.read_text()
         assert "HUAWEICLOUD_SDK_REGION=cn-southwest-2" in content
@@ -107,7 +104,7 @@ class TestCreateDockerfile:
     def test_dockerfile_contains_required_sections(self, tmp_path):
         """Dockerfile contains all required sections."""
         create_dockerfile(tmp_path, "basic", region="cn-north-4")
-        
+
         content = (tmp_path / "Dockerfile").read_text()
         assert "FROM python:3.10-slim" in content
         assert "WORKDIR /app" in content
@@ -128,10 +125,10 @@ class TestCreateConfigFile:
             swr_org="test-org",
             swr_repo="test-repo",
         )
-        
+
         config_path = tmp_path / ".agentarts_config.yaml"
         assert config_path.exists()
-        
+
         content = config_path.read_text()
         assert "test-agent" in content
         assert "cn-north-4" in content
@@ -145,7 +142,7 @@ class TestCreateConfigFile:
             name="my-agent",
             template="basic",
         )
-        
+
         content = (tmp_path / ".agentarts_config.yaml").read_text()
         assert "agent_my-agent" in content
 
@@ -157,7 +154,7 @@ class TestCreateConfigFile:
             template="basic",
             region="cn-east-3",
         )
-        
+
         content = (tmp_path / ".agentarts_config.yaml").read_text()
         assert "cn-east-3" in content
 
@@ -168,14 +165,14 @@ class TestCreateAgentFile:
     def test_creates_agent_file(self, tmp_path):
         """Creates agent.py file."""
         create_agent_file(tmp_path, "basic", "test-agent")
-        
+
         agent_path = tmp_path / "agent.py"
         assert agent_path.exists()
 
     def test_fallback_to_basic_template(self, tmp_path):
         """Falls back to basic template for unknown template."""
         create_agent_file(tmp_path, "unknown-template", "test-agent")
-        
+
         agent_path = tmp_path / "agent.py"
         assert agent_path.exists()
 
@@ -186,14 +183,14 @@ class TestCreateRequirementsFile:
     def test_creates_requirements_file(self, tmp_path):
         """Creates requirements.txt file."""
         create_requirements_file(tmp_path, "basic")
-        
+
         req_path = tmp_path / "requirements.txt"
         assert req_path.exists()
 
     def test_requirements_contains_sdk(self, tmp_path):
         """Requirements contains agentarts-sdk."""
         create_requirements_file(tmp_path, "basic")
-        
+
         content = (tmp_path / "requirements.txt").read_text()
         assert "agentarts-sdk" in content
 
@@ -205,13 +202,13 @@ class TestInitProject:
         """Init fails when target directory already exists."""
         existing_dir = tmp_path / "existing-project"
         existing_dir.mkdir()
-        
+
         result = init_project(
             template="basic",
             name="existing-project",
             path=str(tmp_path),
         )
-        
+
         assert result is False
 
     def test_init_creates_project_structure(self, tmp_path):
@@ -222,9 +219,9 @@ class TestInitProject:
             path=str(tmp_path),
             region="cn-north-4",
         )
-        
+
         assert result is True
-        
+
         project_path = tmp_path / "test-project"
         assert project_path.exists()
         assert (project_path / "agent.py").exists()
@@ -241,9 +238,9 @@ class TestInitProject:
             swr_org="custom-org",
             swr_repo="custom-repo",
         )
-        
+
         assert result is True
-        
+
         config_content = (tmp_path / "test-project" / ".agentarts_config.yaml").read_text()
         assert "custom-org" in config_content
         assert "custom-repo" in config_content

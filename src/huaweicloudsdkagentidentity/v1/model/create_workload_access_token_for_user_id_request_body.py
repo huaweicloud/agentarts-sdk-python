@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,13 +14,13 @@ class CreateWorkloadAccessTokenForUserIdRequestBody:
     sensitive_list = []
 
     openapi_types = {
-        'workload_name': 'str',
-        'user_id': 'str'
+        "workload_name": "str",
+        "user_id": "str"
     }
 
     attribute_map = {
-        'workload_name': 'workload_name',
-        'user_id': 'user_id'
+        "workload_name": "workload_name",
+        "user_id": "user_id"
     }
 
     def __init__(self, workload_name=None, user_id=None):
@@ -34,8 +33,8 @@ class CreateWorkloadAccessTokenForUserIdRequestBody:
         :param user_id: The ID of the user for whom to retrieve the access token
         :type user_id: str
         """
-        
-        
+
+
 
         self._workload_name = None
         self._user_id = None
@@ -94,10 +93,7 @@ class CreateWorkloadAccessTokenForUserIdRequestBody:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -106,11 +102,10 @@ class CreateWorkloadAccessTokenForUserIdRequestBody:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

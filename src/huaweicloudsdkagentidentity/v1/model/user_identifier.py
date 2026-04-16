@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,13 +14,13 @@ class UserIdentifier:
     sensitive_list = []
 
     openapi_types = {
-        'user_token': 'str',
-        'user_id': 'str'
+        "user_token": "str",
+        "user_id": "str"
     }
 
     attribute_map = {
-        'user_token': 'user_token',
-        'user_id': 'user_id'
+        "user_token": "user_token",
+        "user_id": "user_id"
     }
 
     def __init__(self, user_token=None, user_id=None):
@@ -34,8 +33,8 @@ class UserIdentifier:
         :param user_id: User ID for identification
         :type user_id: str
         """
-        
-        
+
+
 
         self._user_token = None
         self._user_id = None
@@ -96,10 +95,7 @@ class UserIdentifier:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -108,11 +104,10 @@ class UserIdentifier:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

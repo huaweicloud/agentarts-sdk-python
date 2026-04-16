@@ -9,21 +9,21 @@ from functools import wraps
 import requests
 from huaweicloudsdkcore.auth.credentials import BasicCredentials
 from huaweicloudsdkcore.auth.provider import (
+    CredentialProvider,
+    CredentialProviderChain,
     EnvCredentialProvider,
     ProfileCredentialProvider,
-    CredentialProviderChain,
-    CredentialProvider,
 )
 
 
 def create_credential():
     """
     Create credentials using CredentialProviderChain.
-    
+
     This method chains multiple credential providers in order:
     1. EnvCredentialProvider - reads credentials from environment variables
     2. ProfileCredentialProvider - reads credentials from configuration files
-    
+
     Returns:
         Credentials: The created credentials object
     """
@@ -38,13 +38,13 @@ def create_credential():
 def require_credentials(*, key: str = "credentials"):
     """
     Decorator to ensure credentials are available for a function.
-    
+
     This decorator creates credentials using create_credential() and passes them
     to the decorated function as a keyword argument with the specified key.
-    
+
     Args:
         key: The keyword argument name to use for passing credentials
-    
+
     Returns:
         Callable: The decorated function
     """
@@ -75,10 +75,10 @@ class MetadataProvider(CredentialProvider):
     def get_credentials(self) -> BasicCredentials:
         """
         Get credentials from metadata service.
-        
+
         Returns:
             BasicCredentials: The credentials object
-            
+
         Raises:
             ValueError: If credentials cannot be obtained
         """
@@ -100,11 +100,14 @@ class MetadataProvider(CredentialProvider):
         except requests.exceptions.RequestException as e:
             self.logger.warning(f"Failed to connect to metadata service: {e}")
 
-        raise ValueError(
+        msg = (
             "Authentication failed: Could not find valid credentials. "
             "Please configure one of the following:\n"
             "1. AK/SK Authentication: Set HUAWEICLOUD_SDK_AK, HUAWEICLOUD_SDK_SK\n"
             "2. OIDC Token: Set HUAWEICLOUD_SDK_IDP_ID, HUAWEICLOUD_SDK_ID_TOKEN_FILE, "
             "and HUAWEICLOUD_SDK_PROJECT_ID\n"
             "3. Metadata: Running on the AgentArts runtime"
+        )
+        raise ValueError(
+            msg
         )

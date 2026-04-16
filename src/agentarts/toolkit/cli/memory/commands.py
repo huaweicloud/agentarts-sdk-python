@@ -1,22 +1,20 @@
 """Memory CLI commands - Space CRUD operations."""
 
 import json
-from typing import Optional
 
 import typer
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from agentarts.toolkit.utils.common import echo_error, echo_success
-
-from ...operations.memory import (
+from agentarts.toolkit.operations.memory import (
     create_space,
     delete_space,
     get_space,
     list_spaces,
     update_space,
 )
+from agentarts.toolkit.utils.common import echo_error, echo_success
 
 console = Console()
 
@@ -32,20 +30,20 @@ memory_app = typer.Typer(
 def create_space_cmd(
         name: str = typer.Argument(..., help="Space name, required (1-128 characters)"),
         message_ttl_hours: int = typer.Option(168, "--ttl", "-t", help="Message TTL in hours"),
-        description: Optional[str] = typer.Option(None, "--description", "-d", help="Space description"),
-        memory_extract_idle_seconds: Optional[int] = typer.Option(None, "--extract-idle",
+        description: str | None = typer.Option(None, "--description", "-d", help="Space description"),
+        memory_extract_idle_seconds: int | None = typer.Option(None, "--extract-idle",
                                                                   help="Memory extraction idle time in seconds"),
-        memory_extract_max_tokens: Optional[int] = typer.Option(None, "--extract-tokens",
+        memory_extract_max_tokens: int | None = typer.Option(None, "--extract-tokens",
                                                                 help="Memory extraction max tokens"),
-        memory_extract_max_messages: Optional[int] = typer.Option(None, "--extract-messages",
+        memory_extract_max_messages: int | None = typer.Option(None, "--extract-messages",
                                                                   help="Memory extraction max messages"),
-        memory_strategies: Optional[str] = typer.Option(None, "--strategies", "-s",
+        memory_strategies: str | None = typer.Option(None, "--strategies", "-s",
                                                         help="Built-in memory strategies (comma-separated)"),
-        tags: Optional[str] = typer.Option(None, "--tags", help="Tags in format 'key1=value1,key2=value2'"),
+        tags: str | None = typer.Option(None, "--tags", help="Tags in format 'key1=value1,key2=value2'"),
         enable_public: bool = typer.Option(True, "--public/--private", help="Enable/disable public access"),
-        vpc_id: Optional[str] = typer.Option(None, "--vpc-id", help="Private VPC ID (requires subnet-id)"),
-        subnet_id: Optional[str] = typer.Option(None, "--subnet-id", help="Private subnet ID (requires vpc-id)"),
-        region: Optional[str] = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
+        vpc_id: str | None = typer.Option(None, "--vpc-id", help="Private VPC ID (requires subnet-id)"),
+        subnet_id: str | None = typer.Option(None, "--subnet-id", help="Private subnet ID (requires vpc-id)"),
+        region: str | None = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
         output: str = typer.Option("table", "--output", "-o", help="Output format: table, json"),
 ):
     """Create a Memory Space.
@@ -121,7 +119,7 @@ def create_space_cmd(
         except (TypeError, ValueError) as e:
             echo_error(f"Failed to serialize space data to JSON: {e}")
     else:
-        echo_success(f"Space created successfully!")
+        echo_success("Space created successfully!")
         console.print(f"  Space ID: [bold]{result.space_id}[/bold]")
         if result.space:
             console.print(f"  Status: {result.space.get('status', 'N/A')}")
@@ -130,7 +128,7 @@ def create_space_cmd(
 @memory_app.command("get")
 def get_space_cmd(
         space_id: str = typer.Argument(..., help="Space ID"),
-        region: Optional[str] = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
+        region: str | None = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
         output: str = typer.Option("table", "--output", "-o", help="Output format: table, json"),
 ):
     """Get Space details.
@@ -174,7 +172,7 @@ def get_space_cmd(
 def list_spaces_cmd(
         limit: int = typer.Option(20, "--limit", "-l", help="Maximum number of spaces"),
         offset: int = typer.Option(0, "--offset", help="Offset for pagination"),
-        region: Optional[str] = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
+        region: str | None = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
         output: str = typer.Option("table", "--output", "-o", help="Output format: table, json"),
 ):
     """List Spaces.
@@ -233,21 +231,21 @@ def list_spaces_cmd(
 @memory_app.command("update")
 def update_space_cmd(
         space_id: str = typer.Argument(..., help="Space ID"),
-        message_ttl_hours: Optional[int] = typer.Option(None, "--ttl", "-t", help="Message TTL in hours"),
-        description: Optional[str] = typer.Option(None, "--description", "-d", help="Space description"),
-        memory_extract_idle_seconds: Optional[int] = typer.Option(None, "--extract-idle",
+        message_ttl_hours: int | None = typer.Option(None, "--ttl", "-t", help="Message TTL in hours"),
+        description: str | None = typer.Option(None, "--description", "-d", help="Space description"),
+        memory_extract_idle_seconds: int | None = typer.Option(None, "--extract-idle",
                                                                   help="Memory extraction idle time in seconds"),
-        memory_extract_max_tokens: Optional[int] = typer.Option(None, "--extract-tokens",
+        memory_extract_max_tokens: int | None = typer.Option(None, "--extract-tokens",
                                                                 help="Memory extraction max tokens"),
-        memory_extract_max_messages: Optional[int] = typer.Option(None, "--extract-messages",
+        memory_extract_max_messages: int | None = typer.Option(None, "--extract-messages",
                                                                   help="Memory extraction max messages"),
-        memory_strategies: Optional[str] = typer.Option(None, "--strategies", "-s",
+        memory_strategies: str | None = typer.Option(None, "--strategies", "-s",
                                                         help="Built-in memory strategies (comma-separated)"),
-        tags: Optional[str] = typer.Option(None, "--tags", help="Tags in format 'key1=value1,key2=value2'"),
-        enable_public: Optional[bool] = typer.Option(None, "--public/--private", help="Enable/disable public access"),
-        vpc_id: Optional[str] = typer.Option(None, "--vpc-id", help="Private VPC ID (requires subnet-id)"),
-        subnet_id: Optional[str] = typer.Option(None, "--subnet-id", help="Private subnet ID (requires vpc-id)"),
-        region: Optional[str] = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
+        tags: str | None = typer.Option(None, "--tags", help="Tags in format 'key1=value1,key2=value2'"),
+        enable_public: bool | None = typer.Option(None, "--public/--private", help="Enable/disable public access"),
+        vpc_id: str | None = typer.Option(None, "--vpc-id", help="Private VPC ID (requires subnet-id)"),
+        subnet_id: str | None = typer.Option(None, "--subnet-id", help="Private subnet ID (requires vpc-id)"),
+        region: str | None = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
         output: str = typer.Option("table", "--output", "-o", help="Output format: table, json"),
 ):
     """Update a Space.
@@ -262,9 +260,8 @@ def update_space_cmd(
     clean_space_id = space_id.strip()
 
     # Validate TTL if provided
-    if message_ttl_hours is not None:
-        if message_ttl_hours <= 0 or message_ttl_hours > 8760:
-            echo_error("Message TTL must be between 1 and 8760 hours")
+    if message_ttl_hours is not None and (message_ttl_hours <= 0 or message_ttl_hours > 8760):
+        echo_error("Message TTL must be between 1 and 8760 hours")
 
     # Validate VPC and subnet combination
     if (vpc_id is None and subnet_id is not None) or (vpc_id is not None and subnet_id is None):
@@ -320,18 +317,18 @@ def update_space_cmd(
         except (TypeError, ValueError) as e:
             echo_error(f"Failed to serialize space data to JSON: {e}")
     else:
-        echo_success(f"Space updated successfully!")
+        echo_success("Space updated successfully!")
         console.print(f"  Space ID: [bold]{clean_space_id}[/bold]")
 
         # Show more details if available
         if result.space:
-            status = result.space.get('status', 'N/A')
-            project_id = result.space.get('project_id', 'N/A')
-            message_ttl = result.space.get('message_ttl_hours', 'N/A')
+            status = result.space.get("status", "N/A")
+            project_id = result.space.get("project_id", "N/A")
+            message_ttl = result.space.get("message_ttl_hours", "N/A")
 
             console.print(f"  Status: {status}")
             console.print(f"  Project ID: {project_id}")
-            if message_ttl != 'N/A':
+            if message_ttl != "N/A":
                 console.print(f"  Message TTL: {message_ttl} hours")
 
             # Show updates that were made
@@ -348,7 +345,7 @@ def update_space_cmd(
 @memory_app.command("delete")
 def delete_space_cmd(
         space_id: str = typer.Argument(..., help="Space ID"),
-        region: Optional[str] = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
+        region: str | None = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
         force: bool = typer.Option(False, "--force", "-f", help="Force deletion without confirmation"),
 ):
     """Delete a Space.
@@ -376,21 +373,21 @@ def delete_space_cmd(
     if not result.success:
         echo_error(f"Failed to delete space: {result.error}")
 
-    echo_success(f"Space deleted successfully!")
+    echo_success("Space deleted successfully!")
     console.print(f"  Space ID: [bold]{display_space_id}[/bold]")
 
 
 @memory_app.command("status")
 def space_status_cmd(
         space_id: str = typer.Argument(..., help="Space ID to check status"),
-        region: Optional[str] = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
+        region: str | None = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
         output: str = typer.Option("table", "--output", "-o", help="Output format: table, json"),
 ):
     """Check the status of a Memory Space.
-    
+
     This command provides a simplified view of space status showing
     only the essential information like available status and health.
-    
+
     Uses AK/SK authentication via environment variables:
     - HUAWEICLOUD_SDK_AK: Access Key
     - HUAWEICLOUD_SDK_SK: Secret Key
@@ -442,11 +439,7 @@ def space_status_cmd(
                 health = "healthy"
                 if status in ["ERROR", "FAILED"]:
                     health = "error"
-                elif status in ["STOPPED", "INACTIVE"]:
-                    health = "warning"
-                elif ttl is not None and ttl < 24:
-                    health = "warning"
-                elif memory_extract is False and result.space.get("status") == "ACTIVE":
+                elif status in ["STOPPED", "INACTIVE"] or (ttl is not None and ttl < 24) or (memory_extract is False and result.space.get("status") == "ACTIVE"):
                     health = "warning"
 
                 output_data["health_status"] = health
@@ -494,7 +487,7 @@ def space_status_cmd(
 
         console.print(Panel(
             status_content,
-            title=f"Memory Space Status",
+            title="Memory Space Status",
             border_style="cyan",
         ))
 

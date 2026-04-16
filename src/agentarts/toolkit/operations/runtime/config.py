@@ -2,7 +2,6 @@
 
 import platform as platform_module
 from pathlib import Path
-from typing import List, Optional
 
 from rich.console import Console
 from rich.table import Table
@@ -29,20 +28,15 @@ def detect_platform() -> str:
     machine = platform_module.machine().lower()
     system = platform_module.system().lower()
 
-    if system == "linux":
+    if system in {"linux", "darwin"}:
         if machine in ("aarch64", "arm64"):
             return "linux/arm64"
-        elif machine in ("x86_64", "amd64"):
-            return "linux/amd64"
-    elif system == "darwin":
-        if machine in ("aarch64", "arm64"):
-            return "linux/arm64"
-        elif machine in ("x86_64", "amd64"):
+        if machine in ("x86_64", "amd64"):
             return "linux/amd64"
     elif system == "windows":
         if machine in ("amd64", "x86_64"):
             return "linux/amd64"
-        elif machine in ("arm64", "aarch64"):
+        if machine in ("arm64", "aarch64"):
             return "linux/arm64"
 
     return "linux/amd64"
@@ -51,20 +45,20 @@ def detect_platform() -> str:
 def detect_dependency_file() -> str:
     """
     Detect dependency file in current directory.
-    
+
     Priority: requirements.txt > pyproject.toml
-    
+
     Returns:
         Detected dependency file name or 'requirements.txt' as default
     """
     cwd = Path.cwd()
-    
+
     if (cwd / "requirements.txt").exists():
         return "requirements.txt"
-    
+
     if (cwd / "pyproject.toml").exists():
         return "pyproject.toml"
-    
+
     return "requirements.txt"
 
 
@@ -122,7 +116,7 @@ def ensure_config_exists() -> AgentArtsConfigList:
     return config
 
 
-def list_agents() -> List[str]:
+def list_agents() -> list[str]:
     """
     List all configured agents.
 
@@ -133,7 +127,7 @@ def list_agents() -> List[str]:
     return config.list_agents()
 
 
-def get_default_agent() -> Optional[str]:
+def get_default_agent() -> str | None:
     """
     Get the default agent name.
 
@@ -168,7 +162,7 @@ def set_default_agent(name: str) -> bool:
     return False
 
 
-def get_agent(name: Optional[str] = None) -> Optional[AgentArtsConfig]:
+def get_agent(name: str | None = None) -> AgentArtsConfig | None:
     """
     Get agent configuration by name.
 
@@ -185,10 +179,10 @@ def get_agent(name: Optional[str] = None) -> Optional[AgentArtsConfig]:
 def add_agent(
     name: str,
     entrypoint: str,
-    region: Optional[str] = None,
-    swr_organization: Optional[str] = None,
-    swr_repository: Optional[str] = None,
-    dependency_file: Optional[str] = None,
+    region: str | None = None,
+    swr_organization: str | None = None,
+    swr_repository: str | None = None,
+    dependency_file: str | None = None,
     set_as_default: bool = True,
     organization_auto_create: bool = False,
     repository_auto_create: bool = False,
@@ -211,12 +205,12 @@ def add_agent(
         True if successful
     """
     config = load_config()
-    
+
     existing_agent = config.get_agent(name)
-    
+
     if existing_agent:
         existing_dict = existing_agent.to_dict()
-        
+
         if entrypoint is not None:
             existing_dict.setdefault("base", {})["entrypoint"] = entrypoint
         if region is not None:
@@ -224,21 +218,21 @@ def add_agent(
         if dependency_file is not None:
             existing_dict.setdefault("base", {})["dependency_file"] = dependency_file
         existing_dict.setdefault("base", {})["name"] = name
-        
+
         if swr_organization is not None:
             existing_dict.setdefault("swr_config", {})["organization"] = swr_organization
         if swr_repository is not None:
             existing_dict.setdefault("swr_config", {})["repository"] = swr_repository
         existing_dict.setdefault("swr_config", {})["organization_auto_create"] = organization_auto_create
         existing_dict.setdefault("swr_config", {})["repository_auto_create"] = repository_auto_create
-        
+
         final_region = existing_dict.get("base", {}).get("region", "cn-southwest-2")
         final_org = existing_dict.get("swr_config", {}).get("organization", "agentarts-org")
         final_repo = existing_dict.get("swr_config", {}).get("repository", f"agent_{name}")
-        
+
         artifact_url = f"swr.{final_region}.myhuaweicloud.com/{final_org}/{final_repo}:latest"
         existing_dict.setdefault("runtime", {}).setdefault("artifact_source", {})["url"] = artifact_url
-        
+
         agent_config = AgentArtsConfig.from_dict(existing_dict)
     else:
         detected_platform = detect_platform()
@@ -257,11 +251,11 @@ def add_agent(
                 repository_auto_create=repository_auto_create,
             ),
         )
-        
+
         final_region = region or "cn-southwest-2"
         final_org = swr_organization or "agentarts-org"
         final_repo = swr_repository or f"agent_{name}"
-        
+
         artifact_url = f"swr.{final_region}.myhuaweicloud.com/{final_org}/{final_repo}:latest"
         agent_config_dict = agent_config.to_dict()
         agent_config_dict.setdefault("runtime", {}).setdefault("artifact_source", {})["url"] = artifact_url
@@ -308,7 +302,7 @@ def print_config_list() -> None:
 
     if not config.agents:
         console.print("[dim]No agents configured[/dim]")
-        console.print(f"\n[dim]Run 'agentarts config' to configure an agent[/dim]")
+        console.print("\n[dim]Run 'agentarts config' to configure an agent[/dim]")
         return
 
     table = Table(title=f"Agent Configurations ({get_config_file_path()})")
@@ -335,7 +329,7 @@ def print_config_list() -> None:
         console.print(f"\n[dim]Default agent: [cyan]{config.default_agent}[/cyan][/dim]")
 
 
-def print_agent_detail(name: Optional[str] = None) -> bool:
+def print_agent_detail(name: str | None = None) -> bool:
     """
     Print detailed configuration for an agent.
 
@@ -373,7 +367,7 @@ def print_agent_detail(name: Optional[str] = None) -> bool:
     return True
 
 
-def set_config_value(key: str, value: str, agent_name: Optional[str] = None) -> bool:
+def set_config_value(key: str, value: str, agent_name: str | None = None) -> bool:
     """
     Set a configuration value for an agent.
 
@@ -412,19 +406,19 @@ def set_config_value(key: str, value: str, agent_name: Optional[str] = None) -> 
 
     try:
         updated_config = AgentArtsConfig.from_dict(config_dict)
-        
+
         if key == "base.name" and value != agent_name:
             config.agents[value] = updated_config
             del config.agents[agent_name]
-            
+
             if config.default_agent == agent_name:
                 config.default_agent = value
-            
+
             console.print(f"[green]Done:[/green] Renamed agent [cyan]{agent_name}[/cyan] to [cyan]{value}[/cyan]")
             agent_name = value
         else:
             config.agents[agent_name] = updated_config
-        
+
         if save_config(config):
             if key != "base.name":
                 console.print(f"[green]Done:[/green] Set [cyan]{key}[/cyan] = [yellow]{value}[/yellow] for agent [cyan]{agent_name}[/cyan]")
@@ -436,7 +430,7 @@ def set_config_value(key: str, value: str, agent_name: Optional[str] = None) -> 
     return False
 
 
-def get_config_value(key: str, agent_name: Optional[str] = None) -> bool:
+def get_config_value(key: str, agent_name: str | None = None) -> bool:
     """
     Get a configuration value for an agent.
 
@@ -475,7 +469,7 @@ def get_config_value(key: str, agent_name: Optional[str] = None) -> bool:
         return False
 
 
-def generate_dockerfile(agent_name: Optional[str] = None, output_path: Optional[str] = None) -> bool:
+def generate_dockerfile(agent_name: str | None = None, output_path: str | None = None) -> bool:
     """
     Generate Dockerfile for an agent.
 
@@ -486,7 +480,9 @@ def generate_dockerfile(agent_name: Optional[str] = None, output_path: Optional[
     Returns:
         True if successful, False otherwise
     """
-    from agentarts.toolkit.utils.runtime.container import generate_dockerfile as _generate_dockerfile
+    from agentarts.toolkit.utils.runtime.container import (
+        generate_dockerfile as _generate_dockerfile,
+    )
 
     config = load_config()
 

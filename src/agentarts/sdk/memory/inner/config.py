@@ -5,7 +5,7 @@ Provides SDK configuration and data class definitions.
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, Dict, List, Any, Literal
+from typing import Any, Literal
 
 
 class StrategyType(Enum):
@@ -30,12 +30,12 @@ class MessageRole(Enum):
 class CreateMemoryRequest:
     """
     Create memory request.
-    
+
     Required fields:
         - content: Memory content, length 1-10000
         - strategy_type: Strategy type (semantic, summary, user_preference, episodic, event, custom)
         - strategy_id: Source strategy ID (UUID)
-    
+
     Optional fields:
         - actor_id: Actor ID, length 0-64
         - assistant_id: Assistant ID, length 0-64
@@ -46,12 +46,12 @@ class CreateMemoryRequest:
     strategy_type: str
     strategy_id: str
 
-    actor_id: Optional[str] = None
-    assistant_id: Optional[str] = None
-    session_id: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    actor_id: str | None = None
+    assistant_id: str | None = None
+    session_id: str | None = None
+    metadata: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary format."""
         result = {
             "content": self.content,
@@ -80,7 +80,7 @@ class Tag:
     key: str
     value: str
 
-    def to_dict(self) -> Dict[str, str]:
+    def to_dict(self) -> dict[str, str]:
         return {"key": self.key, "value": self.value}
 
 
@@ -88,9 +88,9 @@ class Tag:
 class MemoryStrategy:
     """Memory strategy configuration data class."""
     type: str
-    parameters: Optional[Dict[str, Any]] = None
+    parameters: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         result = {"type": self.type}
         if self.parameters:
             result.update(self.parameters)
@@ -100,9 +100,9 @@ class MemoryStrategy:
 @dataclass
 class SessionMetadata:
     """Session metadata data class."""
-    data: Dict[str, Any] = field(default_factory=dict)
+    data: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return self.data.copy()
 
 
@@ -110,29 +110,25 @@ class SessionMetadata:
 class MemorySearchFilter:
     """Memory search filter data class - contains all search_memories API parameters."""
 
-    query: Optional[str] = None
-    strategy_type: Optional[str] = None
-    strategy_id: Optional[str] = None
-    actor_id: Optional[str] = None
-    assistant_id: Optional[str] = None
-    session_id: Optional[str] = None
-    memory_type: Optional[Literal["memory", "episode", "reflection"]] = None
-    start_time: Optional[int] = None
-    end_time: Optional[int] = None
-    top_k: Optional[int] = None
-    min_score: Optional[float] = None
+    query: str | None = None
+    strategy_type: str | None = None
+    strategy_id: str | None = None
+    actor_id: str | None = None
+    assistant_id: str | None = None
+    session_id: str | None = None
+    memory_type: Literal["memory", "episode", "reflection"] | None = None
+    start_time: int | None = None
+    end_time: int | None = None
+    top_k: int | None = None
+    min_score: float | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to API request body format, set default values."""
         result = {}
 
         for k, v in self.__dict__.items():
             if v is not None:
-                if k == "top_k" and v == 10:
-                    result[k] = v
-                elif k == "min_score" and v == 0.5:
-                    result[k] = v
-                elif v is not None:
+                if (k == "top_k" and v == 10) or (k == "min_score" and v == 0.5) or v is not None:
                     result[k] = v
 
         return result
@@ -142,25 +138,23 @@ class MemorySearchFilter:
 class MemoryListFilter:
     """Memory list filter data class - contains all list_memories API filter parameters (except limit/offset)."""
 
-    strategy_type: Optional[str] = None
-    strategy_id: Optional[str] = None
-    actor_id: Optional[str] = None
-    assistant_id: Optional[str] = None
-    session_id: Optional[str] = None
-    start_time: Optional[int] = None
-    end_time: Optional[int] = None
-    sort_by: Optional[Literal["created_at", "updated_at"]] = None
-    sort_order: Optional[Literal["asc", "desc"]] = None
+    strategy_type: str | None = None
+    strategy_id: str | None = None
+    actor_id: str | None = None
+    assistant_id: str | None = None
+    session_id: str | None = None
+    start_time: int | None = None
+    end_time: int | None = None
+    sort_by: Literal["created_at", "updated_at"] | None = None
+    sort_order: Literal["asc", "desc"] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to API dictionary format, set default values."""
         result = {}
 
         for k, v in self.__dict__.items():
             if v is not None:
-                if k == "sort_by" and v == "created_at":
-                    result[k] = v
-                elif k == "sort_order" and v == "desc":
+                if (k == "sort_by" and v == "created_at") or (k == "sort_order" and v == "desc"):
                     result[k] = v
                 else:
                     result[k] = v
@@ -172,14 +166,14 @@ class MemoryListFilter:
 class SpaceCreateRequest:
     """
     Space creation request.
-    
+
     Users only need to care about basic Space configuration,
     SDK internally handles API Key creation automatically.
 
     Required fields:
         - name: Space name, length 1-128
         - message_ttl_hours: Message TTL (hours), range 1-8760
-    
+
     Optional fields:
         - description: Space description
         - tags: Space tags
@@ -187,7 +181,7 @@ class SpaceCreateRequest:
         - private_vpc_id: Private VPC ID (must be provided with private_subnet_id)
         - private_subnet_id: Private subnet ID (must be provided with private_vpc_id)
         - memory_extract_idle_seconds: Memory extraction idle time
-        - memory_extract_max_tokens: Memory extraction max token count  
+        - memory_extract_max_tokens: Memory extraction max token count
         - memory_extract_max_messages: Memory extraction max message count
         - memory_strategies_builtin: Built-in memory strategy list
         - memory_strategies_customized: Custom memory strategy list
@@ -195,21 +189,21 @@ class SpaceCreateRequest:
     name: str
     message_ttl_hours: int = 168
 
-    description: Optional[str] = None
-    memory_extract_idle_seconds: Optional[int] = None
-    memory_extract_max_tokens: Optional[int] = None
-    memory_extract_max_messages: Optional[int] = None
+    description: str | None = None
+    memory_extract_idle_seconds: int | None = None
+    memory_extract_max_tokens: int | None = None
+    memory_extract_max_messages: int | None = None
 
-    tags: Optional[List[Dict[str, str]]] = None
+    tags: list[dict[str, str]] | None = None
 
     public_access_enable: bool = True
-    private_vpc_id: Optional[str] = None
-    private_subnet_id: Optional[str] = None
+    private_vpc_id: str | None = None
+    private_subnet_id: str | None = None
 
-    memory_strategies_builtin: Optional[List[str]] = None
-    memory_strategies_customized: Optional[List[Dict[str, Any]]] = None
+    memory_strategies_builtin: list[str] | None = None
+    memory_strategies_customized: list[dict[str, Any]] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         Convert to API dictionary format.
 
@@ -257,20 +251,20 @@ class SpaceCreateRequest:
 @dataclass
 class SpaceUpdateRequest:
     """Space update request."""
-    name: Optional[str] = None
-    description: Optional[str] = None
-    message_ttl_hours: Optional[int] = None
+    name: str | None = None
+    description: str | None = None
+    message_ttl_hours: int | None = None
 
-    memory_extract_enabled: Optional[bool] = None
-    memory_extract_idle_seconds: Optional[int] = None
-    memory_extract_max_tokens: Optional[int] = None
-    memory_extract_max_messages: Optional[int] = None
+    memory_extract_enabled: bool | None = None
+    memory_extract_idle_seconds: int | None = None
+    memory_extract_max_tokens: int | None = None
+    memory_extract_max_messages: int | None = None
 
-    tags: Optional[List[Dict[str, str]]] = None
+    tags: list[dict[str, str]] | None = None
 
-    memory_strategies_builtin: Optional[List[str]] = None
+    memory_strategies_builtin: list[str] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary, skip None values, conform to OpenAPI spec."""
         result = {}
 
@@ -302,12 +296,12 @@ class SpaceUpdateRequest:
 @dataclass
 class SessionCreateRequest:
     """Session creation request."""
-    id: Optional[str] = None
-    actor_id: Optional[str] = None
-    assistant_id: Optional[str] = None
-    meta: Optional[Dict[str, Any]] = None
+    id: str | None = None
+    actor_id: str | None = None
+    assistant_id: str | None = None
+    meta: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary, skip None values."""
         result = {}
         if self.id is not None:
@@ -328,10 +322,10 @@ class AssetRef:
     uri: str = ""
     mime: str = ""
     size: int = 0
-    filename: Optional[str] = None
-    meta: Optional[Dict[str, Any]] = None
+    filename: str | None = None
+    meta: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         result = {
             "asset_id": self.asset_id,
             "uri": self.uri,
@@ -350,11 +344,11 @@ class DataMessage:
     """Data message part (summary, offload index, custom data)."""
     type: str = "data"
     kind: str = "custom"
-    covers: Optional[List[str]] = None
-    content: Optional[Dict[str, Any]] = None
-    meta: Optional[Dict[str, Any]] = None
+    covers: list[str] | None = None
+    content: dict[str, Any] | None = None
+    meta: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         result = {"type": self.type, "kind": self.kind}
         if self.covers:
             result["covers"] = self.covers
@@ -372,7 +366,7 @@ class ToolCallMessage:
     id: str = ""
     name: str = ""
     arguments: str = ""
-    meta: Optional[str] = None
+    meta: str | None = None
 
     def __post_init__(self):
         if self.arguments is None:
@@ -381,7 +375,7 @@ class ToolCallMessage:
             import json
             self.arguments = json.dumps(self.arguments, ensure_ascii=False)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         tool_call = {
             "id": self.id,
             "name": self.name,
@@ -402,10 +396,10 @@ class ToolResultMessage:
     type: str = "tool_result"
     tool_call_id: str = ""
     content: str = ""
-    asset_ref: Optional[AssetRef] = None
-    meta: Optional[str] = None
+    asset_ref: AssetRef | None = None
+    meta: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         tool_result = {
             "tool_call_id": self.tool_call_id,
             "content": self.content,
@@ -424,7 +418,7 @@ class ToolResultMessage:
 class MessageRequest:
     """
     Message request.
-    
+
     Uses parts format, supports multiple message types:
     - TextPart: Text message
     - ImagePart: Image message
@@ -436,23 +430,26 @@ class MessageRequest:
     - AssetPart: Asset message
     """
     role: str
-    parts: List[Any] = field(default_factory=list)
-    actor_id: Optional[str] = None
-    assistant_id: Optional[str] = None
-    meta: Optional[Dict[str, Any]] = None
+    parts: list[Any] = field(default_factory=list)
+    actor_id: str | None = None
+    assistant_id: str | None = None
+    meta: dict[str, Any] | None = None
 
     def __post_init__(self):
         if not self.parts:
-            raise ValueError("Must contain at least one message part")
+            msg = "Must contain at least one message part"
+            raise ValueError(msg)
 
         if len(self.parts) > 5:
-            raise ValueError("Message can contain at most 5 parts")
+            msg = "Message can contain at most 5 parts"
+            raise ValueError(msg)
 
         for part in self.parts:
-            if not hasattr(part, 'to_dict'):
-                raise ValueError(f"Message part must support to_dict method, actual type: {type(part)}")
+            if not hasattr(part, "to_dict"):
+                msg = f"Message part must support to_dict method, actual type: {type(part)}"
+                raise ValueError(msg)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary, compatible with OpenAPI spec."""
         result = {
             "role": self.role,
@@ -470,23 +467,26 @@ class MessageRequest:
 @dataclass
 class AddMessagesRequest:
     """Batch add messages request."""
-    messages: List[MessageRequest] = field(default_factory=list)
-    timestamp: Optional[int] = None
-    idempotency_key: Optional[str] = None
+    messages: list[MessageRequest] = field(default_factory=list)
+    timestamp: int | None = None
+    idempotency_key: str | None = None
     is_force_extract: bool = False
 
     def __post_init__(self):
         if not self.messages:
-            raise ValueError("Must contain at least one message")
+            msg = "Must contain at least one message"
+            raise ValueError(msg)
 
         if len(self.messages) > 100:
-            raise ValueError("Batch messages can contain at most 100")
+            msg = "Batch messages can contain at most 100"
+            raise ValueError(msg)
 
         for message in self.messages:
             if not isinstance(message, MessageRequest):
-                raise ValueError(f"Message must be MessageRequest type, actual type: {type(message)}")
+                msg = f"Message must be MessageRequest type, actual type: {type(message)}"
+                raise ValueError(msg)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary, compatible with OpenAPI spec."""
         result = {
             "messages": [m.to_dict() for m in self.messages],
@@ -502,23 +502,23 @@ class AddMessagesRequest:
 @dataclass
 class MemorySearchRequest:
     """Memory search request."""
-    query: Optional[str] = None
+    query: str | None = None
     top_k: int = 10
     min_score: float = 0.5
-    strategy_type: Optional[str] = None
-    strategy_id: Optional[str] = None
-    actor_id: Optional[str] = None
-    assistant_id: Optional[str] = None
-    session_id: Optional[str] = None
-    memory_type: Optional[str] = None
-    start_time: Optional[int] = None
-    end_time: Optional[int] = None
+    strategy_type: str | None = None
+    strategy_id: str | None = None
+    actor_id: str | None = None
+    assistant_id: str | None = None
+    session_id: str | None = None
+    memory_type: str | None = None
+    start_time: int | None = None
+    end_time: int | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary, skip None values, use API default values."""
         result = {}
 
-        if self.query is not None and self.query != '':
+        if self.query is not None and self.query != "":
             result["query"] = self.query
         if self.top_k != 10:
             result["top_k"] = self.top_k
@@ -551,16 +551,17 @@ class MemorySearchRequest:
 class MemoryCreateRequest:
     """Memory creation request."""
     content: str
-    actor_id: Optional[str] = None
-    assistant_id: Optional[str] = None
-    session_id: Optional[str] = None
-    extraction_meta: Optional[Dict[str, Any]] = None
+    actor_id: str | None = None
+    assistant_id: str | None = None
+    session_id: str | None = None
+    extraction_meta: dict[str, Any] | None = None
 
     def __post_init__(self):
         if len(self.content) > 10000:
-            raise ValueError("Memory content cannot exceed 10000 characters")
+            msg = "Memory content cannot exceed 10000 characters"
+            raise ValueError(msg)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary, compatible with OpenAPI spec."""
         result = {
             "content": self.content
@@ -579,14 +580,15 @@ class MemoryCreateRequest:
 @dataclass
 class MemoryUpdateRequest:
     """Memory update request."""
-    content: Optional[str] = None
-    extraction_meta: Optional[Dict[str, Any]] = None
+    content: str | None = None
+    extraction_meta: dict[str, Any] | None = None
 
     def __post_init__(self):
         if self.content is not None and len(self.content) > 10000:
-            raise ValueError("Memory content cannot exceed 10000 characters")
+            msg = "Memory content cannot exceed 10000 characters"
+            raise ValueError(msg)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary, compatible with OpenAPI spec."""
         result = {}
         if self.content is not None:
@@ -604,9 +606,9 @@ class CompressConfig:
     token_ratio: float = 0.75
     last_keep: int = 50
     large_payload_threshold: int = 5000
-    custom_prompt: Optional[Dict[str, Any]] = None
+    custom_prompt: dict[str, Any] | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary, skip None values."""
         result = {
             "msg_threshold": self.msg_threshold,
@@ -625,34 +627,34 @@ class SpaceInfo:
     """Space detailed information (for return values)."""
     id: str
     name: str
-    description: Optional[str] = None
+    description: str | None = None
     message_ttl_hours: int = 168
-    status: Optional[str] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    status: str | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
 
     memory_extract_enabled: bool = False
-    memory_extract_idle_seconds: Optional[int] = None
-    memory_extract_max_tokens: Optional[int] = None
-    memory_extract_max_messages: Optional[int] = None
+    memory_extract_idle_seconds: int | None = None
+    memory_extract_max_tokens: int | None = None
+    memory_extract_max_messages: int | None = None
 
-    memory_strategies_builtin: Optional[List[str]] = None
-    memory_strategies_customized: Optional[List[Dict[str, Any]]] = None
+    memory_strategies_builtin: list[str] | None = None
+    memory_strategies_customized: list[dict[str, Any]] | None = None
 
-    vpc_id: Optional[str] = None
-    subnet_id: Optional[str] = None
-    public_access: Optional[Dict[str, Any]] = None
-    private_access: Optional[Dict[str, Any]] = None
+    vpc_id: str | None = None
+    subnet_id: str | None = None
+    public_access: dict[str, Any] | None = None
+    private_access: dict[str, Any] | None = None
 
-    api_key: Optional[str] = None
-    api_key_id: Optional[str] = None
+    api_key: str | None = None
+    api_key_id: str | None = None
 
-    public_domain: Optional[str] = None
-    private_domain: Optional[str] = None
-    private_ip: Optional[str] = None
+    public_domain: str | None = None
+    private_domain: str | None = None
+    private_ip: str | None = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SpaceInfo":
+    def from_dict(cls, data: dict[str, Any]) -> "SpaceInfo":
         """Create SpaceInfo from OpenAPI response dictionary."""
         public_access = data.get("public_access") or {}
         private_access = data.get("private_access") or {}
@@ -689,13 +691,13 @@ class SpaceInfo:
 @dataclass
 class SpaceListResponse:
     """Space list response."""
-    items: List[SpaceInfo]
+    items: list[SpaceInfo]
     total: int
     limit: int
     offset: int
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SpaceListResponse":
+    def from_dict(cls, data: dict[str, Any]) -> "SpaceListResponse":
         """Create SpaceListResponse from OpenAPI response dictionary."""
         return cls(
             items=[SpaceInfo.from_dict(item) for item in data.get("spaces", [])],
@@ -710,14 +712,14 @@ class SessionInfo:
     """Session detailed information (for return values)."""
     id: str
     space_id: str
-    actor_id: Optional[str] = None
-    assistant_id: Optional[str] = None
-    meta: Optional[Dict[str, Any]] = None
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    actor_id: str | None = None
+    assistant_id: str | None = None
+    meta: dict[str, Any] | None = None
+    created_at: str | None = None
+    updated_at: str | None = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SessionInfo":
+    def from_dict(cls, data: dict[str, Any]) -> "SessionInfo":
         """Create SessionInfo from OpenAPI response dictionary."""
         return cls(
             id=data.get("id"),
@@ -733,13 +735,13 @@ class SessionInfo:
 @dataclass
 class SessionListResponse:
     """Session list response."""
-    items: List[SessionInfo]
+    items: list[SessionInfo]
     total: int
     limit: int
     offset: int
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "SessionListResponse":
+    def from_dict(cls, data: dict[str, Any]) -> "SessionListResponse":
         """Create SessionListResponse from OpenAPI response dictionary."""
         return cls(
             items=[SessionInfo.from_dict(item) for item in data.get("items", [])],
@@ -755,17 +757,17 @@ class MessageInfo:
     id: str
     session_id: str
     seq: int
-    actor_id: Optional[str] = None
-    assistant_id: Optional[str] = None
+    actor_id: str | None = None
+    assistant_id: str | None = None
     role: str = "user"
-    parts: Optional[List[Dict[str, Any]]] = None
-    idempotency_key: Optional[str] = None
-    meta: Optional[Dict[str, Any]] = None
-    message_time: Optional[int] = None
-    created_at: Optional[str] = None
+    parts: list[dict[str, Any]] | None = None
+    idempotency_key: str | None = None
+    meta: dict[str, Any] | None = None
+    message_time: int | None = None
+    created_at: str | None = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "MessageInfo":
+    def from_dict(cls, data: dict[str, Any]) -> "MessageInfo":
         """Create MessageInfo from OpenAPI response dictionary."""
         return cls(
             id=data.get("id"),
@@ -785,13 +787,13 @@ class MessageInfo:
 @dataclass
 class MessageListResponse:
     """Message list response."""
-    items: List[MessageInfo]
+    items: list[MessageInfo]
     total: int
     limit: int
     offset: int
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "MessageListResponse":
+    def from_dict(cls, data: dict[str, Any]) -> "MessageListResponse":
         """Create MessageListResponse from OpenAPI response dictionary."""
         return cls(
             items=[MessageInfo.from_dict(item) for item in data.get("items", [])],
@@ -804,10 +806,10 @@ class MessageListResponse:
 @dataclass
 class MessageBatchResponse:
     """Message batch response."""
-    items: List[MessageInfo]
+    items: list[MessageInfo]
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "MessageBatchResponse":
+    def from_dict(cls, data: dict[str, Any]) -> "MessageBatchResponse":
         """Create MessageBatchResponse from OpenAPI response dictionary."""
         return cls(
             items=[MessageInfo.from_dict(item) for item in data.get("messages", [])]
@@ -820,18 +822,18 @@ class MemoryInfo:
     id: str
     space_id: str
     strategy_id: str
-    strategy_type: Optional[str] = None
-    actor_id: Optional[str] = None
-    assistant_id: Optional[str] = None
-    session_id: Optional[str] = None
+    strategy_type: str | None = None
+    actor_id: str | None = None
+    assistant_id: str | None = None
+    session_id: str | None = None
     content: str = ""
     memory_type: str = "memory"
     isolation_level: str = "actor"
-    created_at: Optional[str] = None
-    updated_at: Optional[str] = None
+    created_at: str | None = None
+    updated_at: str | None = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "MemoryInfo":
+    def from_dict(cls, data: dict[str, Any]) -> "MemoryInfo":
         """Create MemoryInfo from OpenAPI response dictionary."""
         return cls(
             id=data.get("id"),
@@ -852,13 +854,13 @@ class MemoryInfo:
 @dataclass
 class MemoryListResponse:
     """Memory list response."""
-    items: List[MemoryInfo]
+    items: list[MemoryInfo]
     total: int
     limit: int
     offset: int
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "MemoryListResponse":
+    def from_dict(cls, data: dict[str, Any]) -> "MemoryListResponse":
         """Create MemoryListResponse from OpenAPI response dictionary."""
         return cls(
             items=[MemoryInfo.from_dict(item) for item in data.get("items", [])],
@@ -871,12 +873,12 @@ class MemoryListResponse:
 @dataclass
 class MemorySearchResponse:
     """Memory search response."""
-    results: List[Dict[str, Any]]
+    results: list[dict[str, Any]]
     total: int = 0
-    query: Optional[str] = None
+    query: str | None = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "MemorySearchResponse":
+    def from_dict(cls, data: dict[str, Any]) -> "MemorySearchResponse":
         """Create MemorySearchResponse from OpenAPI response dictionary."""
         search_results = []
         if "records" in data:
@@ -902,14 +904,15 @@ class TextMessage:
     """SDK text message - most commonly used message type, easy to use and extend."""
     role: Literal["user", "assistant", "system"] = "user"
     content: str = ""
-    actor_id: Optional[str] = None
-    assistant_id: Optional[str] = None
-    meta: Optional[str] = None
+    actor_id: str | None = None
+    assistant_id: str | None = None
+    meta: str | None = None
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to OpenAPI format message request."""
         if not self.content:
-            raise ValueError("Text message content cannot be empty")
+            msg = "Text message content cannot be empty"
+            raise ValueError(msg)
 
         result = {
             "role": self.role,
@@ -923,12 +926,12 @@ class TextMessage:
 @dataclass
 class ContextChainResponse:
     """Context chain response."""
-    messages: List[MessageInfo]
+    messages: list[MessageInfo]
     total_token_count: int
     compressed: bool = False
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ContextChainResponse":
+    def from_dict(cls, data: dict[str, Any]) -> "ContextChainResponse":
         """Create ContextChainResponse from OpenAPI response dictionary."""
         return cls(
             messages=[MessageInfo.from_dict(item) for item in data.get("messages", [])],
@@ -940,15 +943,15 @@ class ContextChainResponse:
 @dataclass
 class ContextCompressionResponse:
     """Context compression response."""
-    compression_id: Optional[str] = None
-    status: Optional[str] = None
-    compressed_messages: Optional[List[MessageInfo]] = None
-    compression_ratio: Optional[float] = None
-    original_token_count: Optional[int] = None
-    compressed_token_count: Optional[int] = None
+    compression_id: str | None = None
+    status: str | None = None
+    compressed_messages: list[MessageInfo] | None = None
+    compression_ratio: float | None = None
+    original_token_count: int | None = None
+    compressed_token_count: int | None = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ContextCompressionResponse":
+    def from_dict(cls, data: dict[str, Any]) -> "ContextCompressionResponse":
         """Create ContextCompressionResponse from OpenAPI response dictionary."""
         return cls(
             compression_id=data.get("compression_id"),
@@ -967,7 +970,7 @@ class ApiKeyInfo:
     api_key: str
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "ApiKeyInfo":
+    def from_dict(cls, data: dict[str, Any]) -> "ApiKeyInfo":
         """Create ApiKeyInfo from OpenAPI response dictionary."""
         return cls(
             id=data.get("id"),

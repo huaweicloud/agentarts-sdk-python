@@ -7,53 +7,49 @@ using requests and HTTP authentication.
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Union
-from urllib.parse import urlparse
+from typing import Any
 
 import requests
 
+from agentarts.sdk.utils.constant import get_memory_endpoint, get_region
+from agentarts.sdk.utils.signer import SDKSigner
+
 from .http_client import APIException
-from ..utils.constant import get_memory_endpoint, get_region
-from ..utils.signer import SDKSigner
 
 logger = logging.getLogger(__name__)
 
 
 class AuthenticationStrategy(ABC):
     """Abstract authentication strategy interface."""
-    
+
     @abstractmethod
     def setup_credentials(self, region_name: str):
         """Setup authentication credentials."""
-        pass
-    
+
     @abstractmethod
     def setup_session_hooks(self, session: requests.Session):
         """Setup session hooks."""
-        pass
-    
+
     @abstractmethod
-    def get_headers(self) -> Dict[str, str]:
+    def get_headers(self) -> dict[str, str]:
         """Get request headers."""
-        pass
-    
+
     @abstractmethod
     def get_endpoint_type(self) -> str:
         """Get endpoint type."""
-        pass
-    
-    def sign_request(self, method: str, url: str, headers: Dict[str, str], 
-                     body: Optional[bytes] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
+
+    def sign_request(self, method: str, url: str, headers: dict[str, str],
+                     body: bytes | None = None, params: dict[str, Any] | None = None) -> dict[str, str]:
         """
         Sign the HTTP request. Override in subclasses that need signing.
-        
+
         Args:
             method: HTTP method
             url: Full URL
             headers: Request headers (will be modified in place)
             body: Request body as bytes
             params: Query parameters as dict
-            
+
         Returns:
             Updated headers dict with signature
         """
@@ -62,119 +58,127 @@ class AuthenticationStrategy(ABC):
 
 class DataPlaneAuthenticationStrategy(AuthenticationStrategy):
     """Data plane authentication strategy."""
-    
-    def __init__(self, api_key: Optional[str] = None):
+
+    def __init__(self, api_key: str | None = None):
         self.credentials = None
         self._api_key = api_key
-    
+
     def setup_credentials(self, region_name: str):
         """Data plane does not require AK/SK credentials."""
         self.credentials = None
         logger.info("Data plane endpoint: credentials will be handled via HUAWEICLOUD_SDK_MEMORY_API_KEY in headers")
-    
+
     def setup_session_hooks(self, session: requests.Session):
         """Data plane does not require special session hooks."""
         session.hooks = {}
-    
-    def get_headers(self) -> Dict[str, str]:
+
+    def get_headers(self) -> dict[str, str]:
         """Get headers with API_KEY authentication."""
         headers = {
             "Content-Type": "application/json",
             "User-Agent": "agentarts-sdk-python/0.0.1",
         }
-        
-        api_key = self._api_key or os.getenv('HUAWEICLOUD_SDK_MEMORY_API_KEY')
+
+        api_key = self._api_key or os.getenv("HUAWEICLOUD_SDK_MEMORY_API_KEY")
         if not api_key:
-            raise ValueError(
+            msg = (
                 "API Key is required for data plane operations. "
                 "Either pass api_key parameter or set HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable."
             )
+            raise ValueError(
+                msg
+            )
         headers["Authorization"] = f"Bearer {api_key}"
-        
-        if hasattr(self, 'client_request_id'):
+
+        if hasattr(self, "client_request_id"):
             headers["X-Client-Request-ID"] = self.client_request_id
-            
+
         return headers
-    
+
     def get_endpoint_type(self) -> str:
         return "data"
 
 
 class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
     """Control plane authentication strategy with AK/SK signing using SDK-HMAC-SHA256."""
-    
+
     def __init__(self):
         self.credentials = None
         self._region_name = None
         self._signer = None
-    
+
     def setup_credentials(self, region_name: str):
         """Setup AK/SK credentials and signer."""
         self._region_name = region_name
         try:
             from agentarts.sdk.utils.metadata import create_credential
-            
+
             self.credentials = create_credential()
             self._signer = SDKSigner(credentials=self.credentials)
             logger.info(f"Successfully loaded AK/SK credentials for region {region_name}")
         except ImportError as e:
-            raise ValueError(
+            msg = (
                 f"Huawei Cloud SDK is required for control plane signing. "
                 f"Install it with: pip install huaweicloudsdkcore>=3.1.0. "
                 f"Error: {e}"
             )
-        except Exception as e:
             raise ValueError(
+                msg
+            )
+        except Exception as e:
+            msg = (
                 f"Failed to load AK/SK credentials for control plane. "
                 f"Please set HUAWEICLOUD_SDK_AK and HUAWEICLOUD_SDK_SK environment variables. "
                 f"Error: {e}"
             )
-    
+            raise ValueError(
+                msg
+            )
+
     def setup_session_hooks(self, session: requests.Session):
         """Setup control plane authentication hooks."""
-        pass
-    
-    def get_headers(self) -> Dict[str, str]:
+
+    def get_headers(self) -> dict[str, str]:
         """Get base headers for control plane requests."""
         headers = {
             "Content-Type": "application/json",
             "User-Agent": "agentarts-sdk/0.0.1",
         }
-        
-        if hasattr(self, 'client_request_id'):
+
+        if hasattr(self, "client_request_id"):
             headers["X-Client-Request-ID"] = self.client_request_id
-            
+
         return headers
-    
+
     def get_endpoint_type(self) -> str:
         return "control"
-    
-    def sign_request(self, method: str, url: str, headers: Dict[str, str],
-                     body: Optional[bytes] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
+
+    def sign_request(self, method: str, url: str, headers: dict[str, str],
+                     body: bytes | None = None, params: dict[str, Any] | None = None) -> dict[str, str]:
         """
         Sign the HTTP request using SDK-HMAC-SHA256 algorithm.
-        
+
         This method uses SDKSigner utility for request signing.
-        
+
         Args:
             method: HTTP method
             url: Full URL
             headers: Request headers
             body: Request body as bytes
             params: Query parameters as dict
-            
+
         Returns:
             Updated headers dict with signature
         """
         if not self._signer:
             return headers
-        
-        body_str = body.decode('utf-8') if body else None
-        
+
+        body_str = body.decode("utf-8") if body else None
+
         params_list = None
         if params:
             params_list = [(k, v) for k, v in params.items()]
-        
+
         return self._signer.sign(
             method=method,
             url=url,
@@ -186,27 +190,26 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
 
 class MemoryAPIException(APIException):
     """Custom exception for Memory API errors."""
-    pass
 
 
 class MemoryHttpService:
     """HTTP client for Huawei Memory API operations with AK/SK authentication.
-    
+
     Compatible with HttpClient interface from memory/inner/httpclient.py
     """
 
     def __init__(
             self,
-            region_name: Optional[str] = None,
-            endpoint: Optional[str] = None,
+            region_name: str | None = None,
+            endpoint: str | None = None,
             endpoint_type: str = "control",
             timeout: int = 30,
-            api_key: Optional[str] = None,
+            api_key: str | None = None,
             verify_ssl: bool = False,
-            enable_signing: Optional[bool] = None,
+            enable_signing: bool | None = None,
     ):
         """Initialize Memory HTTP service with region and authentication strategy.
-        
+
         Args:
             region_name: Huawei Cloud region name, auto-detected from environment if not provided
             endpoint: Custom endpoint URL (for development/testing)
@@ -214,10 +217,10 @@ class MemoryHttpService:
             timeout: Request timeout in seconds
             api_key: API Key for data plane authentication (optional, falls back to environment variable)
             verify_ssl: Whether to verify SSL certificates (default: False)
-            enable_signing: Whether to enable request signing. If None, automatically enabled 
-                           for control plane and disabled for data plane. Set to True/False 
+            enable_signing: Whether to enable request signing. If None, automatically enabled
+                           for control plane and disabled for data plane. Set to True/False
                            to explicitly control signing behavior.
-            
+
         Raises:
             ValueError: If required credentials are not available
         """
@@ -227,7 +230,7 @@ class MemoryHttpService:
         self.verify_ssl = verify_ssl
         self._api_key = api_key
         self._endpoint_type = endpoint_type
-        
+
         if enable_signing is None:
             self._enable_signing = (endpoint_type == "control")
         else:
@@ -240,28 +243,27 @@ class MemoryHttpService:
         if self._enable_signing:
             self._auth_strategy.setup_credentials(self.region_name)
         self.credentials = self._auth_strategy.credentials
-        
+
         self._auth_strategy.setup_session_hooks(self.session)
-        
-        if hasattr(self, 'client_request_id'):
+
+        if hasattr(self, "client_request_id"):
             self._auth_strategy.client_request_id = self.client_request_id
 
     def _create_authentication_strategy(self, endpoint_type: str) -> AuthenticationStrategy:
         """Create authentication strategy instance."""
         if endpoint_type == "data":
             return DataPlaneAuthenticationStrategy(api_key=self._api_key)
-        else:
-            return ControlPlaneAuthenticationStrategy()
+        return ControlPlaneAuthenticationStrategy()
 
-    def _get_headers(self) -> Dict[str, str]:
+    def _get_headers(self) -> dict[str, str]:
         """Get default headers for API requests."""
         return self._auth_strategy.get_headers()
-    
-    def _get_base_url(self, space_id: Optional[str] = None) -> str:
+
+    def _get_base_url(self, space_id: str | None = None) -> str:
         """Get base URL based on authentication strategy."""
         return get_memory_endpoint(
-            self._auth_strategy.get_endpoint_type(), 
-            self.region_name, 
+            self._auth_strategy.get_endpoint_type(),
+            self.region_name,
             space_id
         )
 
@@ -269,13 +271,13 @@ class MemoryHttpService:
             self,
             method: str,
             path: str,
-            params: Optional[Dict[str, Any]] = None,
-            data: Optional[Union[str, Dict[str, Any]]] = None,
-            headers: Optional[Dict[str, str]] = None,
-            space_id: Optional[str] = None
+            params: dict[str, Any] | None = None,
+            data: str | dict[str, Any] | None = None,
+            headers: dict[str, str] | None = None,
+            space_id: str | None = None
     ) -> Any:
         """Make an HTTP request to the Memory API.
-        
+
         Args:
             method: HTTP method
             path: API path
@@ -283,10 +285,10 @@ class MemoryHttpService:
             data: Request body
             headers: Custom headers
             space_id: Space ID for data plane requests
-            
+
         Returns:
             API response data
-            
+
         Raises:
             MemoryAPIException: If API request fails
         """
@@ -304,10 +306,10 @@ class MemoryHttpService:
             if isinstance(data, dict):
                 import json
                 json_data = data
-                body_bytes = json.dumps(data).encode('utf-8')
+                body_bytes = json.dumps(data).encode("utf-8")
             else:
                 text_data = data
-                body_bytes = data.encode('utf-8') if isinstance(data, str) else data
+                body_bytes = data.encode("utf-8") if isinstance(data, str) else data
 
         if self._enable_signing:
             final_headers = self._auth_strategy.sign_request(
@@ -330,44 +332,37 @@ class MemoryHttpService:
                 timeout=60
             )
 
-            if response.status_code == 200:
+            if response.status_code in {200, 201}:
                 if response.headers.get("content-type", "").startswith("application/json"):
                     return response.json()
-                else:
-                    return {"response": response.text}
-            elif response.status_code == 201:
-                if response.headers.get("content-type", "").startswith("application/json"):
-                    return response.json()
-                else:
-                    return {"response": response.text}
-            elif response.status_code == 204:
+                return {"response": response.text}
+            if response.status_code == 204:
                 return {}
-            else:
-                try:
-                    error_data = response.json()
-                    error_code = error_data.get("error_code", "UNKNOWN_ERROR")
-                    error_msg = error_data.get("error_msg", str(error_data))
-                except (ValueError, AttributeError):
-                    error_code = "UNKNOWN_ERROR"
-                    error_msg = response.text or f"HTTP {response.status_code}"
+            try:
+                error_data = response.json()
+                error_code = error_data.get("error_code", "UNKNOWN_ERROR")
+                error_msg = error_data.get("error_msg", str(error_data))
+            except (ValueError, AttributeError):
+                error_code = "UNKNOWN_ERROR"
+                error_msg = response.text or f"HTTP {response.status_code}"
 
-                raise MemoryAPIException(
-                    status_code=response.status_code,
-                    error_code=error_code,
-                    error_msg=error_msg
-                )
+            raise MemoryAPIException(
+                status_code=response.status_code,
+                error_code=error_code,
+                error_msg=error_msg
+            )
 
         except Exception as e:
             if isinstance(e, MemoryAPIException):
                 raise
-            logger.error(f"HTTP request failed: {e}")
+            logger.exception(f"HTTP request failed: {e}")
             raise MemoryAPIException(
                 status_code=503,
                 error_code="NETWORK_ERROR",
                 error_msg=str(e)
             )
 
-    def create_space(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def create_space(self, data: dict[str, Any]) -> dict[str, Any]:
         """Create a new memory space.
 
         Args:
@@ -378,7 +373,7 @@ class MemoryHttpService:
         """
         return self._make_request(method="POST", path="/v1/core/spaces", data=data)
 
-    def create_api_key(self) -> Dict[str, Any]:
+    def create_api_key(self) -> dict[str, Any]:
         """Create a new API Key.
 
         Returns:
@@ -386,7 +381,7 @@ class MemoryHttpService:
         """
         return self._make_request(method="POST", path="/v1/core/space-keys")
 
-    def get_space(self, space_id: str) -> Dict[str, Any]:
+    def get_space(self, space_id: str) -> dict[str, Any]:
         """Get space information by ID.
 
         Args:
@@ -397,7 +392,7 @@ class MemoryHttpService:
         """
         return self._make_request(method="GET", path=f"/v1/core/spaces/{space_id}")
 
-    def update_space(self, space_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    def update_space(self, space_id: str, data: dict[str, Any]) -> dict[str, Any]:
         """Update space information.
 
         Args:
@@ -409,7 +404,7 @@ class MemoryHttpService:
         """
         return self._make_request(method="PUT", path=f"/v1/core/spaces/{space_id}", data=data)
 
-    def delete_space(self, space_id: str) -> Dict[str, Any]:
+    def delete_space(self, space_id: str) -> dict[str, Any]:
         """Delete a space.
 
         Args:
@@ -417,7 +412,7 @@ class MemoryHttpService:
         """
         return self._make_request(method="DELETE", path=f"/v1/core/spaces/{space_id}")
 
-    def list_spaces(self, limit: int = 20, offset: int = 0) -> Dict[str, Any]:
+    def list_spaces(self, limit: int = 20, offset: int = 0) -> dict[str, Any]:
         """List all spaces.
 
         Args:
@@ -430,7 +425,7 @@ class MemoryHttpService:
         params = {"limit": limit, "offset": offset}
         return self._make_request(method="GET", path="/v1/core/spaces", params=params)
 
-    def create_session(self, space_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    def create_session(self, space_id: str, data: dict[str, Any]) -> dict[str, Any]:
         """Create a new memory session.
 
         Args:
@@ -447,7 +442,7 @@ class MemoryHttpService:
             space_id=space_id
         )
 
-    def get_session(self, space_id: str, session_id: str) -> Dict[str, Any]:
+    def get_session(self, space_id: str, session_id: str) -> dict[str, Any]:
         """Get session information.
 
         Args:
@@ -467,8 +462,8 @@ class MemoryHttpService:
             self,
             space_id: str,
             session_id: str,
-            data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+            data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Add messages to a session.
 
         Args:
@@ -489,11 +484,11 @@ class MemoryHttpService:
     def list_messages(
             self,
             space_id: str,
-            session_id: Optional[str] = None,
+            session_id: str | None = None,
             limit: int = 10,
             offset: int = 0,
-            filters: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+            filters: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """List messages in a space or session.
 
         Args:
@@ -508,9 +503,9 @@ class MemoryHttpService:
         """
         params = {}
         if isinstance(limit, int) and limit > 0:
-            params['limit'] = limit
+            params["limit"] = limit
         if isinstance(offset, int) and offset >= 0:
-            params['offset'] = offset
+            params["offset"] = offset
         if filters:
             for key, value in filters.items():
                 if value is not None:
@@ -528,8 +523,8 @@ class MemoryHttpService:
     def search_memories(
             self,
             space_id: str,
-            data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+            data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Search memories in a space.
 
         Args:
@@ -546,7 +541,7 @@ class MemoryHttpService:
             space_id=space_id
         )
 
-    def get_memory(self, space_id: str, memory_id: str) -> Dict[str, Any]:
+    def get_memory(self, space_id: str, memory_id: str) -> dict[str, Any]:
         """Get a specific memory item.
 
         Args:
@@ -562,7 +557,7 @@ class MemoryHttpService:
             space_id=space_id
         )
 
-    def create_memory(self, space_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    def create_memory(self, space_id: str, data: dict[str, Any]) -> dict[str, Any]:
         """Create a new memory item.
 
         Args:
@@ -583,8 +578,8 @@ class MemoryHttpService:
             self,
             space_id: str,
             memory_id: str,
-            data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+            data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Update a memory item.
 
         Args:
@@ -602,7 +597,7 @@ class MemoryHttpService:
             space_id=space_id
         )
 
-    def delete_memory(self, space_id: str, memory_id: str) -> Dict[str, Any]:
+    def delete_memory(self, space_id: str, memory_id: str) -> dict[str, Any]:
         """Delete a memory item.
 
         Args:
@@ -615,7 +610,7 @@ class MemoryHttpService:
             space_id=space_id
         )
 
-    def get_message(self, space_id: str, session_id: str, message_id: str) -> Dict[str, Any]:
+    def get_message(self, space_id: str, session_id: str, message_id: str) -> dict[str, Any]:
         """Get a specific message.
 
         Args:
@@ -632,8 +627,8 @@ class MemoryHttpService:
             space_id=space_id
         )
 
-    def list_memories(self, space_id: str, limit: Optional[int] = None, offset: Optional[int] = None,
-                      filters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def list_memories(self, space_id: str, limit: int | None = None, offset: int | None = None,
+                      filters: dict[str, Any] | None = None) -> dict[str, Any]:
         """List all memories in a space.
 
         Args:
@@ -647,19 +642,19 @@ class MemoryHttpService:
         """
         params = {}
         if limit is not None:
-            params['limit'] = limit
+            params["limit"] = limit
         if offset is not None:
-            params['offset'] = offset
+            params["offset"] = offset
 
         if filters:
             filter_mappings = {
-                'strategy_type': 'strategy_type',
-                'strategy_id': 'strategy_id',
-                'actor_id': 'actor_id',
-                'assistant_id': 'assistant_id',
-                'session_id': 'session_id',
-                'start_time': 'start_time',
-                'end_time': 'end_time'
+                "strategy_type": "strategy_type",
+                "strategy_id": "strategy_id",
+                "actor_id": "actor_id",
+                "assistant_id": "assistant_id",
+                "session_id": "session_id",
+                "start_time": "start_time",
+                "end_time": "end_time"
             }
 
             for filter_key, param_key in filter_mappings.items():
@@ -673,23 +668,22 @@ class MemoryHttpService:
     def endpoint(self) -> str:
         """Get current endpoint."""
         if self._endpoint:
-            return self._endpoint.rstrip('/')
-        else:
-            return get_memory_endpoint(
-                self._auth_strategy.get_endpoint_type(), 
-                self.region_name
-            ).rstrip('/')
+            return self._endpoint.rstrip("/")
+        return get_memory_endpoint(
+            self._auth_strategy.get_endpoint_type(),
+            self.region_name
+        ).rstrip("/")
 
     @property
     def region(self) -> str:
         """Get region."""
         return self.region_name
-    
+
     @property
     def endpoint_type(self) -> str:
         """Get endpoint type."""
         return self._endpoint_type
-    
+
     @property
     def enable_signing(self) -> bool:
         """Get whether signing is enabled."""

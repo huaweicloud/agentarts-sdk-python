@@ -7,8 +7,6 @@ Defines constants, enumerations, and data models used by the runtime application
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Dict, Optional
-
 
 SESSION_HEADER = "x-hw-agentarts-session-id"
 ACCESS_TOKEN_HEADER = "X-HW-AgentGateway-Workload-Access-Token"

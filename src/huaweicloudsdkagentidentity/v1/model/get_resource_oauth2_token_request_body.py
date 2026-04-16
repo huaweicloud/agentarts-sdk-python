@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,29 +14,29 @@ class GetResourceOauth2TokenRequestBody:
     sensitive_list = []
 
     openapi_types = {
-        'custom_parameters': 'dict(str, str)',
-        'custom_state': 'str',
-        'force_authentication': 'bool',
-        'oauth2_flow': 'str',
-        'resource_credential_provider_name': 'str',
-        'resource_oauth2_return_url': 'str',
-        'scopes': 'list[str]',
-        'session_uri': 'str',
-        'workload_access_token': 'str',
-        'authorization_details': 'list[RichAuthorizationDetail]'
+        "custom_parameters": "dict(str, str)",
+        "custom_state": "str",
+        "force_authentication": "bool",
+        "oauth2_flow": "str",
+        "resource_credential_provider_name": "str",
+        "resource_oauth2_return_url": "str",
+        "scopes": "list[str]",
+        "session_uri": "str",
+        "workload_access_token": "str",
+        "authorization_details": "list[RichAuthorizationDetail]"
     }
 
     attribute_map = {
-        'custom_parameters': 'custom_parameters',
-        'custom_state': 'custom_state',
-        'force_authentication': 'force_authentication',
-        'oauth2_flow': 'oauth2_flow',
-        'resource_credential_provider_name': 'resource_credential_provider_name',
-        'resource_oauth2_return_url': 'resource_oauth2_return_url',
-        'scopes': 'scopes',
-        'session_uri': 'session_uri',
-        'workload_access_token': 'workload_access_token',
-        'authorization_details': 'authorization_details'
+        "custom_parameters": "custom_parameters",
+        "custom_state": "custom_state",
+        "force_authentication": "force_authentication",
+        "oauth2_flow": "oauth2_flow",
+        "resource_credential_provider_name": "resource_credential_provider_name",
+        "resource_oauth2_return_url": "resource_oauth2_return_url",
+        "scopes": "scopes",
+        "session_uri": "session_uri",
+        "workload_access_token": "workload_access_token",
+        "authorization_details": "authorization_details"
     }
 
     def __init__(self, custom_parameters=None, custom_state=None, force_authentication=None, oauth2_flow=None, resource_credential_provider_name=None, resource_oauth2_return_url=None, scopes=None, session_uri=None, workload_access_token=None, authorization_details=None):
@@ -66,8 +65,8 @@ class GetResourceOauth2TokenRequestBody:
         :param authorization_details: RFC 9396 Rich Authorization Request (RAR) details: fine-grained authorization metadata to enforce precise access control, compatible with both USER_FEDERATION and M2M OAuth2 flows. This replaces the limitations of broad OAuth2 scopes with resource+action level granularity
         :type authorization_details: list[:class:`huaweicloudsdkagentidentity.v1.RichAuthorizationDetail`]
         """
-        
-        
+
+
 
         self._custom_parameters = None
         self._custom_state = None
@@ -326,10 +325,7 @@ class GetResourceOauth2TokenRequestBody:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -338,11 +334,10 @@ class GetResourceOauth2TokenRequestBody:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 
