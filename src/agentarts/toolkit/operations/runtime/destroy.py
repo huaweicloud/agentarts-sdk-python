@@ -1,19 +1,18 @@
 """Destroy agent operation."""
 
-from typing import Optional
 
 from rich.console import Console
 
 from agentarts.sdk.utils.constant import get_region
 from agentarts.toolkit.operations.runtime.config import get_agent, get_config_file_path
-from agentarts.toolkit.utils.common import echo_error, echo_success, echo_info
+from agentarts.toolkit.utils.common import echo_error, echo_info, echo_success
 
 console = Console()
 
 
 def destroy_agent(
-    agent_name: Optional[str] = None,
-    region: Optional[str] = None,
+    agent_name: str | None = None,
+    region: str | None = None,
 ) -> bool:
     """
     Destroy agent from Huawei Cloud.
@@ -55,9 +54,8 @@ def destroy_agent(
             console.print()
             echo_success(f"Agent '{agent_name}' destroyed successfully")
             return True
-        else:
-            echo_error(f"Failed to destroy agent '{agent_name}'")
-            return False
+        echo_error(f"Failed to destroy agent '{agent_name}'")
+        return False
 
     except Exception as e:
         echo_error(str(e))

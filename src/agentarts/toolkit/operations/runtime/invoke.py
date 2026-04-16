@@ -4,28 +4,30 @@ import json
 import os
 import uuid
 from enum import Enum
-from typing import Any, Dict, Iterator, Optional, Tuple, Union
 
 from rich.console import Console
-from rich.panel import Panel
 
-from agentarts.sdk.utils.constant import get_region, get_runtime_data_plane_endpoint, get_control_plane_endpoint, _ensure_https
 from agentarts.sdk.service.http_client import SignMode
+from agentarts.sdk.service.runtime_client import LocalRuntimeClient, RuntimeClient
+from agentarts.sdk.utils.constant import (
+    _ensure_https,
+    get_control_plane_endpoint,
+    get_region,
+    get_runtime_data_plane_endpoint,
+)
 from agentarts.toolkit.operations.runtime.config import (
-    get_agent,
     get_config_file_path,
     load_config,
 )
-from agentarts.toolkit.utils.common import echo_error, echo_success, echo_info, echo_key_value
-from agentarts.sdk.service.runtime_client import LocalRuntimeClient, RuntimeClient
+from agentarts.toolkit.utils.common import echo_error, echo_info, echo_success
 
 console = Console()
 
 
 def _resolve_agent_info(
-    agent_name: Optional[str],
-    region: Optional[str],
-) -> Tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
+    agent_name: str | None,
+    region: str | None,
+) -> tuple[str | None, str | None, str | None, str | None]:
     """
     Resolve agent name, region, agent_id and auth_type from config if not provided.
 
@@ -65,8 +67,8 @@ def _resolve_agent_info(
 def _get_data_endpoint(
     agent_name: str,
     region: str,
-    agent_id: Optional[str] = None,
-) -> Optional[str]:
+    agent_id: str | None = None,
+) -> str | None:
     """
     Get data plane endpoint for the agent.
 
@@ -123,13 +125,13 @@ class InvokeMode(str, Enum):
 
 def invoke_agent(
     payload: str,
-    agent_name: Optional[str] = None,
+    agent_name: str | None = None,
     mode: InvokeMode = InvokeMode.CLOUD,
-    region: Optional[str] = None,
-    port: Optional[int] = None,
-    endpoint: Optional[str] = None,
-    session_id: Optional[str] = None,
-    bearer_token: Optional[str] = None,
+    region: str | None = None,
+    port: int | None = None,
+    endpoint: str | None = None,
+    session_id: str | None = None,
+    bearer_token: str | None = None,
     timeout: int = 900,
 ) -> bool:
     """
@@ -193,11 +195,10 @@ def invoke_agent(
             sign_mode = SignMode.SDK_HMAC_SHA256
             if auth_type and auth_type.upper() == "IAM":
                 sign_mode = SignMode.V11_HMAC_SHA256
-            else:
-                if not actual_bearer_token:
-                    echo_error("Bearer token is required for non-IAM authentication")
-                    console.print("[dim]Specify --bearer-token or set BEARER_TOKEN environment variable[/dim]")
-                    return False
+            elif not actual_bearer_token:
+                echo_error("Bearer token is required for non-IAM authentication")
+                console.print("[dim]Specify --bearer-token or set BEARER_TOKEN environment variable[/dim]")
+                return False
 
             echo_info("Invoke Request", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]\n[cyan]Auth Type:[/cyan] [dim]{auth_type or 'None'}[/dim]")
 
@@ -226,12 +227,11 @@ def invoke_agent(
             console.print("[bold green]Response:[/bold green]")
             console.print_json(json.dumps(result, indent=2, ensure_ascii=False))
             return True
-        else:
-            console.print()
-            console.print("[bold green]Streaming Response:[/bold green]")
-            for event in result:
-                console.print(f"[dim]{event}[/dim]")
-            return True
+        console.print()
+        console.print("[bold green]Streaming Response:[/bold green]")
+        for event in result:
+            console.print(f"[dim]{event}[/dim]")
+        return True
 
     except RuntimeError as e:
         echo_error(str(e))
@@ -242,13 +242,13 @@ def invoke_agent(
 
 
 def status_agent(
-    agent_name: Optional[str] = None,
+    agent_name: str | None = None,
     mode: InvokeMode = InvokeMode.CLOUD,
-    region: Optional[str] = None,
-    port: Optional[int] = None,
-    endpoint: Optional[str] = None,
-    session_id: Optional[str] = None,
-    bearer_token: Optional[str] = None,
+    region: str | None = None,
+    port: int | None = None,
+    endpoint: str | None = None,
+    session_id: str | None = None,
+    bearer_token: str | None = None,
 ) -> bool:
     """
     Check agent health status.
@@ -267,7 +267,7 @@ def status_agent(
     """
     actual_session_id = session_id or str(uuid.uuid4())
     actual_bearer_token = bearer_token or os.environ.get("BEARER_TOKEN")
-    
+
     try:
         if mode == InvokeMode.LOCAL:
             local_port = port or 8080
@@ -286,62 +286,57 @@ def status_agent(
             if status.lower() in ("healthy", "ok", "running"):
                 echo_success(f"Status: {status}")
                 return True
-            else:
-                echo_error(f"Status: {status}")
-                return False
-        else:
-            agent_name, region, agent_id, auth_type = _resolve_agent_info(agent_name, region)
+            echo_error(f"Status: {status}")
+            return False
+        agent_name, region, agent_id, auth_type = _resolve_agent_info(agent_name, region)
 
-            if agent_name is None:
-                echo_error("No agent specified")
-                return False
+        if agent_name is None:
+            echo_error("No agent specified")
+            return False
 
-            actual_region = region or get_region()
+        actual_region = region or get_region()
 
-            data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id)
+        data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id)
 
-            if not data_endpoint:
-                echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent {agent_name}")
-                console.print("[dim]Set AGENTARTS_RUNTIME_DATA_ENDPOINT environment variable or ensure agent is deployed[/dim]")
-                return False
+        if not data_endpoint:
+            echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent {agent_name}")
+            console.print("[dim]Set AGENTARTS_RUNTIME_DATA_ENDPOINT environment variable or ensure agent is deployed[/dim]")
+            return False
 
-            sign_mode = SignMode.SDK_HMAC_SHA256
-            if auth_type and auth_type.upper() == "IAM":
-                sign_mode = SignMode.V11_HMAC_SHA256
-            else:
-                if not actual_bearer_token:
-                    echo_error("Bearer token is required for non-IAM authentication")
-                    console.print("[dim]Specify --bearer-token or set BEARER_TOKEN environment variable[/dim]")
-                    return False
+        sign_mode = SignMode.SDK_HMAC_SHA256
+        if auth_type and auth_type.upper() == "IAM":
+            sign_mode = SignMode.V11_HMAC_SHA256
+        elif not actual_bearer_token:
+            echo_error("Bearer token is required for non-IAM authentication")
+            console.print("[dim]Specify --bearer-token or set BEARER_TOKEN environment variable[/dim]")
+            return False
 
-            console.print()
-            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]\n[cyan]Auth Type:[/cyan] [dim]{auth_type or 'None'}[/dim]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]")
+        console.print()
+        echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]\n[cyan]Auth Type:[/cyan] [dim]{auth_type or 'None'}[/dim]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]")
 
-            client = RuntimeClient(
-                data_endpoint=data_endpoint,
-                verify_ssl=False,
-                sign_mode=sign_mode,
-                region_id=actual_region,
-            )
+        client = RuntimeClient(
+            data_endpoint=data_endpoint,
+            verify_ssl=False,
+            sign_mode=sign_mode,
+            region_id=actual_region,
+        )
 
-            result = client.ping_agent(
-                agent_name=agent_name,
-                bearer_token=actual_bearer_token,
-                endpoint=endpoint,
-                session_id=actual_session_id,
-            )
+        result = client.ping_agent(
+            agent_name=agent_name,
+            bearer_token=actual_bearer_token,
+            endpoint=endpoint,
+            session_id=actual_session_id,
+        )
 
-            if isinstance(result, dict):
-                status = result.get("status", "Unknown")
-                if status.lower() in ("healthy", "ok", "running"):
-                    echo_success(f"Status: {status}")
-                    return True
-                else:
-                    console.print(f"[yellow]Status: {status}[/yellow]")
-                    return True
-            else:
-                echo_success("Status: Healthy (streaming)")
+        if isinstance(result, dict):
+            status = result.get("status", "Unknown")
+            if status.lower() in ("healthy", "ok", "running"):
+                echo_success(f"Status: {status}")
                 return True
+            console.print(f"[yellow]Status: {status}[/yellow]")
+            return True
+        echo_success("Status: Healthy (streaming)")
+        return True
 
     except RuntimeError as e:
         echo_error(str(e))

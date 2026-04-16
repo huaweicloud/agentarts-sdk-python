@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,13 +14,13 @@ class GetResourceStsTokenResponseBodyAssumedAgency:
     sensitive_list = []
 
     openapi_types = {
-        'urn': 'str',
-        'id': 'str'
+        "urn": "str",
+        "id": "str"
     }
 
     attribute_map = {
-        'urn': 'urn',
-        'id': 'id'
+        "urn": "urn",
+        "id": "id"
     }
 
     def __init__(self, urn=None, id=None):
@@ -34,8 +33,8 @@ class GetResourceStsTokenResponseBodyAssumedAgency:
         :param id: A unique identifier that contains the agency ID and the agency session name
         :type id: str
         """
-        
-        
+
+
 
         self._urn = None
         self._id = None
@@ -94,10 +93,7 @@ class GetResourceStsTokenResponseBodyAssumedAgency:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -106,11 +102,10 @@ class GetResourceStsTokenResponseBodyAssumedAgency:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

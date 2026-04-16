@@ -5,7 +5,7 @@ Provides CLI commands for MCP (Model Context Protocol) gateway operations.
 """
 
 import json
-from typing import Annotated, Any, Dict, List, Optional
+from typing import Annotated, Any
 
 import typer
 
@@ -14,14 +14,15 @@ from agentarts.toolkit.utils.common import echo_error, echo_success, echo_warnin
 mcp_gateway = typer.Typer(help="MCP Gateway management commands")
 
 
-def _parse_json(s: Optional[str]) -> Optional[Dict[str, Any]]:
+def _parse_json(s: str | None) -> dict[str, Any] | None:
     """Parse JSON string to dictionary"""
     if not s:
         return None
     try:
         return json.loads(s)
     except json.JSONDecodeError:
-        raise ValueError("Invalid JSON format")
+        msg = "Invalid JSON format"
+        raise ValueError(msg)
 
 
 def _get_mcp_gateway_client():
@@ -52,14 +53,14 @@ def _handle_error(operation: str, result):
 
 @mcp_gateway.command("create-mcp-gateway")
 def create_mcp_gateway(
-    name: Annotated[Optional[str], typer.Option("--name", "-n", help="Gateway name")] = None,
-    description: Annotated[Optional[str], typer.Option("--description", "-d", help="Gateway description")] = None,
+    name: Annotated[str | None, typer.Option("--name", "-n", help="Gateway name")] = None,
+    description: Annotated[str | None, typer.Option("--description", "-d", help="Gateway description")] = None,
     protocol_type: Annotated[str, typer.Option("--protocol-type", help="Protocol type (default: mcp)")] = "mcp",
     authorizer_type: Annotated[str, typer.Option("--authorizer-type", help="Authorizer type (default: iam)")] = "iam",
-    agency_name: Annotated[Optional[str], typer.Option("--agency-name", help="Agency name")] = None,
-    authorizer_configuration: Annotated[Optional[str], typer.Option("--authorizer-configuration", help="Authorizer configuration (JSON format)")] = None,
-    log_delivery_configuration: Annotated[Optional[str], typer.Option("--log-delivery-configuration", help="Log delivery configuration (JSON format)")] = None,
-    outbound_network_configuration: Annotated[Optional[str], typer.Option("--outbound-network-configuration", help="Outbound network configuration (JSON format)")] = None,
+    agency_name: Annotated[str | None, typer.Option("--agency-name", help="Agency name")] = None,
+    authorizer_configuration: Annotated[str | None, typer.Option("--authorizer-configuration", help="Authorizer configuration (JSON format)")] = None,
+    log_delivery_configuration: Annotated[str | None, typer.Option("--log-delivery-configuration", help="Log delivery configuration (JSON format)")] = None,
+    outbound_network_configuration: Annotated[str | None, typer.Option("--outbound-network-configuration", help="Outbound network configuration (JSON format)")] = None,
 ):
     """
     Create a new MCP gateway
@@ -98,9 +99,9 @@ def create_mcp_gateway(
 @mcp_gateway.command("update-mcp-gateway")
 def update_mcp_gateway(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
-    description: Annotated[Optional[str], typer.Option("--description", "-d", help="Gateway description")] = None,
-    authorizer_configuration: Annotated[Optional[str], typer.Option("--authorizer-configuration", help="Authorizer configuration (JSON format)")] = None,
-    log_delivery_configuration: Annotated[Optional[str], typer.Option("--log-delivery-configuration", help="Log delivery configuration (JSON format)")] = None,
+    description: Annotated[str | None, typer.Option("--description", "-d", help="Gateway description")] = None,
+    authorizer_configuration: Annotated[str | None, typer.Option("--authorizer-configuration", help="Authorizer configuration (JSON format)")] = None,
+    log_delivery_configuration: Annotated[str | None, typer.Option("--log-delivery-configuration", help="Log delivery configuration (JSON format)")] = None,
 ):
     """
     Update an existing MCP gateway
@@ -183,11 +184,11 @@ def get_mcp_gateway(
 
 @mcp_gateway.command("list-mcp-gateways")
 def list_mcp_gateways(
-    name: Annotated[Optional[str], typer.Option("--name", help="Gateway name")] = None,
-    status: Annotated[Optional[str], typer.Option("--status", help="Gateway status")] = None,
-    gateway_id: Annotated[Optional[str], typer.Option("--gateway-id", help="Gateway ID")] = None,
-    limit: Annotated[Optional[int], typer.Option("--limit", help="Limit for pagination (default: 50, min: 1, max: 50)")] = None,
-    offset: Annotated[Optional[int], typer.Option("--offset", help="Offset for pagination (default: 0, min: 0, max: 1000000)")] = None,
+    name: Annotated[str | None, typer.Option("--name", help="Gateway name")] = None,
+    status: Annotated[str | None, typer.Option("--status", help="Gateway status")] = None,
+    gateway_id: Annotated[str | None, typer.Option("--gateway-id", help="Gateway ID")] = None,
+    limit: Annotated[int | None, typer.Option("--limit", help="Limit for pagination (default: 50, min: 1, max: 50)")] = None,
+    offset: Annotated[int | None, typer.Option("--offset", help="Offset for pagination (default: 0, min: 0, max: 1000000)")] = None,
 ):
     """
     List MCP gateways
@@ -199,16 +200,20 @@ def list_mcp_gateways(
         if offset is None:
             offset = 0
         elif offset < 0:
-            raise ValueError("Offset must be greater than or equal to 0")
+            msg = "Offset must be greater than or equal to 0"
+            raise ValueError(msg)
         elif offset > 1000000:
-            raise ValueError("Offset must be less than or equal to 1000000")
+            msg = "Offset must be less than or equal to 1000000"
+            raise ValueError(msg)
 
         if limit is None:
             limit = 50
         elif limit < 1:
-            raise ValueError("Limit must be greater than 0")
+            msg = "Limit must be greater than 0"
+            raise ValueError(msg)
         elif limit > 50:
-            raise ValueError("Limit must be less than or equal to 50")
+            msg = "Limit must be less than or equal to 50"
+            raise ValueError(msg)
 
         client = _get_mcp_gateway_client()
         result = client.list_mcp_gateways(
@@ -222,7 +227,7 @@ def list_mcp_gateways(
         if result.success:
             echo_success(f"Total gateways: {result.data.get('total', 0)}")
             echo_success("Gateways:")
-            echo_success(_format_output(result.data.get('gateways', [])))
+            echo_success(_format_output(result.data.get("gateways", [])))
         else:
             _handle_error("listing gateways", result)
     except Exception as e:
@@ -233,10 +238,10 @@ def list_mcp_gateways(
 @mcp_gateway.command("create-mcp-gateway-target")
 def create_mcp_gateway_target(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
-    name: Annotated[Optional[str], typer.Option("--name", "-n", help="Target name")] = None,
-    description: Annotated[Optional[str], typer.Option("--description", "-d", help="Target description")] = None,
-    target_configuration: Annotated[Optional[str], typer.Option("--target-configuration", help="Target configuration (JSON format)")] = None,
-    credential_provider_configuration: Annotated[Optional[str], typer.Option("--credential-provider-configuration", help="Credential provider configuration (JSON format)")] = None,
+    name: Annotated[str | None, typer.Option("--name", "-n", help="Target name")] = None,
+    description: Annotated[str | None, typer.Option("--description", "-d", help="Target description")] = None,
+    target_configuration: Annotated[str | None, typer.Option("--target-configuration", help="Target configuration (JSON format)")] = None,
+    credential_provider_configuration: Annotated[str | None, typer.Option("--credential-provider-configuration", help="Credential provider configuration (JSON format)")] = None,
 ):
     """
     Create a new MCP gateway target
@@ -272,10 +277,10 @@ def create_mcp_gateway_target(
 def update_mcp_gateway_target(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     target_id: Annotated[str, typer.Argument(help="Target ID")],
-    name: Annotated[Optional[str], typer.Option("--name", "-n", help="Target name")] = None,
-    description: Annotated[Optional[str], typer.Option("--description", "-d", help="Target description")] = None,
-    target_configuration: Annotated[Optional[str], typer.Option("--target-configuration", help="Target configuration (JSON format)")] = None,
-    credential_provider_configuration: Annotated[Optional[str], typer.Option("--credential-provider-configuration", help="Credential provider configuration (JSON format)")] = None,
+    name: Annotated[str | None, typer.Option("--name", "-n", help="Target name")] = None,
+    description: Annotated[str | None, typer.Option("--description", "-d", help="Target description")] = None,
+    target_configuration: Annotated[str | None, typer.Option("--target-configuration", help="Target configuration (JSON format)")] = None,
+    credential_provider_configuration: Annotated[str | None, typer.Option("--credential-provider-configuration", help="Credential provider configuration (JSON format)")] = None,
 ):
     """
     Update an existing MCP gateway target
@@ -369,8 +374,8 @@ def get_mcp_gateway_target(
 @mcp_gateway.command("list-mcp-gateway-targets")
 def list_mcp_gateway_targets(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
-    limit: Annotated[Optional[int], typer.Option("--limit", help="Limit for pagination (default: 50, min: 1, max: 50)")] = None,
-    offset: Annotated[Optional[int], typer.Option("--offset", help="Offset for pagination (default: 0, min: 0, max: 1000000)")] = None,
+    limit: Annotated[int | None, typer.Option("--limit", help="Limit for pagination (default: 50, min: 1, max: 50)")] = None,
+    offset: Annotated[int | None, typer.Option("--offset", help="Offset for pagination (default: 0, min: 0, max: 1000000)")] = None,
 ):
     """
     List MCP gateway targets
@@ -382,16 +387,20 @@ def list_mcp_gateway_targets(
         if offset is None:
             offset = 0
         elif offset < 0:
-            raise ValueError("Offset must be greater than or equal to 0")
+            msg = "Offset must be greater than or equal to 0"
+            raise ValueError(msg)
         elif offset > 1000000:
-            raise ValueError("Offset must be less than or equal to 1000000")
+            msg = "Offset must be less than or equal to 1000000"
+            raise ValueError(msg)
 
         if limit is None:
             limit = 50
         elif limit < 1:
-            raise ValueError("Limit must be greater than 0")
+            msg = "Limit must be greater than 0"
+            raise ValueError(msg)
         elif limit > 50:
-            raise ValueError("Limit must be less than or equal to 50")
+            msg = "Limit must be less than or equal to 50"
+            raise ValueError(msg)
 
         client = _get_mcp_gateway_client()
         result = client.list_mcp_gateway_targets(
@@ -403,7 +412,7 @@ def list_mcp_gateway_targets(
         if result.success:
             echo_success(f"Total targets: {result.data.get('total', 0)}")
             echo_success("Targets:")
-            echo_success(_format_output(result.data.get('targets', [])))
+            echo_success(_format_output(result.data.get("targets", [])))
         else:
             _handle_error("listing targets", result)
     except Exception as e:

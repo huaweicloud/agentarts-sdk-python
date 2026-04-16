@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,11 +14,11 @@ class GetTokenVaultRequest:
     sensitive_list = []
 
     openapi_types = {
-        'token_vault_id': 'str'
+        "token_vault_id": "str"
     }
 
     attribute_map = {
-        'token_vault_id': 'token_vault_id'
+        "token_vault_id": "token_vault_id"
     }
 
     def __init__(self, token_vault_id=None):
@@ -30,8 +29,8 @@ class GetTokenVaultRequest:
         :param token_vault_id: The unique identifier of the token vault.
         :type token_vault_id: str
         """
-        
-        
+
+
 
         self._token_vault_id = None
         self.discriminator = None
@@ -66,10 +65,7 @@ class GetTokenVaultRequest:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -78,11 +74,10 @@ class GetTokenVaultRequest:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

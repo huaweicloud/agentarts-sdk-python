@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,15 +14,15 @@ class MicrosoftOauth2ProviderConfigInput:
     sensitive_list = []
 
     openapi_types = {
-        'client_id': 'str',
-        'client_secret': 'str',
-        'tenant_id': 'str'
+        "client_id": "str",
+        "client_secret": "str",
+        "tenant_id": "str"
     }
 
     attribute_map = {
-        'client_id': 'client_id',
-        'client_secret': 'client_secret',
-        'tenant_id': 'tenant_id'
+        "client_id": "client_id",
+        "client_secret": "client_secret",
+        "tenant_id": "tenant_id"
     }
 
     def __init__(self, client_id=None, client_secret=None, tenant_id=None):
@@ -38,8 +37,8 @@ class MicrosoftOauth2ProviderConfigInput:
         :param tenant_id: The tenant ID for the Microsoft OAuth2 provider.
         :type tenant_id: str
         """
-        
-        
+
+
 
         self._client_id = None
         self._client_secret = None
@@ -122,10 +121,7 @@ class MicrosoftOauth2ProviderConfigInput:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -134,11 +130,10 @@ class MicrosoftOauth2ProviderConfigInput:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

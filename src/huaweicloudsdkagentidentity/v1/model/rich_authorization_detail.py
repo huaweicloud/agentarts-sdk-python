@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,23 +14,23 @@ class RichAuthorizationDetail:
     sensitive_list = []
 
     openapi_types = {
-        'type': 'str',
-        'actions': 'list[str]',
-        'locations': 'list[str]',
-        'identifier': 'str',
-        'datatypes': 'list[str]',
-        'privileges': 'list[str]',
-        'additional_rar_parameters': 'dict(str, str)'
+        "type": "str",
+        "actions": "list[str]",
+        "locations": "list[str]",
+        "identifier": "str",
+        "datatypes": "list[str]",
+        "privileges": "list[str]",
+        "additional_rar_parameters": "dict(str, str)"
     }
 
     attribute_map = {
-        'type': 'type',
-        'actions': 'actions',
-        'locations': 'locations',
-        'identifier': 'identifier',
-        'datatypes': 'datatypes',
-        'privileges': 'privileges',
-        'additional_rar_parameters': 'additional_rar_parameters'
+        "type": "type",
+        "actions": "actions",
+        "locations": "locations",
+        "identifier": "identifier",
+        "datatypes": "datatypes",
+        "privileges": "privileges",
+        "additional_rar_parameters": "additional_rar_parameters"
     }
 
     def __init__(self, type=None, actions=None, locations=None, identifier=None, datatypes=None, privileges=None, additional_rar_parameters=None):
@@ -54,8 +53,8 @@ class RichAuthorizationDetail:
         :param additional_rar_parameters: Extended custom RAR parameters (per RFC 9396 §3.2) - vendor-specific fine-grained auth metadata, does not conflict with standard OAuth2 params
         :type additional_rar_parameters: dict(str, str)
         """
-        
-        
+
+
 
         self._type = None
         self._actions = None
@@ -240,10 +239,7 @@ class RichAuthorizationDetail:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -252,11 +248,10 @@ class RichAuthorizationDetail:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

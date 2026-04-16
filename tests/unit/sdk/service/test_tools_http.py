@@ -1,15 +1,14 @@
 import unittest
 from unittest.mock import patch
 
-from agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
 from agentarts.sdk.service.http_client import RequestResult
+from agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
+
 
 class TestToolsHttpClient(unittest.TestCase):
     @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_AK")
     @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_SK")
     def setUp(self, mock_ak, mock_sk):
-        mock_ak = "test_ak"
-        mock_sk = "test_sk"
         self.control_client = ControlToolsHttpClient(region_name="test-region", endpoint_url="https://test.com")
         self.data_client = DataToolsHttpClient(region_name="test-region", endpoint_url="https://test.com")
 
@@ -52,7 +51,7 @@ class TestToolsHttpClient(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(result, mock_post.return_value.data)
+        assert result == mock_post.return_value.data
         mock_post.assert_called_once_with(
             url="/v1/core/code-interpreters",
             json={
@@ -107,9 +106,9 @@ class TestToolsHttpClient(unittest.TestCase):
                 "limit": 10
             }
         )
-        
+
         # Assert
-        self.assertEqual(result, mock_get.return_value.data)
+        assert result == mock_get.return_value.data
         mock_get.assert_called_once_with(
             url="/v1/core/code-interpreters",
             json={
@@ -117,7 +116,7 @@ class TestToolsHttpClient(unittest.TestCase):
                 "limit": 10
             }
         )
-        
+
     @patch.object(ControlToolsHttpClient, "put")
     def test_update_code_interpreter(self, mock_put):
         """测试update_code_interpreter方法"""
@@ -139,7 +138,7 @@ class TestToolsHttpClient(unittest.TestCase):
             streaming=True,
             _raw_response=None,
         )
-        
+
         # Act
         result = self.control_client.update_code_interpreter(
             code_interpreter_id=code_interpreter_id,
@@ -155,7 +154,7 @@ class TestToolsHttpClient(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(result, mock_put.return_value.data)
+        assert result == mock_put.return_value.data
         mock_put.assert_called_once_with(
             url=f"/v1/core/code-interpreters/{code_interpreter_id}",
             json={
@@ -199,14 +198,14 @@ class TestToolsHttpClient(unittest.TestCase):
             streaming=True,
             _raw_response=None,
         )
-        
+
         # Act
         result = self.control_client.get_code_interpreter(
             code_interpreter_id=code_interpreter_id
         )
 
         # Assert
-        self.assertEqual(result, mock_get.return_value.data)
+        assert result == mock_get.return_value.data
         mock_get.assert_called_once_with(
             url=f"/v1/core/code-interpreters/{code_interpreter_id}"
         )
@@ -224,14 +223,14 @@ class TestToolsHttpClient(unittest.TestCase):
             streaming=True,
             _raw_response=None,
         )
-        
+
         # Act
         result = self.control_client.delete_code_interpreter(
             code_interpreter_id=code_interpreter_id
         )
-        
+
         # Assert
-        self.assertEqual(result, mock_delete.return_value.data)
+        assert result == mock_delete.return_value.data
         mock_delete.assert_called_once_with(
             url=f"/v1/core/code-interpreters/{code_interpreter_id}"
         )
@@ -260,7 +259,7 @@ class TestToolsHttpClient(unittest.TestCase):
             "name": "test-session-name",
             "session_timeout": 600
         }
-        
+
         # Act
         result = self.data_client.start_session(
             code_interpreter_name=code_interpreter_name,
@@ -269,13 +268,13 @@ class TestToolsHttpClient(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(result, mock_post.return_value.data)
+        assert result == mock_post.return_value.data
         mock_post.assert_called_once_with(
             url=f"/v1/code-interpreters/{code_interpreter_name}/sessions-start",
             json=request_params,
             headers = {"Authorization": f"Bearer {api_key}"}
         )
-    
+
     @patch.object(DataToolsHttpClient, "get")
     def test_get_session(self, mock_get):
         """测试get_session方法"""
@@ -306,7 +305,7 @@ class TestToolsHttpClient(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(result, mock_get.return_value.data)
+        assert result == mock_get.return_value.data
         mock_get.assert_called_once_with(
             url=f"/v1/code-interpreters/{code_interpreter_name}/sessions-get",
             headers={
@@ -314,7 +313,7 @@ class TestToolsHttpClient(unittest.TestCase):
                 "Authorization": f"Bearer {api_key}"
             }
         )
-    
+
     @patch.object(DataToolsHttpClient, "put")
     def test_stop_session(self, mock_put):
         """测试stop_session方法"""
@@ -322,14 +321,14 @@ class TestToolsHttpClient(unittest.TestCase):
         code_interpreter_name = "test-code-interpreter-name"
         api_key = "test-api-key"
         session_id = "test-session-id"
-        
+
         # Act
         self.data_client.stop_session(
             code_interpreter_name=code_interpreter_name,
             session_id=session_id,
             api_key=api_key
         )
-        
+
         # Assert
         mock_put.assert_called_once_with(
             url=f"/v1/code-interpreters/{code_interpreter_name}/sessions-stop",
@@ -338,7 +337,7 @@ class TestToolsHttpClient(unittest.TestCase):
                 "Authorization": f"Bearer {api_key}"
             }
         )
-    
+
     @patch.object(DataToolsHttpClient, "post")
     def test_invoke(self, mock_post):
         """测试invoke方法"""
@@ -401,7 +400,7 @@ class TestToolsHttpClient(unittest.TestCase):
         )
 
         # Assert
-        self.assertEqual(result, mock_post.return_value.data)
+        assert result == mock_post.return_value.data
         mock_post.assert_called_once_with(
             url=f"/v1/code-interpreters/{code_interpreter_name}/invoke",
             headers={

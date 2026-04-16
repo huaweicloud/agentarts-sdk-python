@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.sdk_response import SdkResponse
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
@@ -16,11 +15,11 @@ class CreateWorkloadAccessTokenForUserIdResponse(SdkResponse):
     sensitive_list = []
 
     openapi_types = {
-        'workload_access_token': 'str'
+        "workload_access_token": "str"
     }
 
     attribute_map = {
-        'workload_access_token': 'workload_access_token'
+        "workload_access_token": "workload_access_token"
     }
 
     def __init__(self, workload_access_token=None):
@@ -31,7 +30,7 @@ class CreateWorkloadAccessTokenForUserIdResponse(SdkResponse):
         :param workload_access_token: An opaque token representing the identity of both the workload and the user (or just the workload if not acting on behalf of a user)
         :type workload_access_token: str
         """
-        
+
         super().__init__()
 
         self._workload_access_token = None
@@ -65,16 +64,13 @@ class CreateWorkloadAccessTokenForUserIdResponse(SdkResponse):
     def to_dict(self):
         import warnings
         warnings.warn("CreateWorkloadAccessTokenForUserIdResponse.to_dict() is deprecated and no longer maintained, "
-                      "use to_json_object() to get the response content.", DeprecationWarning)
+                      "use to_json_object() to get the response content.", DeprecationWarning, stacklevel=2)
         result = {}
 
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -83,11 +79,10 @@ class CreateWorkloadAccessTokenForUserIdResponse(SdkResponse):
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

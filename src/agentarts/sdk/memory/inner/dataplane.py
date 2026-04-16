@@ -17,17 +17,21 @@ Based on Huawei Cloud backend API definitions:
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Any
+from typing import Any
 
-from ...service.memory_service import MemoryHttpService
+from agentarts.sdk.service.memory_service import MemoryHttpService
+
 from .config import (
-    SessionCreateRequest,
-    SessionInfo,
+    MemoryInfo,
+    MemoryListFilter,
+    MemoryListResponse,
+    MemorySearchFilter,
+    MemorySearchResponse,
+    MessageBatchResponse,
     MessageInfo,
     MessageListResponse,
-    MessageBatchResponse,
-    MemoryListResponse,
-    MemoryInfo, MemorySearchFilter, MemoryListFilter, MemorySearchResponse
+    SessionCreateRequest,
+    SessionInfo,
 )
 
 logger = logging.getLogger(__name__)
@@ -47,8 +51,8 @@ class _DataPlane:
 
     def __init__(
             self,
-            region_name: Optional[str] = None,
-            api_key: Optional[str] = None,
+            region_name: str | None = None,
+            api_key: str | None = None,
             verify_ssl: bool = False,
     ):
         """
@@ -93,9 +97,9 @@ class _DataPlane:
             self,
             space_id: str,
             session_id: str,
-            messages: List[Dict[str, Any]],
-            timestamp: Optional[int] = None,
-            idempotency_key: Optional[str] = None,
+            messages: list[dict[str, Any]],
+            timestamp: int | None = None,
+            idempotency_key: str | None = None,
             is_force_extract: bool = False
     ) -> MessageBatchResponse:
         """
@@ -113,7 +117,8 @@ class _DataPlane:
             MessageBatchResponse: List of successfully added messages
         """
         if not space_id:
-            raise ValueError("space_id is required for data plane operations")
+            msg = "space_id is required for data plane operations"
+            raise ValueError(msg)
 
         logger.info(f"Adding {len(messages)} messages to session: {session_id}")
 
@@ -135,7 +140,7 @@ class _DataPlane:
             session_id: str,
             k: int,
             space_id: str
-    ) -> List[MessageInfo]:
+    ) -> list[MessageInfo]:
         """
         Get last K messages.
 
@@ -148,24 +153,25 @@ class _DataPlane:
             List[MessageInfo]: Message list
         """
         if not space_id:
-            raise ValueError("space_id is required")
+            msg = "space_id is required"
+            raise ValueError(msg)
 
         logger.info(f"Getting last {k} messages from session: {session_id}")
 
         result = self.client.list_messages(space_id, session_id, limit=1, offset=0)
-        total = result.get('total', 0)
+        total = result.get("total", 0)
 
         offset = max(0, total - k)
 
         result = self.client.list_messages(space_id, session_id, limit=k, offset=offset)
-        return [MessageInfo.from_dict(msg) for msg in result.get('items', [])]
+        return [MessageInfo.from_dict(msg) for msg in result.get("items", [])]
 
     def get_message(
             self,
             message_id: str,
             space_id: str,
             session_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Get single message.
 
@@ -183,7 +189,7 @@ class _DataPlane:
     def list_messages(
             self,
             space_id: str,
-            session_id: Optional[str] = None,
+            session_id: str | None = None,
             limit: int = 10,
             offset: int = 0
     ) -> MessageListResponse:
@@ -207,7 +213,7 @@ class _DataPlane:
             self,
             space_id: str,
             filters: MemorySearchFilter = None
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Search memories.
 

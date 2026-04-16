@@ -15,8 +15,8 @@ from agentarts.sdk.identity.auth import (
 from agentarts.sdk.service.identity.identity_client import IdentityClient
 
 __all__ = [
+    "IdentityClient",
     "require_access_token",
     "require_api_key",
     "require_sts_token",
-    "IdentityClient",
 ]

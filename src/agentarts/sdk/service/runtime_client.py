@@ -35,13 +35,16 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict, Iterator, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from agentarts.sdk.service.http_client import BaseHTTPClient, RequestConfig, RequestResult, SignMode
 from agentarts.sdk.utils.constant import (
     get_control_plane_endpoint,
     get_runtime_data_plane_endpoint,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 log = logging.getLogger(__name__)
 
@@ -71,9 +74,9 @@ class RuntimeClient:
 
     def __init__(
         self,
-        control_endpoint: Optional[str] = None,
-        data_endpoint: Optional[str] = None,
-        access_token: Optional[str] = None,
+        control_endpoint: str | None = None,
+        data_endpoint: str | None = None,
+        access_token: str | None = None,
         timeout: float = 30.0,
         verify_ssl: bool = True,
         sign_mode: SignMode = SignMode.SDK_HMAC_SHA256,
@@ -116,7 +119,7 @@ class RuntimeClient:
         return self._data_client._request(method, path, **kwargs)
 
     @staticmethod
-    def _check(result: RequestResult, operation: str) -> Dict[str, Any]:
+    def _check(result: RequestResult, operation: str) -> dict[str, Any]:
         """Raise on unsuccessful response and return parsed data."""
         if not result.success:
             log.error(
@@ -126,8 +129,9 @@ class RuntimeClient:
                 result.data,
                 result.error,
             )
+            msg = f"{operation} failed (HTTP {result.status_code}): {result.error}"
             raise RuntimeError(
-                f"{operation} failed (HTTP {result.status_code}): {result.error}"
+                msg
             )
         return result.data if isinstance(result.data, dict) else {}
 
@@ -139,7 +143,7 @@ class RuntimeClient:
 
     def _dispatch_response(
         self, result: RequestResult, operation: str
-    ) -> Union[Dict[str, Any], Iterator[str]]:
+    ) -> dict[str, Any] | Iterator[str]:
         """
         Dispatch response based on streaming state.
 
@@ -162,8 +166,9 @@ class RuntimeClient:
                 result.data,
                 result.error,
             )
+            msg = f"{operation} failed (HTTP {result.status_code}): {result.error}"
             raise RuntimeError(
-                f"{operation} failed (HTTP {result.status_code}): {result.error}"
+                msg
             )
 
         if result.streaming:
@@ -218,17 +223,17 @@ class RuntimeClient:
         self,
         name: str,
         description: str = "",
-        artifact_source_config: Optional[Dict] = None,
-        env_vars: Optional[List[Dict]] = None,
-        identity_config: Optional[Dict] = None,
-        execution_agency_name: Optional[str] = None,
-        network_config: Optional[Dict] = None,
-        agent_gateway_id: Optional[str] = None,
-        invoke_config: Optional[Dict] = None,
-        observability_config: Optional[Dict] = None,
-        tags_config: Optional[List[Dict]] = None,
+        artifact_source_config: dict | None = None,
+        env_vars: list[dict] | None = None,
+        identity_config: dict | None = None,
+        execution_agency_name: str | None = None,
+        network_config: dict | None = None,
+        agent_gateway_id: str | None = None,
+        invoke_config: dict | None = None,
+        observability_config: dict | None = None,
+        tags_config: list[dict] | None = None,
         **extra: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create a new agent.
 
@@ -249,7 +254,7 @@ class RuntimeClient:
         Returns:
             The created agent object from the API.
         """
-        payload: Dict[str, Any] = {"name": name, **extra}
+        payload: dict[str, Any] = {"name": name, **extra}
         if description:
             payload["description"] = description
         if artifact_source_config is not None:
@@ -278,16 +283,16 @@ class RuntimeClient:
         self,
         agent_id: str,
         description: str = "",
-        artifact_source_config: Optional[Dict] = None,
-        env_vars: Optional[List[Dict]] = None,
-        execution_agency_name: Optional[str] = None,
-        network_config: Optional[Dict] = None,
-        agent_gateway_id: Optional[str] = None,
-        invoke_config: Optional[Dict] = None,
-        observability_config: Optional[Dict] = None,
-        tags_config: Optional[List[Dict]] = None,
+        artifact_source_config: dict | None = None,
+        env_vars: list[dict] | None = None,
+        execution_agency_name: str | None = None,
+        network_config: dict | None = None,
+        agent_gateway_id: str | None = None,
+        invoke_config: dict | None = None,
+        observability_config: dict | None = None,
+        tags_config: list[dict] | None = None,
         **extra: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Update an existing agent.
 
@@ -307,7 +312,7 @@ class RuntimeClient:
         Returns:
             The updated agent object.
         """
-        payload: Dict[str, Any] = {**extra}
+        payload: dict[str, Any] = {**extra}
         if description is not None:
             payload["description"] = description
         if artifact_source_config is not None:
@@ -334,17 +339,17 @@ class RuntimeClient:
         self,
         agent_name: str,
         description: str = "",
-        artifact_source_config: Optional[Dict] = None,
-        env_vars: Optional[List[Dict]] = None,
-        identity_config: Optional[Dict] = None,
-        execution_agency_name: Optional[str] = None,
-        network_config: Optional[Dict] = None,
-        agent_gateway_id: Optional[str] = None,
-        invoke_config: Optional[Dict] = None,
-        observability_config: Optional[Dict] = None,
-        tags_config: Optional[List[Dict]] = None,
+        artifact_source_config: dict | None = None,
+        env_vars: list[dict] | None = None,
+        identity_config: dict | None = None,
+        execution_agency_name: str | None = None,
+        network_config: dict | None = None,
+        agent_gateway_id: str | None = None,
+        invoke_config: dict | None = None,
+        observability_config: dict | None = None,
+        tags_config: list[dict] | None = None,
         **extra: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create or update an agent (upsert semantics).
 
@@ -411,7 +416,7 @@ class RuntimeClient:
         offset: int = 0,
         limit: int = 10,
         **extra: Any,
-    ) -> List[Dict[Any, Any]]:
+    ) -> list[dict[Any, Any]]:
         """
         List agents.
 
@@ -424,7 +429,7 @@ class RuntimeClient:
         Returns:
             A list of agent dicts.
         """
-        params: Dict[str, Any] = {"offset": offset, "limit": limit, **extra}
+        params: dict[str, Any] = {"offset": offset, "limit": limit, **extra}
         if agent_name:
             params["agent_name"] = agent_name
 
@@ -439,7 +444,7 @@ class RuntimeClient:
     def find_agent_by_name(
         self,
         agent_name: str,
-    ) -> Optional[Dict[Any, Any]]:
+    ) -> dict[Any, Any] | None:
         """
         Find an agent by its name.
 
@@ -449,7 +454,7 @@ class RuntimeClient:
         Returns:
             The matching agent object, or raises if not found.
         """
-        params: Dict[str, Any] = {"name": agent_name, "match_type" : "EXACT"}
+        params: dict[str, Any] = {"name": agent_name, "match_type" : "EXACT"}
 
         result = self._control("GET", "/v1/core/runtimes", params=params)
         response_data = self._check(result, "find_agent_by_name")
@@ -466,7 +471,7 @@ class RuntimeClient:
                 return agent
         return None
 
-    def find_agent_by_id(self, agent_id: str) -> Optional[Dict[Any, Any]]:
+    def find_agent_by_id(self, agent_id: str) -> dict[Any, Any] | None:
         """
         Find an agent by its unique identifier.
 
@@ -507,9 +512,9 @@ class RuntimeClient:
         agent_id: str,
         endpoint_name: str,
         endpoint_type: str = "invocations",
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
         **extra: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Create an endpoint for an agent.
 
@@ -523,7 +528,7 @@ class RuntimeClient:
         Returns:
             The created endpoint object.
         """
-        payload: Dict[str, Any] = {
+        payload: dict[str, Any] = {
             "agent_id": agent_id,
             "endpoint_name": endpoint_name,
             "endpoint_type": endpoint_type,
@@ -541,9 +546,9 @@ class RuntimeClient:
         self,
         agent_id: str,
         endpoint_name: str,
-        config: Optional[Dict[str, Any]] = None,
+        config: dict[str, Any] | None = None,
         **extra: Any,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Update an existing agent endpoint.
 
@@ -556,7 +561,7 @@ class RuntimeClient:
         Returns:
             The updated endpoint object.
         """
-        payload: Dict[str, Any] = {"endpoint_name": endpoint_name, **extra}
+        payload: dict[str, Any] = {"endpoint_name": endpoint_name, **extra}
         if config is not None:
             payload["config"] = config
 
@@ -569,7 +574,7 @@ class RuntimeClient:
         self,
         agent_id: str,
         endpoint_name: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Delete an agent endpoint.
 
@@ -589,7 +594,7 @@ class RuntimeClient:
         self,
         agent_id: str,
         endpoint_name: str,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Find an agent endpoint by name.
 
@@ -610,11 +615,11 @@ class RuntimeClient:
         agent_name: str,
         session_id: str,
         payload: str,
-        bearer_token: Optional[str] = None,
-        endpoint: Optional[str] = None,
+        bearer_token: str | None = None,
+        endpoint: str | None = None,
         timeout: int = 900,
         **extra: Any,
-    ) -> Union[Dict[str, Any], Iterator[str]]:
+    ) -> dict[str, Any] | Iterator[str]:
         """
         Invoke an agent on the data plane.
 
@@ -640,11 +645,11 @@ class RuntimeClient:
         from agentarts.sdk.runtime.model import SESSION_HEADER
 
         path = f"/agent/{agent_name}/invocations"
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if endpoint:
             params["endpoint"] = endpoint
 
-        headers: Dict[str, str] = {
+        headers: dict[str, str] = {
             SESSION_HEADER: session_id,
             "Content-Type": "application/json",
         }
@@ -665,11 +670,11 @@ class RuntimeClient:
     def ping_agent(
         self,
         agent_name: str,
-        bearer_token: Optional[str] = None,
-        endpoint: Optional[str] = None,
-        session_id: Optional[str] = None,
+        bearer_token: str | None = None,
+        endpoint: str | None = None,
+        session_id: str | None = None,
         timeout: int = 900,
-    ) -> Union[Dict[str, Any], Iterator[str]]:
+    ) -> dict[str, Any] | Iterator[str]:
         """
         Health-check an agent on the data plane.
 
@@ -691,13 +696,13 @@ class RuntimeClient:
         """
         from agentarts.sdk.runtime.model import SESSION_HEADER
 
-        headers: Dict[str, str] = {}
+        headers: dict[str, str] = {}
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
         if session_id:
             headers[SESSION_HEADER] = session_id
 
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if endpoint:
             params["endpoint"] = endpoint
 
@@ -740,11 +745,11 @@ class LocalRuntimeClient(BaseHTTPClient):
     def invoke_agent(
         self,
         payload: str,
-        session_id: Optional[str] = None,
-        bearer_token: Optional[str] = None,
-        endpoint: Optional[str] = None,
-        timeout: Optional[int] = None,
-    ) -> Union[Dict[str, Any], Iterator[str]]:
+        session_id: str | None = None,
+        bearer_token: str | None = None,
+        endpoint: str | None = None,
+        timeout: int | None = None,
+    ) -> dict[str, Any] | Iterator[str]:
         """
         Invoke a local agent.
 
@@ -762,11 +767,11 @@ class LocalRuntimeClient(BaseHTTPClient):
         from agentarts.sdk.runtime.model import SESSION_HEADER
 
         path = "/invocations"
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if endpoint:
             params["endpoint"] = endpoint
 
-        headers: Dict[str, str] = {"Content-Type": "application/json"}
+        headers: dict[str, str] = {"Content-Type": "application/json"}
         if session_id:
             headers[SESSION_HEADER] = session_id
         if bearer_token:
@@ -785,11 +790,15 @@ class LocalRuntimeClient(BaseHTTPClient):
 
         if not result.success:
             if result.status_code == 0:
-                raise RuntimeError(
+                msg = (
                     f"Cannot connect to local endpoint at {self._base_url}. "
                     f"Make sure the Docker container is running on port {self._port}."
                 )
-            raise RuntimeError(f"invoke_agent failed (HTTP {result.status_code}): {result.error}")
+                raise RuntimeError(
+                    msg
+                )
+            msg = f"invoke_agent failed (HTTP {result.status_code}): {result.error}"
+            raise RuntimeError(msg)
 
         if result.streaming:
             content_type = result.headers.get("Content-Type", "")
@@ -814,11 +823,11 @@ class LocalRuntimeClient(BaseHTTPClient):
 
     def ping_agent(
         self,
-        bearer_token: Optional[str] = None,
-        endpoint: Optional[str] = None,
-        session_id: Optional[str] = None,
-        timeout: Optional[int] = None,
-    ) -> Dict[str, Any]:
+        bearer_token: str | None = None,
+        endpoint: str | None = None,
+        session_id: str | None = None,
+        timeout: int | None = None,
+    ) -> dict[str, Any]:
         """
         Health-check a local agent.
 
@@ -835,13 +844,13 @@ class LocalRuntimeClient(BaseHTTPClient):
 
         path = "/ping"
 
-        headers: Dict[str, str] = {}
+        headers: dict[str, str] = {}
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
         if session_id:
             headers[SESSION_HEADER] = session_id
 
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if endpoint:
             params["endpoint"] = endpoint
 
@@ -857,9 +866,12 @@ class LocalRuntimeClient(BaseHTTPClient):
 
         if not result.success:
             if result.status_code == 0:
-                raise RuntimeError(
+                msg = (
                     f"Cannot connect to local endpoint at {self._base_url}. "
                     f"Make sure the Docker container is running on port {self._port}."
+                )
+                raise RuntimeError(
+                    msg
                 )
             return {
                 "status": "Unhealthy",

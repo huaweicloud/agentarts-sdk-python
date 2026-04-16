@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,17 +14,17 @@ class CreateOauth2CredentialProviderReqBody:
     sensitive_list = []
 
     openapi_types = {
-        'name': 'str',
-        'credential_provider_vendor': 'CredentialProviderVendor',
-        'oauth2_provider_config_input': 'Oauth2ProviderConfigInput',
-        'tags': 'list[Tag]'
+        "name": "str",
+        "credential_provider_vendor": "CredentialProviderVendor",
+        "oauth2_provider_config_input": "Oauth2ProviderConfigInput",
+        "tags": "list[Tag]"
     }
 
     attribute_map = {
-        'name': 'name',
-        'credential_provider_vendor': 'credential_provider_vendor',
-        'oauth2_provider_config_input': 'oauth2_provider_config_input',
-        'tags': 'tags'
+        "name": "name",
+        "credential_provider_vendor": "credential_provider_vendor",
+        "oauth2_provider_config_input": "oauth2_provider_config_input",
+        "tags": "tags"
     }
 
     def __init__(self, name=None, credential_provider_vendor=None, oauth2_provider_config_input=None, tags=None):
@@ -35,15 +34,15 @@ class CreateOauth2CredentialProviderReqBody:
 
         :param name: The name of the credential provider.
         :type name: str
-        :param credential_provider_vendor: 
+        :param credential_provider_vendor:
         :type credential_provider_vendor: :class:`huaweicloudsdkagentidentity.v1.CredentialProviderVendor`
-        :param oauth2_provider_config_input: 
+        :param oauth2_provider_config_input:
         :type oauth2_provider_config_input: :class:`huaweicloudsdkagentidentity.v1.Oauth2ProviderConfigInput`
         :param tags: 自定义标签列表。
         :type tags: list[:class:`huaweicloudsdkagentidentity.v1.Tag`]
         """
-        
-        
+
+
 
         self._name = None
         self._credential_provider_vendor = None
@@ -143,10 +142,7 @@ class CreateOauth2CredentialProviderReqBody:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -155,11 +151,10 @@ class CreateOauth2CredentialProviderReqBody:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

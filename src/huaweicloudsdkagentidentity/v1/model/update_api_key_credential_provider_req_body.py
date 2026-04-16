@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,13 +14,13 @@ class UpdateApiKeyCredentialProviderReqBody:
     sensitive_list = []
 
     openapi_types = {
-        'api_key': 'str',
-        'tags': 'list[Tag]'
+        "api_key": "str",
+        "tags": "list[Tag]"
     }
 
     attribute_map = {
-        'api_key': 'api_key',
-        'tags': 'tags'
+        "api_key": "api_key",
+        "tags": "tags"
     }
 
     def __init__(self, api_key=None, tags=None):
@@ -34,8 +33,8 @@ class UpdateApiKeyCredentialProviderReqBody:
         :param tags: 自定义标签列表。
         :type tags: list[:class:`huaweicloudsdkagentidentity.v1.Tag`]
         """
-        
-        
+
+
 
         self._api_key = None
         self._tags = None
@@ -96,10 +95,7 @@ class UpdateApiKeyCredentialProviderReqBody:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -108,11 +104,10 @@ class UpdateApiKeyCredentialProviderReqBody:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

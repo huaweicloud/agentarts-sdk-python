@@ -5,10 +5,11 @@ import pytest
 
 def test_import():
     """Test that core module can be imported"""
+    from agentarts.sdk.runtime.config import Config
+
     from agentarts.sdk.runtime import AgentRuntime
     from agentarts.sdk.runtime.context import Context
-    from agentarts.sdk.runtime.config import Config
-    
+
     assert AgentRuntime is not None
     assert Context is not None
     assert Config is not None
@@ -18,10 +19,10 @@ def test_import():
 async def test_context():
     """Test Context creation and operations"""
     from agentarts.sdk.runtime.context import Context
-    
+
     context = Context()
     assert context.session_id is not None
-    
+
     context.set("key", "value")
     assert context.get("key") == "value"
     assert context.get("nonexistent", "default") == "default"
@@ -30,6 +31,6 @@ async def test_context():
 def test_config():
     """Test Config creation"""
     from agentarts.sdk.runtime.config import Config
-    
+
     config = Config()
     assert config is not None

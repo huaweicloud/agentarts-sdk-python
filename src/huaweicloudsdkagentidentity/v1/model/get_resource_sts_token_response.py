@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.sdk_response import SdkResponse
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
@@ -16,15 +15,15 @@ class GetResourceStsTokenResponse(SdkResponse):
     sensitive_list = []
 
     openapi_types = {
-        'source_identity': 'str',
-        'assumed_agency': 'GetResourceStsTokenResponseBodyAssumedAgency',
-        'credentials': 'GetResourceStsTokenResponseBodyCredentials'
+        "source_identity": "str",
+        "assumed_agency": "GetResourceStsTokenResponseBodyAssumedAgency",
+        "credentials": "GetResourceStsTokenResponseBodyCredentials"
     }
 
     attribute_map = {
-        'source_identity': 'source_identity',
-        'assumed_agency': 'assumed_agency',
-        'credentials': 'credentials'
+        "source_identity": "source_identity",
+        "assumed_agency": "assumed_agency",
+        "credentials": "credentials"
     }
 
     def __init__(self, source_identity=None, assumed_agency=None, credentials=None):
@@ -34,12 +33,12 @@ class GetResourceStsTokenResponse(SdkResponse):
 
         :param source_identity: The source identity specified by the principal that is calling the operation
         :type source_identity: str
-        :param assumed_agency: 
+        :param assumed_agency:
         :type assumed_agency: :class:`huaweicloudsdkagentidentity.v1.GetResourceStsTokenResponseBodyAssumedAgency`
-        :param credentials: 
+        :param credentials:
         :type credentials: :class:`huaweicloudsdkagentidentity.v1.GetResourceStsTokenResponseBodyCredentials`
         """
-        
+
         super().__init__()
 
         self._source_identity = None
@@ -115,16 +114,13 @@ class GetResourceStsTokenResponse(SdkResponse):
     def to_dict(self):
         import warnings
         warnings.warn("GetResourceStsTokenResponse.to_dict() is deprecated and no longer maintained, "
-                      "use to_json_object() to get the response content.", DeprecationWarning)
+                      "use to_json_object() to get the response content.", DeprecationWarning, stacklevel=2)
         result = {}
 
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -133,11 +129,10 @@ class GetResourceStsTokenResponse(SdkResponse):
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

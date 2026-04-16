@@ -1,6 +1,6 @@
 """Dev command definition"""
 
-from typing import Annotated, List, Optional
+from typing import Annotated
 
 import typer
 
@@ -20,11 +20,11 @@ def dev(
     host: Annotated[str, typer.Option("--host", "-h", help="Server host")] = "0.0.0.0",
     reload: Annotated[bool, typer.Option("--reload", help="Enable auto-reload")] = False,
     config: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--config", "-c", help="Configuration file path"),
     ] = None,
     env: Annotated[
-        Optional[List[str]],
+        list[str] | None,
         typer.Option("--env", "-e", help="Environment variables (KEY=VALUE). Can be used multiple times."),
     ] = None,
 ):

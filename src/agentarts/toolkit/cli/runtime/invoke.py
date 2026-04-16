@@ -1,7 +1,6 @@
 """Invoke command definition"""
 
-import json
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -17,7 +16,7 @@ rich_console = Console()
 
 def status(
     agent: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--agent", "-a", help="Agent name (uses default if not specified for cloud mode)"),
     ] = None,
     mode: Annotated[
@@ -29,23 +28,23 @@ def status(
         ),
     ] = "cloud",
     region: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--region", "-r", help="Huawei Cloud region (for cloud mode)"),
     ] = None,
     port: Annotated[
-        Optional[int],
+        int | None,
         typer.Option("--port", "-p", help="Local port (for local mode, default: 8080)"),
     ] = None,
     endpoint: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--endpoint", "-e", help="Endpoint name"),
     ] = None,
     session_id: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--session", "-s", help="Session ID for stateful agents"),
     ] = None,
     bearer_token: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--bearer-token", "-bt", help="Bearer token for authentication"),
     ] = None,
 ):
@@ -92,7 +91,7 @@ def invoke(
         typer.Argument(help="JSON payload to send to the agent (e.g., '{\"input\": \"hello\"}')"),
     ],
     agent: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--agent", "-a", help="Agent name (uses default if not specified for cloud mode)"),
     ] = None,
     mode: Annotated[
@@ -104,23 +103,23 @@ def invoke(
         ),
     ] = "cloud",
     region: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--region", "-r", help="Huawei Cloud region (for cloud mode)"),
     ] = None,
     port: Annotated[
-        Optional[int],
+        int | None,
         typer.Option("--port", "-p", help="Local port (for local mode, default: 8080)"),
     ] = None,
     endpoint: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--endpoint", "-e", help="Endpoint name"),
     ] = None,
     session_id: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--session", "-s", help="Session ID for stateful agents"),
     ] = None,
     bearer_token: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--bearer-token", help="Bearer token for authentication"),
     ] = None,
     timeout: Annotated[

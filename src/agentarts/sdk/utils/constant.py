@@ -17,7 +17,6 @@ Example:
 
 import os
 
-
 ENV_HUAWEICLOUD_SDK_AK = "HUAWEICLOUD_SDK_AK"
 ENV_HUAWEICLOUD_SDK_SK = "HUAWEICLOUD_SDK_SK"
 ENV_HUAWEICLOUD_SDK_SECURITY_TOKEN = "HUAWEICLOUD_SDK_SECURITY_TOKEN"
@@ -79,7 +78,7 @@ def get_region() -> str:
     return "cn-southwest-2"
 
 
-def get_control_plane_endpoint(region: str = None) -> str:
+def get_control_plane_endpoint(region: str | None = None) -> str:
     """
     Get the AgentArts control plane endpoint URL.
 
@@ -115,7 +114,7 @@ def get_runtime_data_plane_endpoint() -> str:
     return _ensure_https(endpoint)
 
 
-def get_code_interpreter_data_plane_endpoint(endpoint: str = None) -> str:
+def get_code_interpreter_data_plane_endpoint(endpoint: str | None = None) -> str:
     """
     Get the AgentArts code interpreter data plane endpoint URL.
 
@@ -137,8 +136,8 @@ def get_code_interpreter_data_plane_endpoint(endpoint: str = None) -> str:
 
 def get_memory_endpoint(
     endpoint_type: str = "control",
-    region: str = None,
-    space_id: str = None
+    region: str | None = None,
+    space_id: str | None = None
 ) -> str:
     """
     Get the AgentArts memory service endpoint URL.
@@ -169,19 +168,20 @@ def get_memory_endpoint(
     """
     if endpoint_type == "control":
         return get_control_plane_endpoint(region)
-    elif endpoint_type == "data":
+    if endpoint_type == "data":
         memory_endpoint = os.getenv(ENV_AGENTARTS_MEMORY_DATA_ENDPOINT)
         if memory_endpoint:
             return _ensure_https(memory_endpoint)
         if not space_id:
-            raise ValueError("space_id is required for data endpoint")
+            msg = "space_id is required for data endpoint"
+            raise ValueError(msg)
         region = region or get_region()
         return f"https://{space_id}.memory.{region}.agentarts.myhuaweicloud.com"
-    else:
-        raise ValueError(f"Invalid endpoint type: {endpoint_type}")
+    msg = f"Invalid endpoint type: {endpoint_type}"
+    raise ValueError(msg)
 
 
-def get_iam_endpoint(region: str = None) -> str:
+def get_iam_endpoint(region: str | None = None) -> str:
     """
     Get the Huawei Cloud IAM (Identity and Access Management) endpoint URL.
 
@@ -206,7 +206,7 @@ def get_iam_endpoint(region: str = None) -> str:
     return f"https://iam.{region}.myhuaweicloud.com"
 
 
-def get_swr_endpoint(region: str = None) -> str:
+def get_swr_endpoint(region: str | None = None) -> str:
     """
     Get the Huawei Cloud SWR (Software Repository for Container) endpoint URL.
 
@@ -231,7 +231,7 @@ def get_swr_endpoint(region: str = None) -> str:
     return f"https://swr-api.{region}.myhuaweicloud.com"
 
 
-def get_identity_endpoint(region: str = None) -> str:
+def get_identity_endpoint(region: str | None = None) -> str:
     """
     Get the Huawei Cloud Agent Identity endpoint URL.
 
