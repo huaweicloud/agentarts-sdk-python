@@ -29,74 +29,69 @@ Example:
 """
 
 # Public interface
+# Internal classes (for advanced users)
+from agentarts.sdk.service.memory_service import MemoryHttpService
+
 from .client import MemoryClient
 
 # Data types
 from .inner.config import (
-    # ==================== Request types ====================
-    SpaceCreateRequest,
-    SpaceUpdateRequest,
-    SessionCreateRequest,
     AddMessagesRequest,
-    MessageRequest,
+    ApiKeyInfo,
     AssetRef,
-    ToolCallMessage,
-    ToolResultMessage,
+    ContextChainResponse,
+    ContextCompressionResponse,
     DataMessage,
-    TextMessage,
-
-    # ==================== Response types ====================
-    SpaceInfo,
-    SpaceListResponse,
-    SessionInfo,
-    SessionListResponse,
-    MessageInfo,
-    MessageListResponse,
-    MessageBatchResponse,
     MemoryInfo,
     MemoryListResponse,
     MemorySearchResponse,
-    ContextChainResponse,
-    ContextCompressionResponse,
-    ApiKeyInfo,
+    MessageBatchResponse,
+    MessageInfo,
+    MessageListResponse,
+    MessageRequest,
+    SessionCreateRequest,
+    SessionInfo,
+    SessionListResponse,
+    # ==================== Request types ====================
+    SpaceCreateRequest,
+    # ==================== Response types ====================
+    SpaceInfo,
+    SpaceListResponse,
+    SpaceUpdateRequest,
+    TextMessage,
+    ToolCallMessage,
+    ToolResultMessage,
 )
 
-# Internal classes (for advanced users)
-from ..service.memory_service import MemoryHttpService
-
 __all__ = [
+    "AddMessagesRequest",
+    "ApiKeyInfo",
+    "AssetRef",
+    "ContextChainResponse",
+    "ContextCompressionResponse",
+    "DataMessage",
     # ==================== Main entry point ====================
     "MemoryClient",
-
-    # ==================== Request types ====================
-    "SpaceCreateRequest",
-    "SpaceUpdateRequest",
-    "SessionCreateRequest",
-    "AddMessagesRequest",
-    "MessageRequest",
-    "AssetRef",
-    "DataMessage",
-
-    # ==================== SDK-specific message types ====================
-    "TextMessage",
-    "ToolCallMessage",
-    "ToolResultMessage",
-
-    # ==================== Response types ====================
-    "SpaceInfo",
-    "SpaceListResponse",
-    "SessionInfo",
-    "SessionListResponse",
-    "MessageInfo",
-    "MessageListResponse",
-    "MessageBatchResponse",
+    # ==================== Internal classes (for advanced users) ====================
+    "MemoryHttpService",
     "MemoryInfo",
     "MemoryListResponse",
     "MemorySearchResponse",
-    "ContextChainResponse",
-    "ContextCompressionResponse",
-    "ApiKeyInfo",
-
-    # ==================== Internal classes (for advanced users) ====================
-    "MemoryHttpService"
+    "MessageBatchResponse",
+    "MessageInfo",
+    "MessageListResponse",
+    "MessageRequest",
+    "SessionCreateRequest",
+    "SessionInfo",
+    "SessionListResponse",
+    # ==================== Request types ====================
+    "SpaceCreateRequest",
+    # ==================== Response types ====================
+    "SpaceInfo",
+    "SpaceListResponse",
+    "SpaceUpdateRequest",
+    # ==================== SDK-specific message types ====================
+    "TextMessage",
+    "ToolCallMessage",
+    "ToolResultMessage"
 ]

@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,13 +14,13 @@ class ClaimMatchValue:
     sensitive_list = []
 
     openapi_types = {
-        'match_value_string': 'str',
-        'match_value_string_list': 'list[str]'
+        "match_value_string": "str",
+        "match_value_string_list": "list[str]"
     }
 
     attribute_map = {
-        'match_value_string': 'match_value_string',
-        'match_value_string_list': 'match_value_string_list'
+        "match_value_string": "match_value_string",
+        "match_value_string_list": "match_value_string_list"
     }
 
     def __init__(self, match_value_string=None, match_value_string_list=None):
@@ -31,11 +30,11 @@ class ClaimMatchValue:
 
         :param match_value_string: The string value to match for.
         :type match_value_string: str
-        :param match_value_string_list: 
+        :param match_value_string_list:
         :type match_value_string_list: list[str]
         """
-        
-        
+
+
 
         self._match_value_string = None
         self._match_value_string_list = None
@@ -92,10 +91,7 @@ class ClaimMatchValue:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -104,11 +100,10 @@ class ClaimMatchValue:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

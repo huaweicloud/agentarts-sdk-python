@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,11 +14,11 @@ class KeyAuthAuthorizerConfiguration:
     sensitive_list = []
 
     openapi_types = {
-        'api_keys': 'list[ApiKeyInfo]'
+        "api_keys": "list[ApiKeyInfo]"
     }
 
     attribute_map = {
-        'api_keys': 'api_keys'
+        "api_keys": "api_keys"
     }
 
     def __init__(self, api_keys=None):
@@ -27,11 +26,11 @@ class KeyAuthAuthorizerConfiguration:
 
         The model defined in huaweicloud sdk
 
-        :param api_keys: 
+        :param api_keys:
         :type api_keys: list[:class:`huaweicloudsdkagentidentity.v1.ApiKeyInfo`]
         """
-        
-        
+
+
 
         self._api_keys = None
         self.discriminator = None
@@ -62,10 +61,7 @@ class KeyAuthAuthorizerConfiguration:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -74,11 +70,10 @@ class KeyAuthAuthorizerConfiguration:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

@@ -1,5 +1,6 @@
 """Memory operations module."""
 
+from .models import SpaceListResult, SpaceResult
 from .space import (
     create_space,
     delete_space,
@@ -7,14 +8,13 @@ from .space import (
     list_spaces,
     update_space,
 )
-from .models import SpaceListResult, SpaceResult
 
 __all__ = [
+    "SpaceListResult",
+    "SpaceResult",
     "create_space",
+    "delete_space",
     "get_space",
     "list_spaces",
     "update_space",
-    "delete_space",
-    "SpaceResult",
-    "SpaceListResult",
 ]

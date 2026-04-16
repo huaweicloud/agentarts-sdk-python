@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,13 +14,13 @@ class ListWorkloadIdentitiesRequest:
     sensitive_list = []
 
     openapi_types = {
-        'limit': 'int',
-        'marker': 'str'
+        "limit": "int",
+        "marker": "str"
     }
 
     attribute_map = {
-        'limit': 'limit',
-        'marker': 'marker'
+        "limit": "limit",
+        "marker": "marker"
     }
 
     def __init__(self, limit=None, marker=None):
@@ -34,8 +33,8 @@ class ListWorkloadIdentitiesRequest:
         :param marker: 分页标记。
         :type marker: str
         """
-        
-        
+
+
 
         self._limit = None
         self._marker = None
@@ -96,10 +95,7 @@ class ListWorkloadIdentitiesRequest:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -108,11 +104,10 @@ class ListWorkloadIdentitiesRequest:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

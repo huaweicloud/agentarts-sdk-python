@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,17 +14,17 @@ class TokenVault:
     sensitive_list = []
 
     openapi_types = {
-        'token_vault_id': 'str',
-        'kms_configuration': 'KmsConfiguration',
-        'updated_at': 'datetime',
-        'tags': 'list[Tag]'
+        "token_vault_id": "str",
+        "kms_configuration": "KmsConfiguration",
+        "updated_at": "datetime",
+        "tags": "list[Tag]"
     }
 
     attribute_map = {
-        'token_vault_id': 'token_vault_id',
-        'kms_configuration': 'kms_configuration',
-        'updated_at': 'updated_at',
-        'tags': 'tags'
+        "token_vault_id": "token_vault_id",
+        "kms_configuration": "kms_configuration",
+        "updated_at": "updated_at",
+        "tags": "tags"
     }
 
     def __init__(self, token_vault_id=None, kms_configuration=None, updated_at=None, tags=None):
@@ -35,15 +34,15 @@ class TokenVault:
 
         :param token_vault_id: The unique identifier of the token vault.
         :type token_vault_id: str
-        :param kms_configuration: 
+        :param kms_configuration:
         :type kms_configuration: :class:`huaweicloudsdkagentidentity.v1.KmsConfiguration`
         :param updated_at: Timestamp in RFC 3339 format (UTC)
         :type updated_at: datetime
         :param tags: 自定义标签列表。
         :type tags: list[:class:`huaweicloudsdkagentidentity.v1.Tag`]
         """
-        
-        
+
+
 
         self._token_vault_id = None
         self._kms_configuration = None
@@ -147,10 +146,7 @@ class TokenVault:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -159,11 +155,10 @@ class TokenVault:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

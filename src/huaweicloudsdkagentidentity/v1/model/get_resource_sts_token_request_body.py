@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,25 +14,25 @@ class GetResourceStsTokenRequestBody:
     sensitive_list = []
 
     openapi_types = {
-        'resource_credential_provider_name': 'str',
-        'workload_access_token': 'str',
-        'agency_session_name': 'str',
-        'duration_seconds': 'int',
-        'policy': 'str',
-        'source_identity': 'str',
-        'tags': 'list[StsTag]',
-        'transitive_tag_keys': 'list[str]'
+        "resource_credential_provider_name": "str",
+        "workload_access_token": "str",
+        "agency_session_name": "str",
+        "duration_seconds": "int",
+        "policy": "str",
+        "source_identity": "str",
+        "tags": "list[StsTag]",
+        "transitive_tag_keys": "list[str]"
     }
 
     attribute_map = {
-        'resource_credential_provider_name': 'resource_credential_provider_name',
-        'workload_access_token': 'workload_access_token',
-        'agency_session_name': 'agency_session_name',
-        'duration_seconds': 'duration_seconds',
-        'policy': 'policy',
-        'source_identity': 'source_identity',
-        'tags': 'tags',
-        'transitive_tag_keys': 'transitive_tag_keys'
+        "resource_credential_provider_name": "resource_credential_provider_name",
+        "workload_access_token": "workload_access_token",
+        "agency_session_name": "agency_session_name",
+        "duration_seconds": "duration_seconds",
+        "policy": "policy",
+        "source_identity": "source_identity",
+        "tags": "tags",
+        "transitive_tag_keys": "transitive_tag_keys"
     }
 
     def __init__(self, resource_credential_provider_name=None, workload_access_token=None, agency_session_name=None, duration_seconds=None, policy=None, source_identity=None, tags=None, transitive_tag_keys=None):
@@ -58,8 +57,8 @@ class GetResourceStsTokenRequestBody:
         :param transitive_tag_keys: A list of keys for session tags that you want to set as transitive
         :type transitive_tag_keys: list[str]
         """
-        
-        
+
+
 
         self._resource_credential_provider_name = None
         self._workload_access_token = None
@@ -268,10 +267,7 @@ class GetResourceStsTokenRequestBody:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -280,11 +276,10 @@ class GetResourceStsTokenRequestBody:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

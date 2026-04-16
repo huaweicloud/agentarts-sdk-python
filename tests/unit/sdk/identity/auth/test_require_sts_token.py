@@ -1,4 +1,5 @@
 import pytest
+
 from agentarts.sdk.identity.auth import require_sts_token
 
 

@@ -2,9 +2,9 @@ import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Optional
 
 
 class PollingStatus(str, Enum):
@@ -29,7 +29,7 @@ class PollingResult:
     """
 
     status: PollingStatus = field(default=PollingStatus.IN_PROGRESS)
-    access_token: Optional[str] = field(default=None)
+    access_token: str | None = field(default=None)
 
 
 class TokenPoller(ABC):
@@ -97,12 +97,18 @@ class DefaultApiTokenPoller(TokenPoller):
                 self.logger.error(
                     "Authorization session failed for url: %s", self.auth_url
                 )
-                raise RuntimeError(
+                msg = (
                     "Authorization session failed. "
                     "The user may have denied access or the session expired."
                 )
+                raise RuntimeError(
+                    msg
+                )
 
-        raise asyncio.TimeoutError(
+        msg = (
             f"Polling timed out after {DEFAULT_POLLING_TIMEOUT_SECONDS} seconds. "
-            + "User may not have completed authorization."
+             "User may not have completed authorization."
+        )
+        raise asyncio.TimeoutError(
+            msg
         )

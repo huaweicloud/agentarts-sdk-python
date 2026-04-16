@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,21 +14,21 @@ class ApiKeyCredentialProvider:
     sensitive_list = []
 
     openapi_types = {
-        'name': 'str',
-        'urn': 'str',
-        'api_key_secret': 'Secret',
-        'created_at': 'datetime',
-        'updated_at': 'datetime',
-        'tags': 'list[Tag]'
+        "name": "str",
+        "urn": "str",
+        "api_key_secret": "Secret",
+        "created_at": "datetime",
+        "updated_at": "datetime",
+        "tags": "list[Tag]"
     }
 
     attribute_map = {
-        'name': 'name',
-        'urn': 'urn',
-        'api_key_secret': 'api_key_secret',
-        'created_at': 'created_at',
-        'updated_at': 'updated_at',
-        'tags': 'tags'
+        "name": "name",
+        "urn": "urn",
+        "api_key_secret": "api_key_secret",
+        "created_at": "created_at",
+        "updated_at": "updated_at",
+        "tags": "tags"
     }
 
     def __init__(self, name=None, urn=None, api_key_secret=None, created_at=None, updated_at=None, tags=None):
@@ -41,7 +40,7 @@ class ApiKeyCredentialProvider:
         :type name: str
         :param urn: The Uniform Resource Name (URN) of the credential provider.
         :type urn: str
-        :param api_key_secret: 
+        :param api_key_secret:
         :type api_key_secret: :class:`huaweicloudsdkagentidentity.v1.Secret`
         :param created_at: Timestamp in RFC 3339 format (UTC)
         :type created_at: datetime
@@ -50,8 +49,8 @@ class ApiKeyCredentialProvider:
         :param tags: 自定义标签列表。
         :type tags: list[:class:`huaweicloudsdkagentidentity.v1.Tag`]
         """
-        
-        
+
+
 
         self._name = None
         self._urn = None
@@ -203,10 +202,7 @@ class ApiKeyCredentialProvider:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -215,11 +211,10 @@ class ApiKeyCredentialProvider:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

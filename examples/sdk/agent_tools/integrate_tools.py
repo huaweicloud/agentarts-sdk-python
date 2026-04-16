@@ -1,16 +1,15 @@
-import os
 import json
-from typing import TypedDict, Union
+import os
+from typing import TypedDict
 
-from langgraph.graph import StateGraph, END
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_core.tools import tool
-
+from langchain_openai import ChatOpenAI
+from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
-from agentarts.sdk.tools import code_session
-from agentarts.sdk import AgentArtsRuntimeApp
 
+from agentarts.sdk import AgentArtsRuntimeApp
+from agentarts.sdk.tools import code_session
 
 app = AgentArtsRuntimeApp()
 SYSTEM_PROMPT = """你是一个通过代码执行验证所有答案的优秀AI助手
@@ -40,7 +39,7 @@ def execute_python_tool(code: str, description: str) -> str | None:
 
     if description:
         code = f"# {description}\n{code}"
-    
+
     print(f"\n Generated Code: {code}")
 
     with code_session("your_region", "your_code_interpreter_name") as code_client:
@@ -52,7 +51,7 @@ def execute_python_tool(code: str, description: str) -> str | None:
                 "clear_context": False,
             }
         )
-    
+
     return json.dumps(response["result"])
 
 
@@ -65,14 +64,14 @@ llm = ChatOpenAI(
     temperature=0.7,
 )
 
-# 创建工具列表 
+# 创建工具列表
 tools = [execute_python_tool]
 # 工具绑定Agent
 llm.bind_tools(tools)
 
 # 定义graph状态
 class AgentState(TypedDict):
-    messages: list[Union[HumanMessage, SystemMessage, AIMessage]]
+    messages: list[HumanMessage | SystemMessage | AIMessage]
 
 def call_model(state: AgentState):
     """调用模型并返回响应"""
@@ -80,7 +79,7 @@ def call_model(state: AgentState):
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + state["messages"]
     else:
         messages = state["messages"]
-    
+
     response = llm.invoke(messages)
     return {"messages": [response]}
 

@@ -4,24 +4,21 @@ Session management module, provides MemorySession class
 """
 
 import logging
-from typing import List, Optional, Union
 
 from .inner.config import (
-    SessionCreateRequest,
+    MemoryInfo,
+    MemoryListFilter,
+    MemoryListResponse,
+    MemorySearchFilter,
+    MemorySearchResponse,
+    MessageBatchResponse,
     MessageInfo,
     MessageListResponse,
-    MessageBatchResponse,
-    MemoryInfo,
-    MemoryListResponse,
-    MemorySearchResponse,
+    SessionCreateRequest,
     TextMessage,
     ToolCallMessage,
     ToolResultMessage,
-    MessageRequest,
-    MemorySearchFilter,
-    MemoryListFilter,
 )
-from .inner.controlplane import _ControlPlane
 from .inner.dataplane import _DataPlane
 
 logger = logging.getLogger(__name__)
@@ -37,7 +34,7 @@ class RetrievalConfig:
         top_k: Return Top-K memories, default is 2
         score_threshold: Similarity score threshold, results below this score will be filtered
     """
-    user_id: Optional[str] = None
+    user_id: str | None = None
     max_tokens: int = 0
     top_k: int = 2
     score_threshold: float = 0.6
@@ -74,9 +71,9 @@ class MemorySession:
             self,
             space_id: str,
             actor_id: str,
-            session_id: Optional[str] = None,
-            region_name: Optional[str] = None,
-            api_key: Optional[str] = None
+            session_id: str | None = None,
+            region_name: str | None = None,
+            api_key: str | None = None
     ):
         """
         Initialize MemorySession
@@ -135,7 +132,8 @@ class MemorySession:
             session_info = self._data_plane.create_memory_session(space_id, session_config.to_dict())
             self.session_id = session_info.id
             if not self.session_id:
-                raise ValueError(f"Failed to create session: {session_info}")
+                msg = f"Failed to create session: {session_info}"
+                raise ValueError(msg)
             logger.info(f"Session created via API: {self.session_id}")
         else:
             self.session_id = session_id
@@ -147,9 +145,9 @@ class MemorySession:
             cls,
             space_id: str,
             actor_id: str,
-            session_id: Optional[str] = None,
-            region_name: Optional[str] = None,
-            api_key: Optional[str] = None
+            session_id: str | None = None,
+            region_name: str | None = None,
+            api_key: str | None = None
     ) -> "MemorySession":
         """
         Factory method: Create MemorySession
@@ -207,7 +205,7 @@ class MemorySession:
     def get_last_k_messages(
             self,
             k: int
-    ) -> List[MessageInfo]:
+    ) -> list[MessageInfo]:
         """
         Get the last K messages from the bound session
 
@@ -226,15 +224,15 @@ class MemorySession:
 
     def add_messages(
             self,
-            messages: List[Union[TextMessage, ToolCallMessage, ToolResultMessage]],
+            messages: list[TextMessage | ToolCallMessage | ToolResultMessage],
             *,
-            timestamp: Optional[int] = None,
-            idempotency_key: Optional[str] = None,
+            timestamp: int | None = None,
+            idempotency_key: str | None = None,
             is_force_extract: bool = False
     ) -> MessageBatchResponse:
         """
         Add messages to the bound session - supports text messages, tool call messages, and tool result messages
-        
+
         Args:
             messages: List of messages, supports mixing TextMessage, ToolCallMessage, and ToolResultMessage objects
             timestamp: Client API call time (millisecond timestamp, optional)
@@ -247,7 +245,7 @@ class MemorySession:
         Examples:
             >>> # Method 1: Use TextMessage objects
             >>> session.add_messages([TextMessage(role="user", content="Hello"), TextMessage(role="user", content="Please help me")])
-            
+
             >>> # Method 2: Use tool call messages
             >>> tool_call = ToolCallMessage(
             ...     id="call_123",
@@ -255,7 +253,7 @@ class MemorySession:
             ...     arguments={"city": "Beijing"}
             ... )
             >>> session.add_messages([tool_call])
-            
+
             >>> # Method 3: Mix multiple message types
             >>> messages = [
             ...     TextMessage(role="user", content="Query Beijing weather"),
@@ -280,7 +278,8 @@ class MemorySession:
             if isinstance(msg, (TextMessage, ToolCallMessage, ToolResultMessage)):
                 message_requests.append(msg.to_dict())
             else:
-                raise ValueError(f"Unsupported message type: {type(msg)}")
+                msg = f"Unsupported message type: {type(msg)}"
+                raise ValueError(msg)
 
         # Call data plane API
         return self._data_plane.add_messages(
@@ -338,7 +337,7 @@ class MemorySession:
 
     def search_memories(
             self,
-            filters: Optional[MemorySearchFilter] = None
+            filters: MemorySearchFilter | None = None
     ) -> MemorySearchResponse:
         """
         Search memories in the bound session
@@ -364,7 +363,7 @@ class MemorySession:
             self,
             limit: int = 10,
             offset: int = 0,
-            filters: Optional[MemoryListFilter] = None
+            filters: MemoryListFilter | None = None
     ) -> MemoryListResponse:
         """
         List memory records in the bound session

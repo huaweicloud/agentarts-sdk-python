@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.sdk_response import SdkResponse
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
@@ -16,17 +15,17 @@ class GetResourceOauth2TokenResponse(SdkResponse):
     sensitive_list = []
 
     openapi_types = {
-        'access_token': 'str',
-        'authorization_url': 'str',
-        'session_status': 'str',
-        'session_uri': 'str'
+        "access_token": "str",
+        "authorization_url": "str",
+        "session_status": "str",
+        "session_uri": "str"
     }
 
     attribute_map = {
-        'access_token': 'access_token',
-        'authorization_url': 'authorization_url',
-        'session_status': 'session_status',
-        'session_uri': 'session_uri'
+        "access_token": "access_token",
+        "authorization_url": "authorization_url",
+        "session_status": "session_status",
+        "session_uri": "session_uri"
     }
 
     def __init__(self, access_token=None, authorization_url=None, session_status=None, session_uri=None):
@@ -43,7 +42,7 @@ class GetResourceOauth2TokenResponse(SdkResponse):
         :param session_uri: Unique identifier for the user&#39;s authentication session (matches request session_uri)
         :type session_uri: str
         """
-        
+
         super().__init__()
 
         self._access_token = None
@@ -152,16 +151,13 @@ class GetResourceOauth2TokenResponse(SdkResponse):
     def to_dict(self):
         import warnings
         warnings.warn("GetResourceOauth2TokenResponse.to_dict() is deprecated and no longer maintained, "
-                      "use to_json_object() to get the response content.", DeprecationWarning)
+                      "use to_json_object() to get the response content.", DeprecationWarning, stacklevel=2)
         result = {}
 
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -170,11 +166,10 @@ class GetResourceOauth2TokenResponse(SdkResponse):
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

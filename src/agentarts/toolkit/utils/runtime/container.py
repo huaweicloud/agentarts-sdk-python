@@ -6,15 +6,10 @@ Provides functions for building, tagging, pushing, and running Docker images.
 
 import re
 import subprocess
-import sys
 from pathlib import Path
-from typing import Optional
 
-from rich.console import Console
-from rich.live import Live
-from rich.panel import Panel
-from rich.text import Text
 from rich import markup
+from rich.console import Console
 
 console = Console()
 
@@ -61,7 +56,7 @@ def build_docker_image(
     console.print(f"\n[bold]Building Docker image:[/bold] [cyan]{full_image_name}[/cyan]")
 
     step_pattern = re.compile(r"^Step\s+(\d+)/(\d+)\s*:\s*(.+)$")
-    
+
     try:
         cmd = [
             "docker",
@@ -82,27 +77,23 @@ def build_docker_image(
 
         output_lines = []
         error_lines = []
-        current_step_num = 0
         total_steps = 0
-        
+
         for line in iter(process.stdout.readline, ""):
             if not line:
                 break
-            
+
             line = line.rstrip()
             output_lines.append(line)
-            
+
             match = step_pattern.match(line)
             if match:
                 step_num = int(match.group(1))
                 total_steps = int(match.group(2))
                 step_desc = match.group(3)
-                current_step_num = step_num
-                
+
                 console.print(f"  [yellow]▶[/yellow] Step {step_num}/{total_steps}: [white]{markup.escape(step_desc)}[/white]")
-            elif "Successfully built" in line:
-                console.print(f"  [green]✓[/green] {markup.escape(line.strip())}")
-            elif "Successfully tagged" in line:
+            elif "Successfully built" in line or "Successfully tagged" in line:
                 console.print(f"  [green]✓[/green] {markup.escape(line.strip())}")
             elif line.strip():
                 if "error" in line.lower() or "error:" in line.lower():
@@ -114,7 +105,7 @@ def build_docker_image(
         process.wait()
 
         if process.returncode != 0:
-            console.print(f"\n[red]Error building image:[/red]")
+            console.print("\n[red]Error building image:[/red]")
             if error_lines:
                 console.print("[dim]Error details:[/dim]")
                 for line in error_lines[-10:]:
@@ -161,11 +152,11 @@ def tag_image(
         )
 
         if result.returncode != 0:
-            console.print(f"[red]Error tagging image:[/red]")
+            console.print("[red]Error tagging image:[/red]")
             console.print(result.stderr)
             return False
 
-        console.print(f"[green]✓ Done:[/green] Image tagged successfully")
+        console.print("[green]✓ Done:[/green] Image tagged successfully")
         return True
 
     except subprocess.SubprocessError as e:
@@ -203,15 +194,15 @@ def push_image(image: str) -> bool:
         for line in iter(process.stdout.readline, ""):
             if not line:
                 break
-            
+
             line = line.rstrip()
             output_lines.append(line)
-            
+
             if "Pushed" in line:
                 pushed_layers += 1
                 console.print(f"  [green]✓[/green] {markup.escape(line)}")
             elif "Layer already exists" in line:
-                console.print(f"  [dim]○[/dim] Layer exists (skipped)")
+                console.print("  [dim]○[/dim] Layer exists (skipped)")
             elif digest_pattern.search(line):
                 match = digest_pattern.search(line)
                 console.print(f"  [green]✓[/green] Digest: [cyan]{match.group(1)}[/cyan]")
@@ -223,7 +214,7 @@ def push_image(image: str) -> bool:
         process.wait()
 
         if process.returncode != 0:
-            console.print(f"\n[red]Error pushing image:[/red]")
+            console.print("\n[red]Error pushing image:[/red]")
             if error_lines:
                 for line in error_lines:
                     console.print(f"  [red]{markup.escape(line)}[/red]")
@@ -232,7 +223,7 @@ def push_image(image: str) -> bool:
                     console.print(f"  [red]{markup.escape(line)}[/red]")
             return False
 
-        console.print(f"[green]✓ Done:[/green] Image pushed successfully")
+        console.print("[green]✓ Done:[/green] Image pushed successfully")
         return True
 
     except subprocess.TimeoutExpired:
@@ -275,11 +266,11 @@ def login_to_registry(
         )
 
         if result.returncode != 0:
-            console.print(f"[red]Error logging in:[/red]")
+            console.print("[red]Error logging in:[/red]")
             console.print(result.stderr)
             return False
 
-        console.print(f"[green]✓ Done:[/green] Logged in to registry successfully")
+        console.print("[green]✓ Done:[/green] Logged in to registry successfully")
         return True
 
     except subprocess.SubprocessError as e:
@@ -291,7 +282,7 @@ def run_container(
     image_name: str,
     image_tag: str = "latest",
     port: int = 8080,
-    container_name: Optional[str] = None,
+    container_name: str | None = None,
     detach: bool = True,
 ) -> bool:
     """
@@ -335,7 +326,7 @@ def run_container(
         )
 
         if result.returncode != 0:
-            console.print(f"[red]Error running container:[/red]")
+            console.print("[red]Error running container:[/red]")
             console.print(result.stderr)
             return False
 
@@ -352,11 +343,11 @@ def run_container(
 
 def generate_dockerfile(
     base_image: str = "python:3.10-slim",
-    dependency_file: Optional[str] = None,
-    entrypoint: Optional[str] = None,
+    dependency_file: str | None = None,
+    entrypoint: str | None = None,
     port: int = 8080,
     output_path: str = "Dockerfile",
-    region: Optional[str] = None,
+    region: str | None = None,
 ) -> bool:
     """
     Generate Dockerfile from template.

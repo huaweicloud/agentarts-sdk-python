@@ -27,10 +27,12 @@ import asyncio
 import contextvars
 from _contextvars import ContextVar
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Coroutine
-from typing import Optional
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from collections.abc import Coroutine
 
 
 class RequestContext(BaseModel):
@@ -51,9 +53,9 @@ class RequestContext(BaseModel):
             that need access to headers, query params, etc.
     """
 
-    request_id: Optional[str] = Field(None, description="The request ID")
-    session_id: Optional[str] = Field(None, description="The session ID")
-    request: Optional[Any] = Field(None, description="The underlying request object")
+    request_id: str | None = Field(None, description="The request ID")
+    session_id: str | None = Field(None, description="The session ID")
+    request: Any | None = Field(None, description="The underlying request object")
 
 
 class AgentArtsRuntimeContext:
@@ -84,18 +86,18 @@ class AgentArtsRuntimeContext:
             the OAuth2 authorization flow to prevent CSRF attacks.
     """
 
-    _session_id: ContextVar[Optional[str]] = ContextVar("session_id", default=None)
-    _request_id: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
-    _workload_access_token: ContextVar[Optional[str]] = ContextVar(
+    _session_id: ContextVar[str | None] = ContextVar("session_id", default=None)
+    _request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
+    _workload_access_token: ContextVar[str | None] = ContextVar(
         "workload_access_token", default=None
     )
 
-    _user_id: ContextVar[Optional[str]] = ContextVar("user_id", default=None)
-    _oauth2_callback_url: ContextVar[Optional[str]] = ContextVar(
+    _user_id: ContextVar[str | None] = ContextVar("user_id", default=None)
+    _oauth2_callback_url: ContextVar[str | None] = ContextVar(
         "oauth2_callback_url", default=None
     )
-    _user_token: ContextVar[Optional[str]] = ContextVar("user_token", default=None)
-    _oauth2_custom_state: ContextVar[Optional[str]] = ContextVar(
+    _user_token: ContextVar[str | None] = ContextVar("user_token", default=None)
+    _oauth2_custom_state: ContextVar[str | None] = ContextVar(
         "oauth2_custom_state", default=None
     )
 
@@ -104,12 +106,12 @@ class AgentArtsRuntimeContext:
     # ------------------------------------------------------------------
 
     @classmethod
-    def get_session_id(cls) -> Optional[str]:
+    def get_session_id(cls) -> str | None:
         """Return the current session ID, or ``None`` if not set."""
         return cls._session_id.get()
 
     @classmethod
-    def set_session_id(cls, value: Optional[str]) -> None:
+    def set_session_id(cls, value: str | None) -> None:
         """Set the session ID for the current context."""
         cls._session_id.set(value)
 
@@ -118,12 +120,12 @@ class AgentArtsRuntimeContext:
     # ------------------------------------------------------------------
 
     @classmethod
-    def get_request_id(cls) -> Optional[str]:
+    def get_request_id(cls) -> str | None:
         """Return the current request ID, or ``None`` if not set."""
         return cls._request_id.get()
 
     @classmethod
-    def set_request_id(cls, value: Optional[str]) -> None:
+    def set_request_id(cls, value: str | None) -> None:
         """Set the request ID for the current context."""
         cls._request_id.set(value)
 
@@ -132,12 +134,12 @@ class AgentArtsRuntimeContext:
     # ------------------------------------------------------------------
 
     @classmethod
-    def get_workload_access_token(cls) -> Optional[str]:
+    def get_workload_access_token(cls) -> str | None:
         """Return the workload access token, or ``None`` if not set."""
         return cls._workload_access_token.get()
 
     @classmethod
-    def set_workload_access_token(cls, value: Optional[str]) -> None:
+    def set_workload_access_token(cls, value: str | None) -> None:
         """
         Set the workload access token.
 
@@ -152,12 +154,12 @@ class AgentArtsRuntimeContext:
     # ------------------------------------------------------------------
 
     @classmethod
-    def get_user_id(cls) -> Optional[str]:
+    def get_user_id(cls) -> str | None:
         """Return the current user ID, or ``None`` if not set."""
         return cls._user_id.get()
 
     @classmethod
-    def set_user_id(cls, value: Optional[str]) -> None:
+    def set_user_id(cls, value: str | None) -> None:
         """Set the user ID for the current context."""
         cls._user_id.set(value)
 
@@ -166,12 +168,12 @@ class AgentArtsRuntimeContext:
     # ------------------------------------------------------------------
 
     @classmethod
-    def get_oauth2_callback_url(cls) -> Optional[str]:
+    def get_oauth2_callback_url(cls) -> str | None:
         """Return the OAuth2 callback URL, or ``None`` if not set."""
         return cls._oauth2_callback_url.get()
 
     @classmethod
-    def set_oauth2_callback_url(cls, value: Optional[str]) -> None:
+    def set_oauth2_callback_url(cls, value: str | None) -> None:
         """
         Set the OAuth2 callback URL.
 
@@ -185,12 +187,12 @@ class AgentArtsRuntimeContext:
     # ------------------------------------------------------------------
 
     @classmethod
-    def get_user_token(cls) -> Optional[str]:
+    def get_user_token(cls) -> str | None:
         """Return the current user token, or ``None`` if not set."""
         return cls._user_token.get()
 
     @classmethod
-    def set_user_token(cls, value: Optional[str]) -> None:
+    def set_user_token(cls, value: str | None) -> None:
         """
         Set the user token.
 
@@ -205,12 +207,12 @@ class AgentArtsRuntimeContext:
     # ------------------------------------------------------------------
 
     @classmethod
-    def get_oauth2_custom_state(cls) -> Optional[str]:
+    def get_oauth2_custom_state(cls) -> str | None:
         """Return the OAuth2 custom state, or ``None`` if not set."""
         return cls._oauth2_custom_state.get()
 
     @classmethod
-    def set_oauth2_custom_state(cls, value: Optional[str]) -> None:
+    def set_oauth2_custom_state(cls, value: str | None) -> None:
         """
         Set the OAuth2 custom state parameter.
 

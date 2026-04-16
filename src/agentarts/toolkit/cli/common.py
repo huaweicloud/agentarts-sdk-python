@@ -7,7 +7,7 @@ console = Console()
 
 def _handle_error(message: str) -> None:
     """Handle error and exit.
-    
+
     Args:
         message: Error message
     """
@@ -16,7 +16,7 @@ def _handle_error(message: str) -> None:
 
 def _print_success(message: str) -> None:
     """Print success message.
-    
+
     Args:
         message: Success message
     """

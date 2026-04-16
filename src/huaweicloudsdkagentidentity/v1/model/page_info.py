@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,13 +14,13 @@ class PageInfo:
     sensitive_list = []
 
     openapi_types = {
-        'next_marker': 'str',
-        'current_count': 'int'
+        "next_marker": "str",
+        "current_count": "int"
     }
 
     attribute_map = {
-        'next_marker': 'next_marker',
-        'current_count': 'current_count'
+        "next_marker": "next_marker",
+        "current_count": "current_count"
     }
 
     def __init__(self, next_marker=None, current_count=None):
@@ -34,8 +33,8 @@ class PageInfo:
         :param current_count: 本页返回条目数量。
         :type current_count: int
         """
-        
-        
+
+
 
         self._next_marker = None
         self._current_count = None
@@ -95,10 +94,7 @@ class PageInfo:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -107,11 +103,10 @@ class PageInfo:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

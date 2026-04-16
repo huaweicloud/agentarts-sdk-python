@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.sdk_response import SdkResponse
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
@@ -16,11 +15,11 @@ class GetResourceApiKeyResponse(SdkResponse):
     sensitive_list = []
 
     openapi_types = {
-        'api_key': 'str'
+        "api_key": "str"
     }
 
     attribute_map = {
-        'api_key': 'api_key'
+        "api_key": "api_key"
     }
 
     def __init__(self, api_key=None):
@@ -31,7 +30,7 @@ class GetResourceApiKeyResponse(SdkResponse):
         :param api_key: API key associated with the requested resource
         :type api_key: str
         """
-        
+
         super().__init__()
 
         self._api_key = None
@@ -65,16 +64,13 @@ class GetResourceApiKeyResponse(SdkResponse):
     def to_dict(self):
         import warnings
         warnings.warn("GetResourceApiKeyResponse.to_dict() is deprecated and no longer maintained, "
-                      "use to_json_object() to get the response content.", DeprecationWarning)
+                      "use to_json_object() to get the response content.", DeprecationWarning, stacklevel=2)
         result = {}
 
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -83,11 +79,10 @@ class GetResourceApiKeyResponse(SdkResponse):
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

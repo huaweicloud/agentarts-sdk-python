@@ -17,6 +17,6 @@ except PackageNotFoundError:
 __author__ = "Huawei Cloud AgentArts Team"
 
 __all__ = [
-    "__version__",
     "__author__",
+    "__version__",
 ]

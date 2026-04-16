@@ -12,20 +12,26 @@ import json
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Any
 
-from agentarts.sdk.memory import MemoryClient
+from typing_extensions import Self
+
 from agentarts.sdk.integration.langgraph.config import CheckpointerConfig
 from agentarts.sdk.integration.langgraph.converter import (
     langgraph_messages_to_memory,
     memory_to_langgraph_message,
 )
+from agentarts.sdk.memory import MemoryClient
 from agentarts.sdk.utils.constant import get_region
 
+if TYPE_CHECKING:
+    import builtins
+    from collections.abc import Sequence
 
 logger = logging.getLogger(__name__)
 
 try:
+    from langchain_core.runnables import RunnableConfig
     from langgraph.checkpoint.base import (
         BaseCheckpointSaver,
         Checkpoint,
@@ -33,64 +39,63 @@ try:
         CheckpointTuple,
     )
     from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
-    from langchain_core.runnables import RunnableConfig
 
     LANGGRAPH_AVAILABLE = True
 except ImportError:
     LANGGRAPH_AVAILABLE = False
     BaseCheckpointSaver = object
-    Checkpoint = Dict[str, Any]
-    CheckpointMetadata = Dict[str, Any]
+    Checkpoint = dict[str, Any]
+    CheckpointMetadata = dict[str, Any]
     CheckpointTuple = Any
     JsonPlusSerializer = object
-    RunnableConfig = Dict[str, Any]
+    RunnableConfig = dict[str, Any]
 
 
 class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
     """
     A LangGraph checkpoint saver that uses AgentArts Memory service.
-    
+
     This class provides seamless integration between LangGraph's checkpointing
     system and AgentArts Memory service, enabling stateful conversations with
     automatic memory management.
-    
+
     Features:
         - Seamless integration with LangGraph's checkpointing system
         - Automatic state persistence using AgentArts Memory service
         - Support for conversation resumption across sessions
         - Thread ID directly maps to session ID for simplicity
         - Built-in memory extraction and semantic search capabilities
-    
+
     Architecture:
         - Checkpoints are stored as messages in the Memory service
         - Each checkpoint is tagged with metadata for retrieval
         - Thread ID is used directly as session ID
-    
+
     Usage:
         >>> from agentarts.sdk.integration.langgraph import AgentArtsMemorySessionSaver
-        >>> 
+        >>>
         >>> # Create checkpoint saver
         >>> checkpointer = AgentArtsMemorySessionSaver(
         ...     space_id="your-space-id",
         ...     api_key="your-api-key",
         ...     max_messages=10
         ... )
-        >>> 
+        >>>
         >>> # Use with LangGraph
         >>> from langgraph.graph import StateGraph
         >>> graph = StateGraph(...)
         >>> compiled = graph.compile(checkpointer=checkpointer)
-        >>> 
+        >>>
         >>> # Run with thread_id for stateful conversation
         >>> result = compiled.invoke(
         ...     {"input": "hello"},
         ...     config={"configurable": {"thread_id": "conversation-123"}}
         ... )
-    
+
     Args:
         space_id: Space ID for the memory service (required)
         region: Huawei Cloud region name, default from environment
-        api_key: API Key for data plane authentication (optional, 
+        api_key: API Key for data plane authentication (optional,
             falls back to HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable)
         max_messages: Maximum number of messages to retrieve per query, default 10
         serde: Serializer/deserializer for checkpoints (default: JsonPlusSerializer)
@@ -99,15 +104,18 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
     def __init__(
             self,
             space_id: str,
-            region: Optional[str] = None,
-            api_key: Optional[str] = None,
+            region: str | None = None,
+            api_key: str | None = None,
             max_messages: int = 10,
-            serde: Optional[JsonPlusSerializer] = None,
+            serde: JsonPlusSerializer | None = None,
     ) -> None:
         if not LANGGRAPH_AVAILABLE:
-            raise ImportError(
+            msg = (
                 "LangGraph is required to use AgentArtsMemorySessionSaver. "
                 "Install it with: pip install langgraph langchain-core"
+            )
+            raise ImportError(
+                msg
             )
 
         super().__init__(serde=serde or JsonPlusSerializer())
@@ -139,22 +147,22 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         """Extract runtime configuration from RunnableConfig."""
         return CheckpointerConfig.from_runnable_config(config)
 
-    def get_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
+    def get_tuple(self, config: RunnableConfig) -> CheckpointTuple | None:
         """
         Get a checkpoint tuple from the memory service.
-        
+
         Retrieves messages from the memory service, converts them to LangGraph format,
         and builds a checkpoint tuple.
-        
+
         Args:
             config: Runnable config containing thread_id and optionally checkpoint_id
-            
+
         Returns:
             CheckpointTuple if messages found, None otherwise
         """
         runtime_config = self._get_runtime_config(config)
         session_id = runtime_config.session_id
-        
+
         checkpoint_id_from_config = config.get("configurable", {}).get("checkpoint_id")
 
         try:
@@ -165,7 +173,7 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             )
 
         except Exception as e:
-            logger.error(f"Failed to get checkpoint tuple: {e}")
+            logger.exception(f"Failed to get checkpoint tuple: {e}")
             return None
         if not messages:
             return None
@@ -188,7 +196,7 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         checkpoint_ts = datetime.now(timezone.utc).isoformat()
         if messages:
             last_msg = messages[-1]
-            if hasattr(last_msg, 'meta') and last_msg.meta:
+            if hasattr(last_msg, "meta") and last_msg.meta:
                 try:
                     meta = json.loads(last_msg.meta)
                     step = meta.get("step", 0)
@@ -197,14 +205,13 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                     checkpoint_ts = meta.get("checkpoint_ts", checkpoint_ts)
                 except (json.JSONDecodeError, TypeError):
                     logger.debug(f"Failed to parse meta: {last_msg.meta}")
-        
-        if checkpoint_id_from_config:
-            if checkpoint_id_from_config != checkpoint_id:
-                logger.debug(
-                    f"Requested checkpoint_id {checkpoint_id_from_config} "
-                    f"does not match latest {checkpoint_id}"
-                )
-                return None
+
+        if checkpoint_id_from_config and checkpoint_id_from_config != checkpoint_id:
+            logger.debug(
+                f"Requested checkpoint_id {checkpoint_id_from_config} "
+                f"does not match latest {checkpoint_id}"
+            )
+            return None
 
         checkpoint = Checkpoint(
             v=1,
@@ -241,17 +248,17 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             config: RunnableConfig,
             checkpoint: Checkpoint,
             metadata: CheckpointMetadata,
-            new_versions: Optional[Dict[str, Union[str, int, float]]] = None,
+            new_versions: dict[str, str | int | float] | None = None,
     ) -> RunnableConfig:
         """
         Store a checkpoint to the memory service.
-        
+
         Args:
             config: Runnable config containing thread_id
             checkpoint: Checkpoint data to store
             metadata: Checkpoint metadata
             new_versions: New versions (optional)
-            
+
         Returns:
             Updated config with checkpoint_id
         """
@@ -274,8 +281,8 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             "checkpoint_ts": checkpoint_ts,
         }, ensure_ascii=False)
         cloud_messages = langgraph_messages_to_memory(
-            messages, 
-            runtime_config.actor_id, 
+            messages,
+            runtime_config.actor_id,
             runtime_config.assistant_id,
             meta=checkpoint_meta
         )
@@ -288,23 +295,23 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             )
 
         except Exception as e:
-            logger.error(f"Failed to put checkpoint for session {session_id} with: {e}")
+            logger.exception(f"Failed to put checkpoint for session {session_id} with: {e}")
 
         return config
 
     def put_writes(
             self,
             config: RunnableConfig,
-            writes: Sequence[Tuple[str, Any]],
+            writes: Sequence[tuple[str, Any]],
             task_id: str,
             task_path: str = "",
     ) -> None:
         """
         Store intermediate writes linked to a checkpoint.
-        
+
         Note: This method is not fully supported with Memory service backend.
         Writes are typically handled through the normal message flow.
-        
+
         Args:
             config: Runnable config containing thread_id
             writes: List of writes to store (channel, value) pairs
@@ -318,21 +325,21 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
 
     def list(
             self,
-            config: Optional[RunnableConfig],
+            config: RunnableConfig | None,
             *,
-            filter: Optional[Dict[str, Any]] = None,
-            before: Optional[RunnableConfig] = None,
-            limit: Optional[int] = None,
-    ) -> List[CheckpointTuple]:
+            filter: dict[str, Any] | None = None,
+            before: RunnableConfig | None = None,
+            limit: int | None = None,
+    ) -> builtins.list[CheckpointTuple]:
         """
         List checkpoints for a given thread.
-        
+
         Args:
             config: Runnable config containing thread_id
             filter: Optional filter criteria
             before: List checkpoints before this config
             limit: Maximum number of checkpoints to return
-            
+
         Returns:
             List of CheckpointTuple objects
         """
@@ -350,9 +357,9 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                 offset=0
             )
         except Exception as e:
-            logger.error(f"Failed to list checkpoints: {e}")
+            logger.exception(f"Failed to list checkpoints: {e}")
             return []
-        messages = result.items if hasattr(result, 'items') else []
+        messages = result.items if hasattr(result, "items") else []
 
         if not messages:
             return []
@@ -375,7 +382,7 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         checkpoint_ts = datetime.now(timezone.utc).isoformat()
         if messages:
             last_msg = messages[-1]
-            if hasattr(last_msg, 'meta') and last_msg.meta:
+            if hasattr(last_msg, "meta") and last_msg.meta:
                 try:
                     meta = json.loads(last_msg.meta)
                     step = meta.get("step", 0)
@@ -416,10 +423,10 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
     def delete(self, config: RunnableConfig) -> None:
         """
         Delete session for a given thread.
-        
+
         Note: Memory service does not support direct session deletion.
         Sessions will be cleaned up based on TTL configuration.
-        
+
         Args:
             config: Runnable config containing thread_id
         """
@@ -431,24 +438,24 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
     def close(self) -> None:
         """
         Close the underlying MemoryClient connection.
-        
+
         Releases all underlying connection resources.
         """
         self._client.close()
 
-    def __enter__(self) -> "AgentArtsMemorySessionSaver":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.close()
 
-    async def aget_tuple(self, config: RunnableConfig) -> Optional[CheckpointTuple]:
+    async def aget_tuple(self, config: RunnableConfig) -> CheckpointTuple | None:
         """
         Asynchronously get a checkpoint tuple from the memory service.
-        
+
         Args:
             config: Runnable config containing thread_id
-            
+
         Returns:
             CheckpointTuple if messages found, None otherwise
         """
@@ -459,17 +466,17 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             config: RunnableConfig,
             checkpoint: Checkpoint,
             metadata: CheckpointMetadata,
-            new_versions: Optional[Dict[str, Union[str, int, float]]] = None,
+            new_versions: dict[str, str | int | float] | None = None,
     ) -> RunnableConfig:
         """
         Asynchronously store a checkpoint to the memory service.
-        
+
         Args:
             config: Runnable config containing thread_id
             checkpoint: Checkpoint data to store
             metadata: Checkpoint metadata
             new_versions: New versions (optional)
-            
+
         Returns:
             Updated config with checkpoint_id
         """
@@ -480,15 +487,15 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
     async def aput_writes(
             self,
             config: RunnableConfig,
-            writes: Sequence[Tuple[str, Any]],
+            writes: Sequence[tuple[str, Any]],
             task_id: str,
             task_path: str = "",
     ) -> None:
         """
         Asynchronously store intermediate writes linked to a checkpoint.
-        
+
         Note: This method is not fully supported with Memory service backend.
-        
+
         Args:
             config: Runnable config containing thread_id
             writes: List of writes to store (channel, value) pairs
@@ -501,21 +508,21 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
 
     async def alist(
             self,
-            config: Optional[RunnableConfig],
+            config: RunnableConfig | None,
             *,
-            filter: Optional[Dict[str, Any]] = None,
-            before: Optional[RunnableConfig] = None,
-            limit: Optional[int] = None,
-    ) -> List[CheckpointTuple]:
+            filter: dict[str, Any] | None = None,
+            before: RunnableConfig | None = None,
+            limit: int | None = None,
+    ) -> builtins.list[CheckpointTuple]:
         """
         Asynchronously list checkpoints for a given thread.
-        
+
         Args:
             config: Runnable config containing thread_id
             filter: Optional filter criteria
             before: List checkpoints before this config
             limit: Maximum number of checkpoints to return
-            
+
         Returns:
             List of CheckpointTuple objects
         """
@@ -526,9 +533,9 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
     async def adelete(self, config: RunnableConfig) -> None:
         """
         Asynchronously delete session for a given thread.
-        
+
         Note: Memory service does not support direct session deletion.
-        
+
         Args:
             config: Runnable config containing thread_id
         """

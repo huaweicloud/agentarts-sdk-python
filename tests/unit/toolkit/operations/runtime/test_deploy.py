@@ -1,8 +1,6 @@
 """Unit tests for deploy.py module"""
 
-import pytest
-from unittest.mock import patch, MagicMock
-from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 from agentarts.toolkit.operations.runtime.deploy import (
     DeployMode,
@@ -30,20 +28,20 @@ class TestCreateAgentartsRuntime:
     def test_creates_runtime_with_default_description(self, mock_client, tmp_path, monkeypatch):
         """Creates runtime with default description."""
         monkeypatch.chdir(tmp_path)
-        
+
         mock_client_instance = MagicMock()
         mock_client.return_value = mock_client_instance
         mock_client_instance.create_or_update_agent.return_value = {
             "id": "agent-123",
             "latest_version": "v1",
         }
-        
+
         result = create_agentarts_runtime(
             agent_name="test-agent",
             swr_image="swr.cn-north-4.myhuaweicloud.com/org/repo:latest",
             region="cn-north-4",
         )
-        
+
         assert result is not None
         assert result["id"] == "agent-123"
 
@@ -51,20 +49,20 @@ class TestCreateAgentartsRuntime:
     def test_description_includes_toolkit_info(self, mock_client, tmp_path, monkeypatch):
         """Description includes AgentArts SDK Toolkit info."""
         monkeypatch.chdir(tmp_path)
-        
+
         mock_client_instance = MagicMock()
         mock_client.return_value = mock_client_instance
         mock_client_instance.create_or_update_agent.return_value = {
             "id": "agent-123",
             "latest_version": "v1",
         }
-        
+
         create_agentarts_runtime(
             agent_name="test-agent",
             swr_image="swr.cn-north-4.myhuaweicloud.com/org/repo:latest",
             region="cn-north-4",
         )
-        
+
         call_args = mock_client_instance.create_or_update_agent.call_args
         assert "AgentArts SDK Toolkit" in call_args.kwargs["description"]
 
@@ -72,21 +70,21 @@ class TestCreateAgentartsRuntime:
     def test_uses_custom_description(self, mock_client, tmp_path, monkeypatch):
         """Uses custom description when provided."""
         monkeypatch.chdir(tmp_path)
-        
+
         mock_client_instance = MagicMock()
         mock_client.return_value = mock_client_instance
         mock_client_instance.create_or_update_agent.return_value = {
             "id": "agent-123",
             "latest_version": "v1",
         }
-        
+
         create_agentarts_runtime(
             agent_name="test-agent",
             swr_image="swr.cn-north-4.myhuaweicloud.com/org/repo:latest",
             region="cn-north-4",
             description="My custom description",
         )
-        
+
         call_args = mock_client_instance.create_or_update_agent.call_args
         assert call_args.kwargs["description"] == "My custom description"
 
@@ -99,16 +97,16 @@ class TestDeployProject:
     def test_returns_false_when_no_config(self, mock_docker, mock_dockerfile, tmp_path, monkeypatch):
         """Returns False when no configuration file exists."""
         monkeypatch.chdir(tmp_path)
-        
+
         result = deploy_project()
-        
+
         assert result is False
 
     @patch("agentarts.toolkit.operations.runtime.deploy.check_docker_available")
     def test_returns_false_when_docker_not_available(self, mock_docker, tmp_path, monkeypatch):
         """Returns False when Docker is not available."""
         mock_docker.return_value = False
-        
+
         config_content = """
 default_agent: test-agent
 agents:
@@ -123,9 +121,9 @@ agents:
 """
         (tmp_path / ".agentarts_config.yaml").write_text(config_content)
         monkeypatch.chdir(tmp_path)
-        
+
         result = deploy_project()
-        
+
         assert result is False
 
     @patch("agentarts.toolkit.operations.runtime.deploy.check_docker_available")
@@ -138,7 +136,7 @@ agents:
         mock_run.return_value = True
         mock_docker.return_value = True
         mock_dockerfile.return_value = True
-        
+
         config_content = """
 default_agent: test-agent
 agents:
@@ -157,7 +155,7 @@ agents:
         (tmp_path / ".agentarts_config.yaml").write_text(config_content)
         (tmp_path / "Dockerfile").write_text("FROM python:3.10-slim")
         monkeypatch.chdir(tmp_path)
-        
+
         result = deploy_project(mode=DeployMode.LOCAL)
-        
+
         assert result is True

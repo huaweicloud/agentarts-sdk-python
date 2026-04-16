@@ -12,15 +12,17 @@ response ``Content-Type`` header:
   ``iter_lines()`` or ``iter_bytes()`` to consume the body incrementally.
 """
 
-from enum import Enum
-from typing import Any, Dict, Iterator, Optional
+from collections.abc import Iterator
 from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any
 from urllib.parse import urlparse
 
 import requests
+from typing_extensions import Self
 
-from ..utils.signer import SDKSigner
-from ..utils.signer_v11 import V11Signer
+from agentarts.sdk.utils.signer import SDKSigner
+from agentarts.sdk.utils.signer_v11 import V11Signer
 
 _STREAM_CONTENT_TYPES = {"text/event-stream", "application/x-ndjson"}
 
@@ -48,7 +50,7 @@ class RequestConfig:
 
     base_url: str = ""
     timeout: float = 30.0
-    headers: Dict[str, str] = field(default_factory=dict)
+    headers: dict[str, str] = field(default_factory=dict)
     verify_ssl: bool = True
 
 
@@ -72,8 +74,8 @@ class RequestResult:
     success: bool
     status_code: int
     data: Any = None
-    error: Optional[str] = None
-    headers: Dict[str, str] = field(default_factory=dict)
+    error: str | None = None
+    headers: dict[str, str] = field(default_factory=dict)
     streaming: bool = False
     _raw_response: Any = field(default=None, repr=False)
 
@@ -88,10 +90,10 @@ class RequestResult:
         iterator is exhausted.
         """
         if not self.streaming or self._raw_response is None:
-            raise RuntimeError("iter_lines() is only available for streaming results")
+            msg = "iter_lines() is only available for streaming results"
+            raise RuntimeError(msg)
 
-        for line in self._raw_response.iter_lines():
-            yield line
+        yield from self._raw_response.iter_lines()
 
     def iter_bytes(self) -> Iterator[bytes]:
         """
@@ -104,7 +106,8 @@ class RequestResult:
         iterator is exhausted.
         """
         if not self.streaming or self._raw_response is None:
-            raise RuntimeError("iter_bytes() is only available for streaming results")
+            msg = "iter_bytes() is only available for streaming results"
+            raise RuntimeError(msg)
 
         for chunk in self._raw_response.iter_content(chunk_size=None):
             if chunk:
@@ -160,7 +163,7 @@ class BaseHTTPClient:
 
     def __init__(
         self,
-        config: Optional[RequestConfig] = None,
+        config: RequestConfig | None = None,
         open_ak_sk: bool = False,
         sign_mode: SignMode = SignMode.SDK_HMAC_SHA256,
         region_id: str = "",
@@ -175,23 +178,23 @@ class BaseHTTPClient:
         self._credentials = None
         self._sdk_signer = None
 
-    def _get_security_token(self) -> Optional[str]:
+    def _get_security_token(self) -> str | None:
         """Get security token from credentials if available.
-        
+
         Returns:
             Security token string or None if not available.
         """
         if not self._credentials:
             return None
-        
-        security_token = getattr(self._credentials, 'security_token', None)
+
+        security_token = getattr(self._credentials, "security_token", None)
         if security_token:
             return security_token
-        
-        security_token = getattr(self._credentials, 'securityToken', None)
+
+        security_token = getattr(self._credentials, "securityToken", None)
         if security_token:
             return security_token
-        
+
         return None
 
     def _sign_request_v11(self, method: str, full_url: str, **kwargs) -> dict:
@@ -201,7 +204,8 @@ class BaseHTTPClient:
             self._credentials = create_credential()
 
         if not self._region_id:
-            raise ValueError("region_id is required for V11-HMAC-SHA256 signing")
+            msg = "region_id is required for V11-HMAC-SHA256 signing"
+            raise ValueError(msg)
 
         parsed_url = urlparse(full_url)
         host = parsed_url.netloc
@@ -216,18 +220,17 @@ class BaseHTTPClient:
         data = kwargs.get("data")
         json_data = kwargs.get("json")
 
-        body = None
         if data is not None:
             if isinstance(data, dict):
                 import urllib.parse
-                body = urllib.parse.urlencode(data)
+                urllib.parse.urlencode(data)
                 if "Content-Type" not in headers:
                     headers["Content-Type"] = "application/x-www-form-urlencoded"
             else:
-                body = data
+                pass
         elif json_data is not None:
             import json
-            body = json.dumps(json_data)
+            json.dumps(json_data)
             if "Content-Type" not in headers:
                 headers["Content-Type"] = "application/json"
 
@@ -241,7 +244,7 @@ class BaseHTTPClient:
             sk=self._credentials.sk,
             region_id=self._region_id
         )
-        
+
         headers = signer.sign(
             method=method,
             path=path,
@@ -303,8 +306,7 @@ class BaseHTTPClient:
         """Sign the HTTP request using AK/SK based on sign_mode."""
         if self._sign_mode == SignMode.V11_HMAC_SHA256:
             return self._sign_request_v11(method, full_url, **kwargs)
-        else:
-            return self._sign_request_sdk(method, full_url, **kwargs)
+        return self._sign_request_sdk(method, full_url, **kwargs)
 
     def _request(self, method: str, url: str, **kwargs) -> RequestResult:
         """
@@ -337,7 +339,7 @@ class BaseHTTPClient:
             kwargs = self._sign_request(method, full_url, **kwargs)
 
         timeout = kwargs.pop("timeout", self._config.timeout)
-        
+
         try:
             response = self._session.request(
                 method,
@@ -401,14 +403,14 @@ class BaseHTTPClient:
                 error=f"Unexpected error: {e}",
             )
 
-    def get(self, url: str, params: Optional[Dict] = None, **kwargs) -> RequestResult:
+    def get(self, url: str, params: dict | None = None, **kwargs) -> RequestResult:
         """Send GET request."""
         if params:
             kwargs["params"] = params
         return self._request("GET", url, **kwargs)
 
     def post(
-        self, url: str, data: Optional[Any] = None, json: Optional[Any] = None, **kwargs
+        self, url: str, data: Any | None = None, json: Any | None = None, **kwargs
     ) -> RequestResult:
         """Send POST request."""
         if data is not None:
@@ -418,7 +420,7 @@ class BaseHTTPClient:
         return self._request("POST", url, **kwargs)
 
     def put(
-        self, url: str, data: Optional[Any] = None, json: Optional[Any] = None, **kwargs
+        self, url: str, data: Any | None = None, json: Any | None = None, **kwargs
     ) -> RequestResult:
         """Send PUT request."""
         if data is not None:
@@ -428,7 +430,7 @@ class BaseHTTPClient:
         return self._request("PUT", url, **kwargs)
 
     def patch(
-        self, url: str, data: Optional[Any] = None, json: Optional[Any] = None, **kwargs
+        self, url: str, data: Any | None = None, json: Any | None = None, **kwargs
     ) -> RequestResult:
         """Send PATCH request."""
         if data is not None:
@@ -465,7 +467,7 @@ class BaseHTTPClient:
             self._session.close()
             self._session = None
 
-    def __enter__(self) -> "BaseHTTPClient":
+    def __enter__(self) -> Self:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

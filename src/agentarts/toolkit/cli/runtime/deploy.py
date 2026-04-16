@@ -1,6 +1,6 @@
 """Deploy command definition"""
 
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 
@@ -9,7 +9,7 @@ from agentarts.toolkit.operations.runtime import deploy as deploy_op
 
 def deploy(
     agent: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--agent", "-a", help="Agent name (uses default if not specified)"),
     ] = None,
     mode: Annotated[
@@ -25,23 +25,23 @@ def deploy(
         typer.Option("--tag", "-t", help="Docker image tag"),
     ] = "latest",
     port: Annotated[
-        Optional[int],
+        int | None,
         typer.Option("--port", "-p", help="Service port (overrides config)"),
     ] = None,
     local_port: Annotated[
-        Optional[int],
+        int | None,
         typer.Option("--local-port", "-l", help="Local port mapping (for local mode)"),
     ] = None,
     swr_org: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--swr-org", help="SWR organization (overrides config)"),
     ] = None,
     swr_repo: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--swr-repo", help="SWR repository (overrides config)"),
     ] = None,
     description: Annotated[
-        Optional[str],
+        str | None,
         typer.Option("--description", "-d", help="Agent description (overrides config)"),
     ] = None,
 ):

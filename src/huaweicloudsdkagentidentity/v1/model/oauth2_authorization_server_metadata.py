@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
 
@@ -15,19 +14,19 @@ class Oauth2AuthorizationServerMetadata:
     sensitive_list = []
 
     openapi_types = {
-        'authorization_endpoint': 'str',
-        'issuer': 'str',
-        'token_endpoint': 'str',
-        'response_types': 'list[str]',
-        'token_endpoint_auth_methods': 'list[str]'
+        "authorization_endpoint": "str",
+        "issuer": "str",
+        "token_endpoint": "str",
+        "response_types": "list[str]",
+        "token_endpoint_auth_methods": "list[str]"
     }
 
     attribute_map = {
-        'authorization_endpoint': 'authorization_endpoint',
-        'issuer': 'issuer',
-        'token_endpoint': 'token_endpoint',
-        'response_types': 'response_types',
-        'token_endpoint_auth_methods': 'token_endpoint_auth_methods'
+        "authorization_endpoint": "authorization_endpoint",
+        "issuer": "issuer",
+        "token_endpoint": "token_endpoint",
+        "response_types": "response_types",
+        "token_endpoint_auth_methods": "token_endpoint_auth_methods"
     }
 
     def __init__(self, authorization_endpoint=None, issuer=None, token_endpoint=None, response_types=None, token_endpoint_auth_methods=None):
@@ -46,8 +45,8 @@ class Oauth2AuthorizationServerMetadata:
         :param token_endpoint_auth_methods: Client authentication methods supported by the token endpoint.
         :type token_endpoint_auth_methods: list[str]
         """
-        
-        
+
+
 
         self._authorization_endpoint = None
         self._issuer = None
@@ -180,10 +179,7 @@ class Oauth2AuthorizationServerMetadata:
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -192,11 +188,10 @@ class Oauth2AuthorizationServerMetadata:
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

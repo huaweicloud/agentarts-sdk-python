@@ -1,14 +1,9 @@
 import asyncio
 import logging
 import uuid
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, Dict, List, Literal, Optional
-
-from huaweicloudsdkagentidentity.v1 import (
-    GetResourceStsTokenResponseBodyCredentials,
-    StsTag,
-    WorkloadIdentity,
-)
+from typing import Any, Literal
 
 from agentarts.sdk.identity.config import Config
 from agentarts.sdk.runtime.context import (
@@ -18,6 +13,11 @@ from agentarts.sdk.runtime.context import (
 from agentarts.sdk.service.identity.identity_client import IdentityClient
 from agentarts.sdk.service.identity.polling.token_poller import TokenPoller
 from agentarts.sdk.utils.constant import get_region
+from huaweicloudsdkagentidentity.v1 import (
+    GetResourceStsTokenResponseBodyCredentials,
+    StsTag,
+    WorkloadIdentity,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,15 +26,15 @@ def require_access_token(
     *,
     provider_name: str,
     into: str = "access_token",
-    scopes: Optional[List[str]] = None,
-    on_auth_url: Optional[Callable[[str], Any]] = None,
+    scopes: list[str] | None = None,
+    on_auth_url: Callable[[str], Any] | None = None,
     auth_flow: Literal["M2M", "USER_FEDERATION"],
-    callback_url: Optional[str] = None,
+    callback_url: str | None = None,
     force_authentication: bool = False,
-    token_poller: Optional[TokenPoller] = None,
-    custom_state: Optional[str] = None,
-    custom_parameters: Optional[Dict[str, str]] = None,
-    ignore_ssl_verification: Optional[bool] = None,
+    token_poller: TokenPoller | None = None,
+    custom_state: str | None = None,
+    custom_parameters: dict[str, str] | None = None,
+    ignore_ssl_verification: bool | None = None,
 ) -> Callable:
     """Decorator that fetches an OAuth2 access token before calling the decorated function.
 
@@ -75,8 +75,7 @@ def require_access_token(
         # Return the appropriate wrapper based on a function type
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
-        else:
-            return sync_wrapper
+        return sync_wrapper
 
     async def _get_resource_oauth2_token() -> str:
         """Common token fetching logic."""
@@ -100,7 +99,7 @@ def require_api_key(
     *,
     provider_name: str,
     into: str = "api_key",
-    ignore_ssl_verification: Optional[bool] = None,
+    ignore_ssl_verification: bool | None = None,
 ) -> Callable:
     """Decorator that fetches an API key before calling the decorated function.
 
@@ -129,8 +128,7 @@ def require_api_key(
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
-        else:
-            return sync_wrapper
+        return sync_wrapper
 
     def _get_api_key():
         return client.get_resource_api_key(
@@ -145,13 +143,13 @@ def require_sts_token(
     *,
     provider_name: str,
     agency_session_name: str,
-    duration_seconds: Optional[int] = None,
-    policy: Optional[str] = None,
-    source_identity: Optional[str] = None,
-    tags: Optional[List[StsTag]] = None,
-    transitive_tag_keys: Optional[List[str]] = None,
+    duration_seconds: int | None = None,
+    policy: str | None = None,
+    source_identity: str | None = None,
+    tags: list[StsTag] | None = None,
+    transitive_tag_keys: list[str] | None = None,
     into: str = "sts_credentials",
-    ignore_ssl_verification: Optional[bool] = None,
+    ignore_ssl_verification: bool | None = None,
 ) -> Callable:
     """Decorator that fetches an STS token before calling the decorated function.
 
@@ -205,8 +203,7 @@ def require_sts_token(
 
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
-        else:
-            return sync_wrapper
+        return sync_wrapper
 
     def _get_sts_token() -> GetResourceStsTokenResponseBodyCredentials:
         return client.get_resource_sts_token(
@@ -228,17 +225,16 @@ def _get_workload_access_token(client: IdentityClient) -> str:
     if token is not None:
         logger.info("Retrieved workload access token from context")
         return token
-    else:
-        # workload access token context var was not set, so we should be running in a local dev environment
-        logger.info(
-            "No workload access token found in context. Falling back to local authentication setup."
-        )
-        return _set_up_local_auth(client)
+    # workload access token context var was not set, so we should be running in a local dev environment
+    logger.info(
+        "No workload access token found in context. Falling back to local authentication setup."
+    )
+    return _set_up_local_auth(client)
 
 
 def _get_oauth2_callback_url(
-    user_provided_oauth2_callback_url: Optional[str],
-) -> Optional[str]:
+    user_provided_oauth2_callback_url: str | None,
+) -> str | None:
     if user_provided_oauth2_callback_url:
         return user_provided_oauth2_callback_url
 
@@ -246,8 +242,8 @@ def _get_oauth2_callback_url(
 
 
 def _get_oauth2_custom_state(
-    user_provided_custom_state: Optional[str],
-) -> Optional[str]:
+    user_provided_custom_state: str | None,
+) -> str | None:
     if user_provided_custom_state:
         return user_provided_custom_state
 

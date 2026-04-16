@@ -1,4 +1,3 @@
-# coding: utf-8
 
 from huaweicloudsdkcore.sdk_response import SdkResponse
 from huaweicloudsdkcore.utils.http_utils import sanitize_for_serialization
@@ -16,13 +15,13 @@ class ListOauth2CredentialProvidersResponse(SdkResponse):
     sensitive_list = []
 
     openapi_types = {
-        'credential_providers': 'list[Oauth2CredentialProviderSummary]',
-        'page_info': 'PageInfo'
+        "credential_providers": "list[Oauth2CredentialProviderSummary]",
+        "page_info": "PageInfo"
     }
 
     attribute_map = {
-        'credential_providers': 'credential_providers',
-        'page_info': 'page_info'
+        "credential_providers": "credential_providers",
+        "page_info": "page_info"
     }
 
     def __init__(self, credential_providers=None, page_info=None):
@@ -30,12 +29,12 @@ class ListOauth2CredentialProvidersResponse(SdkResponse):
 
         The model defined in huaweicloud sdk
 
-        :param credential_providers: 
+        :param credential_providers:
         :type credential_providers: list[:class:`huaweicloudsdkagentidentity.v1.Oauth2CredentialProviderSummary`]
-        :param page_info: 
+        :param page_info:
         :type page_info: :class:`huaweicloudsdkagentidentity.v1.PageInfo`
         """
-        
+
         super().__init__()
 
         self._credential_providers = None
@@ -86,16 +85,13 @@ class ListOauth2CredentialProvidersResponse(SdkResponse):
     def to_dict(self):
         import warnings
         warnings.warn("ListOauth2CredentialProvidersResponse.to_dict() is deprecated and no longer maintained, "
-                      "use to_json_object() to get the response content.", DeprecationWarning)
+                      "use to_json_object() to get the response content.", DeprecationWarning, stacklevel=2)
         result = {}
 
         for attr, _ in self.openapi_types.items():
             value = getattr(self, attr)
             if isinstance(value, list):
-                result[attr] = list(map(
-                    lambda x: x.to_dict() if hasattr(x, "to_dict") else x,
-                    value
-                ))
+                result[attr] = [x.to_dict() if hasattr(x, "to_dict") else x for x in value]
             elif hasattr(value, "to_dict"):
                 result[attr] = value.to_dict()
             elif isinstance(value, dict):
@@ -104,11 +100,10 @@ class ListOauth2CredentialProvidersResponse(SdkResponse):
                     if hasattr(item[1], "to_dict") else item,
                     value.items()
                 ))
+            elif attr in self.sensitive_list:
+                result[attr] = "****"
             else:
-                if attr in self.sensitive_list:
-                    result[attr] = "****"
-                else:
-                    result[attr] = value
+                result[attr] = value
 
         return result
 

@@ -1,5 +1,11 @@
+from typing import TYPE_CHECKING
+
 import pytest
+
 from agentarts.sdk.identity.auth import require_access_token
+
+if TYPE_CHECKING:
+    from unittest.mock import MagicMock
 
 
 @pytest.mark.asyncio
@@ -172,9 +178,8 @@ def test_require_access_token_passes_ignore_ssl_verification(
 
     # We need to find where the MockClass is. Since we imported it from auth, it is the MockClass.
     from typing import cast
-    from unittest.mock import MagicMock
 
-    mock_client_class = cast(MagicMock, IdentityClient)
+    mock_client_class = cast("MagicMock", IdentityClient)
     mock_client_class.assert_called_with(
         region="ap-southeast-4", ignore_ssl_verification=True
     )

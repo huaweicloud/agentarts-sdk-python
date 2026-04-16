@@ -1,6 +1,6 @@
 """Config command definitions"""
 
-from typing import Annotated, Optional
+from typing import Annotated
 
 import typer
 from rich.console import Console
@@ -8,10 +8,9 @@ from rich.prompt import Prompt
 
 from agentarts.toolkit.operations.runtime import config as config_op
 from agentarts.toolkit.utils.common import (
-    echo_success,
     echo_error,
     echo_info,
-    echo_key_value,
+    echo_success,
 )
 
 console = Console()
@@ -26,12 +25,12 @@ config_app = typer.Typer(
 @config_app.callback()
 def main(
     ctx: typer.Context,
-    name: Annotated[Optional[str], typer.Option("--name", "-n", help="Agent name")] = None,
-    entrypoint: Annotated[Optional[str], typer.Option("--entrypoint", "-e", help="Agent entrypoint (e.g., app:main)")] = None,
-    region: Annotated[Optional[str], typer.Option("--region", "-r", help="Huawei Cloud region (e.g., cn-southwest-2)")] = None,
-    dependency_file: Annotated[Optional[str], typer.Option("--dependency-file", "-d", help="Path to dependency file (e.g., requirements.txt)")] = None,
-    swr_organization: Annotated[Optional[str], typer.Option("--swr-org", help="SWR organization name")] = None,
-    swr_repository: Annotated[Optional[str], typer.Option("--swr-repo", help="SWR repository name")] = None,
+    name: Annotated[str | None, typer.Option("--name", "-n", help="Agent name")] = None,
+    entrypoint: Annotated[str | None, typer.Option("--entrypoint", "-e", help="Agent entrypoint (e.g., app:main)")] = None,
+    region: Annotated[str | None, typer.Option("--region", "-r", help="Huawei Cloud region (e.g., cn-southwest-2)")] = None,
+    dependency_file: Annotated[str | None, typer.Option("--dependency-file", "-d", help="Path to dependency file (e.g., requirements.txt)")] = None,
+    swr_organization: Annotated[str | None, typer.Option("--swr-org", help="SWR organization name")] = None,
+    swr_repository: Annotated[str | None, typer.Option("--swr-repo", help="SWR repository name")] = None,
     set_default: Annotated[bool, typer.Option("--set-default/--no-set-default", help="Set as default agent")] = True,
 ):
     """
@@ -99,10 +98,10 @@ def main(
     if agent_dependency_file is None:
         existing_config = config_op.get_agent(agent_name)
         default_dep = existing_config.base.dependency_file if existing_config else None
-        
+
         if default_dep is None:
             default_dep = config_op.detect_dependency_file()
-        
+
         console.print(f"\n[bold]Dependency file [cyan]({default_dep})[/cyan]:[/bold]")
         console.print("[dim]  Auto-detected from requirements.txt or pyproject.toml. Press Enter to use default[/dim]")
         agent_dependency_file = Prompt.ask("  File", default=default_dep)
@@ -113,15 +112,15 @@ def main(
         existing_config = config_op.get_agent(agent_name)
         default_org = existing_config.swr_config.organization if existing_config else None
         auto_org = "agentarts-org"
-        
-        console.print(f"\n[bold]SWR Organization:[/bold]")
+
+        console.print("\n[bold]SWR Organization:[/bold]")
         if default_org:
             console.print(f"[dim]  Current: [cyan]{default_org}[/cyan]. Press Enter to keep current, or input new name[/dim]")
         else:
             console.print(f"[dim]  Press Enter for auto-create [cyan]{auto_org}[/cyan]. Or input existing organization name[/dim]")
-        
+
         org_input = Prompt.ask("  Organization", default="")
-        
+
         if org_input:
             org = org_input
             auto_create_org = False
@@ -138,15 +137,15 @@ def main(
         existing_config = config_op.get_agent(agent_name)
         default_repo = existing_config.swr_config.repository if existing_config else None
         auto_repo = agent_name
-        
-        console.print(f"\n[bold]SWR Repository:[/bold]")
+
+        console.print("\n[bold]SWR Repository:[/bold]")
         if default_repo:
             console.print(f"[dim]  Current: [cyan]{default_repo}[/cyan]. Press Enter to keep current, or input new name[/dim]")
         else:
             console.print(f"[dim]  Press Enter for auto-create [cyan]{auto_repo}[/cyan]. Or input existing repository name[/dim]")
-        
+
         repo_input = Prompt.ask("  Repository", default="")
-        
+
         if repo_input:
             repo = repo_input
             auto_create_repo = False
@@ -216,8 +215,8 @@ def set_default(
 
 @config_app.command("get")
 def get(
-    key: Annotated[Optional[str], typer.Argument(help="Configuration key (dot notation, e.g., base.region)")] = None,
-    agent: Annotated[Optional[str], typer.Option("--agent", "-a", help="Agent name")] = None,
+    key: Annotated[str | None, typer.Argument(help="Configuration key (dot notation, e.g., base.region)")] = None,
+    agent: Annotated[str | None, typer.Option("--agent", "-a", help="Agent name")] = None,
 ):
     """
     Get configuration value or agent details.
@@ -241,7 +240,7 @@ def get(
 def set(
     key: Annotated[str, typer.Argument(help="Configuration key (dot notation, e.g., base.region)")],
     value: Annotated[str, typer.Argument(help="Configuration value")],
-    agent: Annotated[Optional[str], typer.Option("--agent", "-a", help="Agent name")] = None,
+    agent: Annotated[str | None, typer.Option("--agent", "-a", help="Agent name")] = None,
 ):
     """
     Set configuration value.
