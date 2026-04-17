@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "agentarts-sdk"
-version = "0.1.0"
+version = "0.1.0dev41702"
 description = "Huawei Cloud AgentArts SDK - Build, deploy and manage AI agents with cloud capabilities"
 readme = "README.md"
 license = {file = "LICENSE"}
