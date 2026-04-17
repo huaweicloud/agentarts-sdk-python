@@ -144,27 +144,25 @@ def get_memory_endpoint(
 
     Supports two endpoint types:
     - "control": Returns the control plane endpoint (same as get_control_plane_endpoint).
-    - "data": Returns the memory data plane endpoint. Requires space_id
-              unless AGENTARTS_MEMORY_DATA_ENDPOINT is set.
+    - "data": Returns the memory data plane endpoint.
 
     Args:
         endpoint_type: Either "control" or "data".
         region: Huawei Cloud region. Auto-detected if not provided.
-        space_id: Agent workspace ID. Required for "data" endpoint type.
+        space_id: Agent workspace ID. Deprecated - no longer used for endpoint construction.
 
     Returns:
         The memory service endpoint URL.
 
     Raises:
-        ValueError: If endpoint_type is not "control" or "data",
-                    or if space_id is missing for "data" type.
+        ValueError: If endpoint_type is not "control" or "data".
 
     Example:
         >>> get_memory_endpoint("control", "cn-southwest-2")
         "https://agentarts.cn-southwest-2.myhuaweicloud.com"
 
-        >>> get_memory_endpoint("data", "cn-southwest-2", "my-workspace")
-        "https://my-workspace.memory.cn-southwest-2.agentarts.myhuaweicloud.com"
+        >>> get_memory_endpoint("data", "cn-southwest-2")
+        "https://memory.cn-southwest-2.huaweicloud-agentarts.com"
     """
     if endpoint_type == "control":
         return get_control_plane_endpoint(region)
@@ -172,11 +170,8 @@ def get_memory_endpoint(
         memory_endpoint = os.getenv(ENV_AGENTARTS_MEMORY_DATA_ENDPOINT)
         if memory_endpoint:
             return _ensure_https(memory_endpoint)
-        if not space_id:
-            msg = "space_id is required for data endpoint"
-            raise ValueError(msg)
         region = region or get_region()
-        return f"https://{space_id}.memory.{region}.agentarts.myhuaweicloud.com"
+        return f"https://memory.{region}.huaweicloud-agentarts.com"
     msg = f"Invalid endpoint type: {endpoint_type}"
     raise ValueError(msg)
 

@@ -143,13 +143,13 @@ class TestGetMemoryEndpoint:
         result = get_memory_endpoint("data")
         assert result == "https://memory.example.com"
 
-    def test_data_type_constructs_from_region_and_space(self, monkeypatch):
-        """Constructs data endpoint from region and space_id."""
+    def test_data_type_constructs_default_endpoint(self, monkeypatch):
+        """Constructs data endpoint with new default domain format."""
         monkeypatch.delenv("AGENTARTS_MEMORY_DATA_ENDPOINT", raising=False)
         monkeypatch.delenv("AGENTARTS_CONTROL_ENDPOINT", raising=False)
         monkeypatch.setenv("HUAWEICLOUD_SDK_REGION", "cn-north-4")
-        result = get_memory_endpoint("data", "cn-north-4", "my-workspace")
-        assert result == "https://my-workspace.memory.cn-north-4.agentarts.myhuaweicloud.com"
+        result = get_memory_endpoint("data", "cn-north-4")
+        assert result == "https://memory.cn-north-4.huaweicloud-agentarts.com"
 
     def test_data_type_uses_default_region(self, monkeypatch):
         """Uses default region when not provided for data endpoint."""
@@ -158,14 +158,15 @@ class TestGetMemoryEndpoint:
         monkeypatch.delenv("HUAWEICLOUD_SDK_REGION", raising=False)
         monkeypatch.delenv("HUAWEICLOUD_REGION", raising=False)
         monkeypatch.delenv("OS_REGION_NAME", raising=False)
-        result = get_memory_endpoint("data", space_id="my-workspace")
-        assert result == "https://my-workspace.memory.cn-southwest-2.agentarts.myhuaweicloud.com"
+        result = get_memory_endpoint("data")
+        assert result == "https://memory.cn-southwest-2.huaweicloud-agentarts.com"
 
-    def test_data_type_raises_without_space_id(self, monkeypatch):
-        """Raises ValueError when space_id is not provided for 'data' type."""
+    def test_data_type_works_without_space_id(self, monkeypatch):
+        """Works correctly when space_id is not provided for 'data' type."""
         monkeypatch.delenv("AGENTARTS_MEMORY_DATA_ENDPOINT", raising=False)
-        with pytest.raises(ValueError, match="space_id is required"):
-            get_memory_endpoint("data")
+        monkeypatch.setenv("HUAWEICLOUD_SDK_REGION", "cn-north-4")
+        result = get_memory_endpoint("data")
+        assert result == "https://memory.cn-north-4.huaweicloud-agentarts.com"
 
     def test_invalid_type_raises(self, monkeypatch):
         """Raises ValueError for invalid endpoint_type."""
@@ -175,15 +176,15 @@ class TestGetMemoryEndpoint:
     def test_data_type_env_endpoint_overrides_construction(self, monkeypatch):
         """AGENTARTS_MEMORY_DATA_ENDPOINT takes priority over constructed URL."""
         monkeypatch.setenv("AGENTARTS_MEMORY_DATA_ENDPOINT", "https://custom-memory.example.com")
-        result = get_memory_endpoint("data", "cn-north-4", "my-workspace")
+        result = get_memory_endpoint("data", "cn-north-4")
         assert result == "https://custom-memory.example.com"
 
     def test_data_type_with_explicit_region(self, monkeypatch):
         """Uses explicit region parameter for data endpoint construction."""
         monkeypatch.delenv("AGENTARTS_MEMORY_DATA_ENDPOINT", raising=False)
         monkeypatch.setenv("HUAWEICLOUD_SDK_REGION", "cn-north-4")
-        result = get_memory_endpoint("data", "cn-southwest-2", "my-workspace")
-        assert result == "https://my-workspace.memory.cn-southwest-2.agentarts.myhuaweicloud.com"
+        result = get_memory_endpoint("data", "cn-southwest-2")
+        assert result == "https://memory.cn-southwest-2.huaweicloud-agentarts.com"
 
 
 # ============================================================
