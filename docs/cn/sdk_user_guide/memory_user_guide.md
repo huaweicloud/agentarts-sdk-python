@@ -29,6 +29,27 @@ export HUAWEICLOUD_SDK_SK="your-secret-key"
 2. 进入"我的凭证"页面
 3. 在"访问密钥"标签页创建或查看 AK/SK
 
+### 数据面端点配置
+
+Memory 数据面端点可以通过以下方式配置（按优先级排序）：
+
+1. **环境变量**（最高优先级）：
+   ```bash
+   export AGENTARTS_MEMORY_DATA_ENDPOINT="https://memory.cn-north-4.huaweicloud-agentarts.com"
+   ```
+
+2. **初始化参数**：
+   ```python
+   client = MemoryClient(
+       region_name="cn-north-4",
+       endpoint="https://your-custom-endpoint.com"
+   )
+   ```
+
+3. **默认值**：SDK 内置默认端点 `https://memory.{region}.huaweicloud-agentarts.com`
+
+> **Note:** 更多环境变量配置请参考 [环境变量配置指南](environment_variables.md)。
+
 ### API Key 配置
 
 创建 Space 后会生成 API Key，用于数据面操作。配置方式：
