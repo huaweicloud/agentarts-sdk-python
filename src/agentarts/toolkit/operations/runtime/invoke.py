@@ -1,6 +1,7 @@
 """Invoke operation implementation"""
 
 import json
+import logging
 import os
 import uuid
 from enum import Enum
@@ -22,6 +23,7 @@ from agentarts.toolkit.operations.runtime.config import (
 from agentarts.toolkit.utils.common import echo_error, echo_info, echo_success
 
 console = Console()
+logger = logging.getLogger(__name__)
 
 
 def _resolve_agent_info(
@@ -40,27 +42,39 @@ def _resolve_agent_info(
     """
     agent_id = None
     auth_type = None
+    config_path = get_config_file_path()
+    config = None
+    if config_path.exists():
+        config = load_config()
+
     if agent_name is None:
-        config_path = get_config_file_path()
-        if config_path.exists():
-            config = load_config()
-            if config:
-                if config.default_agent and config.default_agent in (config.agents or {}):
-                    agent_name = config.default_agent
-                    agent_config = config.agents[agent_name]
+        if config:
+            if config.default_agent and config.default_agent in (config.agents or {}):
+                agent_name = config.default_agent
+                agent_config = config.agents[agent_name]
+                region = region or agent_config.base.region
+                agent_id = agent_config.runtime.agent_id
+                if agent_config.runtime.identity_configuration:
+                    auth_type = agent_config.runtime.identity_configuration.authorizer_type
+            elif config.agents:
+                first_agent_key = next(iter(config.agents.keys()), None)
+                if first_agent_key:
+                    agent_name = first_agent_key
+                    agent_config = config.agents[first_agent_key]
                     region = region or agent_config.base.region
                     agent_id = agent_config.runtime.agent_id
                     if agent_config.runtime.identity_configuration:
                         auth_type = agent_config.runtime.identity_configuration.authorizer_type
-                elif config.agents:
-                    first_agent_key = next(iter(config.agents.keys()), None)
-                    if first_agent_key:
-                        agent_name = first_agent_key
-                        agent_config = config.agents[first_agent_key]
-                        region = region or agent_config.base.region
-                        agent_id = agent_config.runtime.agent_id
-                        if agent_config.runtime.identity_configuration:
-                            auth_type = agent_config.runtime.identity_configuration.authorizer_type
+    elif config:
+        if agent_name in (config.agents or {}):
+            agent_config = config.agents[agent_name]
+            region = region or agent_config.base.region
+            agent_id = agent_config.runtime.agent_id
+            if agent_config.runtime.identity_configuration:
+                auth_type = agent_config.runtime.identity_configuration.authorizer_type
+        else:
+            logger.info("Agent '%s' not found in config, using default IAM authentication", agent_name)
+            auth_type = "IAM"
     return agent_name, region, agent_id, auth_type
 
 

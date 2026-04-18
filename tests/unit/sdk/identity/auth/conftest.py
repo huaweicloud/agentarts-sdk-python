@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -13,6 +13,19 @@ def mock_identity_client():
         # Pre-configure common async methods
         mock_instance.get_resource_oauth2_token = AsyncMock()
         yield mock_instance
+
+
+@pytest.fixture
+def mock_identity_client_class():
+    """Fixture to mock IdentityClient class for verifying constructor calls."""
+    with patch.object(auth, "IdentityClient") as MockClass:
+        mock_instance = MockClass.return_value
+        mock_instance.get_resource_oauth2_token = AsyncMock()
+        mock_instance.get_resource_api_key = MagicMock(return_value="mock-api-key")
+        mock_instance.get_resource_sts_token = MagicMock(return_value={})
+        mock_instance.create_workload_identity = MagicMock()
+        mock_instance.create_workload_access_token = MagicMock(return_value="mock-workload-token")
+        yield MockClass
 
 
 @pytest.fixture

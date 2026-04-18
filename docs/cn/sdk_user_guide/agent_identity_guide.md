@@ -232,15 +232,24 @@ export HUAWEICLOUD_SDK_DOMAIN_ID="your-domain-id"
 
 #### 自定义服务终端节点 (Endpoint)
 
-您可以使用遵循 `HUAWEICLOUD_SDK_REGION_AGENTIDENTITY_{REGION_ID}={endpoint}` 模式的环境变量来自定义特定区域的 Agent
-Identity 服务终端节点。
+您可以使用以下环境变量自定义各服务的终端节点：
 
-例如：
+| 环境变量 | 说明 | 默认值 |
+|----------|------|--------|
+| `HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT` | Agent Identity 服务端点 | `https://agent-identity.{region}.myhuaweicloud.com` |
+| `HUAWEICLOUD_SDK_IAM_ENDPOINT` | IAM 服务端点 | `https://iam.{region}.myhuaweicloud.com` |
+
+**配置示例：**
 
 ```bash
-# 自定义 cn-southwest-301 区域的终端节点
+# 自定义 Agent Identity 服务端点
+export HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT="https://agent-identity.cn-north-4.myhuaweicloud.com"
+
+# 自定义 cn-southwest-301 区域的终端节点（特殊格式）
 export HUAWEICLOUD_SDK_REGION_AGENTIDENTITY_CN_SOUTHWEST_301="https://agent-identity-open.cn-southwest-301.beta.myhuaweicloud.com"
 ```
+
+> **Note:** 更多环境变量配置请参考 [环境变量配置指南](environment_variables.md)。
 
 ### 2. 使用装饰器
 

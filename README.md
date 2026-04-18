@@ -237,6 +237,8 @@ export HUAWEICLOUD_SDK_SK="your-secret-key"
 
 > **Note:** Get your AK/SK from [Huawei Cloud Console](https://console.huaweicloud.com/) -> My Credentials -> Access Keys.
 
+For complete environment variable configuration, see [Environment Variables Guide](docs/cn/sdk_user_guide/environment_variables.md).
+
 ## Quick Start
 
 ### 1. Initialize a New Project

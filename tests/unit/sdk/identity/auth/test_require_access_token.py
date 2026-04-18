@@ -1,11 +1,6 @@
-from typing import TYPE_CHECKING
-
 import pytest
 
 from agentarts.sdk.identity.auth import require_access_token
-
-if TYPE_CHECKING:
-    from unittest.mock import MagicMock
 
 
 @pytest.mark.asyncio
@@ -151,15 +146,16 @@ async def test_require_access_token_uses_user_id_from_context_in_local_fallback(
 
 
 def test_require_access_token_passes_ignore_ssl_verification(
-    mock_identity_client, mock_context_token, monkeypatch
+    mock_identity_client_class, mock_context_token, monkeypatch
 ):
     """Test that ignore_ssl_verification is passed to IdentityClient."""
-    from agentarts.sdk.identity.auth import IdentityClient
-
     # Explicitly set the region env variable so the test is deterministic
     monkeypatch.setenv("HUAWEICLOUD_SDK_REGION", "ap-southeast-4")
 
     mock_context_token.return_value = "workload-token"
+    mock_identity_client_class.return_value.get_resource_oauth2_token.return_value = (
+        "mock-token"
+    )
 
     @require_access_token(
         provider_name="test",
@@ -170,16 +166,11 @@ def test_require_access_token_passes_ignore_ssl_verification(
     def decorated_func(access_token=None):
         return access_token
 
-    # The IdentityClient is initialized when the decorator is applied
-    # So we check the mock call args on the class (which is IdentityClient in auth.py)
-    # We need to get the mock class from the fixture
-    # In conftest.py, it's: with patch.object(auth, "IdentityClient") as MockClass:
-    # So IdentityClient in auth.py is now that MockClass.
+    # WHEN: The decorated function is called
+    result = decorated_func()
 
-    # We need to find where the MockClass is. Since we imported it from auth, it is the MockClass.
-    from typing import cast
-
-    mock_client_class = cast("MagicMock", IdentityClient)
-    mock_client_class.assert_called_with(
+    # THEN: IdentityClient should be called with ignore_ssl_verification=True
+    assert result == "mock-token"
+    mock_identity_client_class.assert_called_once_with(
         region="ap-southeast-4", ignore_ssl_verification=True
     )
