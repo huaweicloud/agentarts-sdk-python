@@ -120,7 +120,7 @@ def invoke(
     ] = None,
     bearer_token: Annotated[
         str | None,
-        typer.Option("--bearer-token", help="Bearer token for authentication"),
+        typer.Option("--bearer-token", "-bt", help="Bearer token for authentication"),
     ] = None,
     timeout: Annotated[
         int,
