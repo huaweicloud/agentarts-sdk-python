@@ -71,20 +71,21 @@ class MCPGatewayClient(BaseHTTPClient):
 
             # Agency configuration
             agency_name = "AgentArtsCoreGateway"
+            # Set service principal to service.WorkloadSandboxMetadata
+            service_principal = "service.WorkloadSandboxMetadata"
             trust_policy = {
                 "Version": "5.0",
                 "Statement": [
                     {
                         "Action": [
                             "csms:secret:getVersion"
-                            "agentIdentity::getAuthorizerConfiguration",
                             "agentIdentity::getResourceApiKey",
                             "agentIdentity::getResourceOauth2Token",
                             "agentIdentity::getResourceStsToken",
                         ],
                         "Effect": "Allow",
                         "Principal": {
-                            "Service": ["service.SandboxMetadata"]
+                            "Service": [service_principal]
                         }
                     }
                 ]
