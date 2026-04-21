@@ -210,6 +210,45 @@ export HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT="https://agent-identity.cn-north-4
 
 ## 其他配置
 
+### SDK 日志级别
+
+用于控制 SDK 的日志输出级别：
+
+| 环境变量 | 说明 | 默认值 |
+|----------|------|--------|
+| `AGENTARTS_LOG_LEVEL` | SDK 日志级别 | `INFO` |
+
+**可选值：** `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
+
+**配置示例：**
+
+```bash
+# 开启详细日志（调试模式）
+export AGENTARTS_LOG_LEVEL="DEBUG"
+
+# 只显示警告及以上级别的日志
+export AGENTARTS_LOG_LEVEL="WARNING"
+```
+
+**代码配置方式：**
+
+```python
+from agentarts.sdk.utils.logging import setup_logging
+
+# 设置日志级别
+setup_logging(level="DEBUG")
+
+# 或使用环境变量（自动读取 AGENTARTS_LOG_LEVEL）
+setup_logging()
+
+# 自定义日志输出到文件
+import logging
+setup_logging(
+    level="DEBUG",
+    handler=logging.FileHandler("/var/log/agentarts/app.log")
+)
+```
+
 ### Python 基础镜像
 
 用于指定 Agent 部署时的 Python 基础镜像：
