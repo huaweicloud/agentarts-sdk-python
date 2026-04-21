@@ -715,3 +715,106 @@ class TestInvokeHandler:
 
         with pytest.raises(RuntimeError, match="Handler failed"):
             await app._invoke_handler(failing_handler, context, False, {})
+
+
+class TestInvokeHandlerContextPropagation:
+    """Tests for contextvars propagation in _invoke_handler."""
+
+    @pytest.mark.asyncio
+    async def test_sync_handler_gets_workload_access_token(self):
+        """Sync handler should be able to read workload_access_token from AgentArtsRuntimeContext."""
+        app = AgentArtsRuntimeApp()
+
+        def sync_handler(payload):
+            token = AgentArtsRuntimeContext.get_workload_access_token()
+            return {"token": token}
+
+        AgentArtsRuntimeContext.set_workload_access_token("test-workload-token-123")
+        try:
+            context = RequestContext(session_id="test", request_id="req-1", request=None)
+            result = await app._invoke_handler(sync_handler, context, False, {})
+            assert result["token"] == "test-workload-token-123"
+        finally:
+            AgentArtsRuntimeContext.set_workload_access_token(None)
+
+    @pytest.mark.asyncio
+    async def test_async_handler_gets_workload_access_token(self):
+        """Async handler should be able to read workload_access_token from AgentArtsRuntimeContext."""
+        app = AgentArtsRuntimeApp()
+
+        async def async_handler(payload):
+            token = AgentArtsRuntimeContext.get_workload_access_token()
+            return {"token": token}
+
+        AgentArtsRuntimeContext.set_workload_access_token("test-workload-token-456")
+        try:
+            context = RequestContext(session_id="test", request_id="req-1", request=None)
+            result = await app._invoke_handler(async_handler, context, False, {})
+            assert result["token"] == "test-workload-token-456"
+        finally:
+            AgentArtsRuntimeContext.set_workload_access_token(None)
+
+    @pytest.mark.asyncio
+    async def test_sync_handler_gets_session_id(self):
+        """Sync handler should be able to read session_id from AgentArtsRuntimeContext."""
+        app = AgentArtsRuntimeApp()
+
+        def sync_handler(payload):
+            session_id = AgentArtsRuntimeContext.get_session_id()
+            return {"session_id": session_id}
+
+        AgentArtsRuntimeContext.set_session_id("session-abc")
+        try:
+            context = RequestContext(session_id="test", request_id="req-1", request=None)
+            result = await app._invoke_handler(sync_handler, context, False, {})
+            assert result["session_id"] == "session-abc"
+        finally:
+            AgentArtsRuntimeContext.set_session_id(None)
+
+    @pytest.mark.asyncio
+    async def test_sync_handler_gets_user_id(self):
+        """Sync handler should be able to read user_id from AgentArtsRuntimeContext."""
+        app = AgentArtsRuntimeApp()
+
+        def sync_handler(payload):
+            user_id = AgentArtsRuntimeContext.get_user_id()
+            return {"user_id": user_id}
+
+        AgentArtsRuntimeContext.set_user_id("user-xyz")
+        try:
+            context = RequestContext(session_id="test", request_id="req-1", request=None)
+            result = await app._invoke_handler(sync_handler, context, False, {})
+            assert result["user_id"] == "user-xyz"
+        finally:
+            AgentArtsRuntimeContext.set_user_id(None)
+
+    @pytest.mark.asyncio
+    async def test_concurrent_sync_handlers_isolated_context(self):
+        """Concurrent sync handlers should have isolated contextvars."""
+        import asyncio
+
+        app = AgentArtsRuntimeApp()
+        results = {}
+
+        def make_handler(key, token_value):
+            def handler(payload):
+                local_token = AgentArtsRuntimeContext.get_workload_access_token()
+                results[key] = local_token
+                return {"key": key, "token": local_token}
+            return handler
+
+        async def run_with_context(key, token_value):
+            AgentArtsRuntimeContext.set_workload_access_token(token_value)
+            try:
+                context = RequestContext(session_id="test", request_id="req-1", request=None)
+                return await app._invoke_handler(make_handler(key, token_value), context, False, {})
+            finally:
+                AgentArtsRuntimeContext.set_workload_access_token(None)
+
+        await asyncio.gather(
+            run_with_context("handler_a", "token-A"),
+            run_with_context("handler_b", "token-B"),
+        )
+
+        assert results["handler_a"] == "token-A"
+        assert results["handler_b"] == "token-B"
