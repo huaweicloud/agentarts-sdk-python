@@ -19,6 +19,7 @@ pulling in the full FastAPI dependency at runtime.
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import inspect
 import json
 import logging
@@ -383,8 +384,9 @@ class AgentArtsRuntimeApp(Starlette):
                 if asyncio.iscoroutinefunction(handler):
                     return await handler(*args)
                 loop = asyncio.get_event_loop()
+                ctx = contextvars.copy_context()
                 return await loop.run_in_executor(
-                    self._invocation_executor, handler, *args
+                    self._invocation_executor, lambda: ctx.run(handler, *args)
                 )
             except Exception as exc:
                 handler_name = getattr(handler, "__name__", "unknown")
