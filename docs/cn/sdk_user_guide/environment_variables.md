@@ -263,6 +263,31 @@ setup_logging(
 export PYTHON_BASE_IMAGE="python:3.11-slim"
 ```
 
+### 运行时监听地址
+
+用于指定 Agent 运行时的监听地址：
+
+| 环境变量 | 说明 | 默认值 |
+|----------|------|--------|
+| `AGENTARTS_BIND_IP` | 运行时监听地址 | Docker: 自动获取 eth0 IP，本地: `127.0.0.1` |
+
+**默认行为：**
+
+| 环境 | 默认监听地址 |
+|------|-------------|
+| Docker 容器 | 自动获取 eth0 接口 IP（通过 `ip addr show eth0`） |
+| 本地开发 | `127.0.0.1` |
+
+**配置示例：**
+
+```bash
+# 手动指定监听地址
+export AGENTARTS_BIND_IP="0.0.0.0"
+
+# 或在代码中指定
+app.run(host="0.0.0.0", port=8080)
+```
+
 ---
 
 ## 环境变量优先级说明

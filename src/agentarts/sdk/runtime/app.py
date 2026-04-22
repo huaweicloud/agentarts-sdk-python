@@ -609,16 +609,37 @@ class AgentArtsRuntimeApp(Starlette):
             handler.run(host="0.0.0.0", port=8080)
 
         Args:
-            host: Bind address.  Defaults to ``"0.0.0.0"``.
-            port: Bind port.  Defaults to ``8080``.
+            host: Bind address. Defaults to eth0 IP in Docker environment,
+                or ``"127.0.0.1"`` in local development.
+                Can be overridden via ``AGENTARTS_BIND_IP`` environment variable.
+            port: Bind port. Defaults to ``8080``.
             **kwargs: Additional keyword arguments forwarded to
                 ``uvicorn.run`` (e.g. ``workers``, ``log_level``).
         """
+        import subprocess
+
         import uvicorn
 
         if host is None:
-            if os.path.exists("/.dockerenv") or os.getenv("DOCKER_CONTAINER"):
-                host = "0.0.0.0"
+            env_bind_ip = os.getenv("AGENTARTS_BIND_IP")
+            if env_bind_ip:
+                host = env_bind_ip
+            elif os.path.exists("/.dockerenv") or os.getenv("DOCKER_CONTAINER"):
+                try:
+                    result = subprocess.run(
+                        "ip addr show eth0 | grep -oP 'inet \\K[\\d.]+'",
+                        shell=True,
+                        capture_output=True,
+                        text=True,
+                        check=True,
+                    )
+                    ip = result.stdout.strip()
+                    if ip:
+                        host = ip
+                    else:
+                        host = "0.0.0.0"
+                except Exception:
+                    host = "0.0.0.0"
             else:
                 host = "127.0.0.1"
 
