@@ -47,7 +47,11 @@ def render_dockerfile(
 
     user_section = f"""# Create non-root user for security
 RUN groupadd -g {group_id} {user_name} && \\
-    useradd -u {user_id} -g {group_id} -m -s /bin/bash {user_name}"""
+    useradd -u {user_id} -g {group_id} -m -s /bin/bash {user_name}
+
+# Install iproute2 for network interface IP detection
+RUN apt-get update && apt-get install -y --no-install-recommends iproute2 && \\
+    rm -rf /var/lib/apt/lists/*"""
 
     chown_section = f"RUN chown {user_name}:{user_name} /app"
 
@@ -61,7 +65,7 @@ RUN pip install --no-cache-dir -r {dependency_file}"""
 
     if entrypoint and ":" in entrypoint:
         module, app_target = entrypoint.split(":")
-        cmd_section = f'CMD ["uvicorn", "{module}:{app_target}", "--host", "0.0.0.0", "--port", "{port}"]'
+        cmd_section = f'CMD ["uvicorn", "{module}:{app_target}", "--port", "{port}"]'
     else:
         cmd_section = 'CMD ["python", "-m", "agentarts.server", "--config", "agentarts.yaml"]'
 
