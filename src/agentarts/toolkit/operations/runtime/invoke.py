@@ -82,6 +82,7 @@ def _get_data_endpoint(
     agent_name: str,
     region: str,
     agent_id: str | None = None,
+    verify_ssl: bool | str = True,
 ) -> str | None:
     """
     Get data plane endpoint for the agent.
@@ -101,7 +102,7 @@ def _get_data_endpoint(
 
     if not data_endpoint:
         control_endpoint = get_control_plane_endpoint(region)
-        control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=True)
+        control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=verify_ssl)
 
         if agent_id:
             agent_detail = control_client.find_agent_by_id(agent_id)
@@ -147,6 +148,7 @@ def invoke_agent(
     session_id: str | None = None,
     bearer_token: str | None = None,
     timeout: int = 900,
+    skip_ssl_verification: bool = False,
 ) -> bool:
     """
     Invoke agent locally or on cloud.
@@ -198,8 +200,9 @@ def invoke_agent(
 
             actual_region = region or get_region()
             actual_session_id = session_id or str(uuid.uuid4())
+            verify_ssl = not skip_ssl_verification
 
-            data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id)
+            data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id, verify_ssl)
 
             if not data_endpoint:
                 echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent [yellow]{agent_name} {actual_region}[/yellow]")
@@ -263,6 +266,7 @@ def status_agent(
     endpoint: str | None = None,
     session_id: str | None = None,
     bearer_token: str | None = None,
+    skip_ssl_verification: bool = False,
 ) -> bool:
     """
     Check agent health status.
@@ -309,8 +313,9 @@ def status_agent(
             return False
 
         actual_region = region or get_region()
+        verify_ssl = not skip_ssl_verification
 
-        data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id)
+        data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id, verify_ssl)
 
         if not data_endpoint:
             echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent {agent_name}")

@@ -83,6 +83,7 @@ def status(
         endpoint=endpoint,
         session_id=session_id,
         bearer_token=bearer_token,
+        skip_ssl_verification=skip_ssl_verification,
     )
 
     if not success:
