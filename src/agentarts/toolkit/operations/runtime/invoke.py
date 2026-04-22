@@ -218,7 +218,7 @@ def invoke_agent(
 
             client = RuntimeClient(
                 data_endpoint=data_endpoint,
-                verify_ssl=True,
+                verify_ssl=verify_ssl,
                 sign_mode=sign_mode,
                 region_id=actual_region,
             )
@@ -330,7 +330,7 @@ def status_agent(
 
         client = RuntimeClient(
             data_endpoint=data_endpoint,
-            verify_ssl=False,
+            verify_ssl=verify_ssl,
             sign_mode=sign_mode,
             region_id=actual_region,
         )

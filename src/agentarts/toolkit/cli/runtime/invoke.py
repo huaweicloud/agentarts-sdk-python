@@ -47,6 +47,10 @@ def status(
         str | None,
         typer.Option("--bearer-token", "-bt", help="Bearer token for authentication"),
     ] = None,
+    skip_ssl_verification: Annotated[
+        bool,
+        typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification"),
+    ] = False,
 ):
     """
     Check agent health status.
@@ -126,6 +130,10 @@ def invoke(
         int,
         typer.Option("--timeout", help="Request timeout in seconds (default: 900)"),
     ] = 900,
+    skip_ssl_verification: Annotated[
+        bool,
+        typer.Option("--skip-ssl-verification", help="Skip SSL certificate verification"),
+    ] = False,
 ):
     """
     Invoke agent with JSON payload.
@@ -159,6 +167,7 @@ def invoke(
         session_id=session_id,
         bearer_token=bearer_token,
         timeout=timeout,
+        skip_ssl_verification=skip_ssl_verification,
     )
 
     if not success:
