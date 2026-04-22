@@ -46,6 +46,7 @@ def create_agentarts_runtime(
     agent_config: Any | None = None,
     port: int | None = None,
     description: str | None = None,
+    verify_ssl: bool | str = True,
 ) -> dict | None:
     """
     Create or update AgentArts runtime using RuntimeClient.
@@ -68,7 +69,7 @@ def create_agentarts_runtime(
 
         endpoint = get_control_plane_endpoint(region)
 
-        client = RuntimeClient(control_endpoint=endpoint, verify_ssl=False)
+        client = RuntimeClient(control_endpoint=endpoint, verify_ssl=verify_ssl)
 
         artifact_source_config = None
         invoke_config = {}
@@ -158,6 +159,7 @@ def deploy_project(
     swr_org: str | None = None,
     swr_repo: str | None = None,
     description: str | None = None,
+    skip_ssl_verification: bool = False,
 ) -> bool:
     """
     Deploy project.
