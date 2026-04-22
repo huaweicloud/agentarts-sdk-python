@@ -101,7 +101,7 @@ def _get_data_endpoint(
 
     if not data_endpoint:
         control_endpoint = get_control_plane_endpoint(region)
-        control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=False)
+        control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=True)
 
         if agent_id:
             agent_detail = control_client.find_agent_by_id(agent_id)
@@ -218,7 +218,7 @@ def invoke_agent(
 
             client = RuntimeClient(
                 data_endpoint=data_endpoint,
-                verify_ssl=False,
+                verify_ssl=True,
                 sign_mode=sign_mode,
                 region_id=actual_region,
             )
