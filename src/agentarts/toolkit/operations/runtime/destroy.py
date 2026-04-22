@@ -13,6 +13,7 @@ console = Console()
 def destroy_agent(
     agent_name: str | None = None,
     region: str | None = None,
+    skip_ssl_verification: bool = False,
 ) -> bool:
     """
     Destroy agent from Huawei Cloud.
@@ -20,6 +21,7 @@ def destroy_agent(
     Args:
         agent_name: Agent name to destroy
         region: Huawei Cloud region
+        skip_ssl_verification: Skip SSL certificate verification (default: False)
 
     Returns:
         True if destroyed successfully, False otherwise
@@ -45,8 +47,9 @@ def destroy_agent(
         from agentarts.sdk.service import RuntimeClient
         from agentarts.sdk.utils.constant import get_control_plane_endpoint
 
+        verify_ssl = not skip_ssl_verification
         control_endpoint = get_control_plane_endpoint(actual_region)
-        client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=False)
+        client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=verify_ssl)
 
         result = client.delete_agent_by_name(agent_name=agent_name)
 

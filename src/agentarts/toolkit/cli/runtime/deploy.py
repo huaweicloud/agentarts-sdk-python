@@ -44,6 +44,10 @@ def deploy(
         str | None,
         typer.Option("--description", "-d", help="Agent description (overrides config)"),
     ] = None,
+    skip_ssl_verification: Annotated[
+        bool,
+        typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification"),
+    ] = False,
 ):
     """
     Deploy agent to Huawei Cloud or run locally.
@@ -94,6 +98,7 @@ def deploy(
         swr_org=swr_org,
         swr_repo=swr_repo,
         description=description,
+        skip_ssl_verification=skip_ssl_verification,
     )
 
     if not success:

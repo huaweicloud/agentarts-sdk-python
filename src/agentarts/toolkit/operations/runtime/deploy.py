@@ -241,8 +241,10 @@ def deploy_project(
         border_style="cyan",
     ))
 
+    verify_ssl = not skip_ssl_verification
+
     try:
-        swr_client = SWRClient(region=region)
+        swr_client = SWRClient(region=region, verify_ssl=verify_ssl)
 
         if agent_config.swr_config.organization_auto_create:
             org_result = swr_client.create_or_get_organization(final_swr_org)
@@ -323,6 +325,7 @@ def deploy_project(
         agent_config=agent_config,
         port=port,
         description=description,
+        verify_ssl=verify_ssl,
     )
 
     if agent is None:
