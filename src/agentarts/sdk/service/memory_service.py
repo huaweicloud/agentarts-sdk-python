@@ -205,7 +205,7 @@ class MemoryHttpService:
             endpoint_type: str = "control",
             timeout: int = 30,
             api_key: str | None = None,
-            verify_ssl: bool = False,
+            verify_ssl: bool | str = True,
             enable_signing: bool | None = None,
     ):
         """Initialize Memory HTTP service with region and authentication strategy.
@@ -216,7 +216,10 @@ class MemoryHttpService:
             endpoint_type: "control" for control plane, "data" for data plane
             timeout: Request timeout in seconds
             api_key: API Key for data plane authentication (optional, falls back to environment variable)
-            verify_ssl: Whether to verify SSL certificates (default: False)
+            verify_ssl: SSL verification setting.
+                - True: Verify SSL certificates using system CA bundle (default)
+                - False: Skip SSL verification (not recommended for production)
+                - str: Path to custom CA certificate file
             enable_signing: Whether to enable request signing. If None, automatically enabled
                            for control plane and disabled for data plane. Set to True/False
                            to explicitly control signing behavior.

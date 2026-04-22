@@ -25,14 +25,17 @@ class _ControlPlane:
     def __init__(
             self,
             region_name: str | None = None,
-            verify_ssl: bool = False,
+            verify_ssl: bool | str = True,
     ):
         """
         Initialize control plane.
 
         Args:
             region_name: Huawei Cloud region name, auto-detected from environment if not provided
-            verify_ssl: Whether to verify SSL certificates (default: False)
+            verify_ssl: SSL verification setting.
+                - True: Verify SSL certificates using system CA bundle (default)
+                - False: Skip SSL verification (not recommended for production)
+                - str: Path to custom CA certificate file
         """
         self.client = MemoryHttpService(
             region_name=region_name,

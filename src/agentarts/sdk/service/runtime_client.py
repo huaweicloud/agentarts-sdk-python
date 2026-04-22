@@ -67,7 +67,10 @@ class RuntimeClient:
         access_token: Bearer token for API authentication.
             Can also be set later via :meth:`set_auth_token`.
         timeout: Default request timeout in seconds.
-        verify_ssl: Whether to verify SSL certificates.
+        verify_ssl: Whether to verify SSL certificates. Can be:
+            - True: Verify SSL certificates using system CA bundle (default)
+            - False: Skip SSL verification (not recommended for production)
+            - str: Path to custom CA certificate file
         sign_mode: Signature mode for data plane requests (SDK_HMAC_SHA256 or V11_HMAC_SHA256).
         region_id: Region ID for V11 signature mode.
     """
@@ -78,7 +81,7 @@ class RuntimeClient:
         data_endpoint: str | None = None,
         access_token: str | None = None,
         timeout: float = 30.0,
-        verify_ssl: bool = True,
+        verify_ssl: bool | str = True,
         sign_mode: SignMode = SignMode.SDK_HMAC_SHA256,
         region_id: str = "",
     ) -> None:

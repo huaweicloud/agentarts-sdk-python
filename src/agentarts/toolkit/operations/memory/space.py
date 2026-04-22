@@ -28,7 +28,7 @@ def _get_client(region: str | None = None) -> MemoryClient:
     Returns:
         MemoryClient instance
     """
-    kwargs = {}
+    kwargs = {"verify_ssl": False}
     if region:
         kwargs["region_name"] = region
     return MemoryClient(**kwargs)
