@@ -47,13 +47,7 @@ def render_dockerfile(
 
     user_section = f"""# Create non-root user for security
 RUN groupadd -g {group_id} {user_name} && \\
-    useradd -u {user_id} -g {group_id} -m -s /bin/bash {user_name}
-
-# Install iproute2 for network interface IP detection (optional, best effort)
-RUN apt-get update && \\
-    (apt-get install -y --no-install-recommends iproute2 || \\
-        echo "Warning: iproute2 installation failed, using 0.0.0.0 fallback") && \\
-    rm -rf /var/lib/apt/lists/*"""
+    useradd -u {user_id} -g {group_id} -m -s /bin/bash {user_name}"""
 
     chown_section = f"RUN chown {user_name}:{user_name} /app"
 
