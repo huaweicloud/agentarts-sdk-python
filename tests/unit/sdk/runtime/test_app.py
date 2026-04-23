@@ -271,6 +271,46 @@ class TestTaskContext:
         assert app._task_context(handler) is False
 
 
+class TestPingTaskContext:
+    """Tests for _ping_task_context method."""
+
+    def test_ping_task_context_with_context_param(self):
+        """Test _ping_task_context returns True for handler with context as first param."""
+        app = AgentArtsRuntimeApp()
+
+        def handler(context):
+            pass
+
+        assert app._ping_task_context(handler) is True
+
+    def test_ping_task_context_without_context_param(self):
+        """Test _ping_task_context returns False for handler without context param."""
+        app = AgentArtsRuntimeApp()
+
+        def handler():
+            pass
+
+        assert app._ping_task_context(handler) is False
+
+    def test_ping_task_context_wrong_param_name(self):
+        """Test _ping_task_context returns False when first param is not 'context'."""
+        app = AgentArtsRuntimeApp()
+
+        def handler(other):
+            pass
+
+        assert app._ping_task_context(handler) is False
+
+    def test_ping_task_context_with_multiple_params(self):
+        """Test _ping_task_context returns True when first param is 'context'."""
+        app = AgentArtsRuntimeApp()
+
+        def handler(context, extra):
+            pass
+
+        assert app._ping_task_context(handler) is True
+
+
 class TestSerialization:
     """Tests for serialization methods."""
 
@@ -523,6 +563,84 @@ class TestHandlePing:
         body = json.loads(response.body)
         assert body["status"] == "HealthyBusy"
 
+    @pytest.mark.asyncio
+    async def test_handle_ping_with_context_param_handler(self):
+        """Test _handle_ping passes context to handler when context param is present."""
+        app = AgentArtsRuntimeApp()
+
+        received_context = None
+
+        @app.ping
+        def ping_with_context(context):
+            nonlocal received_context
+            received_context = context
+            return PingStatus.HEALTHY
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {
+            "x-hw-agentarts-session-id": "test-session-123",
+            "X-Request-Id": "req-456",
+        }
+
+        response = await app._handle_ping(mock_request)
+
+        assert response.status_code == 200
+        assert received_context is not None
+        assert received_context.session_id == "test-session-123"
+        assert received_context.request_id == "req-456"
+        assert received_context.request == mock_request
+
+    @pytest.mark.asyncio
+    async def test_handle_ping_without_context_param_handler(self):
+        """Test _handle_ping does not pass context when handler has no context param."""
+        app = AgentArtsRuntimeApp()
+
+        handler_called = False
+
+        @app.ping
+        def ping_no_context():
+            nonlocal handler_called
+            handler_called = True
+            return PingStatus.HEALTHY
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {}
+
+        response = await app._handle_ping(mock_request)
+
+        assert response.status_code == 200
+        assert handler_called is True
+
+    @pytest.mark.asyncio
+    async def test_handle_ping_context_with_headers(self):
+        """Test _handle_ping builds request_context with headers."""
+        app = AgentArtsRuntimeApp()
+
+        received_session_id = None
+
+        @app.ping
+        def ping_check_session(context):
+            nonlocal received_session_id
+            received_session_id = context.session_id
+            return PingStatus.HEALTHY
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {
+            "X-HW-AgentGateway-Workload-Access-Token": "workload-token",
+            "x-hw-agentarts-session-id": "session-abc",
+            "X-Hw-AgentArts-Runtime-User-Id": "user-xyz",
+        }
+
+        response = await app._handle_ping(mock_request)
+
+        assert response.status_code == 200
+        assert received_session_id == "session-abc"
+        assert AgentArtsRuntimeContext.get_workload_access_token() == "workload-token"
+        assert AgentArtsRuntimeContext.get_session_id() == "session-abc"
+        assert AgentArtsRuntimeContext.get_user_id() == "user-xyz"
+
+        AgentArtsRuntimeContext.clear()
+
 
 class TestGetCurrentPingStatus:
     """Tests for get_current_ping_status method."""
@@ -552,6 +670,93 @@ class TestGetCurrentPingStatus:
         status = app.get_current_ping_status()
 
         assert status == PingStatus.UNHEALTHY
+
+    def test_get_current_ping_status_with_context_param_handler(self):
+        """Test get_current_ping_status passes context to handler with context param."""
+        app = AgentArtsRuntimeApp()
+
+        received_context = None
+
+        @app.ping
+        def ping_with_context(context):
+            nonlocal received_context
+            received_context = context
+            return PingStatus.HEALTHY
+
+        request_context = RequestContext(
+            session_id="test-session",
+            request_id="req-123",
+            request=None
+        )
+
+        status = app.get_current_ping_status(request_context)
+
+        assert status == PingStatus.HEALTHY
+        assert received_context == request_context
+
+    def test_get_current_ping_status_without_context_param_handler(self):
+        """Test get_current_ping_status does not pass context when handler has no context param."""
+        app = AgentArtsRuntimeApp()
+
+        handler_called = False
+
+        @app.ping
+        def ping_no_context():
+            nonlocal handler_called
+            handler_called = True
+            return PingStatus.HEALTHY
+
+        request_context = RequestContext(
+            session_id="test-session",
+            request_id="req-123",
+            request=None
+        )
+
+        status = app.get_current_ping_status(request_context)
+
+        assert status == PingStatus.HEALTHY
+        assert handler_called is True
+
+    def test_get_current_ping_status_no_context_passed_when_none(self):
+        """Test get_current_ping_status does not pass None context."""
+        app = AgentArtsRuntimeApp()
+
+        received_context = None
+
+        @app.ping
+        def ping_with_context(context):
+            nonlocal received_context
+            received_context = context
+            return PingStatus.HEALTHY
+
+        status = app.get_current_ping_status(None)
+
+        assert status == PingStatus.HEALTHY
+        assert received_context is None
+
+    def test_get_current_ping_status_custom_handler_uses_context(self):
+        """Test custom ping handler can use context to determine status."""
+        app = AgentArtsRuntimeApp()
+
+        @app.ping
+        def ping_check_session(context):
+            if context and context.session_id == "healthy-session":
+                return PingStatus.HEALTHY
+            return PingStatus.UNHEALTHY
+
+        healthy_context = RequestContext(
+            session_id="healthy-session",
+            request_id="req-1",
+            request=None
+        )
+        unhealthy_context = RequestContext(
+            session_id="unhealthy-session",
+            request_id="req-2",
+            request=None
+        )
+
+        assert app.get_current_ping_status(healthy_context) == PingStatus.HEALTHY
+        assert app.get_current_ping_status(unhealthy_context) == PingStatus.UNHEALTHY
 
 
 class TestForcePingStatus:

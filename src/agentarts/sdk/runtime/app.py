@@ -274,6 +274,17 @@ class AgentArtsRuntimeApp(Starlette):
         except Exception:
             return False
 
+    def _ping_task_context(self, handler: Callable) -> bool:
+        """
+        Return ``True`` if *handler* accepts a ``context`` as its
+        first positional parameter.
+        """
+        try:
+            params = list(inspect.signature(handler).parameters.keys())
+            return len(params) >= 1 and params[0] == "context"
+        except Exception:
+            return False
+
     # ------------------------------------------------------------------
     # Invocation endpoint
     # ------------------------------------------------------------------
@@ -491,7 +502,8 @@ class AgentArtsRuntimeApp(Starlette):
         is returned.
         """
         try:
-            status = self.get_current_ping_status()
+            request_context = self._build_request_context(request)
+            status = self.get_current_ping_status(request_context)
             self.logger.debug(f"Ping request - status: {status}")
             return JSONResponse(
                 content={
@@ -508,9 +520,12 @@ class AgentArtsRuntimeApp(Starlette):
                 },
             )
 
-    def get_current_ping_status(self) -> PingStatus:
+    def get_current_ping_status(self, request_context: RequestContext | None = None) -> PingStatus:
         """
         Get the current status of the AgentArts runtime.
+
+        Args:
+            request_context: Optional request context to pass to the ping handler.
 
         Returns:
             PingStatus: The current health status of the runtime.
@@ -522,7 +537,9 @@ class AgentArtsRuntimeApp(Starlette):
 
         if self._ping_handler is not None:
             try:
-                result = self._ping_handler()
+                task_context = self._ping_task_context(self._ping_handler)
+                args = (request_context,) if task_context and request_context else ()
+                result = self._ping_handler(*args)
                 current_status = PingStatus(result) if isinstance(result, str) else result
             except Exception as exc:
                 self.logger.warning("Custom Ping handler failed: %s: %s", type(exc).__name__, exc)
