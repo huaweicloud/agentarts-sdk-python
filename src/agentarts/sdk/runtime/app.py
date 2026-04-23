@@ -24,6 +24,7 @@ import inspect
 import json
 import logging
 import os
+import socket
 import subprocess
 import threading
 import time
@@ -671,22 +672,28 @@ class AgentArtsRuntimeApp(Starlette):
                 )
                 ip = result.stdout.strip()
                 if ip and result.returncode == 0:
+                    self.logger.debug("Detected eth0 IP via ip command: %s", ip)
                     return ip
-            except Exception:
-                pass
+            except Exception as e:
+                self.logger.debug("Failed to get IP via ip command: %s", e)
             try:
-                result = subprocess.run(
-                    "ifconfig eth0 | grep -oP 'inet \\K[\\d.]+'",
-                    shell=True,
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                )
-                ip = result.stdout.strip()
-                if ip and result.returncode == 0:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.settimeout(2)
+                s.connect(("8.8.8.8", 80))
+                ip = s.getsockname()[0]
+                s.close()
+                if ip and ip != "0.0.0.0":
+                    self.logger.debug("Detected eth0 IP via socket: %s", ip)
                     return ip
-            except Exception:
-                pass
+            except Exception as e:
+                self.logger.debug("Failed to get IP via socket: %s", e)
+            try:
+                ip = socket.gethostbyname(socket.gethostname())
+                if ip and ip != "127.0.0.1":
+                    self.logger.debug("Detected eth0 IP via hostname: %s", ip)
+                    return ip
+            except Exception as e:
+                self.logger.debug("Failed to get IP via hostname: %s", e)
             return None
 
         if host is None:
