@@ -4,9 +4,11 @@ Metadata utilities for credential management.
 
 import json
 import logging
+import os
 from functools import wraps
 
 import requests
+from .constant import ENV_HUAWEICLOUD_SDK_PROJECT_ID
 from huaweicloudsdkcore.auth.credentials import BasicCredentials
 from huaweicloudsdkcore.auth.provider import (
     CredentialProvider,
@@ -91,10 +93,14 @@ class MetadataProvider(CredentialProvider):
             if resp.status_code < 300:
                 metadata = json.loads(resp.text)
                 self.logger.info(f"Get metadata credentials with expired time: {metadata['expires_at']}")
-                return BasicCredentials() \
+
+                credentials = BasicCredentials() \
                     .with_ak(metadata["access"]) \
                     .with_sk(metadata["secret"]) \
                     .with_security_token(metadata["securitytoken"])
+
+                project_id = os.getenv(ENV_HUAWEICLOUD_SDK_PROJECT_ID)
+                return credentials.with_project_id(project_id) if project_id else credentials
 
             self.logger.warning(f"Get metadata credentials failed with status: {resp.status_code}")
         except requests.exceptions.RequestException as e:
