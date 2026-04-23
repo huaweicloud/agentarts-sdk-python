@@ -691,3 +691,13 @@ class MemoryHttpService:
     def enable_signing(self) -> bool:
         """Get whether signing is enabled."""
         return self._enable_signing
+
+    def close(self) -> None:
+        """Close the HTTP session and release resources.
+
+        This method should be called when the service is no longer needed
+        to properly release the underlying requests.Session resources.
+        """
+        if hasattr(self, "session") and self.session is not None:
+            self.session.close()
+            logger.info("MemoryHttpService session closed")

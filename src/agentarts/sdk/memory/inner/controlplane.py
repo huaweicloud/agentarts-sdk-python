@@ -186,3 +186,12 @@ class _ControlPlane:
         self.client.delete_space(space_id)
 
         logger.info(f"Space deleted: {space_id}")
+
+    def close(self) -> None:
+        """Close the control plane and release resources.
+
+        This method closes the underlying HTTP client session.
+        """
+        if hasattr(self, "client") and self.client is not None:
+            self.client.close()
+            logger.info("ControlPlane closed")

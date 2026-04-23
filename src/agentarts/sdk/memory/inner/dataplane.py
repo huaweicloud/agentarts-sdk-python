@@ -287,3 +287,12 @@ class _DataPlane:
         """
         logger.info(f"Deleting memory: {memory_id}")
         self.client.delete_memory(space_id, memory_id)
+
+    def close(self) -> None:
+        """Close the data plane and release resources.
+
+        This method closes the underlying HTTP client session.
+        """
+        if hasattr(self, "client") and self.client is not None:
+            self.client.close()
+            logger.info("DataPlane closed")
