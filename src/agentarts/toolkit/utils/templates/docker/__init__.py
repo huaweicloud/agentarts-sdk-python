@@ -49,8 +49,10 @@ def render_dockerfile(
 RUN groupadd -g {group_id} {user_name} && \\
     useradd -u {user_id} -g {group_id} -m -s /bin/bash {user_name}
 
-# Install iproute2 for network interface IP detection
-RUN apt-get update && apt-get install -y --no-install-recommends iproute2 && \\
+# Install iproute2 for network interface IP detection (with retry and Chinese mirror fallback)
+RUN apt-get update && apt-get install -y --no-install-recommends iproute2 || \\
+    (sed -i 's@//.*archive.ubuntu.com@//mirrors.aliyun.com@g' /etc/apt/sources.list && \\
+     apt-get update && apt-get install -y --no-install-recommends iproute2) && \\
     rm -rf /var/lib/apt/lists/*"""
 
     chown_section = f"RUN chown {user_name}:{user_name} /app"
@@ -63,11 +65,11 @@ RUN pip install --no-cache-dir -r {dependency_file}"""
 
     chown_app_section = f"RUN chown -R {user_name}:{user_name} /app"
 
-    if entrypoint and ":" in entrypoint:
-        module, app_target = entrypoint.split(":")
-        cmd_section = f'CMD ["uvicorn", "{module}:{app_target}", "--port", "{port}"]'
+    if entrypoint:
+        module = entrypoint.split(":")[0] if ":" in entrypoint else entrypoint
+        cmd_section = f'CMD ["python", "-m", "{module}"]'
     else:
-        cmd_section = 'CMD ["python", "-m", "agentarts.server", "--config", "agentarts.yaml"]'
+        cmd_section = f'CMD ["python", "-m", "agent", "--host", "0.0.0.0", "--port", "{port}"]'
 
     content = template.format(
         base_image=base_image,
