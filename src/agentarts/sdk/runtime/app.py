@@ -371,6 +371,8 @@ class AgentArtsRuntimeApp(Starlette):
                 status_code=500,
                 content={"error": type(exc).__name__, "message": str(exc)},
             )
+        finally:
+            AgentArtsRuntimeContext.clear()
 
     async def _invoke_handler(
         self,
