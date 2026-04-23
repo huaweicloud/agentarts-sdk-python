@@ -24,10 +24,12 @@ import inspect
 import json
 import logging
 import os
+import subprocess
 import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -626,37 +628,72 @@ class AgentArtsRuntimeApp(Starlette):
             handler.run(host="0.0.0.0", port=8080)
 
         Args:
-            host: Bind address. Defaults to eth0 IP in Docker environment,
+            host: Bind address. Defaults to eth0 IP in Docker/Kubernetes environment,
                 or ``"127.0.0.1"`` in local development.
                 Can be overridden via ``AGENTARTS_BIND_IP`` environment variable.
             port: Bind port. Defaults to ``8080``.
             **kwargs: Additional keyword arguments forwarded to
                 ``uvicorn.run`` (e.g. ``workers``, ``log_level``).
         """
-        import subprocess
-
         import uvicorn
+
+        def _is_docker_environment() -> bool:
+            if os.path.exists("/.dockerenv"):
+                return True
+            if os.getenv("DOCKER_CONTAINER"):
+                return True
+            if os.getenv("KUBERNETES_SERVICE_HOST"):
+                return True
+            try:
+                cgroup = Path("/proc/1/cgroup").read_text()
+                if "docker" in cgroup or "kubepods" in cgroup or "containerd" in cgroup:
+                    return True
+            except Exception:
+                pass
+            try:
+                mountinfo = Path("/proc/self/mountinfo").read_text()
+                if "docker" in mountinfo or "containers" in mountinfo:
+                    return True
+            except Exception:
+                pass
+            return False
+
+        def _get_eth0_ip() -> str | None:
+            try:
+                result = subprocess.run(
+                    "ip addr show eth0 | grep -oP 'inet \\K[\\d.]+'",
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                ip = result.stdout.strip()
+                if ip and result.returncode == 0:
+                    return ip
+            except Exception:
+                pass
+            try:
+                result = subprocess.run(
+                    "ifconfig eth0 | grep -oP 'inet \\K[\\d.]+'",
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                ip = result.stdout.strip()
+                if ip and result.returncode == 0:
+                    return ip
+            except Exception:
+                pass
+            return None
 
         if host is None:
             env_bind_ip = os.getenv("AGENTARTS_BIND_IP")
             if env_bind_ip:
                 host = env_bind_ip
-            elif os.path.exists("/.dockerenv") or os.getenv("DOCKER_CONTAINER"):
-                try:
-                    result = subprocess.run(
-                        "ip addr show eth0 | grep -oP 'inet \\K[\\d.]+'",
-                        shell=True,
-                        capture_output=True,
-                        text=True,
-                        check=True,
-                    )
-                    ip = result.stdout.strip()
-                    if ip:
-                        host = ip
-                    else:
-                        host = "0.0.0.0"
-                except Exception:
-                    host = "0.0.0.0"
+            elif _is_docker_environment():
+                eth0_ip = _get_eth0_ip()
+                host = eth0_ip if eth0_ip else "0.0.0.0"
             else:
                 host = "127.0.0.1"
 

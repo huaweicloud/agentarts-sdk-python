@@ -40,54 +40,19 @@ def render_dockerfile(
     """
     template = get_dockerfile_template()
 
+    env_lines = ["# Set container environment marker", "ENV DOCKER_CONTAINER=true"]
     if region:
-        env_section = f"# Set Huawei Cloud region\nENV HUAWEICLOUD_SDK_REGION={region}"
-    else:
-        env_section = "# No region specified"
+        env_lines.append(f"ENV HUAWEICLOUD_SDK_REGION={region}")
+    env_section = "\n".join(env_lines)
 
     user_section = f"""# Create non-root user for security
 RUN groupadd -g {group_id} {user_name} && \\
     useradd -u {user_id} -g {group_id} -m -s /bin/bash {user_name}
 
-# Install iproute2 for network interface IP detection
-# Supports: Ubuntu (new/old), Debian, with multiple mirror fallbacks for China network
-RUN set -e; \\
-    MIRRORS="mirrors.aliyun.com mirrors.tuna.tsinghua.edu.cn mirrors.ustc.edu.cn"; \\
-    \\
-    switch_to_mirror() {{ \\
-        mirror="$1"; \\
-        if ls /etc/apt/sources.list.d/*.sources 2>/dev/null 1>&2; then \\
-            for f in /etc/apt/sources.list.d/*.sources; do \\
-                sed -i "s@URIs: http[s]*://[^ ]*ubuntu@URIs: http://${{mirror}}@g" "$f" 2>/dev/null || true; \\
-                sed -i "s@URIs: http[s]*://[^ ]*debian@URIs: http://${{mirror}}@g" "$f" 2>/dev/null || true; \\
-            done; \\
-        fi; \\
-        if [ -f /etc/apt/sources.list ]; then \\
-            sed -i "s@http[s]*://[^ ]*archive.ubuntu.com@http://${{mirror}}@g" /etc/apt/sources.list 2>/dev/null || true; \\
-            sed -i "s@http[s]*://[^ ]*security.ubuntu.com@http://${{mirror}}@g" /etc/apt/sources.list 2>/dev/null || true; \\
-            sed -i "s@http[s]*://[^ ]*deb.debian.org@http://${{mirror}}@g" /etc/apt/sources.list 2>/dev/null || true; \\
-            sed -i "s@http[s]*://[^ ]*security.debian.org@http://${{mirror}}@g" /etc/apt/sources.list 2>/dev/null || true; \\
-        fi; \\
-    }}; \\
-    \\
-    if apt-get update && apt-get install -y --no-install-recommends iproute2; then \\
-        echo "iproute2 installed successfully"; \\
-    else \\
-        echo "Direct install failed, trying mirror sources..."; \\
-        installed=false; \\
-        for mirror in $MIRRORS; do \\
-            echo "Trying mirror: $mirror"; \\
-            switch_to_mirror "$mirror"; \\
-            if apt-get update && apt-get install -y --no-install-recommends iproute2; then \\
-                echo "iproute2 installed successfully via $mirror"; \\
-                installed=true; \\
-                break; \\
-            fi; \\
-        done; \\
-        if [ "$installed" = false ]; then \\
-            echo "Warning: iproute2 installation failed after all attempts, continuing without it"; \\
-        fi; \\
-    fi; \\
+# Install iproute2 for network interface IP detection (optional, best effort)
+RUN apt-get update && \\
+    (apt-get install -y --no-install-recommends iproute2 || \\
+        echo "Warning: iproute2 installation failed, using 0.0.0.0 fallback") && \\
     rm -rf /var/lib/apt/lists/*"""
 
     chown_section = f"RUN chown {user_name}:{user_name} /app"
