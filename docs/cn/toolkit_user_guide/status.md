@@ -15,6 +15,7 @@
 | `--bearer-token` | `-bt` | Bearer 认证令牌 | 无 |
 | `--endpoint` | `-e` | 指定端点名称 | 无 |
 | `--session` | `-s` | 会话 ID（用于有状态 Agent） | 无 |
+| `--user-id` | `-u` | 用户 ID（用于 OAuth2 出站凭据） | 无 |
 
 ## 健康状态说明
 
@@ -142,6 +143,17 @@ agentarts status \
   --agent my-agent \
   --region cn-southwest-2 \
   --bearer-token "your-token"
+```
+
+### 示例 9: 使用用户 ID（OAuth2 出站凭据）
+
+```bash
+agentarts status --agent my-agent --user-id "user-123"
+```
+
+或使用简写：
+```bash
+agentarts status -a my-agent -u "user-123"
 ```
 
 ## 检查模式

@@ -51,6 +51,10 @@ def status(
         bool,
         typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification"),
     ] = False,
+    user_id: Annotated[
+        str | None,
+        typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials"),
+    ] = None,
 ):
     """
     Check agent health status.
@@ -66,6 +70,7 @@ def status(
         agentarts status --endpoint custom-endpoint
         agentarts status --session my-session-123
         agentarts status --bearer-token my-token
+        agentarts status --user-id my-user-id
         agentarts status -bt my-token
     """
     status_mode = InvokeMode.CLOUD
@@ -84,6 +89,7 @@ def status(
         session_id=session_id,
         bearer_token=bearer_token,
         skip_ssl_verification=skip_ssl_verification,
+        user_id=user_id,
     )
 
     if not success:
@@ -135,6 +141,10 @@ def invoke(
         bool,
         typer.Option("--skip-ssl-verification", help="Skip SSL certificate verification"),
     ] = False,
+    user_id: Annotated[
+        str | None,
+        typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials"),
+    ] = None,
 ):
     """
     Invoke agent with JSON payload.
@@ -150,6 +160,7 @@ def invoke(
         agentarts invoke '{"message": "hello"}' --agent my-agent
         agentarts invoke '{"message": "hello"}' --mode local --port 8080
         agentarts invoke '{"message": "test"}' --session my-session-123
+        agentarts invoke '{"message": "test"}' --user-id my-user-id
     """
     invoke_mode = InvokeMode.CLOUD
     if mode.lower() == "local":
@@ -169,6 +180,7 @@ def invoke(
         bearer_token=bearer_token,
         timeout=timeout,
         skip_ssl_verification=skip_ssl_verification,
+        user_id=user_id,
     )
 
     if not success:

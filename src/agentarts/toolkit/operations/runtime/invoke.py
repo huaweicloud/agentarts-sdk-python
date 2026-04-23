@@ -149,6 +149,7 @@ def invoke_agent(
     bearer_token: str | None = None,
     timeout: int = 900,
     skip_ssl_verification: bool = False,
+    user_id: str | None = None,
 ) -> bool:
     """
     Invoke agent locally or on cloud.
@@ -163,6 +164,8 @@ def invoke_agent(
         session_id: Session ID for stateful agents
         bearer_token: Optional bearer token
         timeout: Request timeout in seconds
+        skip_ssl_verification: Skip SSL certificate verification
+        user_id: Optional user ID for OAuth2 outbound credentials
 
     Returns:
         True if successful, False otherwise
@@ -189,6 +192,7 @@ def invoke_agent(
                 bearer_token=actual_bearer_token,
                 endpoint=endpoint,
                 timeout=timeout,
+                user_id=user_id,
             )
         else:
             agent_name, region, agent_id, auth_type = _resolve_agent_info(agent_name, region)
@@ -233,6 +237,7 @@ def invoke_agent(
                 bearer_token=actual_bearer_token,
                 endpoint=endpoint,
                 timeout=timeout,
+                user_id=user_id,
             )
 
         if isinstance(result, dict):
@@ -267,6 +272,7 @@ def status_agent(
     session_id: str | None = None,
     bearer_token: str | None = None,
     skip_ssl_verification: bool = False,
+    user_id: str | None = None,
 ) -> bool:
     """
     Check agent health status.
@@ -279,6 +285,8 @@ def status_agent(
         endpoint: Optional endpoint name
         session_id: Session ID for stateful agents (auto-generated if None)
         bearer_token: Optional bearer token
+        skip_ssl_verification: Skip SSL certificate verification
+        user_id: Optional user ID for OAuth2 outbound credentials
 
     Returns:
         True if healthy, False otherwise
@@ -298,6 +306,7 @@ def status_agent(
                 bearer_token=actual_bearer_token,
                 endpoint=endpoint,
                 session_id=actual_session_id,
+                user_id=user_id,
             )
 
             status = result.get("status", "Unknown")
@@ -345,6 +354,7 @@ def status_agent(
             bearer_token=actual_bearer_token,
             endpoint=endpoint,
             session_id=actual_session_id,
+            user_id=user_id,
         )
 
         if isinstance(result, dict):
