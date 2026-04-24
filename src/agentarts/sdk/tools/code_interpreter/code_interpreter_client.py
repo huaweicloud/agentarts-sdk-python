@@ -335,7 +335,7 @@ class CodeInterpreter:
     def start_session(
         self,
         code_interpreter_name: str,
-        session_name: str = str,
+        session_name: str,
         api_key: str | None = None,
         session_timeout: int | None = DEFAULT_TIMEOUT
     ) -> str:
