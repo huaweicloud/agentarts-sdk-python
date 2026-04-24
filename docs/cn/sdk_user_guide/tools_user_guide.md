@@ -138,15 +138,15 @@ CodeInterpreter
 ### 初始化
 
 ```python
-CodeInterpreter(region: str, data_endpoint: Optional[str] = None)
+CodeInterpreter(region: Optional[str] = None, data_endpoint: Optional[str] = None)
 ```
 
 **参数说明**：
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| region | str | 否 | 从配置读取 | 华为云区域名称 |
-| data_endpoint | str | 否 | None | 数据面端点，优先从环境变量 AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT 读取 |
+| region | str | 否 | 从环境变量获取 | 华为云区域名称 |
+| data_endpoint | str | 否 | 从环境变量获取 | 数据面端点，优先从环境变量 AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT 读取 |
 
 **使用示例**：
 
@@ -291,7 +291,7 @@ result = client.update_code_interpreter(
 + access_endpoint(str): 代码解释器的访问域名
 + observability(Dict): 可观测性配置(日志+指标)
 + tags(List[Dict]): 标签列表，每个标签是一个包含 "key" 和 "value" 的字典
-+ auth_tyoe(str): 工具认证方式
++ auth_type(str): 工具认证方式
 + api_key_name(str): API Key名称
 + network_config(Dict): 网络配置，例如 VPC 和安全组设置
 
@@ -324,7 +324,7 @@ client.delete_code_interpreter(
 | 参数名 | 类型 | 描述 |
 | --- | --- | --- |
 |code_interpreter_name |str| **Required**  代码解释器的名称，用于识别和管理会话，名称唯一|
-|session_name |str| 会话名称|
+|session_name |str|  **Required**  会话名称|
 |api_key |str| 认证使用的API Key，如果不提供则从环境变量HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY中获取, default: `None`|
 |session_timeout |int| 会话超时时间，单位为秒，默认15分钟，最小值为60秒，最大值为86400秒（24小时）, default: `900`|
 
@@ -480,7 +480,7 @@ result[Dict]: 包含文件上传结果的字典
 # 上传CSV文件
 result = client.upload_file(
     path="/home/user/my-file.csv",
-    content="data, revenue\n2026-01-01, 1000\n2026-01-02, 2000"),
+    content="data, revenue\n2026-01-01, 1000\n2026-01-02, 2000",
     description='Daily sales data with columns: data, revenue'
 )
 ```
