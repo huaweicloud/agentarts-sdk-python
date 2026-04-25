@@ -75,7 +75,7 @@ def deploy(
 
     Examples:
         agentarts deploy
-        agentarts deploy --agent my-agent
+        agentarts deploy --agent myagent
         agentarts deploy --mode local --local-port 8080
         agentarts deploy --mode cloud --tag v1.0.0
         agentarts deploy --swr-org my-org --swr-repo my-repo

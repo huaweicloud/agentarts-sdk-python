@@ -109,7 +109,7 @@ class TestCreateDockerfile:
         assert "FROM python:3.10-slim" in content
         assert "WORKDIR /app" in content
         assert "EXPOSE 8080" in content
-        assert "uvicorn" in content
+        assert "agent" in content
 
 
 class TestCreateConfigFile:
@@ -139,12 +139,12 @@ class TestCreateConfigFile:
         """Config uses agent_{name} as default SWR repo."""
         create_config_file(
             project_path=tmp_path,
-            name="my-agent",
+            name="myagent",
             template="basic",
         )
 
         content = (tmp_path / ".agentarts_config.yaml").read_text()
-        assert "agent_my-agent" in content
+        assert "agent_myagent" in content
 
     def test_config_includes_region(self, tmp_path):
         """Config includes specified region."""

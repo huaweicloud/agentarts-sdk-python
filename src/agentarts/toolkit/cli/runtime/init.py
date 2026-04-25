@@ -53,7 +53,7 @@ def prompt_for_template() -> TemplateType:
 
 def prompt_for_name() -> str:
     """Prompt user to enter project name"""
-    return Prompt.ask("\n[bold]Enter project name[/bold]", default="my_agent")
+    return Prompt.ask("\n[bold]Enter project name[/bold]", default="myagent")
 
 
 def prompt_for_region() -> str:
@@ -103,10 +103,10 @@ def init(
 
     Examples:
         agentarts init
-        agentarts init -n my_agent
-        agentarts init -n my_agent -t langgraph
-        agentarts init -n my_agent -t langchain -r cn-southwest-2
-        agentarts init -n my_agent --swr-org my-org --swr-repo my-repo
+        agentarts init -n myagent
+        agentarts init -n myagent -t langgraph
+        agentarts init -n myagent -t langchain -r cn-southwest-2
+        agentarts init -n myagent --swr-org my-org --swr-repo my-repo
     """
     if name is None:
         name = prompt_for_name()

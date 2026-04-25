@@ -32,8 +32,8 @@ def destroy(
 
     Examples:
         agentarts destroy
-        agentarts destroy --agent my-agent
-        agentarts destroy --agent my-agent --region cn-southwest-2
+        agentarts destroy --agent myagent
+        agentarts destroy --agent myagent --region cn-southwest-2
         agentarts destroy --yes  # Skip confirmation
     """
     from rich.console import Console as RichConsole
