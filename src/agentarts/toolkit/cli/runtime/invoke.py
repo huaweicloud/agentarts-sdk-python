@@ -65,7 +65,7 @@ def status(
 
     Examples:
         agentarts status
-        agentarts status --agent my-agent
+        agentarts status --agent myagent
         agentarts status --mode local --port 8080
         agentarts status --endpoint custom-endpoint
         agentarts status --session my-session-123
@@ -157,7 +157,7 @@ def invoke(
 
     Examples:
         agentarts invoke '{"message": "hello"}'
-        agentarts invoke '{"message": "hello"}' --agent my-agent
+        agentarts invoke '{"message": "hello"}' --agent myagent
         agentarts invoke '{"message": "hello"}' --mode local --port 8080
         agentarts invoke '{"message": "test"}' --session my-session-123
         agentarts invoke '{"message": "test"}' --user-id my-user-id
