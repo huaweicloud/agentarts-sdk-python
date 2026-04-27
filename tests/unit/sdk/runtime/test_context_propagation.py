@@ -146,7 +146,7 @@ class TestContextPropagationWithRequireAccessToken:
     async def test_invoke_handler_copies_context_to_thread(self):
         """
         Test that _invoke_handler correctly copies contextvars to thread pool.
-        
+
         This verifies the copy_context() + run_in_executor pattern.
         """
         import contextvars
@@ -201,12 +201,12 @@ class TestContextPropagationWithRequireAccessToken:
     async def test_consecutive_requests_context_isolation(self):
         """
         Test that consecutive requests have isolated context.
-        
+
         This verifies that:
         1. First request sets workload_access_token
         2. After request completes, context should be cleared
         3. Second request without token header should NOT see first request's token
-        
+
         This is the key test for the reported bug:
         'Workload Access Token is invalid or expired'
         """
@@ -291,7 +291,7 @@ class TestContextPropagationWithRequireAccessToken:
     ):
         """
         Test that require_api_key benefits from context clearing.
-        
+
         Verifies: token from first request does not leak to second request.
         """
         from agentarts.sdk.identity.auth import require_api_key
@@ -337,7 +337,7 @@ class TestContextPropagationWithRequireAccessToken:
     ):
         """
         Test that require_sts_token benefits from context clearing.
-        
+
         Verifies: token from first request does not leak to second request.
         """
         from agentarts.sdk.identity.auth import require_sts_token
@@ -381,7 +381,7 @@ class TestContextPropagationWithRequireAccessToken:
     async def test_concurrent_requests_have_isolated_context(self):
         """
         Test that concurrent requests have isolated context.
-        
+
         This verifies that clearing context in one request does NOT affect
         other concurrent requests running in parallel.
         """

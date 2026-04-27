@@ -20,7 +20,7 @@ from agentarts.sdk.runtime.context import AgentArtsRuntimeContext, RequestContex
 class TestContextWithoutClearing:
     """
     These tests demonstrate the bug when context is NOT cleared.
-    
+
     They bypass the normal _handle_invocation flow and directly test
     the scenario where context leaks between requests.
     """
@@ -29,7 +29,7 @@ class TestContextWithoutClearing:
     async def test_token_leaks_without_clear(self):
         """
         Demonstrate: Without clear(), token from Request 1 leaks to Request 2.
-        
+
         This is the root cause of the bug you reported:
         'Workload Access Token is invalid or expired'
         """
@@ -52,7 +52,7 @@ class TestContextWithoutClearing:
 
         request_context1 = app._build_request_context(mock_request1)
         result1 = await app._invoke_handler(sync_handler, request_context1, False, {"input": "first"})
-        
+
         assert captured_tokens[-1] == "expired-token-from-request-1"
 
         AgentArtsRuntimeContext.set_workload_access_token("expired-token-from-request-1")
@@ -75,7 +75,7 @@ class TestContextWithoutClearing:
     async def test_real_world_scenario_without_clear(self):
         """
         Real-world scenario simulation:
-        
+
         1. User A makes request with valid token
         2. Token expires (simulated)
         3. User B makes request (no token header)
@@ -98,7 +98,7 @@ class TestContextWithoutClearing:
 
         request_context_a = app._build_request_context(mock_request_user_a)
         result_a = await app._invoke_handler(sync_handler, request_context_a, False, {"user": "User-A"})
-        
+
         assert result_a["token_used"] == "user-a-token-WILL-EXPIRE"
 
         AgentArtsRuntimeContext.set_workload_access_token("user-a-token-WILL-EXPIRE")
@@ -141,7 +141,7 @@ class TestContextWithoutClearing:
 
         request_context1 = app._build_request_context(mock_request1)
         result1 = await app._invoke_handler(sync_handler, request_context1, False, {"input": "first"})
-        
+
         assert captured_tokens[-1] == "token-A"
 
         AgentArtsRuntimeContext.clear()
