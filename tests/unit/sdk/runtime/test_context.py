@@ -47,6 +47,7 @@ def test_oauth2_custom_state_context():
 
 
 def test_request_id_context():
+    AgentArtsRuntimeContext.clear()
     assert AgentArtsRuntimeContext.get_request_id() is None
     AgentArtsRuntimeContext.set_request_id("req-123")
     assert AgentArtsRuntimeContext.get_request_id() == "req-123"
@@ -55,6 +56,7 @@ def test_request_id_context():
 
 
 def test_session_id_context():
+    AgentArtsRuntimeContext.clear()
     assert AgentArtsRuntimeContext.get_session_id() is None
     AgentArtsRuntimeContext.set_session_id("sess-123")
     assert AgentArtsRuntimeContext.get_session_id() == "sess-123"
