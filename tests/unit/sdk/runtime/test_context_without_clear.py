@@ -7,14 +7,13 @@ This test simulates the original bug scenario where:
 3. Request 2 sees Request 1's token (LEAKED!)
 """
 
-import json
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from starlette.requests import Request
 
 from agentarts.sdk.runtime.app import AgentArtsRuntimeApp
-from agentarts.sdk.runtime.context import AgentArtsRuntimeContext, RequestContext
+from agentarts.sdk.runtime.context import AgentArtsRuntimeContext
 
 
 class TestContextWithoutClearing:

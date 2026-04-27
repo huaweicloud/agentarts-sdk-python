@@ -175,7 +175,6 @@ class TestContextPropagationWithRequireAccessToken:
         Test that run_async_in_sync_context preserves contextvars when called from
         a thread that has copied context.
         """
-        import asyncio
         import contextvars
 
         from agentarts.sdk.runtime.context import run_async_in_sync_context
@@ -294,7 +293,6 @@ class TestContextPropagationWithRequireAccessToken:
 
         Verifies: token from first request does not leak to second request.
         """
-        from agentarts.sdk.identity.auth import require_api_key
 
         app = AgentArtsRuntimeApp()
 
@@ -340,7 +338,6 @@ class TestContextPropagationWithRequireAccessToken:
 
         Verifies: token from first request does not leak to second request.
         """
-        from agentarts.sdk.identity.auth import require_sts_token
 
         app = AgentArtsRuntimeApp()
 

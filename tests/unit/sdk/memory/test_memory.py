@@ -2,8 +2,6 @@
 
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 
 def test_memory_client_import():
     """Test that MemoryClient can be imported"""

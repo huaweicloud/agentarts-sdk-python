@@ -8,7 +8,6 @@ import os
 from functools import wraps
 
 import requests
-from .constant import ENV_HUAWEICLOUD_SDK_PROJECT_ID
 from huaweicloudsdkcore.auth.credentials import BasicCredentials
 from huaweicloudsdkcore.auth.provider import (
     CredentialProvider,
@@ -16,6 +15,8 @@ from huaweicloudsdkcore.auth.provider import (
     EnvCredentialProvider,
     ProfileCredentialProvider,
 )
+
+from .constant import ENV_HUAWEICLOUD_SDK_PROJECT_ID
 
 
 def create_credential():
