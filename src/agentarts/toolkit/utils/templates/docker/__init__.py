@@ -40,10 +40,10 @@ def render_dockerfile(
     """
     template = get_dockerfile_template()
 
+    env_lines = ["# Set container environment marker", "ENV DOCKER_CONTAINER=true"]
     if region:
-        env_section = f"# Set Huawei Cloud region\nENV HUAWEICLOUD_SDK_REGION={region}"
-    else:
-        env_section = "# No region specified"
+        env_lines.append(f"ENV HUAWEICLOUD_SDK_REGION={region}")
+    env_section = "\n".join(env_lines)
 
     user_section = f"""# Create non-root user for security
 RUN groupadd -g {group_id} {user_name} && \\
@@ -59,11 +59,11 @@ RUN pip install --no-cache-dir -r {dependency_file}"""
 
     chown_app_section = f"RUN chown -R {user_name}:{user_name} /app"
 
-    if entrypoint and ":" in entrypoint:
-        module, app_target = entrypoint.split(":")
-        cmd_section = f'CMD ["uvicorn", "{module}:{app_target}", "--host", "0.0.0.0", "--port", "{port}"]'
+    if entrypoint:
+        module = entrypoint.split(":")[0] if ":" in entrypoint else entrypoint
+        cmd_section = f'CMD ["python", "-m", "{module}"]'
     else:
-        cmd_section = 'CMD ["python", "-m", "agentarts.server", "--config", "agentarts.yaml"]'
+        cmd_section = f'CMD ["python", "-m", "agent", "--host", "0.0.0.0", "--port", "{port}"]'
 
     content = template.format(
         base_image=base_image,

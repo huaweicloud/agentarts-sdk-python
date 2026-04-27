@@ -47,6 +47,14 @@ def status(
         str | None,
         typer.Option("--bearer-token", "-bt", help="Bearer token for authentication"),
     ] = None,
+    skip_ssl_verification: Annotated[
+        bool,
+        typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification"),
+    ] = False,
+    user_id: Annotated[
+        str | None,
+        typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials"),
+    ] = None,
 ):
     """
     Check agent health status.
@@ -57,11 +65,12 @@ def status(
 
     Examples:
         agentarts status
-        agentarts status --agent my-agent
+        agentarts status --agent myagent
         agentarts status --mode local --port 8080
         agentarts status --endpoint custom-endpoint
         agentarts status --session my-session-123
         agentarts status --bearer-token my-token
+        agentarts status --user-id my-user-id
         agentarts status -bt my-token
     """
     status_mode = InvokeMode.CLOUD
@@ -79,6 +88,8 @@ def status(
         endpoint=endpoint,
         session_id=session_id,
         bearer_token=bearer_token,
+        skip_ssl_verification=skip_ssl_verification,
+        user_id=user_id,
     )
 
     if not success:
@@ -88,7 +99,7 @@ def status(
 def invoke(
     payload: Annotated[
         str,
-        typer.Argument(help="JSON payload to send to the agent (e.g., '{\"input\": \"hello\"}')"),
+        typer.Argument(help="JSON payload to send to the agent (e.g., '{\"message\": \"hello\"}')"),
     ],
     agent: Annotated[
         str | None,
@@ -126,6 +137,14 @@ def invoke(
         int,
         typer.Option("--timeout", help="Request timeout in seconds (default: 900)"),
     ] = 900,
+    skip_ssl_verification: Annotated[
+        bool,
+        typer.Option("--skip-ssl-verification", help="Skip SSL certificate verification"),
+    ] = False,
+    user_id: Annotated[
+        str | None,
+        typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials"),
+    ] = None,
 ):
     """
     Invoke agent with JSON payload.
@@ -138,9 +157,10 @@ def invoke(
 
     Examples:
         agentarts invoke '{"message": "hello"}'
-        agentarts invoke '{"message": "hello"}' --agent my-agent
+        agentarts invoke '{"message": "hello"}' --agent myagent
         agentarts invoke '{"message": "hello"}' --mode local --port 8080
         agentarts invoke '{"message": "test"}' --session my-session-123
+        agentarts invoke '{"message": "test"}' --user-id my-user-id
     """
     invoke_mode = InvokeMode.CLOUD
     if mode.lower() == "local":
@@ -159,6 +179,8 @@ def invoke(
         session_id=session_id,
         bearer_token=bearer_token,
         timeout=timeout,
+        skip_ssl_verification=skip_ssl_verification,
+        user_id=user_id,
     )
 
     if not success:

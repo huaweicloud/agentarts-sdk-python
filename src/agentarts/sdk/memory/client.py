@@ -83,7 +83,7 @@ class MemoryClient:
             self,
             region_name: str | None = None,
             api_key: str | None = None,
-            verify_ssl: bool = False,
+            verify_ssl: bool | str = True,
     ):
         """
         Initialize Memory Client.
@@ -100,7 +100,10 @@ class MemoryClient:
             region_name: Huawei Cloud region name, auto-detected from environment if not provided
             api_key: API Key for data plane authentication (optional, falls back
                 to HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable)
-            verify_ssl: Whether to verify SSL certificates (default: False)
+            verify_ssl: SSL verification setting.
+                - True: Verify SSL certificates using system CA bundle (default)
+                - False: Skip SSL verification (not recommended for production)
+                - str: Path to custom CA certificate file
 
         Environment Variables:
             HUAWEICLOUD_SDK_AK: Access Key, required for control plane API

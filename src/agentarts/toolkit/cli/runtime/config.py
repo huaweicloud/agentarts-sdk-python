@@ -45,8 +45,8 @@ def main(
 
     Examples:
         agentarts config
-        agentarts config --name my-agent --entrypoint app:main
-        agentarts config -n my-agent -e app:main --dependency-file requirements.txt --swr-org my-org --swr-repo my-repo
+        agentarts config --name myagent --entrypoint app:main
+        agentarts config -n myagent -e app:main --dependency-file requirements.txt --swr-org my-org --swr-repo my-repo
     """
     if ctx.invoked_subcommand is not None:
         return
@@ -226,7 +226,7 @@ def get(
     Examples:
         agentarts config get
         agentarts config get base.region
-        agentarts config get base.region --agent my-agent
+        agentarts config get base.region --agent myagent
     """
     if key is None:
         success = config_op.print_agent_detail(agent)
@@ -262,7 +262,7 @@ def remove(
     Remove an agent configuration.
 
     Examples:
-        agentarts config remove my-agent
+        agentarts config remove myagent
     """
     success = config_op.remove_agent(name)
     if not success:

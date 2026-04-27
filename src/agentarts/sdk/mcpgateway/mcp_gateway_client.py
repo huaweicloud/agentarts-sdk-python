@@ -21,13 +21,11 @@ class MCPGatewayClient(BaseHTTPClient):
     """
 
     def __init__(self, config: RequestConfig | None = None):
-        # If config is None or base_url is not set, use control plane endpoint
         if config is None or (config.base_url is None or config.base_url == ""):
             from agentarts.sdk.service.http_client import RequestConfig
             if config is None:
                 config = RequestConfig()
             config.base_url = f"{get_control_plane_endpoint()}/v1/core"
-            config.verify_ssl = False
         super().__init__(config, open_ak_sk=True)
 
     def create_mcp_gateway(

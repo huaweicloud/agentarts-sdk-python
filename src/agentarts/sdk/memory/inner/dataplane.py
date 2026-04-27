@@ -53,7 +53,7 @@ class _DataPlane:
             self,
             region_name: str | None = None,
             api_key: str | None = None,
-            verify_ssl: bool = False,
+            verify_ssl: bool | str = True,
     ):
         """
         Initialize data plane.
@@ -61,7 +61,10 @@ class _DataPlane:
         Args:
             region_name: Huawei Cloud region name, auto-detected from environment if not provided
             api_key: API Key for data plane authentication (optional, falls back to environment variable)
-            verify_ssl: Whether to verify SSL certificates (default: False)
+            verify_ssl: SSL verification setting (default: True). Can be:
+                - True: Verify SSL certificates using system CA bundle
+                - False: Skip SSL verification (not recommended for production)
+                - str: Path to custom CA certificate file
         """
         self.client = MemoryHttpService(
             region_name=region_name,
@@ -284,3 +287,12 @@ class _DataPlane:
         """
         logger.info(f"Deleting memory: {memory_id}")
         self.client.delete_memory(space_id, memory_id)
+
+    def close(self) -> None:
+        """Close the data plane and release resources.
+
+        This method closes the underlying HTTP client session.
+        """
+        if hasattr(self, "client") and self.client is not None:
+            self.client.close()
+            logger.info("DataPlane closed")
