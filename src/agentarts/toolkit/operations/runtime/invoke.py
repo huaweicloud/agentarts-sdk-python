@@ -138,6 +138,77 @@ class InvokeMode(str, Enum):
     CLOUD = "cloud"
 
 
+def _normalize_json_payload(payload: str) -> str:
+    """
+    Normalize JSON payload to handle Windows PowerShell quote stripping.
+
+    On Windows PowerShell, double quotes inside single-quoted strings may be
+    stripped when passed to subprocess, causing '{"message":"hello"}' to become
+    '{message:hello}'. This function attempts to restore proper JSON formatting.
+
+    Args:
+        payload: Raw payload string received from CLI
+
+    Returns:
+        Normalized JSON string
+    """
+    if not payload:
+        return payload
+
+    payload = payload.strip()
+
+    try:
+        json.loads(payload)
+        return payload
+    except json.JSONDecodeError:
+        pass
+
+    if payload.startswith("'") and payload.endswith("'"):
+        payload = payload[1:-1]
+
+    if '\\"' in payload:
+        payload = payload.replace('\\"', '"')
+        try:
+            json.loads(payload)
+            return payload
+        except json.JSONDecodeError:
+            pass
+
+    if payload.startswith("{") and payload.endswith("}"):
+        inner = payload[1:-1].strip()
+        if not inner:
+            return "{}"
+
+        result_parts = []
+        parts = inner.split(",")
+        for part in parts:
+            part = part.strip()
+            if ":" in part:
+                key_val = part.split(":", 1)
+                key = key_val[0].strip()
+                val = key_val[1].strip() if len(key_val) > 1 else ""
+
+                if not key.startswith('"') and not key.startswith("'"):
+                    key = f'"{key}"'
+
+                if val:
+                    if not val.startswith('"') and not val.startswith("'") and not val.startswith("[") and not val.startswith("{") and not val.isdigit() and val.lower() not in ("true", "false", "null"):
+                        val = f'"{val}"'
+
+                result_parts.append(f"{key}:{val}")
+            else:
+                result_parts.append(part)
+
+        reconstructed = "{" + ",".join(result_parts) + "}"
+        try:
+            json.loads(reconstructed)
+            return reconstructed
+        except json.JSONDecodeError:
+            pass
+
+    return payload
+
+
 def invoke_agent(
     payload: str,
     agent_name: str | None = None,
@@ -170,8 +241,9 @@ def invoke_agent(
     Returns:
         True if successful, False otherwise
     """
+    normalized_payload = _normalize_json_payload(payload)
     try:
-        json.loads(payload)
+        json.loads(normalized_payload)
     except json.JSONDecodeError:
         echo_error("Payload must be valid JSON")
         return False
@@ -187,7 +259,7 @@ def invoke_agent(
             echo_info("Invoke Request", f"[cyan]Mode:[/cyan] [yellow]Local[/yellow]\n[cyan]Endpoint:[/cyan] [white]localhost:{local_port}[/white]")
 
             result = client.invoke_agent(
-                payload=payload,
+                payload=normalized_payload,
                 session_id=session_id,
                 bearer_token=actual_bearer_token,
                 endpoint=endpoint,
@@ -233,7 +305,7 @@ def invoke_agent(
             result = client.invoke_agent(
                 agent_name=agent_name,
                 session_id=actual_session_id,
-                payload=payload,
+                payload=normalized_payload,
                 bearer_token=actual_bearer_token,
                 endpoint=endpoint,
                 timeout=timeout,

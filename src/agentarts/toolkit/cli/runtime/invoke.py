@@ -99,7 +99,7 @@ def status(
 def invoke(
     payload: Annotated[
         str,
-        typer.Argument(help="JSON payload to send to the agent (e.g., '{\"input\": \"hello\"}')"),
+        typer.Argument(help="JSON payload to send to the agent (e.g., '{\"message\": \"hello\"}')"),
     ],
     agent: Annotated[
         str | None,
