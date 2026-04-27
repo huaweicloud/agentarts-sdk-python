@@ -228,7 +228,7 @@ class TestBuildContext:
         mock_request.headers = {
             "X-HW-AgentGateway-Workload-Access-Token": "workload-token",
             "x-hw-agentarts-session-id": "session-abc",
-            "X-Hw-AgentArts-Runtime-User-Id": "user-xyz",
+            "X-HW-AgentGateway-User-Id": "user-xyz",
         }
 
         app._build_request_context(mock_request)
@@ -628,7 +628,7 @@ class TestHandlePing:
         mock_request.headers = {
             "X-HW-AgentGateway-Workload-Access-Token": "workload-token",
             "x-hw-agentarts-session-id": "session-abc",
-            "X-Hw-AgentArts-Runtime-User-Id": "user-xyz",
+            "X-HW-AgentGateway-User-Id": "user-xyz",
         }
 
         response = await app._handle_ping(mock_request)
@@ -859,7 +859,16 @@ class TestRun:
         """Test run uses 0.0.0.0 in Docker environment."""
         app = AgentArtsRuntimeApp()
 
-        with patch("os.path.exists", return_value=True), patch("uvicorn.run") as mock_run:
+        with (
+            patch("os.path.exists", return_value=True),
+            patch("socket.socket") as mock_socket,
+            patch("socket.gethostbyname", return_value="127.0.0.1"),
+            patch("uvicorn.run") as mock_run,
+        ):
+            mock_socket_instance = MagicMock()
+            mock_socket_instance.getsockname.return_value = ("0.0.0.0", 0)
+            mock_socket.return_value = mock_socket_instance
+
             app.run()
             call_kwargs = mock_run.call_args[1]
             assert call_kwargs["host"] == "0.0.0.0"
