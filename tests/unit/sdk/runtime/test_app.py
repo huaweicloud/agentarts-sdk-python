@@ -861,12 +861,16 @@ class TestRun:
 
         with (
             patch("os.path.exists", return_value=True),
-            patch("socket.socket") as mock_socket,
-            patch("socket.gethostbyname", return_value="127.0.0.1"),
+            patch("agentarts.sdk.runtime.app.subprocess.run") as mock_subprocess,
+            patch("agentarts.sdk.runtime.app.socket.socket") as mock_socket,
+            patch("agentarts.sdk.runtime.app.socket.gethostbyname", return_value="127.0.0.1"),
+            patch("agentarts.sdk.runtime.app.socket.gethostname", return_value="localhost"),
             patch("uvicorn.run") as mock_run,
         ):
+            mock_subprocess.return_value.stdout = ""
+            mock_subprocess.return_value.returncode = 1
             mock_socket_instance = MagicMock()
-            mock_socket_instance.getsockname.return_value = ("0.0.0.0", 0)
+            mock_socket_instance.connect.side_effect = Exception("mocked failure")
             mock_socket.return_value = mock_socket_instance
 
             app.run()
