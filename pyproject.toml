@@ -41,7 +41,6 @@ classifiers = [
 requires-python = ">=3.10"
 dependencies = [
     "huaweicloudsdkagentidentity>=3.1.0",
-    "huaweicloudsdkcore>=3.1.0",
     "huaweicloudsdkiam>=3.1.0",
     "huaweicloudsdkswr>=3.1.0",
     "starlette>=0.46.2",
