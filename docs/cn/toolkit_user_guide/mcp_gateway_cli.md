@@ -44,9 +44,9 @@ agentarts mcp-gateway [command] [options]
 agentarts mcp-gateway create-mcp-gateway [options]
 ```
 **参数说明**：
-| 参数 | 結写 | 必填 | 默认值 | 说明 |
+| 参数 | 简写 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| --name | -n | 否 | TestGateway-{random} | 网关名称 |
+| --name | -n | 否 | gateway-{random} | 网关名称 |
 | --description | -d | 否 | None | 网关描述 |
 | --protocol-type | 无 | 否 | mcp | 协议类型 |
 | --authorizer-type | 无 | 否 | iam | 授权器类型（custom_jwt/iam/api_key） |
@@ -54,7 +54,6 @@ agentarts mcp-gateway create-mcp-gateway [options]
 | --authorizer-configuration | 无 | 否 | None | 授权器配置（JSON 格式） |
 | --log-delivery-configuration | 无 | 否 | None | 日志投递配置（JSON 格式） |
 | --outbound-network-configuration | 无 | 否 | None | 出站网络配置（JSON 格式） |
-| --tags | 无 | 否 | None | 网关标签 |
 **使用示例**：
 ```bash
 # 基本创建
@@ -63,8 +62,7 @@ agentarts mcp-gateway create-mcp-gateway --name my-gateway --description "我的
 agentarts mcp-gateway create-mcp-gateway \
   --name my-gateway \
   --description "生产环境网关" \
-  --authorizer-type iam \
-  --tags "production,api"
+  --authorizer-type iam
 ```
 ### update-mcp-gateway
 更新现有的 MCP 网关。
@@ -78,7 +76,6 @@ agentarts mcp-gateway update-mcp-gateway <gateway_id> [options]
 | --description | -d | 否 | None | 网关描述 |
 | --authorizer-configuration | 无 | 否 | None | 授权器配置（JSON 格式） |
 | --log-delivery-configuration | 无 | 否 | None | 日志投递配置（JSON 格式） |
-| --tags | 无 | 否 | None | 网关标签 |
 **使用示例**：
 ```bash
 # 更新描述
@@ -86,7 +83,7 @@ agentarts mcp-gateway update-mcp-gateway 123 --description "更新后的描述"
 # 更新多个配置
 agentarts mcp-gateway update-mcp-gateway 123 \
   --description "新描述" \
-  --tags "production,updated"
+  --log-delivery-configuration '{"enabled": true}'
 ```
 ### delete-mcp-gateway
 删除 MCP 网关。
@@ -125,7 +122,6 @@ agentarts mcp-gateway list-mcp-gateways [options]
 | --name | 无 | 否 | None | 网关名称过滤器 |
 | --status | 无 | 否 | None | 网关状态过滤器 |
 | --gateway-id | 无 | 否 | None | 网关 ID 过滤器 |
-| --tags | 无 | 否 | None | 网关标签过滤器 |
 | --limit | 无 | 否 | 50 | 分页限制（1-50） |
 | --offset | 无 | 否 | 0 | 分页偏移量 |
 **使用示例**：
@@ -147,7 +143,7 @@ agentarts mcp-gateway create-mcp-gateway-target <gateway_id> [options]
 | 参数 | 简写 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | gateway_id | 无 | 是 | - | 网关 ID（位置参数） |
-| --name | -n | 否 | TestGatewayTarget-{random} | 目标名称 |
+| --name | -n | 否 | target-{random} | 目标名称 |
 | --description | -d | 否 | None | 目标描述 |
 | --target-configuration | 无 | 否 | None | 目标配置（JSON 格式） |
 | --credential-provider-configuration | 无 | 否 | None | 凭证提供者配置（JSON 格式） |
