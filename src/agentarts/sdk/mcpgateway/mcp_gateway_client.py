@@ -78,7 +78,7 @@ class MCPGatewayClient(BaseHTTPClient):
                 "Statement": [
                     {
                         "Action": [
-                            "csms:secret:getVersion"
+                            "csms:secret:getVersion",
                             "agentIdentity::getResourceApiKey",
                             "agentIdentity::getResourceOauth2Token",
                             "agentIdentity::getResourceStsToken",
