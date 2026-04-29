@@ -6,7 +6,10 @@ Provides built-in tools for AI agents:
 - code_session: Context manager for code interpreter sessions
 """
 
-from agentarts.sdk.tools.code_interpreter import CodeInterpreter, code_session
+from agentarts.sdk.tools.code_interpreter.code_interpreter_client import (
+    CodeInterpreter,
+    code_session,
+)
 
 __all__ = [
     "CodeInterpreter",
