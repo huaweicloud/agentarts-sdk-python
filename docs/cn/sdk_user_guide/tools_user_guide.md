@@ -141,7 +141,7 @@ CodeInterpreter
 ### 初始化
 
 ```python
-CodeInterpreter(region: Optional[str] = None, data_endpoint: Optional[str] = None)
+CodeInterpreter(region: Optional[str] = None, data_endpoint: Optional[str] = None, auth_type: str = "API_KEY")
 ```
 
 **参数说明**：
@@ -150,11 +150,12 @@ CodeInterpreter(region: Optional[str] = None, data_endpoint: Optional[str] = Non
 |------|------|------|--------|------|
 | region | str | 否 | 从环境变量获取 | 华为云区域名称 |
 | data_endpoint | str | 否 | 从环境变量获取 | 数据面端点，优先从环境变量 AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT 读取 |
+| auth_type | str | 否 | "API_KEY" | 认证类型，支持 "API_KEY" 或 "IAM" |
 
 **使用示例**：
 
 ```python
-# 使用环境变量配置
+# 使用环境变量配置（API Key 认证）
 client = CodeInterpreter(region="cn-southwest-2")
 
 # 通过参数指定数据面端点
@@ -163,6 +164,11 @@ client = CodeInterpreter(
     data_endpoint="https://your-custom-endpoint.com"
 )
 
+# 使用 IAM 认证
+client = CodeInterpreter(
+    region="cn-southwest-2",
+    auth_type="IAM"
+)
 ```
 
 ### 功能特性
@@ -627,6 +633,7 @@ client.execute_code("print(x)")
 | --- | --- | --- |
 |region |str| **Required**  region名称，如"cn-southwest-2"|
 |code_interpreter_name |str| **Required**  代码解释器名称|
+|auth_type |str| 认证类型，支持 "API_KEY" 或 "IAM"，默认 "API_KEY"|
 |api_key |str| 认证使用的API Key，如果代码解释器创建时使用 API_KEY 认证，则需要提供此参数；如果不提供则从环境变量HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY中获取；如果代码解释器创建时使用 IAM 认证，则无需提供此参数, default: `None`|
 
 **样例**
@@ -639,7 +646,7 @@ with code_session("cn-southwest-2", "my-code-interpreter-name") as client:
 with code_session("cn-southwest-2", "my-code-interpreter-name", api_key="your-api-key") as client:
     client.execute_code("print('Hello, World!')")
 
-# 代码解释器创建时使用 IAM 认证，无需传入 api_key
-with code_session("cn-southwest-2", "my-code-interpreter-name") as client:
+# 使用 IAM 认证
+with code_session("cn-southwest-2", "my-code-interpreter-name", auth_type="IAM") as client:
     client.execute_code("print('Hello, World!')")
 ```

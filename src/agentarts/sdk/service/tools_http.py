@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from .http_client import BaseHTTPClient, RequestConfig
+from .http_client import BaseHTTPClient, RequestConfig, SignMode
 
 
 class ToolsAPIError(BaseException):
@@ -84,8 +84,23 @@ class ControlToolsHttpClient(BaseHTTPClient):
 
 
 class DataToolsHttpClient(BaseHTTPClient):
-    def __init__(self, region_name: str, endpoint_url: str):
-        super().__init__(RequestConfig(base_url=endpoint_url, verify_ssl=False))
+    def __init__(self, region_name: str, endpoint_url: str, auth_type: str = "API_KEY"):
+        """Initialize the data tools HTTP client.
+
+        Args:
+            region_name (str): The region name
+            endpoint_url (str): The endpoint URL for data plane API
+            auth_type (str, optional): Authentication type, supports "API_KEY" or "IAM". Defaults to "API_KEY"
+        """
+        if auth_type == "IAM":
+            super().__init__(
+                RequestConfig(base_url=endpoint_url, verify_ssl=False),
+                open_ak_sk=True,
+                sign_mode=SignMode.V11_HMAC_SHA256,
+                region_id=region_name,
+            )
+        else:
+            super().__init__(RequestConfig(base_url=endpoint_url, verify_ssl=False))
         self.region_name = region_name
 
     @property
