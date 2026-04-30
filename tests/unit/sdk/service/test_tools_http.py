@@ -9,8 +9,12 @@ class TestToolsHttpClient(unittest.TestCase):
     @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_AK")
     @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_SK")
     def setUp(self, mock_ak, mock_sk):
-        self.control_client = ControlToolsHttpClient(region_name="test-region", endpoint_url="https://test.com")
-        self.data_client = DataToolsHttpClient(region_name="test-region", endpoint_url="https://test.com")
+        self.control_client = ControlToolsHttpClient(
+            region_name="test-region", endpoint_url="https://test.com"
+        )
+        self.data_client = DataToolsHttpClient(
+            region_name="test-region", endpoint_url="https://test.com"
+        )
 
     @patch.object(ControlToolsHttpClient, "post")
     def test_create_code_interpreter(self, mock_post):
@@ -28,7 +32,7 @@ class TestToolsHttpClient(unittest.TestCase):
                 "observability": {},
                 "network_config": {},
                 "agent_gateway_id": "a1b2c3d4-e5f6-7890-abcd-ef12334567890",
-                "tags": []
+                "tags": [],
             },
             headers={},
             streaming=True,
@@ -46,7 +50,7 @@ class TestToolsHttpClient(unittest.TestCase):
                 "observability": {},
                 "network_config": {},
                 "agent_gateway_id": "a1b2c3d4-e5f6-7890-abcd-ef12334567890",
-                "tags": []
+                "tags": [],
             }
         )
 
@@ -63,8 +67,8 @@ class TestToolsHttpClient(unittest.TestCase):
                 "observability": {},
                 "network_config": {},
                 "agent_gateway_id": "a1b2c3d4-e5f6-7890-abcd-ef12334567890",
-                "tags": []
-            }
+                "tags": [],
+            },
         )
 
     @patch.object(ControlToolsHttpClient, "get")
@@ -90,9 +94,9 @@ class TestToolsHttpClient(unittest.TestCase):
                         },
                         "access_endpoint": "",
                         "observability": {},
-                        "tags": []
+                        "tags": [],
                     }
-                ]
+                ],
             },
             headers={},
             streaming=True,
@@ -100,21 +104,12 @@ class TestToolsHttpClient(unittest.TestCase):
         )
 
         # Act
-        result = self.control_client.list_code_interpreters(
-            {
-                "offset": 0,
-                "limit": 10
-            }
-        )
+        result = self.control_client.list_code_interpreters({"offset": 0, "limit": 10})
 
         # Assert
         assert result == mock_get.return_value.data
         mock_get.assert_called_once_with(
-            url="/v1/core/code-interpreters",
-            params={
-                "offset": 0,
-                "limit": 10
-            }
+            url="/v1/core/code-interpreters", params={"offset": 0, "limit": 10}
         )
 
     @patch.object(ControlToolsHttpClient, "put")
@@ -125,15 +120,7 @@ class TestToolsHttpClient(unittest.TestCase):
         mock_put.return_value = RequestResult(
             success=True,
             status_code=200,
-            data={
-                "observability": {},
-                "tags": [
-                    {
-                        "key": "test-tag",
-                        "value": "test-tag-value"
-                    }
-                ]
-            },
+            data={"observability": {}, "tags": [{"key": "test-tag", "value": "test-tag-value"}]},
             headers={},
             streaming=True,
             _raw_response=None,
@@ -144,28 +131,15 @@ class TestToolsHttpClient(unittest.TestCase):
             code_interpreter_id=code_interpreter_id,
             request_params={
                 "observability": {},
-                "tags": [
-                    {
-                        "key": "test-tag",
-                        "value": "test-tag-value"
-                    }
-                ]
-            }
+                "tags": [{"key": "test-tag", "value": "test-tag-value"}],
+            },
         )
 
         # Assert
         assert result == mock_put.return_value.data
         mock_put.assert_called_once_with(
             url=f"/v1/core/code-interpreters/{code_interpreter_id}",
-            json={
-                "observability": {},
-                "tags": [
-                    {
-                        "key": "test-tag",
-                        "value": "test-tag-value"
-                    }
-                ]
-            }
+            json={"observability": {}, "tags": [{"key": "test-tag", "value": "test-tag-value"}]},
         )
 
     @patch.object(ControlToolsHttpClient, "get")
@@ -192,7 +166,7 @@ class TestToolsHttpClient(unittest.TestCase):
                 "tags": [],
                 "auth_type": "API_KEY",
                 "api_key_name": "test-api-key-name",
-                "network_config": {}
+                "network_config": {},
             },
             headers={},
             streaming=True,
@@ -200,15 +174,11 @@ class TestToolsHttpClient(unittest.TestCase):
         )
 
         # Act
-        result = self.control_client.get_code_interpreter(
-            code_interpreter_id=code_interpreter_id
-        )
+        result = self.control_client.get_code_interpreter(code_interpreter_id=code_interpreter_id)
 
         # Assert
         assert result == mock_get.return_value.data
-        mock_get.assert_called_once_with(
-            url=f"/v1/core/code-interpreters/{code_interpreter_id}"
-        )
+        mock_get.assert_called_once_with(url=f"/v1/core/code-interpreters/{code_interpreter_id}")
 
     @patch.object(ControlToolsHttpClient, "delete")
     def test_delete_code_interpreter(self, mock_delete):
@@ -231,9 +201,7 @@ class TestToolsHttpClient(unittest.TestCase):
 
         # Assert
         assert result == mock_delete.return_value.data
-        mock_delete.assert_called_once_with(
-            url=f"/v1/core/code-interpreters/{code_interpreter_id}"
-        )
+        mock_delete.assert_called_once_with(url=f"/v1/core/code-interpreters/{code_interpreter_id}")
 
     @patch.object(DataToolsHttpClient, "put")
     def test_start_session(self, mock_post):
@@ -247,7 +215,7 @@ class TestToolsHttpClient(unittest.TestCase):
                 "created_at": "2026-01-01T00:00:00Z",
                 "name": "test-session-name",
                 "session_id": "test-session-id",
-                "session_timeout": 600
+                "session_timeout": 600,
             },
             headers={},
             streaming=True,
@@ -255,16 +223,13 @@ class TestToolsHttpClient(unittest.TestCase):
         )
         code_interpreter_name = "test-code-interpreter-name"
         api_key = "test-api-key"
-        request_params = {
-            "name": "test-session-name",
-            "session_timeout": 600
-        }
+        request_params = {"name": "test-session-name", "session_timeout": 600}
 
         # Act
         result = self.data_client.start_session(
             code_interpreter_name=code_interpreter_name,
             api_key=api_key,
-            request_params=request_params
+            request_params=request_params,
         )
 
         # Assert
@@ -272,7 +237,7 @@ class TestToolsHttpClient(unittest.TestCase):
         mock_post.assert_called_once_with(
             url=f"/v1/code-interpreters/{code_interpreter_name}/sessions-start",
             json=request_params,
-            headers = {"Authorization": f"Bearer {api_key}"}
+            headers={"Authorization": f"Bearer {api_key}"},
         )
 
     @patch.object(DataToolsHttpClient, "get")
@@ -287,7 +252,7 @@ class TestToolsHttpClient(unittest.TestCase):
                 "created_at": "2026-01-01T00:00:00Z",
                 "name": "test-session-name",
                 "session_id": "test-session-id",
-                "session_timeout": 600
+                "session_timeout": 600,
             },
             headers={},
             streaming=True,
@@ -299,9 +264,7 @@ class TestToolsHttpClient(unittest.TestCase):
 
         # Act
         result = self.data_client.get_session(
-            code_interpreter_name=code_interpreter_name,
-            session_id=session_id,
-            api_key=api_key
+            code_interpreter_name=code_interpreter_name, session_id=session_id, api_key=api_key
         )
 
         # Assert
@@ -310,8 +273,8 @@ class TestToolsHttpClient(unittest.TestCase):
             url=f"/v1/code-interpreters/{code_interpreter_name}/sessions-get",
             headers={
                 "x-HW-Agentarts-Code-Interpreter-Session-Id": session_id,
-                "Authorization": f"Bearer {api_key}"
-            }
+                "Authorization": f"Bearer {api_key}",
+            },
         )
 
     @patch.object(DataToolsHttpClient, "put")
@@ -324,9 +287,7 @@ class TestToolsHttpClient(unittest.TestCase):
 
         # Act
         self.data_client.stop_session(
-            code_interpreter_name=code_interpreter_name,
-            session_id=session_id,
-            api_key=api_key
+            code_interpreter_name=code_interpreter_name, session_id=session_id, api_key=api_key
         )
 
         # Assert
@@ -334,8 +295,8 @@ class TestToolsHttpClient(unittest.TestCase):
             url=f"/v1/code-interpreters/{code_interpreter_name}/sessions-stop",
             headers={
                 "x-HW-Agentarts-Code-Interpreter-Session-Id": session_id,
-                "Authorization": f"Bearer {api_key}"
-            }
+                "Authorization": f"Bearer {api_key}",
+            },
         )
 
     @patch.object(DataToolsHttpClient, "post")
@@ -362,8 +323,8 @@ class TestToolsHttpClient(unittest.TestCase):
                                 "blob": "",
                                 "mime_type": "string",
                                 "text": "string",
-                                "uri": "string"
-                            }
+                                "uri": "string",
+                            },
                         }
                     ],
                     "is_error": False,
@@ -371,8 +332,8 @@ class TestToolsHttpClient(unittest.TestCase):
                         "execution_time": 100,
                         "exit_code": 0,
                         "stderr": "string",
-                        "stdout": "string"
-                    }
+                        "stdout": "string",
+                    },
                 },
             },
             headers={},
@@ -387,8 +348,8 @@ class TestToolsHttpClient(unittest.TestCase):
             "arguments": {
                 "clear_context": False,
                 "code": "print('hello world')",
-                "language": "python"
-            }
+                "language": "python",
+            },
         }
 
         # Act
@@ -396,7 +357,7 @@ class TestToolsHttpClient(unittest.TestCase):
             code_interpreter_name=code_interpreter_name,
             session_id=session_id,
             api_key=api_key,
-            arguments=params
+            arguments=params,
         )
 
         # Assert
@@ -405,7 +366,7 @@ class TestToolsHttpClient(unittest.TestCase):
             url=f"/v1/code-interpreters/{code_interpreter_name}/invoke",
             headers={
                 "x-HW-Agentarts-Code-Interpreter-Session-Id": session_id,
-                "Authorization": f"Bearer {api_key}"
+                "Authorization": f"Bearer {api_key}",
             },
-            json=params
+            json=params,
         )

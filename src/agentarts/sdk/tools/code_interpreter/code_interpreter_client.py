@@ -11,6 +11,7 @@ Data Plane:
     Manages the full lifecycle of code interpreter sessions
     (create, stop, get, invoke)
 """
+
 import base64
 import logging
 import os
@@ -44,30 +45,30 @@ class CodeInterpreter:
         data_plane_client: Client for interacting with data plane API
     """
 
-    def __init__(self, region: str | None, data_endpoint: str | None = None) -> None:
+    def __init__(self, region: str | None, data_endpoint: str | None = None, auth_type: str = "API_KEY") -> None:
         """Initialize the code interpreter client in the specified region.
 
         Args:
             region: The specified region
             data_endpoint: Data plane endpoint, optional. If not provided,
                 will be retrieved from environment variable AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT
+            auth_type: Authentication type, optional. Defaults to "API_KEY"
         """
         region = region or get_region()
 
         # Control plane client for managing code interpreters
         self.control_plane_client = ControlToolsHttpClient(
-            region_name=region,
-            endpoint_url=get_control_plane_endpoint()
+            region_name=region, endpoint_url=get_control_plane_endpoint()
         )
 
         # Data plane client for managing code interpreter sessions
         # Priority: environment variable > parameter > default value
         endpoint_url = get_code_interpreter_data_plane_endpoint(endpoint=data_endpoint)
 
-        self.data_plane_client = DataToolsHttpClient(
-            region_name=region,
-            endpoint_url=endpoint_url
-        )
+        if auth_type == "IAM":
+            self.data_plane_client = DataToolsHttpClient(region_name=region, endpoint_url=endpoint_url, auth_type=auth_type)
+        else:
+            self.data_plane_client = DataToolsHttpClient(region_name=region, endpoint_url=endpoint_url)
 
         self._code_interpreter_name = None
         self._session_id = None
@@ -111,9 +112,9 @@ class CodeInterpreter:
     def create_code_interpreter(
         self,
         name: str,
-        api_key_name: str,
+        auth_type: str = "API_KEY",
+        api_key_name: str | None = None,
         description: str | None = None,
-        auth_type: str | None = None,
         execution_agency_name: str | None = None,
         observability: dict | None = None,
         network_config: dict | None = None,
@@ -126,9 +127,9 @@ class CodeInterpreter:
 
         Args:
             name (str): The code interpreter name, must follow specific naming rules
-            api_key_name (str): The API Key name
+            auth_type (str): Authentication type, supported values: "API_KEY", "IAM". default "API_KEY"
+            api_key_name (Optional[str]): The API Key name
             description (Optional[str]): The code interpreter description
-            auth_type (Optional[str]): Authentication type, e.g., "API_KEY"
             execution_agency_name (Optional[str]): IAM agency name
             observability (Optional[Dict]): Observability configuration, e.g., logging and monitoring settings
             network_config (Optional[Dict]): Network configuration, e.g., VPC and security group settings
@@ -152,7 +153,7 @@ class CodeInterpreter:
         Example:
             >>> code_interpreter = client.create_code_interpreter(
             ...     name="my-code-interpreter",
-            ...     api_key_name="my-api-key-name",
+            ...     auth_type="API_KEY"
             ... )
             >>> code_interpreter_id = code_interpreter["id"]
         """
@@ -161,16 +162,16 @@ class CodeInterpreter:
         if not bool(re.match(pattern, name)):
             msg = "Name must match the pattern, please check your code_interpreter_name."
             raise ValueError(msg)
+        if auth_type == "API_KEY" and api_key_name is None:
+            msg = "API_KEY auth_type requires api_key_name."
+            raise ValueError(msg)
 
-        request_params = {
-            "name": name,
-            "api_key_name": api_key_name,
-        }
+        request_params = {"name": name, "auth_type": auth_type}
 
+        if api_key_name:
+            request_params["api_key_name"] = api_key_name
         if description:
             request_params["description"] = description
-        if auth_type:
-            request_params["auth_type"] = auth_type
         if execution_agency_name:
             request_params["execution_agency_name"] = execution_agency_name
         if observability:
@@ -182,9 +183,7 @@ class CodeInterpreter:
         if tags:
             request_params["tags"] = tags
 
-        return self.control_plane_client.create_code_interpreter(
-            request_params=request_params
-        )
+        return self.control_plane_client.create_code_interpreter(request_params=request_params)
 
     def list_code_interpreters(
         self,
@@ -234,9 +233,7 @@ class CodeInterpreter:
         # Remove None values
         request_params = {k: v for k, v in request_params.items() if v is not None}
 
-        return self.control_plane_client.list_code_interpreters(
-            request_params=request_params
-        )
+        return self.control_plane_client.list_code_interpreters(request_params=request_params)
 
     def update_code_interpreter(
         self,
@@ -279,8 +276,7 @@ class CodeInterpreter:
         if tags is not None:
             request_params["tags"] = tags
         return self.control_plane_client.update_code_interpreter(
-            code_interpreter_id=code_interpreter_id,
-            request_params=request_params
+            code_interpreter_id=code_interpreter_id, request_params=request_params
         )
 
     def get_code_interpreter(self, code_interpreter_id: str) -> dict:
@@ -328,16 +324,14 @@ class CodeInterpreter:
             >>> )
         """
         logging.info(f"Deleting code interpreter {code_interpreter_id}")
-        self.control_plane_client.delete_code_interpreter(
-            code_interpreter_id=code_interpreter_id
-        )
+        self.control_plane_client.delete_code_interpreter(code_interpreter_id=code_interpreter_id)
 
     def start_session(
         self,
         code_interpreter_name: str,
         session_name: str,
         api_key: str | None = None,
-        session_timeout: int | None = DEFAULT_TIMEOUT
+        session_timeout: int | None = DEFAULT_TIMEOUT,
     ) -> str:
         """Start a code interpreter session.
 
@@ -347,7 +341,8 @@ class CodeInterpreter:
         Args:
             code_interpreter_name (str): The code interpreter name, used to identify and manage sessions, must be unique
             session_name (str): The session name
-            api_key (Optional[str]): API Key for authentication, if not provided will be retrieved from environment variable API_KEY
+            api_key (Optional[str]): API Key for authentication, use only when auth_type is "API_KEY",
+                if not provided will be retrieved from environment variable API_KEY
             session_timeout (Optional[int]): Session timeout in seconds,
                 default 15 minutes, minimum 60 seconds, maximum 86400 seconds (24 hours)
 
@@ -365,29 +360,40 @@ class CodeInterpreter:
             "name": session_name,
             "session_timeout": session_timeout,
         }
-        if api_key is None:
-            api_key = os.getenv("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
-        response = self.data_plane_client.start_session(
-            code_interpreter_name=code_interpreter_name,
-            api_key=api_key,
-            request_params=request_params
-        )
+
+        if self.data_plane_client.open_ak_sk:
+            response = self.data_plane_client.start_session(
+                code_interpreter_name=code_interpreter_name, request_params=request_params
+            )
+        else:
+            # default use API_KEY authentication
+            api_key = api_key or os.getenv("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
+            if api_key is None:
+                msg = "API Key is not provided and not found in environment variable."
+                raise ValueError(msg)
+            response = self.data_plane_client.start_session(
+                code_interpreter_name=code_interpreter_name,
+                request_params=request_params,
+                api_key=api_key,
+            )
+
         self.session_id = response["session_id"]
         self.code_interpreter_name = code_interpreter_name
         return self.session_id
 
     def get_session(
-            self,
-            code_interpreter_name: str,
-            session_id: str | None = None,
-            api_key: str | None = None
+        self,
+        code_interpreter_name: str,
+        session_id: str | None = None,
+        api_key: str | None = None,
     ) -> dict:
         """Get code interpreter session details.
 
         Args:
             code_interpreter_name (str): The code interpreter name, used to identify and manage sessions, must be unique
             session_id (Optional[str]): The session ID, defaults to current session ID
-            api_key (Optional[str]): API Key for authentication, if not provided will be retrieved from environment variable API_KEY
+            api_key (Optional[str]): API Key for authentication, use only when auth_type is "API_KEY",
+                if not provided will be retrieved from environment variable API_KEY
 
         Returns:
             Dict: Dictionary containing session details
@@ -408,12 +414,19 @@ class CodeInterpreter:
         if not code_interpreter_name or not session_id:
             msg = "code_interpreter_name and session_id are required"
             raise ValueError(msg)
+
+        if self.data_plane_client.open_ak_sk:
+            return self.data_plane_client.get_session(
+                code_interpreter_name=code_interpreter_name, session_id=session_id
+            )
+
+        # default use API_KEY authentication
+        api_key = api_key or os.getenv("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
         if api_key is None:
-            api_key = os.getenv("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
+            msg = "API Key is not provided and not found in environment variable."
+            raise ValueError(msg)
         return self.data_plane_client.get_session(
-            code_interpreter_name=code_interpreter_name,
-            session_id=session_id,
-            api_key=api_key
+            code_interpreter_name=code_interpreter_name, session_id=session_id, api_key=api_key
         )
 
     def stop_session(self, api_key: str | None = None) -> bool:
@@ -422,7 +435,8 @@ class CodeInterpreter:
         Terminates any active session and clears session state.
 
         Args:
-            api_key (Optional[str]): API Key for authentication, if not provided will be retrieved from environment variable API_KEY
+            api_key (Optional[str]): API Key for authentication, use only when auth_type is "API_KEY",
+                if not provided will be retrieved from environment variable API_KEY
 
         Returns:
             bool: Returns True when no active session, otherwise False after stopping
@@ -434,24 +448,31 @@ class CodeInterpreter:
         if not self.session_id or not self.code_interpreter_name:
             return True
 
-        if api_key is None:
-            api_key = os.getenv("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
-
-        self.data_plane_client.stop_session(
-            code_interpreter_name=self.code_interpreter_name,
-            session_id=self.session_id,
-            api_key=api_key
-        )
+        if self.data_plane_client.open_ak_sk:
+            self.data_plane_client.stop_session(
+                code_interpreter_name=self.code_interpreter_name, session_id=self.session_id
+            )
+        else:
+            # default use API_KEY authentication
+            api_key = api_key or os.getenv("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
+            if api_key is None:
+                msg = "API Key is not provided and not found in environment variable."
+                raise ValueError(msg)
+            self.data_plane_client.stop_session(
+                code_interpreter_name=self.code_interpreter_name,
+                session_id=self.session_id,
+                api_key=api_key,
+            )
 
         self.code_interpreter_name = None
         self.session_id = None
         return True
 
     def invoke(
-            self,
-            operate_type: str,
-            arguments: dict,
-            api_key: str | None = None
+        self,
+        operate_type: str,
+        arguments: dict,
+        api_key: str | None = None,
     ) -> dict[str, Any]:
         """Invoke a code interpreter session.
 
@@ -460,7 +481,8 @@ class CodeInterpreter:
         Args:
             operate_type (str): The operation method name, e.g., "execute_code" or "execute_command"
             arguments (Dict): Invocation arguments, varies based on operate_type
-            api_key (Optional[str]): API Key for authentication, if not provided will be retrieved from environment variable API_KEY
+            api_key (Optional[str]): API Key for authentication, use only when auth_type is "API_KEY",
+                if not provided will be retrieved from environment variable API_KEY
 
         Returns:
             result[Dict]: Dictionary containing the invocation result
@@ -479,26 +501,31 @@ class CodeInterpreter:
             msg = "No Code Interpreter exists, use create_code_interpreter method first"
             raise ValueError(msg)
 
-        request_params = {
-            "operate_type": operate_type,
-            "arguments": arguments
-        }
+        request_params = {"operate_type": operate_type, "arguments": arguments}
 
+        if self.data_plane_client.open_ak_sk:
+            return self.data_plane_client.invoke(
+                code_interpreter_name=self.code_interpreter_name,
+                session_id=self.session_id,
+                arguments=request_params,
+            )
+        # default use API_KEY authentication
+        api_key = api_key or os.getenv("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
         if api_key is None:
-            api_key = os.getenv("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
-
+            msg = "API Key is not provided and not found in environment variable."
+            raise ValueError(msg)
         return self.data_plane_client.invoke(
             code_interpreter_name=self.code_interpreter_name,
             session_id=self.session_id,
+            arguments=request_params,
             api_key=api_key,
-            arguments=request_params
         )
 
     def execute_code(
-            self,
-            code: str,
-            language: str = "python",
-            clear_context: bool = False,
+        self,
+        code: str,
+        language: str = "python",
+        clear_context: bool = False,
     ) -> dict[str, Any]:
         """Execute code in the code interpreter.
 
@@ -529,11 +556,7 @@ class CodeInterpreter:
 
         return self.invoke(
             operate_type="execute_code",
-            arguments={
-                "code": code,
-                "language": language,
-                "clear_context": clear_context
-            }
+            arguments={"code": code, "language": language, "clear_context": clear_context},
         )
 
     def execute_command(self, command: str) -> dict[str, Any]:
@@ -559,8 +582,7 @@ class CodeInterpreter:
             raise ValueError(msg)
 
         # Check for common injection patterns
-        strict_block_pattrns = [
-        ]
+        strict_block_pattrns = []
 
         for pattern in strict_block_pattrns:
             if re.search(pattern, command):
@@ -569,18 +591,13 @@ class CodeInterpreter:
 
         logger.info(f"Executing command: {command}")
 
-        return self.invoke(
-            operate_type="execute_command",
-            arguments={
-                "command": command
-            }
-        )
+        return self.invoke(operate_type="execute_command", arguments={"command": command})
 
     def upload_file(
-            self,
-            path: str,
-            content: str | bytes,
-            description: str = "",
+        self,
+        path: str,
+        content: str | bytes,
+        description: str = "",
     ) -> dict[str, Any]:
         """Upload a file to the code interpreter.
 
@@ -621,17 +638,9 @@ class CodeInterpreter:
         else:
             logger.info(f"Uploading file to {path} without description")
 
-        return self.invoke(
-            operate_type="write_files",
-            arguments={
-                "write_contents": [file_content]
-            }
-        )
+        return self.invoke(operate_type="write_files", arguments={"write_contents": [file_content]})
 
-    def upload_files(
-            self,
-            files: list[dict[str, str]]
-    ) -> dict[str, Any]:
+    def upload_files(self, files: list[dict[str, str]]) -> dict[str, Any]:
         """Upload multiple files to the code interpreter.
 
         This operation is atomic, all files will be uploaded successfully or fail together,
@@ -656,7 +665,7 @@ class CodeInterpreter:
         """
         file_contents = []
         for file_spec in files:
-            path = file_spec.get("path")
+            path = file_spec.get("path", "")
             content = file_spec.get("content")
 
             if not path.startswith("/"):
@@ -676,17 +685,9 @@ class CodeInterpreter:
 
         logger.info(f"Uploading {len(file_contents)} files")
 
-        return self.invoke(
-            operate_type="write_files",
-            arguments={
-                "write_contents": file_contents
-            }
-        )
+        return self.invoke(operate_type="write_files", arguments={"write_contents": file_contents})
 
-    def download_file(
-            self,
-            path: str
-    ) -> str | bytes:
+    def download_file(self, path: str) -> str | bytes:
         """Download a file from the code interpreter.
 
         Args:
@@ -706,31 +707,25 @@ class CodeInterpreter:
             raise ValueError(msg)
 
         logger.info(f"Downloading file from {path}")
-        result = self.invoke(
-            operate_type="read_files",
-            arguments={
-                "paths": [path]
-            }
-        )
+        result = self.invoke(operate_type="read_files", arguments={"paths": [path]})
 
         # Extract file content
-        if "stream" not in result:
+        if "result" not in result or "content" not in result["result"]:
             msg = f"Could not read file: {path}"
             raise FileNotFoundError(msg)
+        result = result["result"]
 
-        for event in result["stream"]:
-            if "result" not in event:
-                msg = f"Could not read file: {path}"
-                raise FileNotFoundError(msg)
-            for content_item in event["result"].get("contents", []):
-                if content_item.get("type") != "resource":
-                    msg = f"Could not read file: {path}"
-                    raise FileNotFoundError(msg)
-                resource = content_item.get("resource", {})
-                if "text" in resource:
-                    return resource["text"]
-                if "blob" in resource:
-                    raw = base64.b64decode(resource["blob"])
+        for content_item in result["content"]:
+            if content_item.get("type") == "text":
+                return content_item.get("text", "")
+            if content_item.get("type") == "image":
+                return base64.b64decode(content_item.get("data", ""))
+            if content_item.get("type") == "resource":
+                content_resource = content_item.get("resource", {})
+                if content_resource.get("type") == "text":
+                    return content_resource["text"]
+                if content_resource.get("type") == "blob":
+                    raw = base64.b64decode(content_resource["blob"])
                     try:
                         return raw.decode("utf-8")
                     except ValueError:
@@ -738,10 +733,7 @@ class CodeInterpreter:
         msg = f"Could not read file: {path}"
         raise FileNotFoundError(msg)
 
-    def download_files(
-            self,
-            paths: list[str]
-    ) -> dict[str, str | bytes]:
+    def download_files(self, paths: list[str]) -> dict[str, str | bytes]:
         """Download multiple files from the code interpreter.
 
         Args:
@@ -762,39 +754,39 @@ class CodeInterpreter:
             if not path.startswith(DEFAULT_PATH):
                 msg = f"Invalid path. Path must start with {DEFAULT_PATH}"
                 raise ValueError(msg)
-        result = self.invoke(
-            operate_type="read_files",
-            arguments={
-                "paths": paths
-            }
-        )
+        result = self.invoke(operate_type="read_files", arguments={"paths": paths})
+
+        # Extract file content
+        if "result" not in result or "content" not in result["result"]:
+            msg = f"Could not read file: {path}"
+            raise FileNotFoundError(msg)
+        result = result["result"]
 
         files = {}
-        for event in result["stream"]:
-            if "result" not in event:
-                return files
-            for content_item in event["result"].get("contents", []):
-                if content_item.get("type") != "resource":
-                    return files
-                resource = content_item.get("resource", {})
-                uri = resource.get("uri", "")
-                file_path = uri.replace("file://", "")
+        for content_item in result["content"]:
+            uri = content_item.get("uri", "")
+            file_path = uri.replace("file://", "")
 
-                if "text" in resource:
-                    files[file_path] = resource["text"]
-                elif "blob" in resource:
+            if content_item.get("type") == "text":
+                files[file_path] = content_item.get("text", "")
+            elif content_item.get("type") == "image":
+                files[file_path] = base64.b64decode(content_item.get("data", ""))
+            elif content_item.get("type") == "resource":
+                resource = content_item.get("resource", {})
+                resource_uri = resource.get("uri", "")
+                resource_file_path = resource_uri.replace("file://", "")
+
+                if resource.get("type") == "text":
+                    files[resource_file_path] = resource["text"]
+                elif resource.get("type") == "blob":
                     raw = base64.b64decode(resource["blob"])
                     try:
-                        files[file_path] = raw.decode("utf-8")
+                        files[resource_file_path] = raw.decode("utf-8")
                     except ValueError:
-                        files[file_path] = raw
+                        files[resource_file_path] = raw
         return files
 
-    def install_packages(
-            self,
-            packages: list[str],
-            upgrade: bool = False
-    ) -> dict[str, Any]:
+    def install_packages(self, packages: list[str], upgrade: bool = False) -> dict[str, Any]:
         """Install Python packages in the code interpreter.
 
         Args:
@@ -830,12 +822,7 @@ class CodeInterpreter:
         command = f"pip install {package_str} {upgrade_flag}"
 
         logger.info(f"Installing packages: {package_str}")
-        return self.invoke(
-            operate_type="execute_command",
-            arguments={
-                "command": command
-            }
-        )
+        return self.invoke(operate_type="execute_command", arguments={"command": command})
 
     def clear_context(self) -> dict[str, Any]:
         """Clear the code interpreter context.
@@ -858,26 +845,26 @@ class CodeInterpreter:
         logger.info("Clearing code interpreter context")
         return self.invoke(
             operate_type="execute_code",
-            arguments={
-                "code": "# Context cleared",
-                "language": "python",
-                "clear_context": True
-            }
+            arguments={"code": "# Context cleared", "language": "python", "clear_context": True},
         )
+
 
 @contextmanager
 def code_session(
     region: str,
     code_interpreter_name: str,
-    api_key: str | None = None
+    auth_type: str = "API_KEY",
+    api_key: str | None = None,
 ) -> Generator[CodeInterpreter, None, None]:
     """Code interpreter session context manager.
 
     Args:
         region (str): Region name, e.g., "cn-southwest-2"
+        auth_type (str, optional): Authentication type, default "API_KEY".
+            Can be "API_KEY" or "IAM"
         code_interpreter_name (str): Code interpreter name
-        api_key (Optional[str]): API Key, if not provided will be retrieved from
-            environment variable HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY
+        api_key (Optional[str]): API Key for authentication, use only when auth_type is "API_KEY",
+            if not provided will be retrieved from environment variable API_KEY
 
     Yields:
         CodeInterpreter: Code interpreter instance with session started
@@ -889,14 +876,19 @@ def code_session(
         >>> # With API Key
         >>> with code_session("cn-southwest-2", "my-code-interpreter-name", api_key="your-api-key") as client:
         >>>     client.execute_code("print('Hello, World!')")
+        >>>
+        >>> # With IAM
+        >>> with code_session("cn-southwest-2", "my-code-interpreter-name", auth_type="IAM") as client:
+        >>>     client.execute_code("print('Hello, World!')")
     """
 
-    client = CodeInterpreter(region=region)
+    client = CodeInterpreter(region=region, auth_type=auth_type)
+
     default_session_name = "default-session-name"
     client.start_session(
         code_interpreter_name=code_interpreter_name,
         session_name=default_session_name,
-        api_key=api_key
+        api_key=api_key,
     )
 
     try:
