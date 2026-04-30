@@ -45,13 +45,14 @@ class CodeInterpreter:
         data_plane_client: Client for interacting with data plane API
     """
 
-    def __init__(self, region: str | None, data_endpoint: str | None = None) -> None:
+    def __init__(self, region: str | None, data_endpoint: str | None = None, auth_type: str = "API_KEY") -> None:
         """Initialize the code interpreter client in the specified region.
 
         Args:
             region: The specified region
             data_endpoint: Data plane endpoint, optional. If not provided,
                 will be retrieved from environment variable AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT
+            auth_type: Authentication type, optional. Defaults to "API_KEY"
         """
         region = region or get_region()
 
@@ -64,7 +65,10 @@ class CodeInterpreter:
         # Priority: environment variable > parameter > default value
         endpoint_url = get_code_interpreter_data_plane_endpoint(endpoint=data_endpoint)
 
-        self.data_plane_client = DataToolsHttpClient(region_name=region, endpoint_url=endpoint_url)
+        if auth_type == "IAM":
+            self.data_plane_client = DataToolsHttpClient(region_name=region, endpoint_url=endpoint_url, auth_type=auth_type)
+        else:
+            self.data_plane_client = DataToolsHttpClient(region_name=region, endpoint_url=endpoint_url)
 
         self._code_interpreter_name = None
         self._session_id = None
@@ -161,8 +165,6 @@ class CodeInterpreter:
         if auth_type == "API_KEY" and api_key_name is None:
             msg = "API_KEY auth_type requires api_key_name."
             raise ValueError(msg)
-        if auth_type == "IAM":
-            self.data_plane_client.open_ak_sk = True
 
         request_params = {"name": name, "auth_type": auth_type}
 
@@ -851,12 +853,15 @@ class CodeInterpreter:
 def code_session(
     region: str,
     code_interpreter_name: str,
+    auth_type: str = "API_KEY",
     api_key: str | None = None,
 ) -> Generator[CodeInterpreter, None, None]:
     """Code interpreter session context manager.
 
     Args:
         region (str): Region name, e.g., "cn-southwest-2"
+        auth_type (str, optional): Authentication type, default "API_KEY".
+            Can be "API_KEY" or "IAM"
         code_interpreter_name (str): Code interpreter name
         api_key (Optional[str]): API Key for authentication, use only when auth_type is "API_KEY",
             if not provided will be retrieved from environment variable API_KEY
@@ -871,9 +876,13 @@ def code_session(
         >>> # With API Key
         >>> with code_session("cn-southwest-2", "my-code-interpreter-name", api_key="your-api-key") as client:
         >>>     client.execute_code("print('Hello, World!')")
+        >>>
+        >>> # With IAM
+        >>> with code_session("cn-southwest-2", "my-code-interpreter-name", auth_type="IAM") as client:
+        >>>     client.execute_code("print('Hello, World!')")
     """
 
-    client = CodeInterpreter(region=region)
+    client = CodeInterpreter(region=region, auth_type=auth_type)
 
     default_session_name = "default-session-name"
     client.start_session(
