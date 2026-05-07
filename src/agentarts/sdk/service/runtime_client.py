@@ -67,7 +67,10 @@ class RuntimeClient:
         access_token: Bearer token for API authentication.
             Can also be set later via :meth:`set_auth_token`.
         timeout: Default request timeout in seconds.
-        verify_ssl: Whether to verify SSL certificates.
+        verify_ssl: Whether to verify SSL certificates. Can be:
+            - True: Verify SSL certificates using system CA bundle (default)
+            - False: Skip SSL verification (not recommended for production)
+            - str: Path to custom CA certificate file
         sign_mode: Signature mode for data plane requests (SDK_HMAC_SHA256 or V11_HMAC_SHA256).
         region_id: Region ID for V11 signature mode.
     """
@@ -78,7 +81,7 @@ class RuntimeClient:
         data_endpoint: str | None = None,
         access_token: str | None = None,
         timeout: float = 30.0,
-        verify_ssl: bool = True,
+        verify_ssl: bool | str = True,
         sign_mode: SignMode = SignMode.SDK_HMAC_SHA256,
         region_id: str = "",
     ) -> None:
@@ -618,6 +621,7 @@ class RuntimeClient:
         bearer_token: str | None = None,
         endpoint: str | None = None,
         timeout: int = 900,
+        user_id: str | None = None,
         **extra: Any,
     ) -> dict[str, Any] | Iterator[str]:
         """
@@ -636,13 +640,15 @@ class RuntimeClient:
             endpoint: Optional endpoint name, appended as a query parameter
                 ``?endpoint=xxx``.
             timeout: Request timeout in seconds.
+            user_id: Optional user ID for OAuth2 outbound credentials,
+                passed as the ``USER_ID_HEADER`` header.
             **extra: Additional fields merged into the request.
 
         Returns:
             A ``dict`` for JSON responses, or an ``Iterator[str]`` for
             SSE streaming responses.
         """
-        from agentarts.sdk.runtime.model import SESSION_HEADER
+        from agentarts.sdk.runtime.model import SESSION_HEADER, USER_ID_HEADER
 
         path = f"/agent/{agent_name}/invocations"
         params: dict[str, Any] = {}
@@ -655,6 +661,8 @@ class RuntimeClient:
         }
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
+        if user_id:
+            headers[USER_ID_HEADER] = user_id
 
         result = self._data(
             "POST",
@@ -674,6 +682,7 @@ class RuntimeClient:
         endpoint: str | None = None,
         session_id: str | None = None,
         timeout: int = 900,
+        user_id: str | None = None,
     ) -> dict[str, Any] | Iterator[str]:
         """
         Health-check an agent on the data plane.
@@ -689,18 +698,22 @@ class RuntimeClient:
             session_id: Session identifier for stateful agents,
                 passed as the ``SESSION_HEADER`` header.
             timeout: Request timeout in seconds.
+            user_id: Optional user ID for OAuth2 outbound credentials,
+                passed as the ``USER_ID_HEADER`` header.
 
         Returns:
             A ``dict`` with at least a ``status`` field (e.g. ``"Healthy"``),
             or an ``Iterator[str]`` for SSE streaming responses.
         """
-        from agentarts.sdk.runtime.model import SESSION_HEADER
+        from agentarts.sdk.runtime.model import SESSION_HEADER, USER_ID_HEADER
 
         headers: dict[str, str] = {}
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
         if session_id:
             headers[SESSION_HEADER] = session_id
+        if user_id:
+            headers[USER_ID_HEADER] = user_id
 
         params: dict[str, Any] = {}
         if endpoint:
@@ -749,6 +762,7 @@ class LocalRuntimeClient(BaseHTTPClient):
         bearer_token: str | None = None,
         endpoint: str | None = None,
         timeout: int | None = None,
+        user_id: str | None = None,
     ) -> dict[str, Any] | Iterator[str]:
         """
         Invoke a local agent.
@@ -759,12 +773,14 @@ class LocalRuntimeClient(BaseHTTPClient):
             bearer_token: Optional bearer token for ``Authorization`` header.
             endpoint: Optional endpoint name.
             timeout: Request timeout in seconds.
+            user_id: Optional user ID for OAuth2 outbound credentials,
+                passed as the ``USER_ID_HEADER`` header.
 
         Returns:
             A ``dict`` for JSON responses, or an ``Iterator[str]`` for
             SSE streaming responses.
         """
-        from agentarts.sdk.runtime.model import SESSION_HEADER
+        from agentarts.sdk.runtime.model import SESSION_HEADER, USER_ID_HEADER
 
         path = "/invocations"
         params: dict[str, Any] = {}
@@ -776,6 +792,8 @@ class LocalRuntimeClient(BaseHTTPClient):
             headers[SESSION_HEADER] = session_id
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
+        if user_id:
+            headers[USER_ID_HEADER] = user_id
 
         request_timeout = timeout or self._config.timeout
 
@@ -827,6 +845,7 @@ class LocalRuntimeClient(BaseHTTPClient):
         endpoint: str | None = None,
         session_id: str | None = None,
         timeout: int | None = None,
+        user_id: str | None = None,
     ) -> dict[str, Any]:
         """
         Health-check a local agent.
@@ -836,11 +855,13 @@ class LocalRuntimeClient(BaseHTTPClient):
             endpoint: Optional endpoint name.
             session_id: Session identifier for stateful agents.
             timeout: Request timeout in seconds.
+            user_id: Optional user ID for OAuth2 outbound credentials,
+                passed as the ``USER_ID_HEADER`` header.
 
         Returns:
             A ``dict`` with a ``status`` field indicating health status.
         """
-        from agentarts.sdk.runtime.model import SESSION_HEADER
+        from agentarts.sdk.runtime.model import SESSION_HEADER, USER_ID_HEADER
 
         path = "/ping"
 
@@ -849,6 +870,8 @@ class LocalRuntimeClient(BaseHTTPClient):
             headers["Authorization"] = f"Bearer {bearer_token}"
         if session_id:
             headers[SESSION_HEADER] = session_id
+        if user_id:
+            headers[USER_ID_HEADER] = user_id
 
         params: dict[str, Any] = {}
         if endpoint:

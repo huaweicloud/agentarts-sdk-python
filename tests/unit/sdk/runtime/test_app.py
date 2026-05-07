@@ -228,7 +228,7 @@ class TestBuildContext:
         mock_request.headers = {
             "X-HW-AgentGateway-Workload-Access-Token": "workload-token",
             "x-hw-agentarts-session-id": "session-abc",
-            "X-Hw-AgentArts-Runtime-User-Id": "user-xyz",
+            "X-HW-AgentGateway-User-Id": "user-xyz",
         }
 
         app._build_request_context(mock_request)
@@ -269,6 +269,46 @@ class TestTaskContext:
             pass
 
         assert app._task_context(handler) is False
+
+
+class TestPingTaskContext:
+    """Tests for _ping_task_context method."""
+
+    def test_ping_task_context_with_context_param(self):
+        """Test _ping_task_context returns True for handler with context as first param."""
+        app = AgentArtsRuntimeApp()
+
+        def handler(context):
+            pass
+
+        assert app._ping_task_context(handler) is True
+
+    def test_ping_task_context_without_context_param(self):
+        """Test _ping_task_context returns False for handler without context param."""
+        app = AgentArtsRuntimeApp()
+
+        def handler():
+            pass
+
+        assert app._ping_task_context(handler) is False
+
+    def test_ping_task_context_wrong_param_name(self):
+        """Test _ping_task_context returns False when first param is not 'context'."""
+        app = AgentArtsRuntimeApp()
+
+        def handler(other):
+            pass
+
+        assert app._ping_task_context(handler) is False
+
+    def test_ping_task_context_with_multiple_params(self):
+        """Test _ping_task_context returns True when first param is 'context'."""
+        app = AgentArtsRuntimeApp()
+
+        def handler(context, extra):
+            pass
+
+        assert app._ping_task_context(handler) is True
 
 
 class TestSerialization:
@@ -523,6 +563,84 @@ class TestHandlePing:
         body = json.loads(response.body)
         assert body["status"] == "HealthyBusy"
 
+    @pytest.mark.asyncio
+    async def test_handle_ping_with_context_param_handler(self):
+        """Test _handle_ping passes context to handler when context param is present."""
+        app = AgentArtsRuntimeApp()
+
+        received_context = None
+
+        @app.ping
+        def ping_with_context(context):
+            nonlocal received_context
+            received_context = context
+            return PingStatus.HEALTHY
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {
+            "x-hw-agentarts-session-id": "test-session-123",
+            "X-Request-Id": "req-456",
+        }
+
+        response = await app._handle_ping(mock_request)
+
+        assert response.status_code == 200
+        assert received_context is not None
+        assert received_context.session_id == "test-session-123"
+        assert received_context.request_id == "req-456"
+        assert received_context.request == mock_request
+
+    @pytest.mark.asyncio
+    async def test_handle_ping_without_context_param_handler(self):
+        """Test _handle_ping does not pass context when handler has no context param."""
+        app = AgentArtsRuntimeApp()
+
+        handler_called = False
+
+        @app.ping
+        def ping_no_context():
+            nonlocal handler_called
+            handler_called = True
+            return PingStatus.HEALTHY
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {}
+
+        response = await app._handle_ping(mock_request)
+
+        assert response.status_code == 200
+        assert handler_called is True
+
+    @pytest.mark.asyncio
+    async def test_handle_ping_context_with_headers(self):
+        """Test _handle_ping builds request_context with headers."""
+        app = AgentArtsRuntimeApp()
+
+        received_session_id = None
+
+        @app.ping
+        def ping_check_session(context):
+            nonlocal received_session_id
+            received_session_id = context.session_id
+            return PingStatus.HEALTHY
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {
+            "X-HW-AgentGateway-Workload-Access-Token": "workload-token",
+            "x-hw-agentarts-session-id": "session-abc",
+            "X-HW-AgentGateway-User-Id": "user-xyz",
+        }
+
+        response = await app._handle_ping(mock_request)
+
+        assert response.status_code == 200
+        assert received_session_id == "session-abc"
+        assert AgentArtsRuntimeContext.get_workload_access_token() == "workload-token"
+        assert AgentArtsRuntimeContext.get_session_id() == "session-abc"
+        assert AgentArtsRuntimeContext.get_user_id() == "user-xyz"
+
+        AgentArtsRuntimeContext.clear()
+
 
 class TestGetCurrentPingStatus:
     """Tests for get_current_ping_status method."""
@@ -552,6 +670,93 @@ class TestGetCurrentPingStatus:
         status = app.get_current_ping_status()
 
         assert status == PingStatus.UNHEALTHY
+
+    def test_get_current_ping_status_with_context_param_handler(self):
+        """Test get_current_ping_status passes context to handler with context param."""
+        app = AgentArtsRuntimeApp()
+
+        received_context = None
+
+        @app.ping
+        def ping_with_context(context):
+            nonlocal received_context
+            received_context = context
+            return PingStatus.HEALTHY
+
+        request_context = RequestContext(
+            session_id="test-session",
+            request_id="req-123",
+            request=None
+        )
+
+        status = app.get_current_ping_status(request_context)
+
+        assert status == PingStatus.HEALTHY
+        assert received_context == request_context
+
+    def test_get_current_ping_status_without_context_param_handler(self):
+        """Test get_current_ping_status does not pass context when handler has no context param."""
+        app = AgentArtsRuntimeApp()
+
+        handler_called = False
+
+        @app.ping
+        def ping_no_context():
+            nonlocal handler_called
+            handler_called = True
+            return PingStatus.HEALTHY
+
+        request_context = RequestContext(
+            session_id="test-session",
+            request_id="req-123",
+            request=None
+        )
+
+        status = app.get_current_ping_status(request_context)
+
+        assert status == PingStatus.HEALTHY
+        assert handler_called is True
+
+    def test_get_current_ping_status_no_context_passed_when_none(self):
+        """Test get_current_ping_status does not pass None context."""
+        app = AgentArtsRuntimeApp()
+
+        received_context = None
+
+        @app.ping
+        def ping_with_context(context):
+            nonlocal received_context
+            received_context = context
+            return PingStatus.HEALTHY
+
+        status = app.get_current_ping_status(None)
+
+        assert status == PingStatus.HEALTHY
+        assert received_context is None
+
+    def test_get_current_ping_status_custom_handler_uses_context(self):
+        """Test custom ping handler can use context to determine status."""
+        app = AgentArtsRuntimeApp()
+
+        @app.ping
+        def ping_check_session(context):
+            if context and context.session_id == "healthy-session":
+                return PingStatus.HEALTHY
+            return PingStatus.UNHEALTHY
+
+        healthy_context = RequestContext(
+            session_id="healthy-session",
+            request_id="req-1",
+            request=None
+        )
+        unhealthy_context = RequestContext(
+            session_id="unhealthy-session",
+            request_id="req-2",
+            request=None
+        )
+
+        assert app.get_current_ping_status(healthy_context) == PingStatus.HEALTHY
+        assert app.get_current_ping_status(unhealthy_context) == PingStatus.UNHEALTHY
 
 
 class TestForcePingStatus:
@@ -654,7 +859,20 @@ class TestRun:
         """Test run uses 0.0.0.0 in Docker environment."""
         app = AgentArtsRuntimeApp()
 
-        with patch("os.path.exists", return_value=True), patch("uvicorn.run") as mock_run:
+        with (
+            patch("os.path.exists", return_value=True),
+            patch("agentarts.sdk.runtime.app.subprocess.run") as mock_subprocess,
+            patch("agentarts.sdk.runtime.app.socket.socket") as mock_socket,
+            patch("agentarts.sdk.runtime.app.socket.gethostbyname", return_value="127.0.0.1"),
+            patch("agentarts.sdk.runtime.app.socket.gethostname", return_value="localhost"),
+            patch("uvicorn.run") as mock_run,
+        ):
+            mock_subprocess.return_value.stdout = ""
+            mock_subprocess.return_value.returncode = 1
+            mock_socket_instance = MagicMock()
+            mock_socket_instance.connect.side_effect = Exception("mocked failure")
+            mock_socket.return_value = mock_socket_instance
+
             app.run()
             call_kwargs = mock_run.call_args[1]
             assert call_kwargs["host"] == "0.0.0.0"
@@ -715,3 +933,106 @@ class TestInvokeHandler:
 
         with pytest.raises(RuntimeError, match="Handler failed"):
             await app._invoke_handler(failing_handler, context, False, {})
+
+
+class TestInvokeHandlerContextPropagation:
+    """Tests for contextvars propagation in _invoke_handler."""
+
+    @pytest.mark.asyncio
+    async def test_sync_handler_gets_workload_access_token(self):
+        """Sync handler should be able to read workload_access_token from AgentArtsRuntimeContext."""
+        app = AgentArtsRuntimeApp()
+
+        def sync_handler(payload):
+            token = AgentArtsRuntimeContext.get_workload_access_token()
+            return {"token": token}
+
+        AgentArtsRuntimeContext.set_workload_access_token("test-workload-token-123")
+        try:
+            context = RequestContext(session_id="test", request_id="req-1", request=None)
+            result = await app._invoke_handler(sync_handler, context, False, {})
+            assert result["token"] == "test-workload-token-123"
+        finally:
+            AgentArtsRuntimeContext.set_workload_access_token(None)
+
+    @pytest.mark.asyncio
+    async def test_async_handler_gets_workload_access_token(self):
+        """Async handler should be able to read workload_access_token from AgentArtsRuntimeContext."""
+        app = AgentArtsRuntimeApp()
+
+        async def async_handler(payload):
+            token = AgentArtsRuntimeContext.get_workload_access_token()
+            return {"token": token}
+
+        AgentArtsRuntimeContext.set_workload_access_token("test-workload-token-456")
+        try:
+            context = RequestContext(session_id="test", request_id="req-1", request=None)
+            result = await app._invoke_handler(async_handler, context, False, {})
+            assert result["token"] == "test-workload-token-456"
+        finally:
+            AgentArtsRuntimeContext.set_workload_access_token(None)
+
+    @pytest.mark.asyncio
+    async def test_sync_handler_gets_session_id(self):
+        """Sync handler should be able to read session_id from AgentArtsRuntimeContext."""
+        app = AgentArtsRuntimeApp()
+
+        def sync_handler(payload):
+            session_id = AgentArtsRuntimeContext.get_session_id()
+            return {"session_id": session_id}
+
+        AgentArtsRuntimeContext.set_session_id("session-abc")
+        try:
+            context = RequestContext(session_id="test", request_id="req-1", request=None)
+            result = await app._invoke_handler(sync_handler, context, False, {})
+            assert result["session_id"] == "session-abc"
+        finally:
+            AgentArtsRuntimeContext.set_session_id(None)
+
+    @pytest.mark.asyncio
+    async def test_sync_handler_gets_user_id(self):
+        """Sync handler should be able to read user_id from AgentArtsRuntimeContext."""
+        app = AgentArtsRuntimeApp()
+
+        def sync_handler(payload):
+            user_id = AgentArtsRuntimeContext.get_user_id()
+            return {"user_id": user_id}
+
+        AgentArtsRuntimeContext.set_user_id("user-xyz")
+        try:
+            context = RequestContext(session_id="test", request_id="req-1", request=None)
+            result = await app._invoke_handler(sync_handler, context, False, {})
+            assert result["user_id"] == "user-xyz"
+        finally:
+            AgentArtsRuntimeContext.set_user_id(None)
+
+    @pytest.mark.asyncio
+    async def test_concurrent_sync_handlers_isolated_context(self):
+        """Concurrent sync handlers should have isolated contextvars."""
+        import asyncio
+
+        app = AgentArtsRuntimeApp()
+        results = {}
+
+        def make_handler(key, token_value):
+            def handler(payload):
+                local_token = AgentArtsRuntimeContext.get_workload_access_token()
+                results[key] = local_token
+                return {"key": key, "token": local_token}
+            return handler
+
+        async def run_with_context(key, token_value):
+            AgentArtsRuntimeContext.set_workload_access_token(token_value)
+            try:
+                context = RequestContext(session_id="test", request_id="req-1", request=None)
+                return await app._invoke_handler(make_handler(key, token_value), context, False, {})
+            finally:
+                AgentArtsRuntimeContext.set_workload_access_token(None)
+
+        await asyncio.gather(
+            run_with_context("handler_a", "token-A"),
+            run_with_context("handler_b", "token-B"),
+        )
+
+        assert results["handler_a"] == "token-A"
+        assert results["handler_b"] == "token-B"

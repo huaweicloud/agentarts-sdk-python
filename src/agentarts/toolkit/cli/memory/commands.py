@@ -45,6 +45,7 @@ def create_space_cmd(
         subnet_id: str | None = typer.Option(None, "--subnet-id", help="Private subnet ID (requires vpc-id)"),
         region: str | None = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
         output: str = typer.Option("table", "--output", "-o", help="Output format: table, json"),
+        skip_ssl_verification: bool = typer.Option(False, "--skip-ssl-verification", "-k", help="Skip SSL certificate verification"),
 ):
     """Create a Memory Space.
 
@@ -107,6 +108,7 @@ def create_space_cmd(
         private_vpc_id=vpc_id.strip() if vpc_id else None,
         private_subnet_id=subnet_id.strip() if subnet_id else None,
         region=region,
+        skip_ssl_verification=skip_ssl_verification,
     )
 
     if not result.success:
@@ -130,6 +132,7 @@ def get_space_cmd(
         space_id: str = typer.Argument(..., help="Space ID"),
         region: str | None = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
         output: str = typer.Option("table", "--output", "-o", help="Output format: table, json"),
+        skip_ssl_verification: bool = typer.Option(False, "--skip-ssl-verification", help="Skip SSL certificate verification"),
 ):
     """Get Space details.
 
@@ -144,6 +147,7 @@ def get_space_cmd(
     result = get_space(
         space_id=space_id,
         region=region,
+        skip_ssl_verification=skip_ssl_verification,
     )
 
     if not result.success:
@@ -174,6 +178,7 @@ def list_spaces_cmd(
         offset: int = typer.Option(0, "--offset", help="Offset for pagination"),
         region: str | None = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
         output: str = typer.Option("table", "--output", "-o", help="Output format: table, json"),
+        skip_ssl_verification: bool = typer.Option(False, "--skip-ssl-verification", help="Skip SSL certificate verification"),
 ):
     """List Spaces.
 
@@ -193,6 +198,7 @@ def list_spaces_cmd(
         limit=limit,
         offset=offset,
         region=region,
+        skip_ssl_verification=skip_ssl_verification,
     )
 
     if not result.success:
@@ -247,6 +253,7 @@ def update_space_cmd(
         subnet_id: str | None = typer.Option(None, "--subnet-id", help="Private subnet ID (requires vpc-id)"),
         region: str | None = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
         output: str = typer.Option("table", "--output", "-o", help="Output format: table, json"),
+        skip_ssl_verification: bool = typer.Option(False, "--skip-ssl-verification", help="Skip SSL certificate verification"),
 ):
     """Update a Space.
 
@@ -301,6 +308,7 @@ def update_space_cmd(
         private_vpc_id=vpc_id.strip() if vpc_id else None,
         private_subnet_id=subnet_id.strip() if subnet_id else None,
         region=region,
+        skip_ssl_verification=skip_ssl_verification,
     )
 
     if not result.success:
@@ -347,6 +355,7 @@ def delete_space_cmd(
         space_id: str = typer.Argument(..., help="Space ID"),
         region: str | None = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
         force: bool = typer.Option(False, "--force", "-f", help="Force deletion without confirmation"),
+        skip_ssl_verification: bool = typer.Option(False, "--skip-ssl-verification", help="Skip SSL certificate verification"),
 ):
     """Delete a Space.
 
@@ -368,6 +377,7 @@ def delete_space_cmd(
     result = delete_space(
         space_id=space_id,
         region=region,
+        skip_ssl_verification=skip_ssl_verification,
     )
 
     if not result.success:
@@ -382,6 +392,7 @@ def space_status_cmd(
         space_id: str = typer.Argument(..., help="Space ID to check status"),
         region: str | None = typer.Option(None, "--region", "-r", help="Region name (default: cn-north-4)"),
         output: str = typer.Option("table", "--output", "-o", help="Output format: table, json"),
+        skip_ssl_verification: bool = typer.Option(False, "--skip-ssl-verification", help="Skip SSL certificate verification"),
 ):
     """Check the status of a Memory Space.
 
@@ -402,6 +413,7 @@ def space_status_cmd(
     result = get_space(
         space_id=space_id,
         region=region,
+        skip_ssl_verification=skip_ssl_verification,
     )
 
     if not result.success:

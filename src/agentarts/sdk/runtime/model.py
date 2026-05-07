@@ -10,7 +10,7 @@ from enum import Enum
 
 SESSION_HEADER = "x-hw-agentarts-session-id"
 ACCESS_TOKEN_HEADER = "X-HW-AgentGateway-Workload-Access-Token"
-USER_ID_HEADER = "X-Hw-AgentArts-Runtime-User-Id"
+USER_ID_HEADER = "X-HW-AgentGateway-User-Id"
 
 CUSTOM_HEADER_PREFIX = "X-Hw-AgentArts-Runtime-Custom-"
 
