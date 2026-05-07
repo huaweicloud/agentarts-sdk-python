@@ -37,7 +37,8 @@ class MCPGatewayClient(BaseHTTPClient):
         agency_name: str | None = None,
         authorizer_configuration: dict[str, Any] | None = None,
         log_delivery_configuration: dict[str, Any] | None = None,
-        outbound_network_configuration: dict[str, Any] | None = None
+        outbound_network_configuration: dict[str, Any] | None = None,
+        skip_ssl_verification: bool = False
     ) -> RequestResult:
         """
         Create a new MCP gateway.
@@ -51,6 +52,7 @@ class MCPGatewayClient(BaseHTTPClient):
             authorizer_configuration: Authorizer configuration
             log_delivery_configuration: Log delivery configuration
             outbound_network_configuration: Outbound network configuration
+            skip_ssl_verification: Skip SSL certificate verification
 
         Returns:
             RequestResult: Result of the API call
@@ -65,7 +67,7 @@ class MCPGatewayClient(BaseHTTPClient):
         # Handle agency_name if not provided
         if agency_name is None:
             # Create IAM client
-            iam_client = IAMClient()
+            iam_client = IAMClient(verify_ssl=not skip_ssl_verification)
 
             # Agency configuration
             agency_name = "AgentArtsCoreGateway"
@@ -135,7 +137,6 @@ class MCPGatewayClient(BaseHTTPClient):
         self,
         gateway_id: str,
         description: str | None = None,
-        authorizer_configuration: dict[str, Any] | None = None,
         log_delivery_configuration: dict[str, Any] | None = None
     ) -> RequestResult:
         """
@@ -144,7 +145,6 @@ class MCPGatewayClient(BaseHTTPClient):
         Args:
             gateway_id: Gateway ID
             description: Gateway description
-            authorizer_configuration: Authorizer configuration
             log_delivery_configuration: Log delivery configuration
 
         Returns:
@@ -157,12 +157,10 @@ class MCPGatewayClient(BaseHTTPClient):
         # Validate that not all optional parameters are None
         if all(param is None for param in [
             description,
-            authorizer_configuration,
             log_delivery_configuration
         ]):
             updateable_fields = [
                 "description",
-                "authorizer_configuration",
                 "log_delivery_configuration"
             ]
             msg = f"At least one parameter must be provided for update. Available fields: {', '.join(updateable_fields)}"
@@ -170,7 +168,6 @@ class MCPGatewayClient(BaseHTTPClient):
 
         payload = {
             "description": description,
-            "authorizer_configuration": authorizer_configuration,
             "log_delivery_configuration": log_delivery_configuration
         }
 

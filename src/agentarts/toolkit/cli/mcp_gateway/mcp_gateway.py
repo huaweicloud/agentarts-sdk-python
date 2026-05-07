@@ -61,6 +61,7 @@ def create_mcp_gateway(
     authorizer_configuration: Annotated[str | None, typer.Option("--authorizer-configuration", help="Authorizer configuration (JSON format)")] = None,
     log_delivery_configuration: Annotated[str | None, typer.Option("--log-delivery-configuration", help="Log delivery configuration (JSON format)")] = None,
     outbound_network_configuration: Annotated[str | None, typer.Option("--outbound-network-configuration", help="Outbound network configuration (JSON format)")] = None,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
 ):
     """
     Create a new MCP gateway
@@ -83,6 +84,7 @@ def create_mcp_gateway(
             authorizer_configuration=authorizer_config,
             log_delivery_configuration=log_delivery_config,
             outbound_network_configuration=outbound_network_config,
+            skip_ssl_verification=skip_ssl_verification,
         )
 
         if result.success:
@@ -100,7 +102,6 @@ def create_mcp_gateway(
 def update_mcp_gateway(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     description: Annotated[str | None, typer.Option("--description", "-d", help="Gateway description")] = None,
-    authorizer_configuration: Annotated[str | None, typer.Option("--authorizer-configuration", help="Authorizer configuration (JSON format)")] = None,
     log_delivery_configuration: Annotated[str | None, typer.Option("--log-delivery-configuration", help="Log delivery configuration (JSON format)")] = None,
 ):
     """
@@ -110,14 +111,12 @@ def update_mcp_gateway(
         agentarts mcp-gateway update-mcp-gateway 123 --description "Updated description"
     """
     try:
-        authorizer_config = _parse_json(authorizer_configuration)
         log_delivery_config = _parse_json(log_delivery_configuration)
 
         client = _get_mcp_gateway_client()
         result = client.update_mcp_gateway(
             gateway_id=gateway_id,
             description=description,
-            authorizer_configuration=authorizer_config,
             log_delivery_configuration=log_delivery_config,
         )
 

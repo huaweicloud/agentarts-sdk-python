@@ -119,7 +119,8 @@ create_mcp_gateway(
     agency_name: Optional[str] = None,
     authorizer_configuration: Optional[Dict[str, Any]] = None,
     log_delivery_configuration: Optional[Dict[str, Any]] = None,
-    outbound_network_configuration: Optional[Dict[str, Any]] = None
+    outbound_network_configuration: Optional[Dict[str, Any]] = None,
+    skip_ssl_verification: bool = False
 ) -> RequestResult
 ```
 
@@ -135,6 +136,7 @@ create_mcp_gateway(
 | authorizer_configuration | Dict | 否 | None | 授权器配置 |
 | log_delivery_configuration | Dict | 否 | {"enabled": False} | 日志投递配置 |
 | outbound_network_configuration | Dict | 否 | {"network_mode": "public"} | 出站网络配置 |
+| skip_ssl_verification | bool | 否 | False | 是否跳过 SSL 证书验证 |
 
 **返回值**：`RequestResult` 对象
 
@@ -148,7 +150,6 @@ create_mcp_gateway(
 update_mcp_gateway(
     gateway_id: str,
     description: Optional[str] = None,
-    authorizer_configuration: Optional[Dict[str, Any]] = None,
     log_delivery_configuration: Optional[Dict[str, Any]] = None
 ) -> RequestResult
 ```
@@ -159,7 +160,6 @@ update_mcp_gateway(
 |------|------|------|--------|------|
 | gateway_id | str | 是 | - | 网关 ID |
 | description | str | 否 | None | 网关描述 |
-| authorizer_configuration | Dict | 否 | None | 授权器配置 |
 | log_delivery_configuration | Dict | 否 | None | 日志投递配置 |
 
 **返回值**：`RequestResult` 对象
@@ -419,7 +419,7 @@ except Exception as e:
 **原因**：未提供任何更新参数。
 
 **解决方案**：
-确保至少提供一个更新参数（description、authorizer_configuration 等）。
+确保至少提供一个更新参数（description等）。
 
 ### Q3: 如何选择授权器类型？
 
