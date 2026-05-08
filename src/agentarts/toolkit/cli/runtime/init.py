@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.prompt import Prompt
 
 from agentarts.toolkit.operations.runtime import init as init_op
+from agentarts.toolkit.utils.swr_org import generate_default_agent_name
 
 console = Console()
 
@@ -53,7 +54,8 @@ def prompt_for_template() -> TemplateType:
 
 def prompt_for_name() -> str:
     """Prompt user to enter project name"""
-    return Prompt.ask("\n[bold]Enter project name[/bold]", default="myagent")
+    default_name = generate_default_agent_name()
+    return Prompt.ask("\n[bold]Enter project name[/bold]", default=default_name)
 
 
 def prompt_for_region() -> str:
@@ -83,7 +85,7 @@ def init(
     ] = None,
     swr_org: Annotated[
         str | None,
-        typer.Option("--swr-org", help="SWR organization (default: agentarts-org)"),
+        typer.Option("--swr-org", help="SWR organization (auto-generated if not specified)"),
     ] = None,
     swr_repo: Annotated[
         str | None,

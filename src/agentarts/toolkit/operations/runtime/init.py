@@ -11,6 +11,7 @@ from agentarts.toolkit.utils.common import (
     echo_step,
     echo_success,
 )
+from agentarts.toolkit.utils.swr_org import generate_swr_org_name
 from agentarts.toolkit.utils.templates.manager import template_manager
 
 console = Console()
@@ -148,7 +149,7 @@ def create_config_file(
 ) -> None:
     """Create .agentarts_config.yaml configuration file."""
     actual_region = region or "cn-southwest-2"
-    actual_swr_org = swr_org or "agentarts-org"
+    actual_swr_org = swr_org or generate_swr_org_name(region=actual_region)
     actual_swr_repo = swr_repo or f"agent_{name}"
     detected_platform = detect_platform()
 

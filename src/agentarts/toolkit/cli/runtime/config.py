@@ -12,6 +12,7 @@ from agentarts.toolkit.utils.common import (
     echo_info,
     echo_success,
 )
+from agentarts.toolkit.utils.swr_org import generate_swr_org_name
 
 console = Console()
 
@@ -111,7 +112,7 @@ def main(
     if org is None:
         existing_config = config_op.get_agent(agent_name)
         default_org = existing_config.swr_config.organization if existing_config else None
-        auto_org = "agentarts-org"
+        auto_org = generate_swr_org_name(region=agent_region)
 
         console.print("\n[bold]SWR Organization:[/bold]")
         if default_org:
