@@ -92,7 +92,7 @@ def execute_python_tool(code: str, description: str) -> str | None:
     api_key = os.environ.get(
         "HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY", ""
     )  # 配置环境变量后，api_key无需在代码中传递亦可正常工作
-    with code_session("your_region", "your_code_interpreter_name", api_key) as code_client:
+    with code_session("your_region", "your_code_interpreter_name", api_key=api_key) as code_client:
         response = code_client.invoke(
             operate_type="execute_code",
             api_key=api_key,
