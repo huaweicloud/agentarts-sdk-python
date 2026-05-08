@@ -18,7 +18,9 @@ class TestCodeInterpreterClient(unittest.TestCase):
     @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_SK")
     @patch("agentarts.sdk.utils.constant.get_control_plane_endpoint")
     @patch("agentarts.sdk.utils.constant.get_code_interpreter_data_plane_endpoint")
-    def setUp(self, mock_get_data_plane_endpoint, mock_get_control_plane_endpoint, mock_sk, mock_ak):
+    def setUp(
+        self, mock_get_data_plane_endpoint, mock_get_control_plane_endpoint, mock_sk, mock_ak
+    ):
         """在每个测试方法前调用"""
         mock_get_control_plane_endpoint.return_value = "https://control-plane.example.com"
         mock_get_data_plane_endpoint.return_value = "https://data-plane.example.com"
@@ -39,13 +41,12 @@ class TestCodeInterpreterClient(unittest.TestCase):
             "observability": {},
             "network_config": {},
             "agent_gateway_id": "test-agent-gateway-id",
-            "tags": []
+            "tags": [],
         }
 
         # Act
         result = self.code_interpreter_client.create_code_interpreter(
-            name="test-code-interpreter-name",
-            api_key_name="test-api-key-name"
+            name="test-code-interpreter-name", api_key_name="test-api-key-name"
         )
 
         # Assert
@@ -53,8 +54,67 @@ class TestCodeInterpreterClient(unittest.TestCase):
         mock_create_code_interpreter.assert_called_once_with(
             request_params={
                 "name": "test-code-interpreter-name",
-                "api_key_name": "test-api-key-name"
+                "auth_type": "API_KEY",
+                "api_key_name": "test-api-key-name",
             }
+        )
+
+    @patch.object(ControlToolsHttpClient, "create_code_interpreter")
+    def test_create_code_interpreter_with_api_key(self, mock_create_code_interpreter):
+        """测试create_code_interpreter方法，提供API_KEY认证的情况"""
+        # Arrange
+        mock_create_code_interpreter.return_value = {
+            "name": "test-code-interpreter-name",
+            "api_key_name": "test-api-key-name",
+            "description": "test-code-interpreter-description",
+            "auth_type": "API_KEY",
+            "execution_agency_name": "test-execution-agency-name",
+            "observability": {},
+            "network_config": {},
+            "agent_gateway_id": "test-agent-gateway-id",
+            "tags": [],
+        }
+
+        # Act
+        result = self.code_interpreter_client.create_code_interpreter(
+            name="test-code-interpreter-name", auth_type="API_KEY", api_key_name="test-api-key-name"
+        )
+
+        # Assert
+        assert result == mock_create_code_interpreter.return_value
+        mock_create_code_interpreter.assert_called_once_with(
+            request_params={
+                "name": "test-code-interpreter-name",
+                "auth_type": "API_KEY",
+                "api_key_name": "test-api-key-name",
+            }
+        )
+
+    @patch.object(ControlToolsHttpClient, "create_code_interpreter")
+    def test_create_code_interpreter_with_iam(self, mock_create_code_interpreter):
+        """测试create_code_interpreter方法，提供IAM认证的情况"""
+        # Arrange
+        mock_create_code_interpreter.return_value = {
+            "name": "test-code-interpreter-name",
+            "api_key_name": "test-api-key-name",
+            "description": "test-code-interpreter-description",
+            "auth_type": "IAM",
+            "execution_agency_name": "test-execution-agency-name",
+            "observability": {},
+            "network_config": {},
+            "agent_gateway_id": "test-agent-gateway-id",
+            "tags": [],
+        }
+
+        # Act
+        result = self.code_interpreter_client.create_code_interpreter(
+            name="test-code-interpreter-name", auth_type="IAM"
+        )
+
+        # Assert
+        assert result == mock_create_code_interpreter.return_value
+        mock_create_code_interpreter.assert_called_once_with(
+            request_params={"name": "test-code-interpreter-name", "auth_type": "IAM"}
         )
 
     @patch.object(ControlToolsHttpClient, "create_code_interpreter")
@@ -63,69 +123,43 @@ class TestCodeInterpreterClient(unittest.TestCase):
         # Arrange
         mock_create_code_interpreter.return_value = {
             "name": "test-code-interpreter-name",
+            "auth_type": "API_KEY",
             "api_key_name": "test-api-key-name",
             "description": "test-code-interpreter-description",
-            "auth_type": "API_KEY",
             "execution_agency_name": "test-execution-agency-name",
             "observability": {
                 "logs": {
                     "enable": True,
                     "group_id": "test-group-id",
-                    "stream_id": "test-stream-id"
+                    "stream_id": "test-stream-id",
                 },
-                "metrics": {
-                    "enable": True,
-                    "instance_id": "test-instance-id"
-                },
-                "tracing": {
-                    "enable": True,
-                    "service_group": "test-service-group"
-                }
+                "metrics": {"enable": True, "instance_id": "test-instance-id"},
+                "tracing": {"enable": True, "service_group": "test-service-group"},
             },
-            "network_config": {
-                "network_config": "PUBLIC"
-            },
+            "network_config": {"network_config": "PUBLIC"},
             "agent_gateway_id": "test-agent-gateway-id",
-            "tags": [
-                {
-                    "key": "test-tag",
-                    "value": "test-tag-value"
-                }
-            ]
+            "tags": [{"key": "test-tag", "value": "test-tag-value"}],
         }
 
         # Act
         result = self.code_interpreter_client.create_code_interpreter(
             name="test-code-interpreter-name",
+            auth_type="API_KEY",
             api_key_name="test-api-key-name",
             description="test-code-interpreter-description",
-            auth_type="API_KEY",
             execution_agency_name="test-execution-agency-name",
             observability={
                 "logs": {
                     "enable": True,
                     "group_id": "test-group-id",
-                    "stream_id": "test-stream-id"
+                    "stream_id": "test-stream-id",
                 },
-                "metrics": {
-                    "enable": True,
-                    "instance_id": "test-instance-id"
-                },
-                "tracing": {
-                    "enable": True,
-                    "service_group": "test-service-group"
-                }
+                "metrics": {"enable": True, "instance_id": "test-instance-id"},
+                "tracing": {"enable": True, "service_group": "test-service-group"},
             },
-            network_config={
-                "network_config": "PUBLIC"
-            },
+            network_config={"network_config": "PUBLIC"},
             agent_gateway_id="test-agent-gateway-id",
-            tags=[
-                {
-                    "key": "test-tag",
-                    "value": "test-tag-value"
-                }
-            ]
+            tags=[{"key": "test-tag", "value": "test-tag-value"}],
         )
 
         # Assert
@@ -133,35 +167,22 @@ class TestCodeInterpreterClient(unittest.TestCase):
         mock_create_code_interpreter.assert_called_once_with(
             request_params={
                 "name": "test-code-interpreter-name",
+                "auth_type": "API_KEY",
                 "api_key_name": "test-api-key-name",
                 "description": "test-code-interpreter-description",
-                "auth_type": "API_KEY",
                 "execution_agency_name": "test-execution-agency-name",
                 "observability": {
                     "logs": {
                         "enable": True,
                         "group_id": "test-group-id",
-                        "stream_id": "test-stream-id"
+                        "stream_id": "test-stream-id",
                     },
-                    "metrics": {
-                        "enable": True,
-                        "instance_id": "test-instance-id"
-                    },
-                    "tracing": {
-                        "enable": True,
-                        "service_group": "test-service-group"
-                    }
+                    "metrics": {"enable": True, "instance_id": "test-instance-id"},
+                    "tracing": {"enable": True, "service_group": "test-service-group"},
                 },
-                "network_config": {
-                    "network_config": "PUBLIC"
-                },
+                "network_config": {"network_config": "PUBLIC"},
                 "agent_gateway_id": "test-agent-gateway-id",
-                "tags": [
-                    {
-                        "key": "test-tag",
-                        "value": "test-tag-value"
-                    }
-                ]
+                "tags": [{"key": "test-tag", "value": "test-tag-value"}],
             }
         )
 
@@ -171,12 +192,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         # Arrange
         mock_list_code_interpreters.return_value = {
             "total_count": 1,
-            "items": [
-                {
-                    "name": "test-code-interpreter-name",
-                    "api_key_name": "test-api-key-name"
-                }
-            ]
+            "items": [{"name": "test-code-interpreter-name", "api_key_name": "test-api-key-name"}],
         }
 
         # Act
@@ -197,21 +213,12 @@ class TestCodeInterpreterClient(unittest.TestCase):
         # Arrange
         mock_list_code_interpreters.return_value = {
             "total_count": 1,
-            "items": [
-                {
-                    "name": "test-code-interpreter-name",
-                    "api_key_name": "test-api-key-name"
-                }
-            ]
+            "items": [{"name": "test-code-interpreter-name", "api_key_name": "test-api-key-name"}],
         }
 
         # Act
         result = self.code_interpreter_client.list_code_interpreters(
-            name="test-name",
-            limit=20,
-            offset=10,
-            sort_key="created_at",
-            sort_dir="asc"
+            name="test-name", limit=20, offset=10, sort_key="created_at", sort_dir="asc"
         )
 
         # Assert
@@ -222,7 +229,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 "limit": 20,
                 "offset": 10,
                 "sort_key": "created_at",
-                "sort_dir": "asc"
+                "sort_dir": "asc",
             }
         )
 
@@ -238,31 +245,18 @@ class TestCodeInterpreterClient(unittest.TestCase):
             "updated_at": "2026-01-01T00:00:00Z",
             "execution_agency_name": "test-execution-agency-name",
             "agent_gateway_id": "test-agent-gateway-id",
-            "workload_identity": {
-                "urn": "test-workload-urn"
-            },
+            "workload_identity": {"urn": "test-workload-urn"},
             "access_endpoint": "test-access-endpoint-url",
             "observability": {
                 "logs": {
                     "enable": True,
                     "group_id": "test-group-id",
-                    "stream_id": "test-stream-id"
+                    "stream_id": "test-stream-id",
                 },
-                "metrics": {
-                    "enable": True,
-                    "instance_id": "test-instance-id"
-                },
-                "tracing": {
-                    "enable": True,
-                    "service_group": "test-service-group"
-                }
+                "metrics": {"enable": True, "instance_id": "test-instance-id"},
+                "tracing": {"enable": True, "service_group": "test-service-group"},
             },
-            "tags": [
-                {
-                    "key": "test-tag",
-                    "value": "test-tag-value"
-                }
-            ]
+            "tags": [{"key": "test-tag", "value": "test-tag-value"}],
         }
 
         # Act
@@ -272,23 +266,12 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 "logs": {
                     "enable": True,
                     "group_id": "test-group-id",
-                    "stream_id": "test-stream-id"
+                    "stream_id": "test-stream-id",
                 },
-                "metrics": {
-                    "enable": True,
-                    "instance_id": "test-instance-id"
-                },
-                "tracing": {
-                    "enable": True,
-                    "service_group": "test-service-group"
-                }
+                "metrics": {"enable": True, "instance_id": "test-instance-id"},
+                "tracing": {"enable": True, "service_group": "test-service-group"},
             },
-            tags=[
-                {
-                    "key": "test-tag",
-                    "value": "test-tag-value"
-                }
-            ]
+            tags=[{"key": "test-tag", "value": "test-tag-value"}],
         )
         # Assert
         assert result == mock_update_code_interpreter.return_value
@@ -299,24 +282,13 @@ class TestCodeInterpreterClient(unittest.TestCase):
                     "logs": {
                         "enable": True,
                         "group_id": "test-group-id",
-                        "stream_id": "test-stream-id"
+                        "stream_id": "test-stream-id",
                     },
-                    "metrics": {
-                        "enable": True,
-                        "instance_id": "test-instance-id"
-                    },
-                    "tracing": {
-                        "enable": True,
-                        "service_group": "test-service-group"
-                    }
+                    "metrics": {"enable": True, "instance_id": "test-instance-id"},
+                    "tracing": {"enable": True, "service_group": "test-service-group"},
                 },
-                "tags": [
-                    {
-                        "key": "test-tag",
-                        "value": "test-tag-value"
-                    }
-                ]
-            }
+                "tags": [{"key": "test-tag", "value": "test-tag-value"}],
+            },
         )
 
     @patch.object(ControlToolsHttpClient, "get_code_interpreter")
@@ -334,37 +306,22 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 "logs": {
                     "enable": True,
                     "group_id": "test-group-id",
-                    "stream_id": "test-stream-id"
+                    "stream_id": "test-stream-id",
                 },
-                "metrics": {
-                    "enable": True,
-                    "instance_id": "test-instance-id"
-                },
-                "tracing": {
-                    "enable": True,
-                    "service_group": "test-service-group"
-                }
+                "metrics": {"enable": True, "instance_id": "test-instance-id"},
+                "tracing": {"enable": True, "service_group": "test-service-group"},
             },
-            "workload_identity": {
-                "urn": "test-workload-urn"
-            },
+            "workload_identity": {"urn": "test-workload-urn"},
             "access_endpoint": "test-access-endpoint-url",
             "agent_gateway_id": "test-agent-gateway-id",
-            "tags": [
-                {
-                    "key": "test-tag",
-                    "value": "test-tag-value"
-                }
-            ],
+            "tags": [{"key": "test-tag", "value": "test-tag-value"}],
             "auth_type": "API_KEY",
             "api_key_name": "test-api-key-name",
             "network_config": {
                 "vpc_id": "test-vpc-id",
                 "subnet_id": "test-subnet-id",
-                "security_group_id": [
-                    "test-security-group-id"
-                ]
-            }
+                "security_group_id": ["test-security-group-id"],
+            },
         }
         code_interpreter_id = "test-code-interpreter-id"
 
@@ -375,9 +332,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
 
         # Assert
         assert result == mock_get_code_interpreter.return_value
-        mock_get_code_interpreter.assert_called_once_with(
-            code_interpreter_id=code_interpreter_id
-        )
+        mock_get_code_interpreter.assert_called_once_with(code_interpreter_id=code_interpreter_id)
 
     @patch.object(ControlToolsHttpClient, "delete_code_interpreter")
     def test_delete_code_interpreter(self, mock_delete_code_interpreter):
@@ -406,8 +361,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
 
         # Act
         result = self.code_interpreter_client.start_session(
-            code_interpreter_name=test_code_interpreter_name,
-            session_name=test_session_name
+            code_interpreter_name=test_code_interpreter_name, session_name=test_session_name
         )
 
         # Assert
@@ -417,10 +371,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         mock_start_session.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",
             api_key="test-api-key",
-            request_params={
-                "name": test_session_name,
-                "session_timeout": 900  # 默认值
-            }
+            request_params={"name": test_session_name, "session_timeout": 900},  # 默认值
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
@@ -440,7 +391,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
             code_interpreter_name=test_code_interpreter_name,
             session_name=test_session_name,
             api_key=test_api_key,
-            session_timeout=test_session_timeout
+            session_timeout=test_session_timeout,
         )
 
         # Assert
@@ -450,13 +401,9 @@ class TestCodeInterpreterClient(unittest.TestCase):
         mock_start_session.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",
             api_key=test_api_key,
-            request_params={
-                "name": test_session_name,
-                "session_timeout": test_session_timeout
-            }
+            request_params={"name": test_session_name, "session_timeout": test_session_timeout},
         )
         mock_getenv.assert_not_called()  # 因为我们提供了api_key，所以不应该调用getenv
-
 
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "get_session")
@@ -470,14 +417,13 @@ class TestCodeInterpreterClient(unittest.TestCase):
             "session_id": session_id,
             "created_at": "2023-01-01T00:00:00Z",
             "name": "test-session-name",
-            "session_timeout": 900
+            "session_timeout": 900,
         }
         mock_getenv.return_value = "test-api-key"
 
         # Act
         response = self.code_interpreter_client.get_session(
-            code_interpreter_name=code_interpreter_name,
-            session_id=session_id
+            code_interpreter_name=code_interpreter_name, session_id=session_id
         )
 
         # Assert
@@ -485,7 +431,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         mock_get_session.assert_called_once_with(
             code_interpreter_name=code_interpreter_name,
             session_id=session_id,
-            api_key="test-api-key"
+            api_key="test-api-key",
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
@@ -497,9 +443,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
 
         # Act & Assert
         with pytest.raises(ValueError, match=error_message):
-            self.code_interpreter_client.get_session(
-                code_interpreter_name=code_interpreter_name
-            )
+            self.code_interpreter_client.get_session(code_interpreter_name=code_interpreter_name)
 
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "stop_session")
@@ -517,7 +461,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         mock_stop_session.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",
             session_id="test-session-id",
-            api_key="test-api-key"
+            api_key="test-api-key",
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
@@ -530,7 +474,6 @@ class TestCodeInterpreterClient(unittest.TestCase):
         assert self.code_interpreter_client.session_id is None
         assert self.code_interpreter_client.code_interpreter_name is None
 
-
     def test_invoke_with_no_existing_session(self):
         """测试invoke方法，无激活会话的情况"""
         # Arrange
@@ -538,10 +481,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
 
         # Act & Assert
         with pytest.raises(ValueError, match=error_message):
-            self.code_interpreter_client.invoke(
-                operate_type="test-method",
-                arguments={}
-            )
+            self.code_interpreter_client.invoke(operate_type="test-method", arguments={})
 
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
@@ -554,20 +494,14 @@ class TestCodeInterpreterClient(unittest.TestCase):
         mock_getenv.return_value = "test-api-key"
 
         # Act
-        self.code_interpreter_client.invoke(
-            operate_type="test-method",
-            arguments={}
-        )
+        self.code_interpreter_client.invoke(operate_type="test-method", arguments={})
 
         # Assert
         mock_invoke.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",
             session_id="test-session-id",
             api_key="test-api-key",
-            arguments={
-                "operate_type": "test-method",
-                "arguments": {}
-            }
+            arguments={"operate_type": "test-method", "arguments": {}},
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
@@ -594,12 +528,8 @@ class TestCodeInterpreterClient(unittest.TestCase):
             api_key="test-api-key",
             arguments={
                 "operate_type": "execute_code",
-                "arguments": {
-                    "code": code,
-                    "language": "python",
-                    "clear_context": False
-                }
-            }
+                "arguments": {"code": code, "language": "python", "clear_context": False},
+            },
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
@@ -615,10 +545,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         mock_getenv.return_value = "test-api-key"
 
         # Act
-        self.code_interpreter_client.execute_code(
-            code=code,
-            clear_context=True
-        )
+        self.code_interpreter_client.execute_code(code=code, clear_context=True)
 
         # Assert
         mock_invoke.assert_called_once_with(
@@ -627,12 +554,8 @@ class TestCodeInterpreterClient(unittest.TestCase):
             api_key="test-api-key",
             arguments={
                 "operate_type": "execute_code",
-                "arguments": {
-                    "code": code,
-                    "language": "python",
-                    "clear_context": True
-                }
-            }
+                "arguments": {"code": code, "language": "python", "clear_context": True},
+            },
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
@@ -647,10 +570,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
 
         # Act & Assert
         with pytest.raises(ValueError, match=error_message):
-            self.code_interpreter_client.execute_code(
-                code=code,
-                language=language
-            )
+            self.code_interpreter_client.execute_code(code=code, language=language)
 
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
@@ -664,21 +584,14 @@ class TestCodeInterpreterClient(unittest.TestCase):
         mock_getenv.return_value = "test-api-key"
 
         # Act
-        self.code_interpreter_client.execute_command(
-            command=command
-        )
+        self.code_interpreter_client.execute_command(command=command)
 
         # Assert
         mock_invoke.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",
             session_id="test-session-id",
             api_key="test-api-key",
-            arguments={
-                "operate_type": "execute_command",
-                "arguments": {
-                    "command": command
-                }
-            }
+            arguments={"operate_type": "execute_command", "arguments": {"command": command}},
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
@@ -694,9 +607,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
 
         # Act & Assert
         with pytest.raises(ValueError, match=error_message):
-            self.code_interpreter_client.execute_command(
-                command=command
-            )
+            self.code_interpreter_client.execute_command(command=command)
 
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
@@ -711,9 +622,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         text_content = "Hello, World!"
         description = "test file"
         self.code_interpreter_client.upload_file(
-            path=path,
-            content=text_content,
-            description=description
+            path=path, content=text_content, description=description
         )
 
         # Assert
@@ -723,15 +632,8 @@ class TestCodeInterpreterClient(unittest.TestCase):
             api_key="test-api-key",
             arguments={
                 "operate_type": "write_files",
-                "arguments": {
-                    "write_contents": [
-                        {
-                            "path": path,
-                            "text": text_content
-                        }
-                    ]
-                }
-            }
+                "arguments": {"write_contents": [{"path": path, "text": text_content}]},
+            },
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
@@ -749,9 +651,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         encoded_content = base64.b64encode(binary_content).decode("utf-8")
         description = "test file"
         self.code_interpreter_client.upload_file(
-            path=path,
-            content=binary_content,
-            description=description
+            path=path, content=binary_content, description=description
         )
 
         # Assert
@@ -761,15 +661,8 @@ class TestCodeInterpreterClient(unittest.TestCase):
             api_key="test-api-key",
             arguments={
                 "operate_type": "write_files",
-                "arguments": {
-                    "write_contents": [
-                        {
-                            "path": path,
-                            "blob": encoded_content
-                        }
-                    ]
-                }
-            }
+                "arguments": {"write_contents": [{"path": path, "blob": encoded_content}]},
+            },
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
@@ -788,9 +681,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
 
         # Act
         self.code_interpreter_client.upload_file(
-            path=path,
-            content=text_content,
-            description=description
+            path=path, content=text_content, description=description
         )
 
         # Assert
@@ -802,16 +693,12 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 "operate_type": "write_files",
                 "arguments": {
                     "write_contents": [
-                        {
-                            "path": os.path.join("/home/user", path),
-                            "text": text_content
-                        }
+                        {"path": os.path.join("/home/user", path), "text": text_content}
                     ]
-                }
-            }
+                },
+            },
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
-
 
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
@@ -856,18 +743,17 @@ class TestCodeInterpreterClient(unittest.TestCase):
                             "blob": encoded_content,
                         },
                     ]
-                }
-            }
+                },
+            },
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
-
 
     def test_upload_files_with_invalid_path(self):
         """测试upload_files方法，提供无效路径的情况"""
         # Arrange
         self.code_interpreter_client.code_interpreter_name = "test-code-interpreter-name"
         self.code_interpreter_client.session_id = "test-session-id"
-        error_message= "Invalid path. Path must start with /home/user"
+        error_message = "Invalid path. Path must start with /home/user"
         files = [
             {
                 "path": "/invalid/user/test.txt",
@@ -883,7 +769,6 @@ class TestCodeInterpreterClient(unittest.TestCase):
         with pytest.raises(ValueError, match=error_message):
             self.code_interpreter_client.upload_files(files=files)
 
-
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
     def test_download_file_with_text_content(self, mock_invoke, mock_getenv):
@@ -891,21 +776,18 @@ class TestCodeInterpreterClient(unittest.TestCase):
         # Arrange
         text_content = "col1, col2\n1, 2\n3, 4"
         mock_invoke.return_value = {
-            "stream" : [
-                {
-                    "result": {
-                        "contents": [
-                            {
-                                "type": "resource",
-                                "resource": {
-                                    "uri": "/home/user/data.csv",
-                                    "text": text_content
-                                }
-                            }
-                        ]
+            "result": {
+                "content": [
+                    {
+                        "type": "resource",
+                        "resource": {
+                            "type": "text",
+                            "uri": "file:///home/user/data.csv",
+                            "text": text_content,
+                        },
                     }
-                }
-            ]
+                ]
+            }
         }
         self.code_interpreter_client.code_interpreter_name = "test-code-interpreter-name"
         self.code_interpreter_client.session_id = "test-session-id"
@@ -920,14 +802,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
             code_interpreter_name="test-code-interpreter-name",
             session_id="test-session-id",
             api_key="test-api-key",
-            arguments={
-                "operate_type": "read_files",
-                "arguments": {
-                    "paths": [
-                        path
-                    ]
-                }
-            }
+            arguments={"operate_type": "read_files", "arguments": {"paths": [path]}},
         )
         assert response == text_content
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
@@ -940,21 +815,18 @@ class TestCodeInterpreterClient(unittest.TestCase):
         binary_content = b"\x89PNG\r\n\x1a\n"
         encode_content = base64.b64encode(binary_content).decode("utf-8")
         mock_invoke.return_value = {
-            "stream" : [
-                {
-                    "result": {
-                        "contents": [
-                            {
-                                "type": "resource",
-                                "resource": {
-                                    "uri": "/home/user/image.png",
-                                    "blob": encode_content
-                                }
-                            }
-                        ]
+            "result": {
+                "content": [
+                    {
+                        "type": "resource",
+                        "resource": {
+                            "type": "blob",
+                            "uri": "file:///home/user/image.png",
+                            "blob": encode_content,
+                        },
                     }
-                }
-            ]
+                ]
+            }
         }
         self.code_interpreter_client.code_interpreter_name = "test-code-interpreter-name"
         self.code_interpreter_client.session_id = "test-session-id"
@@ -969,28 +841,21 @@ class TestCodeInterpreterClient(unittest.TestCase):
             code_interpreter_name="test-code-interpreter-name",
             session_id="test-session-id",
             api_key="test-api-key",
-            arguments={
-                "operate_type": "read_files",
-                "arguments": {
-                    "paths": [
-                        path
-                    ]
-                }
-            }
+            arguments={"operate_type": "read_files", "arguments": {"paths": [path]}},
         )
         assert response == binary_content
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
+    @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
-    def test_download_file_with_no_found_file(self, mock_invoke):
+    def test_download_file_with_no_found_file(self, mock_invoke, mock_getenv):
         """测试download_file方法，提供不存在的文件的情况"""
         # Arrange
-        mock_invoke.return_value = {
-            "stream" : []
-        }
+        mock_invoke.return_value = {}
+        mock_getenv.return_value = "test-api-key"
         self.code_interpreter_client.code_interpreter_name = "test-code-interpreter-name"
         self.code_interpreter_client.session_id = "test-session-id"
-        path = "/home/user/non-existent.csv"
+        path = "/home/user/no-existent.csv"
         error_message = f"Could not read file: {path}"
 
         # Act & Assert
@@ -1015,28 +880,26 @@ class TestCodeInterpreterClient(unittest.TestCase):
         """测试download_files方法，提供文本文件的情况"""
         # Arrange
         mock_invoke.return_value = {
-            "stream" : [
-                {
-                    "result": {
-                        "content": [
-                            {
-                                "type": "resource",
-                                "resource": {
-                                    "uri": "/home/user/data.csv",
-                                    "text": "col1, col2\n1, 2\n3, 4"
-                                }
-                            },
-                            {
-                                "type": "resource",
-                                "resource": {
-                                    "uri": "/home/user/config.json",
-                                    "text": '{"key": "value"}'
-                                }
-                            }
-                        ]
-                    }
-                }
-            ]
+            "result": {
+                "content": [
+                    {
+                        "type": "resource",
+                        "resource": {
+                            "type": "text",
+                            "uri": "file:///home/user/data.csv",
+                            "text": "col1, col2\n1, 2\n3, 4",
+                        },
+                    },
+                    {
+                        "type": "resource",
+                        "resource": {
+                            "type": "text",
+                            "uri": "file:///home/user/config.json",
+                            "text": '{"key": "value"}',
+                        },
+                    },
+                ]
+            }
         }
         self.code_interpreter_client.code_interpreter_name = "test-code-interpreter-name"
         self.code_interpreter_client.session_id = "test-session-id"
@@ -1044,20 +907,19 @@ class TestCodeInterpreterClient(unittest.TestCase):
         mock_getenv.return_value = "test-api-key"
 
         # Act
-        self.code_interpreter_client.download_files(paths)
+        result = self.code_interpreter_client.download_files(paths)
 
         # Assert
         mock_invoke.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",
             session_id="test-session-id",
             api_key="test-api-key",
-            arguments={
-                "operate_type": "read_files",
-                "arguments": {
-                    "paths": paths
-                }
-            }
+            arguments={"operate_type": "read_files", "arguments": {"paths": paths}},
         )
+        assert result == {
+            "/home/user/data.csv": "col1, col2\n1, 2\n3, 4",
+            "/home/user/config.json": '{"key": "value"}',
+        }
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
     @patch.object(os, "getenv")
@@ -1068,28 +930,26 @@ class TestCodeInterpreterClient(unittest.TestCase):
         binary_content = b"\x89PNG\r\n\x1a\n"
         encode_binary = base64.b64encode(binary_content).decode("utf-8")
         mock_invoke.return_value = {
-            "stream" : [
-                {
-                    "result": {
-                        "content": [
-                            {
-                                "type": "resource",
-                                "resource": {
-                                    "uri": "/home/user/iamge-1.png",
-                                    "blob": encode_binary
-                                }
-                            },
-                            {
-                                "type": "resource",
-                                "resource": {
-                                    "uri": "/home/user/image-2.png",
-                                    "blob": encode_binary
-                                }
-                            }
-                        ]
-                    }
-                }
-            ]
+            "result": {
+                "content": [
+                    {
+                        "type": "resource",
+                        "resource": {
+                            "type": "blob",
+                            "uri": "file:///home/user/iamge-1.png",
+                            "blob": encode_binary,
+                        },
+                    },
+                    {
+                        "type": "resource",
+                        "resource": {
+                            "type": "blob",
+                            "uri": "file:///home/user/image-2.png",
+                            "blob": encode_binary,
+                        },
+                    },
+                ]
+            }
         }
         self.code_interpreter_client.code_interpreter_name = "test-code-interpreter-name"
         self.code_interpreter_client.session_id = "test-session-id"
@@ -1097,20 +957,19 @@ class TestCodeInterpreterClient(unittest.TestCase):
         mock_getenv.return_value = "test-api-key"
 
         # Act
-        self.code_interpreter_client.download_files(paths)
+        result = self.code_interpreter_client.download_files(paths)
 
         # Assert
         mock_invoke.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",
             session_id="test-session-id",
             api_key="test-api-key",
-            arguments={
-                "operate_type": "read_files",
-                "arguments": {
-                    "paths": paths
-                }
-            }
+            arguments={"operate_type": "read_files", "arguments": {"paths": paths}},
         )
+        assert result == {
+            "/home/user/iamge-1.png": binary_content,
+            "/home/user/image-2.png": binary_content,
+        }
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
     def test_download_files_with_invalid_path(self):
@@ -1124,7 +983,6 @@ class TestCodeInterpreterClient(unittest.TestCase):
         # Act & Assert
         with pytest.raises(ValueError, match=error_message):
             self.code_interpreter_client.download_files(paths)
-
 
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
@@ -1147,10 +1005,8 @@ class TestCodeInterpreterClient(unittest.TestCase):
             api_key="test-api-key",
             arguments={
                 "operate_type": "execute_command",
-                "arguments": {
-                    "command": f"pip install {' '.join(packages)} "
-                }
-            }
+                "arguments": {"command": f"pip install {' '.join(packages)} "},
+            },
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
@@ -1175,10 +1031,8 @@ class TestCodeInterpreterClient(unittest.TestCase):
             api_key="test-api-key",
             arguments={
                 "operate_type": "execute_command",
-                "arguments": {
-                    "command": f"pip install {' '.join(packages)} "
-                }
-            }
+                "arguments": {"command": f"pip install {' '.join(packages)} "},
+            },
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
@@ -1194,10 +1048,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         mock_getenv.return_value = "test-api-key"
 
         # Act
-        self.code_interpreter_client.install_packages(
-            packages=packages,
-            upgrade=True
-        )
+        self.code_interpreter_client.install_packages(packages=packages, upgrade=True)
 
         # Assert
         mock_invoke.assert_called_once_with(
@@ -1206,10 +1057,8 @@ class TestCodeInterpreterClient(unittest.TestCase):
             api_key="test-api-key",
             arguments={
                 "operate_type": "execute_command",
-                "arguments": {
-                    "command": f"pip install {' '.join(packages)} --upgrade"
-                }
-            }
+                "arguments": {"command": f"pip install {' '.join(packages)} --upgrade"},
+            },
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 
@@ -1224,8 +1073,6 @@ class TestCodeInterpreterClient(unittest.TestCase):
         # Act & Assert
         with pytest.raises(ValueError, match=error_message):
             self.code_interpreter_client.install_packages(invalid_package)
-
-
 
     @patch.object(os, "getenv")
     @patch.object(DataToolsHttpClient, "invoke")
@@ -1250,8 +1097,8 @@ class TestCodeInterpreterClient(unittest.TestCase):
                 "arguments": {
                     "code": "# Context cleared",
                     "language": "python",
-                    "clear_context": True
-                }
-            }
+                    "clear_context": True,
+                },
+            },
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
