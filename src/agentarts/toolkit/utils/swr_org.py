@@ -96,11 +96,11 @@ def generate_swr_org_name(
     """
     Generate unique SWR organization name.
 
-    Format: agentarts-{region_short}-{ak_identifier}-{random_suffix}
+    Format: agentarts-{region_short}-{ak_identifier}-org
 
     The generated name is designed to be:
-    1. Unique per account (based on AK)
-    2. Unique per generation (random suffix)
+    1. Unique per account (based on AK hash)
+    2. Consistent per account (same AK generates same name)
     3. Within max_length constraint (default 64 chars)
 
     Args:
@@ -115,31 +115,27 @@ def generate_swr_org_name(
 
     Examples:
         >>> generate_swr_org_name("cn-southwest-2", "ABCDEFGHIJKLMNOP")
-        'agentarts-cnsw2-a1b2c3d4-xyz123'
+        'agentarts-cnso2-19fc8eff-org'
 
         >>> generate_swr_org_name("cn-southwest-2")  # AK from env
-        'agentarts-cnsw2-<ak_hash>-<random>'
+        'agentarts-cnso2-<ak_hash>-org'
     """
     prefix = "agentarts-"
+    suffix = "-org"
 
     region_short = shorten_region(region or "default")
 
     ak_identifier = generate_ak_identifier(ak, length=8)
 
-    random_suffix = generate_random_suffix(length=6)
-
-    base_name = f"{prefix}{region_short}-{ak_identifier}-{random_suffix}"
+    base_name = f"{prefix}{region_short}-{ak_identifier}{suffix}"
 
     if len(base_name) > max_length:
         excess = len(base_name) - max_length
-        if excess > 0:
-            random_suffix = generate_random_suffix(length=6 - min(excess, 6))
-            base_name = f"{prefix}{region_short}-{ak_identifier}-{random_suffix}"
-        if len(base_name) > max_length:
-            ak_identifier = generate_ak_identifier(ak, length=8 - min(len(base_name) - max_length, 8))
-            base_name = f"{prefix}{region_short}-{ak_identifier}"
+        ak_identifier = generate_ak_identifier(ak, length=8 - min(excess, 8))
+        base_name = f"{prefix}{region_short}-{ak_identifier}{suffix}"
+
         if len(base_name) > max_length:
             region_short = region_short[: len(region_short) - min(len(base_name) - max_length, len(region_short))]
-            base_name = f"{prefix}{region_short}"
+            base_name = f"{prefix}{region_short}{suffix}"
 
     return base_name.lower()
