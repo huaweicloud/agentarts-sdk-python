@@ -20,12 +20,11 @@ class MCPGatewayClient(BaseHTTPClient):
     Inherits from BaseHTTPClient to provide service-specific API methods.
     """
 
-    def __init__(self, config: RequestConfig | None = None):
-        if config is None or (config.base_url is None or config.base_url == ""):
-            from agentarts.sdk.service.http_client import RequestConfig
-            if config is None:
-                config = RequestConfig()
-            config.base_url = f"{get_control_plane_endpoint()}/v1/core"
+    def __init__(self, verify_ssl: bool = True):
+        config = RequestConfig()
+        config.base_url = f"{get_control_plane_endpoint()}/v1/core"
+        config.verify_ssl = verify_ssl
+        self.verify_ssl = verify_ssl
         super().__init__(config, open_ak_sk=True)
 
     def create_mcp_gateway(
@@ -37,8 +36,7 @@ class MCPGatewayClient(BaseHTTPClient):
         agency_name: str | None = None,
         authorizer_configuration: dict[str, Any] | None = None,
         log_delivery_configuration: dict[str, Any] | None = None,
-        outbound_network_configuration: dict[str, Any] | None = None,
-        skip_ssl_verification: bool = False
+        outbound_network_configuration: dict[str, Any] | None = None
     ) -> RequestResult:
         """
         Create a new MCP gateway.
@@ -52,7 +50,6 @@ class MCPGatewayClient(BaseHTTPClient):
             authorizer_configuration: Authorizer configuration
             log_delivery_configuration: Log delivery configuration
             outbound_network_configuration: Outbound network configuration
-            skip_ssl_verification: Skip SSL certificate verification
 
         Returns:
             RequestResult: Result of the API call
@@ -67,7 +64,7 @@ class MCPGatewayClient(BaseHTTPClient):
         # Handle agency_name if not provided
         if agency_name is None:
             # Create IAM client
-            iam_client = IAMClient(verify_ssl=not skip_ssl_verification)
+            iam_client = IAMClient(verify_ssl=self.verify_ssl)
 
             # Agency configuration
             agency_name = "AgentArtsCoreGateway"
