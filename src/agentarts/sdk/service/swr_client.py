@@ -158,7 +158,7 @@ class SWRClient:
             }
 
         except Exception as e:
-            print(f"Organization '{organization}' not found: {e}")
+            print(f"Organization '{organization}' query failed: {e}")
             return None
 
     def create_organization(
@@ -253,7 +253,7 @@ class SWRClient:
             }
 
         except Exception as e:
-            print(f"Repository '{organization}/{repository}' not found: {e}")
+            print(f"Repository '{organization}/{repository}' query failed: {e}")
             return None
 
     def create_repository(
