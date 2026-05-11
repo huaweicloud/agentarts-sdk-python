@@ -12,6 +12,7 @@ from agentarts.toolkit.utils.runtime.config import (
     BaseConfig,
     SWRConfig,
 )
+from agentarts.toolkit.utils.swr_org import generate_swr_org_name
 
 console = Console()
 
@@ -227,7 +228,8 @@ def add_agent(
         existing_dict.setdefault("swr_config", {})["repository_auto_create"] = repository_auto_create
 
         final_region = existing_dict.get("base", {}).get("region", "cn-southwest-2")
-        final_org = existing_dict.get("swr_config", {}).get("organization", "agentarts-org")
+        existing_org = existing_dict.get("swr_config", {}).get("organization")
+        final_org = existing_org or generate_swr_org_name(region=final_region)
         final_repo = existing_dict.get("swr_config", {}).get("repository", f"agent_{name}")
 
         artifact_url = f"swr.{final_region}.myhuaweicloud.com/{final_org}/{final_repo}:latest"
@@ -253,7 +255,7 @@ def add_agent(
         )
 
         final_region = region or "cn-southwest-2"
-        final_org = swr_organization or "agentarts-org"
+        final_org = swr_organization or generate_swr_org_name(region=final_region)
         final_repo = swr_repository or f"agent_{name}"
 
         artifact_url = f"swr.{final_region}.myhuaweicloud.com/{final_org}/{final_repo}:latest"
