@@ -25,11 +25,11 @@ def _parse_json(s: str | None) -> dict[str, Any] | None:
         raise ValueError(msg)
 
 
-def _get_mcp_gateway_client():
+def _get_mcp_gateway_client(verify_ssl: bool = True):
     """Get MCP Gateway client"""
     from agentarts.sdk.mcpgateway import MCPGatewayClient
 
-    return MCPGatewayClient()
+    return MCPGatewayClient(verify_ssl=verify_ssl)
 
 
 def _format_output(data) -> str:
@@ -61,6 +61,7 @@ def create_mcp_gateway(
     authorizer_configuration: Annotated[str | None, typer.Option("--authorizer-configuration", help="Authorizer configuration (JSON format)")] = None,
     log_delivery_configuration: Annotated[str | None, typer.Option("--log-delivery-configuration", help="Log delivery configuration (JSON format)")] = None,
     outbound_network_configuration: Annotated[str | None, typer.Option("--outbound-network-configuration", help="Outbound network configuration (JSON format)")] = None,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
 ):
     """
     Create a new MCP gateway
@@ -73,7 +74,7 @@ def create_mcp_gateway(
         log_delivery_config = _parse_json(log_delivery_configuration)
         outbound_network_config = _parse_json(outbound_network_configuration)
 
-        client = _get_mcp_gateway_client()
+        client = _get_mcp_gateway_client(verify_ssl=not skip_ssl_verification)
         result = client.create_mcp_gateway(
             name=name,
             description=description,
@@ -82,7 +83,7 @@ def create_mcp_gateway(
             agency_name=agency_name,
             authorizer_configuration=authorizer_config,
             log_delivery_configuration=log_delivery_config,
-            outbound_network_configuration=outbound_network_config,
+            outbound_network_configuration=outbound_network_config
         )
 
         if result.success:
@@ -100,8 +101,8 @@ def create_mcp_gateway(
 def update_mcp_gateway(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     description: Annotated[str | None, typer.Option("--description", "-d", help="Gateway description")] = None,
-    authorizer_configuration: Annotated[str | None, typer.Option("--authorizer-configuration", help="Authorizer configuration (JSON format)")] = None,
     log_delivery_configuration: Annotated[str | None, typer.Option("--log-delivery-configuration", help="Log delivery configuration (JSON format)")] = None,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
 ):
     """
     Update an existing MCP gateway
@@ -110,14 +111,12 @@ def update_mcp_gateway(
         agentarts mcp-gateway update-mcp-gateway 123 --description "Updated description"
     """
     try:
-        authorizer_config = _parse_json(authorizer_configuration)
         log_delivery_config = _parse_json(log_delivery_configuration)
 
-        client = _get_mcp_gateway_client()
+        client = _get_mcp_gateway_client(verify_ssl=not skip_ssl_verification)
         result = client.update_mcp_gateway(
             gateway_id=gateway_id,
             description=description,
-            authorizer_configuration=authorizer_config,
             log_delivery_configuration=log_delivery_config,
         )
 
@@ -135,6 +134,7 @@ def update_mcp_gateway(
 @mcp_gateway.command("delete-mcp-gateway")
 def delete_mcp_gateway(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
 ):
     """
     Delete an MCP gateway
@@ -148,7 +148,7 @@ def delete_mcp_gateway(
             echo_success("Deletion cancelled")
             return
 
-        client = _get_mcp_gateway_client()
+        client = _get_mcp_gateway_client(verify_ssl=not skip_ssl_verification)
         result = client.delete_mcp_gateway(gateway_id=gateway_id)
 
         if result.success:
@@ -162,6 +162,7 @@ def delete_mcp_gateway(
 @mcp_gateway.command("get-mcp-gateway")
 def get_mcp_gateway(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
 ):
     """
     Get details of an MCP gateway
@@ -170,7 +171,7 @@ def get_mcp_gateway(
         agentarts mcp-gateway get-mcp-gateway 123
     """
     try:
-        client = _get_mcp_gateway_client()
+        client = _get_mcp_gateway_client(verify_ssl=not skip_ssl_verification)
         result = client.get_mcp_gateway(gateway_id=gateway_id)
 
         if result.success:
@@ -189,6 +190,7 @@ def list_mcp_gateways(
     gateway_id: Annotated[str | None, typer.Option("--gateway-id", help="Gateway ID")] = None,
     limit: Annotated[int | None, typer.Option("--limit", help="Limit for pagination (default: 50, min: 1, max: 50)")] = None,
     offset: Annotated[int | None, typer.Option("--offset", help="Offset for pagination (default: 0, min: 0, max: 1000000)")] = None,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
 ):
     """
     List MCP gateways
@@ -215,7 +217,7 @@ def list_mcp_gateways(
             msg = "Limit must be less than or equal to 50"
             raise ValueError(msg)
 
-        client = _get_mcp_gateway_client()
+        client = _get_mcp_gateway_client(verify_ssl=not skip_ssl_verification)
         result = client.list_mcp_gateways(
             name=name,
             status=status,
@@ -238,10 +240,11 @@ def list_mcp_gateways(
 @mcp_gateway.command("create-mcp-gateway-target")
 def create_mcp_gateway_target(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
+    target_configuration: Annotated[str, typer.Option("--target-configuration", help="Target configuration (JSON format)")],
     name: Annotated[str | None, typer.Option("--name", "-n", help="Target name")] = None,
     description: Annotated[str | None, typer.Option("--description", "-d", help="Target description")] = None,
-    target_configuration: Annotated[str | None, typer.Option("--target-configuration", help="Target configuration (JSON format)")] = None,
     credential_provider_configuration: Annotated[str | None, typer.Option("--credential-provider-configuration", help="Credential provider configuration (JSON format)")] = None,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
 ):
     """
     Create a new MCP gateway target
@@ -253,7 +256,7 @@ def create_mcp_gateway_target(
         target_config = _parse_json(target_configuration)
         credential_config = _parse_json(credential_provider_configuration)
 
-        client = _get_mcp_gateway_client()
+        client = _get_mcp_gateway_client(verify_ssl=not skip_ssl_verification)
         result = client.create_mcp_gateway_target(
             gateway_id=gateway_id,
             name=name,
@@ -281,6 +284,7 @@ def update_mcp_gateway_target(
     description: Annotated[str | None, typer.Option("--description", "-d", help="Target description")] = None,
     target_configuration: Annotated[str | None, typer.Option("--target-configuration", help="Target configuration (JSON format)")] = None,
     credential_provider_configuration: Annotated[str | None, typer.Option("--credential-provider-configuration", help="Credential provider configuration (JSON format)")] = None,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
 ):
     """
     Update an existing MCP gateway target
@@ -292,7 +296,7 @@ def update_mcp_gateway_target(
         target_config = _parse_json(target_configuration)
         credential_config = _parse_json(credential_provider_configuration)
 
-        client = _get_mcp_gateway_client()
+        client = _get_mcp_gateway_client(verify_ssl=not skip_ssl_verification)
         result = client.update_mcp_gateway_target(
             gateway_id=gateway_id,
             target_id=target_id,
@@ -317,6 +321,7 @@ def update_mcp_gateway_target(
 def delete_mcp_gateway_target(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     target_id: Annotated[str, typer.Argument(help="Target ID")],
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
 ):
     """
     Delete an MCP gateway target
@@ -330,7 +335,7 @@ def delete_mcp_gateway_target(
             echo_success("Deletion cancelled")
             return
 
-        client = _get_mcp_gateway_client()
+        client = _get_mcp_gateway_client(verify_ssl=not skip_ssl_verification)
         result = client.delete_mcp_gateway_target(
             gateway_id=gateway_id,
             target_id=target_id,
@@ -348,6 +353,7 @@ def delete_mcp_gateway_target(
 def get_mcp_gateway_target(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     target_id: Annotated[str, typer.Argument(help="Target ID")],
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
 ):
     """
     Get details of an MCP gateway target
@@ -356,7 +362,7 @@ def get_mcp_gateway_target(
         agentarts mcp-gateway get-mcp-gateway-target 123 456
     """
     try:
-        client = _get_mcp_gateway_client()
+        client = _get_mcp_gateway_client(verify_ssl=not skip_ssl_verification)
         result = client.get_mcp_gateway_target(
             gateway_id=gateway_id,
             target_id=target_id,
@@ -376,6 +382,7 @@ def list_mcp_gateway_targets(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     limit: Annotated[int | None, typer.Option("--limit", help="Limit for pagination (default: 50, min: 1, max: 50)")] = None,
     offset: Annotated[int | None, typer.Option("--offset", help="Offset for pagination (default: 0, min: 0, max: 1000000)")] = None,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
 ):
     """
     List MCP gateway targets
@@ -402,7 +409,7 @@ def list_mcp_gateway_targets(
             msg = "Limit must be less than or equal to 50"
             raise ValueError(msg)
 
-        client = _get_mcp_gateway_client()
+        client = _get_mcp_gateway_client(verify_ssl=not skip_ssl_verification)
         result = client.list_mcp_gateway_targets(
             gateway_id=gateway_id,
             limit=limit,

@@ -90,19 +90,17 @@ if list_result.success:
 #### 初始化
 
 ```python
-MCPGatewayClient(config: Optional[RequestConfig] = None)
+MCPGatewayClient(verify_ssl: bool = True)
 ```
 
 **参数说明**：
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| config | RequestConfig | 否 | None | 请求配置对象 |
+| verify_ssl | bool | 否 | True | 是否验证 SSL 证书 |
 
 **默认行为**：
-- 如果未提供 `config`，将创建默认的 `RequestConfig`
-- 如果未设置 `base_url`，客户端将使用控制平面端点
-- 默认禁用 SSL 验证
+- 默认启用 SSL 验证（verify_ssl=True）
 
 ### 网关管理方法
 
@@ -148,7 +146,6 @@ create_mcp_gateway(
 update_mcp_gateway(
     gateway_id: str,
     description: Optional[str] = None,
-    authorizer_configuration: Optional[Dict[str, Any]] = None,
     log_delivery_configuration: Optional[Dict[str, Any]] = None
 ) -> RequestResult
 ```
@@ -159,7 +156,6 @@ update_mcp_gateway(
 |------|------|------|--------|------|
 | gateway_id | str | 是 | - | 网关 ID |
 | description | str | 否 | None | 网关描述 |
-| authorizer_configuration | Dict | 否 | None | 授权器配置 |
 | log_delivery_configuration | Dict | 否 | None | 日志投递配置 |
 
 **返回值**：`RequestResult` 对象
@@ -419,7 +415,7 @@ except Exception as e:
 **原因**：未提供任何更新参数。
 
 **解决方案**：
-确保至少提供一个更新参数（description、authorizer_configuration 等）。
+确保至少提供一个更新参数（description等）。
 
 ### Q3: 如何选择授权器类型？
 
