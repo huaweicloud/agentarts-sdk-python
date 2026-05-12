@@ -19,14 +19,18 @@ pulling in the full FastAPI dependency at runtime.
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import inspect
 import json
 import logging
 import os
+import socket
+import subprocess
 import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -273,6 +277,17 @@ class AgentArtsRuntimeApp(Starlette):
         except Exception:
             return False
 
+    def _ping_task_context(self, handler: Callable) -> bool:
+        """
+        Return ``True`` if *handler* accepts a ``context`` as its
+        first positional parameter.
+        """
+        try:
+            params = list(inspect.signature(handler).parameters.keys())
+            return len(params) >= 1 and params[0] == "context"
+        except Exception:
+            return False
+
     # ------------------------------------------------------------------
     # Invocation endpoint
     # ------------------------------------------------------------------
@@ -357,6 +372,8 @@ class AgentArtsRuntimeApp(Starlette):
                 status_code=500,
                 content={"error": type(exc).__name__, "message": str(exc)},
             )
+        finally:
+            AgentArtsRuntimeContext.clear()
 
     async def _invoke_handler(
         self,
@@ -383,8 +400,9 @@ class AgentArtsRuntimeApp(Starlette):
                 if asyncio.iscoroutinefunction(handler):
                     return await handler(*args)
                 loop = asyncio.get_event_loop()
+                ctx = contextvars.copy_context()
                 return await loop.run_in_executor(
-                    self._invocation_executor, handler, *args
+                    self._invocation_executor, lambda: ctx.run(handler, *args)
                 )
             except Exception as exc:
                 handler_name = getattr(handler, "__name__", "unknown")
@@ -489,7 +507,8 @@ class AgentArtsRuntimeApp(Starlette):
         is returned.
         """
         try:
-            status = self.get_current_ping_status()
+            request_context = self._build_request_context(request)
+            status = self.get_current_ping_status(request_context)
             self.logger.debug(f"Ping request - status: {status}")
             return JSONResponse(
                 content={
@@ -506,9 +525,12 @@ class AgentArtsRuntimeApp(Starlette):
                 },
             )
 
-    def get_current_ping_status(self) -> PingStatus:
+    def get_current_ping_status(self, request_context: RequestContext | None = None) -> PingStatus:
         """
         Get the current status of the AgentArts runtime.
+
+        Args:
+            request_context: Optional request context to pass to the ping handler.
 
         Returns:
             PingStatus: The current health status of the runtime.
@@ -520,7 +542,9 @@ class AgentArtsRuntimeApp(Starlette):
 
         if self._ping_handler is not None:
             try:
-                result = self._ping_handler()
+                task_context = self._ping_task_context(self._ping_handler)
+                args = (request_context,) if task_context and request_context else ()
+                result = self._ping_handler(*args)
                 current_status = PingStatus(result) if isinstance(result, str) else result
             except Exception as exc:
                 self.logger.warning("Custom Ping handler failed: %s: %s", type(exc).__name__, exc)
@@ -607,16 +631,78 @@ class AgentArtsRuntimeApp(Starlette):
             handler.run(host="0.0.0.0", port=8080)
 
         Args:
-            host: Bind address.  Defaults to ``"0.0.0.0"``.
-            port: Bind port.  Defaults to ``8080``.
+            host: Bind address. Defaults to eth0 IP in Docker/Kubernetes environment,
+                or ``"127.0.0.1"`` in local development.
+                Can be overridden via ``AGENTARTS_BIND_IP`` environment variable.
+            port: Bind port. Defaults to ``8080``.
             **kwargs: Additional keyword arguments forwarded to
                 ``uvicorn.run`` (e.g. ``workers``, ``log_level``).
         """
         import uvicorn
 
+        def _is_docker_environment() -> bool:
+            if os.path.exists("/.dockerenv"):
+                return True
+            if os.getenv("DOCKER_CONTAINER"):
+                return True
+            if os.getenv("KUBERNETES_SERVICE_HOST"):
+                return True
+            try:
+                cgroup = Path("/proc/1/cgroup").read_text()
+                if "docker" in cgroup or "kubepods" in cgroup or "containerd" in cgroup:
+                    return True
+            except Exception:
+                pass
+            try:
+                mountinfo = Path("/proc/self/mountinfo").read_text()
+                if "docker" in mountinfo or "containers" in mountinfo:
+                    return True
+            except Exception:
+                pass
+            return False
+
+        def _get_eth0_ip() -> str | None:
+            try:
+                result = subprocess.run(
+                    "ip addr show eth0 | grep -oP 'inet \\K[\\d.]+'",
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                ip = result.stdout.strip()
+                if ip and result.returncode == 0:
+                    self.logger.debug("Detected eth0 IP via ip command: %s", ip)
+                    return ip
+            except Exception as e:
+                self.logger.debug("Failed to get IP via ip command: %s", e)
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                s.settimeout(2)
+                s.connect(("8.8.8.8", 80))
+                ip = s.getsockname()[0]
+                s.close()
+                if ip and ip != "0.0.0.0":
+                    self.logger.debug("Detected eth0 IP via socket: %s", ip)
+                    return ip
+            except Exception as e:
+                self.logger.debug("Failed to get IP via socket: %s", e)
+            try:
+                ip = socket.gethostbyname(socket.gethostname())
+                if ip and ip != "127.0.0.1":
+                    self.logger.debug("Detected eth0 IP via hostname: %s", ip)
+                    return ip
+            except Exception as e:
+                self.logger.debug("Failed to get IP via hostname: %s", e)
+            return None
+
         if host is None:
-            if os.path.exists("/.dockerenv") or os.getenv("DOCKER_CONTAINER"):
-                host = "0.0.0.0"
+            env_bind_ip = os.getenv("AGENTARTS_BIND_IP")
+            if env_bind_ip:
+                host = env_bind_ip
+            elif _is_docker_environment():
+                eth0_ip = _get_eth0_ip()
+                host = eth0_ip if eth0_ip else "0.0.0.0"
             else:
                 host = "127.0.0.1"
 

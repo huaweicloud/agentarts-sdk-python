@@ -176,12 +176,12 @@ class TestAddAgent:
         monkeypatch.chdir(tmp_path)
 
         add_agent(
-            name="my-agent",
+            name="myagent",
             entrypoint="agent:app",
         )
 
         config = load_config()
-        agent = config.get_agent("my-agent")
+        agent = config.get_agent("myagent")
         assert agent.swr_config.repository is None
 
     def test_sets_as_default_when_first_agent(self, tmp_path, monkeypatch):

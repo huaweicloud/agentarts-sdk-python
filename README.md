@@ -140,6 +140,7 @@ if __name__ == "__main__":
 It is recommended to install the SDK in a virtual environment to avoid dependency conflicts.
 
 **Windows:**
+
 ```powershell
 # Create virtual environment
 python -m venv venv
@@ -152,6 +153,7 @@ python -m venv venv
 ```
 
 **Linux/macOS:**
+
 ```bash
 # Create virtual environment
 python -m venv venv
@@ -163,11 +165,13 @@ source venv/bin/activate
 ### Install via pip
 
 **Windows:**
+
 ```powershell
 pip install agentarts-sdk
 ```
 
 **Linux/macOS:**
+
 ```bash
 pip install agentarts-sdk
 ```
@@ -188,6 +192,7 @@ pip install agentarts-sdk[all]
 ### Install from Source
 
 **Windows:**
+
 ```powershell
 git clone https://github.com/huaweicloud/agentarts-sdk-python.git
 cd agentarts-sdk-python
@@ -201,6 +206,7 @@ pip install -e ".[dev]"
 ```
 
 **Linux/macOS:**
+
 ```bash
 git clone https://github.com/huaweicloud/agentarts-sdk-python.git
 cd agentarts-sdk-python
@@ -218,18 +224,21 @@ pip install -e ".[dev]"
 Set environment variables for Huawei Cloud authentication:
 
 **Windows (PowerShell):**
+
 ```powershell
 $env:HUAWEICLOUD_SDK_AK = "your-access-key"
 $env:HUAWEICLOUD_SDK_SK = "your-secret-key"
 ```
 
 **Windows (Command Prompt):**
+
 ```cmd
 set HUAWEICLOUD_SDK_AK=your-access-key
 set HUAWEICLOUD_SDK_SK=your-secret-key
 ```
 
 **Linux/macOS:**
+
 ```bash
 export HUAWEICLOUD_SDK_AK="your-access-key"
 export HUAWEICLOUD_SDK_SK="your-secret-key"
@@ -251,6 +260,7 @@ agentarts init -n my_agent -t langgraph
 ```
 
 This creates:
+
 ```
 my_agent/
 ├── agent.py              # Agent implementation
@@ -307,16 +317,16 @@ agentarts destroy
 
 ## CLI Commands Reference
 
-| Command | Description |
-|---------|-------------|
-| `agentarts init` | Initialize a new agent project |
-| `agentarts dev` | Start local development server |
-| `agentarts config` | Configure SDK settings (alias: `configure`) |
-| `agentarts deploy` | Deploy agent to Huawei Cloud (alias: `launch`) |
-| `agentarts invoke` | Invoke deployed agent |
-| `agentarts status` | Check deployment status |
-| `agentarts destroy` | Remove deployed agent |
-| `agentarts mcp-gateway` | Manage MCP gateways |
+| Command                 | Description                                    |
+| ----------------------- | ---------------------------------------------- |
+| `agentarts init`        | Initialize a new agent project                 |
+| `agentarts dev`         | Start local development server                 |
+| `agentarts config`      | Configure SDK settings (alias: `configure`)    |
+| `agentarts deploy`      | Deploy agent to Huawei Cloud (alias: `launch`) |
+| `agentarts invoke`      | Invoke deployed agent                          |
+| `agentarts status`      | Check deployment status                        |
+| `agentarts destroy`     | Remove deployed agent                          |
+| `agentarts mcp-gateway` | Manage MCP gateways                            |
 
 ## Limitations & Requirements
 
@@ -329,20 +339,22 @@ agentarts destroy
 
 When using optional framework dependencies, ensure the following minimum versions:
 
-| Framework | Minimum Version | Install Command |
-|-----------|-----------------|-----------------|
-| LangGraph | 1.0.0 | `pip install agentarts-sdk[langgraph]` |
-| LangChain | 0.1.0 | `pip install agentarts-sdk[langchain]` |
-| langchain-core | 0.1.0 | Included with langgraph/langchain |
+| Framework      | Minimum Version | Install Command                        |
+| -------------- | --------------- | -------------------------------------- |
+| LangGraph      | 1.0.0           | `pip install agentarts-sdk[langgraph]` |
+| LangChain      | 0.1.0           | `pip install agentarts-sdk[langchain]` |
+| langchain-core | 0.1.0           | Included with langgraph/langchain      |
 
 > **Note:** LangGraph 1.0+ introduces a new Checkpoint format with required fields (`step`, `pending_sends`, `parents`). The SDK's integration module is compatible with LangGraph 1.0 and above.
 
 ### Docker
 
 Docker is required for:
+
 - Building and deploying agents with `agentarts deploy` (alias: `launch`)
 
 **Install Docker:**
+
 - [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop)
 - [Docker Engine for Linux](https://docs.docker.com/engine/install/)
 
@@ -387,5 +399,6 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for det
 ## Support
 
 - **Issues:** [GitHub Issues](https://github.com/huaweicloud/agentarts-sdk-python/issues)
-- **Documentation:** https://docs.huaweicloud.com/agentarts
-- **Email:** agentarts@huawei.com
+- **Documentation:** <https://support.huaweicloud.com/productdesc-agentarts/agentarts_03_0002.html>
+- **Email:** <hwagentartssdk@huawei.com>
+

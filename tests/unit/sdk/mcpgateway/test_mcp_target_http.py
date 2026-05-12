@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from agentarts.sdk.mcpgateway.mcp_gateway_client import MCPGatewayClient
-from agentarts.sdk.service.http_client import RequestConfig, RequestResult
+from agentarts.sdk.service.http_client import RequestResult
 
 
 class TestMCPGatewayClient:
@@ -15,7 +15,7 @@ class TestMCPGatewayClient:
 
     def setup_method(self):
         """Setup test method"""
-        self.client = MCPGatewayClient(RequestConfig(base_url="http://test.example.com"))
+        self.client = MCPGatewayClient(verify_ssl=True)
 
     @patch("agentarts.sdk.mcpgateway.mcp_gateway_client.MCPGatewayClient.post")
     def test_create_mcp_gateway_target(self, mock_post):

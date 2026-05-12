@@ -20,14 +20,11 @@ class MCPGatewayClient(BaseHTTPClient):
     Inherits from BaseHTTPClient to provide service-specific API methods.
     """
 
-    def __init__(self, config: RequestConfig | None = None):
-        # If config is None or base_url is not set, use control plane endpoint
-        if config is None or (config.base_url is None or config.base_url == ""):
-            from agentarts.sdk.service.http_client import RequestConfig
-            if config is None:
-                config = RequestConfig()
-            config.base_url = f"{get_control_plane_endpoint()}/v1/core"
-            config.verify_ssl = False
+    def __init__(self, verify_ssl: bool = True):
+        config = RequestConfig()
+        config.base_url = f"{get_control_plane_endpoint()}/v1/core"
+        config.verify_ssl = verify_ssl
+        self.verify_ssl = verify_ssl
         super().__init__(config, open_ak_sk=True)
 
     def create_mcp_gateway(
@@ -67,7 +64,7 @@ class MCPGatewayClient(BaseHTTPClient):
         # Handle agency_name if not provided
         if agency_name is None:
             # Create IAM client
-            iam_client = IAMClient()
+            iam_client = IAMClient(verify_ssl=self.verify_ssl)
 
             # Agency configuration
             agency_name = "AgentArtsCoreGateway"
@@ -78,7 +75,7 @@ class MCPGatewayClient(BaseHTTPClient):
                 "Statement": [
                     {
                         "Action": [
-                            "csms:secret:getVersion"
+                            "csms:secret:getVersion",
                             "agentIdentity::getResourceApiKey",
                             "agentIdentity::getResourceOauth2Token",
                             "agentIdentity::getResourceStsToken",
@@ -137,7 +134,6 @@ class MCPGatewayClient(BaseHTTPClient):
         self,
         gateway_id: str,
         description: str | None = None,
-        authorizer_configuration: dict[str, Any] | None = None,
         log_delivery_configuration: dict[str, Any] | None = None
     ) -> RequestResult:
         """
@@ -146,7 +142,6 @@ class MCPGatewayClient(BaseHTTPClient):
         Args:
             gateway_id: Gateway ID
             description: Gateway description
-            authorizer_configuration: Authorizer configuration
             log_delivery_configuration: Log delivery configuration
 
         Returns:
@@ -159,12 +154,10 @@ class MCPGatewayClient(BaseHTTPClient):
         # Validate that not all optional parameters are None
         if all(param is None for param in [
             description,
-            authorizer_configuration,
             log_delivery_configuration
         ]):
             updateable_fields = [
                 "description",
-                "authorizer_configuration",
                 "log_delivery_configuration"
             ]
             msg = f"At least one parameter must be provided for update. Available fields: {', '.join(updateable_fields)}"
@@ -172,7 +165,6 @@ class MCPGatewayClient(BaseHTTPClient):
 
         payload = {
             "description": description,
-            "authorizer_configuration": authorizer_configuration,
             "log_delivery_configuration": log_delivery_configuration
         }
 

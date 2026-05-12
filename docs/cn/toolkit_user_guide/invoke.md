@@ -17,6 +17,7 @@
 | `--session` | `-s` | 会话 ID（用于有状态 Agent） | 自动生成 UUID |
 | `--bearer-token` | `-bt` | Bearer 认证令牌 | 无 |
 | `--timeout` | - | 请求超时时间（秒） | `900` |
+| `--user-id` | `-u` | 用户 ID（用于 OAuth2 出站凭据） | 无 |
 
 ## 调用模式
 
@@ -118,13 +119,24 @@ agentarts invoke '{"message": "你好"}' --agent my-agent --bearer-token "your-t
 agentarts invoke '{"message": "你好"}' --agent my-agent --endpoint custom-endpoint
 ```
 
-### 示例 9: 设置超时时间
+### 示例 10: 设置超时时间
 
 ```bash
 agentarts invoke '{"message": "你好"}' --agent my-agent --timeout 60
 ```
 
-### 示例 10: 复杂数据调用
+### 示例 11: 使用用户 ID（OAuth2 出站凭据）
+
+```bash
+agentarts invoke '{"message": "你好"}' --agent my-agent --user-id "user-123"
+```
+
+或使用简写：
+```bash
+agentarts invoke '{"message": "你好"}' -a my-agent -u "user-123"
+```
+
+### 示例 12: 复杂数据调用
 
 ```bash
 agentarts invoke '{

@@ -47,26 +47,30 @@ result = client.create_mcp_gateway(
     authorizer_type="iam"
 )
 
+gateway_id = None
 if result.success:
-    gateway_id = result.data.get("id")
+    gateway_id = result.data.get("gateway_id")
     print(f"网关创建成功，ID: {gateway_id}")
 else:
     print(f"创建网关失败: {result.error}")
 
 # 创建目标
-if gateway_id:
+if gateway_id is not None:
     target_result = client.create_mcp_gateway_target(
         gateway_id=gateway_id,
         name="my-target",
         description="我的 MCP 目标",
         target_configuration={
-            "endpoint": "https://api.example.com",
-            "timeout": 30
+            "mcp_server": {
+                "endpoint": "https://example.com/mcp",
+                "server_type": "sse"
+            }
         }
     )
 
     if target_result.success:
-        target_id = target_result.data.get("id")
+        target = target_result.data.get("target")
+        target_id = target.get("target_id")
         print(f"目标创建成功，ID: {target_id}")
     else:
         print(f"创建目标失败: {target_result.error}")
@@ -76,7 +80,7 @@ list_result = client.list_mcp_gateways()
 if list_result.success:
     print(f"总网关数: {list_result.data.get('total', 0)}")
     for gateway in list_result.data.get('gateways', []):
-        print(f"- {gateway.get('name')} (ID: {gateway.get('id')})")
+        print(f"- {gateway.get('name')} (ID: {gateway.get('gateway_id')})")
 ```
 
 ## API 参考
@@ -86,19 +90,17 @@ if list_result.success:
 #### 初始化
 
 ```python
-MCPGatewayClient(config: Optional[RequestConfig] = None)
+MCPGatewayClient(verify_ssl: bool = True)
 ```
 
 **参数说明**：
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
-| config | RequestConfig | 否 | None | 请求配置对象 |
+| verify_ssl | bool | 否 | True | 是否验证 SSL 证书 |
 
 **默认行为**：
-- 如果未提供 `config`，将创建默认的 `RequestConfig`
-- 如果未设置 `base_url`，客户端将使用控制平面端点
-- 默认禁用 SSL 验证
+- 默认启用 SSL 验证（verify_ssl=True）
 
 ### 网关管理方法
 
@@ -115,8 +117,7 @@ create_mcp_gateway(
     agency_name: Optional[str] = None,
     authorizer_configuration: Optional[Dict[str, Any]] = None,
     log_delivery_configuration: Optional[Dict[str, Any]] = None,
-    outbound_network_configuration: Optional[Dict[str, Any]] = None,
-    tags: Optional[List[str]] = None
+    outbound_network_configuration: Optional[Dict[str, Any]] = None
 ) -> RequestResult
 ```
 
@@ -128,7 +129,7 @@ create_mcp_gateway(
 | description | str | 否 | None | 网关描述 |
 | protocol_type | str | 否 | mcp | 协议类型 |
 | authorizer_type | str | 否 | iam | 授权器类型（custom_jwt/iam/api_key） |
-| agency_name | str | 否 | None | 代理名称 |
+| agency_name | str | 否 | None | 代理名称。未提供时自动创建名为 AgentArtsCoreGateway 的代理 |
 | authorizer_configuration | Dict | 否 | None | 授权器配置 |
 | log_delivery_configuration | Dict | 否 | {"enabled": False} | 日志投递配置 |
 | outbound_network_configuration | Dict | 否 | {"network_mode": "public"} | 出站网络配置 |
@@ -145,9 +146,7 @@ create_mcp_gateway(
 update_mcp_gateway(
     gateway_id: str,
     description: Optional[str] = None,
-    authorizer_configuration: Optional[Dict[str, Any]] = None,
-    log_delivery_configuration: Optional[Dict[str, Any]] = None,
-    outbound_network_configuration: Optional[Dict[str, Any]] = None
+    log_delivery_configuration: Optional[Dict[str, Any]] = None
 ) -> RequestResult
 ```
 
@@ -157,9 +156,7 @@ update_mcp_gateway(
 |------|------|------|--------|------|
 | gateway_id | str | 是 | - | 网关 ID |
 | description | str | 否 | None | 网关描述 |
-| authorizer_configuration | Dict | 否 | None | 授权器配置 |
 | log_delivery_configuration | Dict | 否 | None | 日志投递配置 |
-| outbound_network_configuration | Dict | 否 | None | 出站网络配置 |
 
 **返回值**：`RequestResult` 对象
 
@@ -418,7 +415,7 @@ except Exception as e:
 **原因**：未提供任何更新参数。
 
 **解决方案**：
-确保至少提供一个更新参数（description、authorizer_configuration 等）。
+确保至少提供一个更新参数（description等）。
 
 ### Q3: 如何选择授权器类型？
 

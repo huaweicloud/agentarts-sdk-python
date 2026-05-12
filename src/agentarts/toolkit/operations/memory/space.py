@@ -13,7 +13,7 @@ from .models import SpaceListResult, SpaceResult
 logger = logging.getLogger(__name__)
 
 
-def _get_client(region: str | None = None) -> MemoryClient:
+def _get_client(region: str | None = None, verify_ssl: bool | str = True) -> MemoryClient:
     """Get MemoryClient instance.
 
     Uses Huawei Cloud SDK Core credential provider chain (AK/SK).
@@ -24,11 +24,12 @@ def _get_client(region: str | None = None) -> MemoryClient:
 
     Args:
         region: Region name (optional, defaults to cn-north-4)
+        verify_ssl: SSL verification setting (default: True)
 
     Returns:
         MemoryClient instance
     """
-    kwargs = {}
+    kwargs = {"verify_ssl": verify_ssl}
     if region:
         kwargs["region_name"] = region
     return MemoryClient(**kwargs)
@@ -71,6 +72,7 @@ def create_space(
         private_vpc_id: str | None = None,
         private_subnet_id: str | None = None,
         region: str | None = None,
+        skip_ssl_verification: bool = False,
         **kwargs,
 ) -> SpaceResult:
     """Create a Memory Space.
@@ -93,13 +95,15 @@ def create_space(
         private_vpc_id: Private VPC ID (requires private_subnet_id)
         private_subnet_id: Private subnet ID (requires private_vpc_id)
         region: Region name (optional, defaults to cn-north-4)
+        skip_ssl_verification: Skip SSL certificate verification (default: False)
         **kwargs: Additional parameters (ignored, for backward compatibility)
 
     Returns:
         SpaceResult with space_id and space details
     """
     try:
-        client = _get_client(region=region)
+        verify_ssl = not skip_ssl_verification
+        client = _get_client(region=region, verify_ssl=verify_ssl)
 
         # 使用关键字参数调用 create_space（适配新 API）
         space = client.create_space(
@@ -137,18 +141,21 @@ def create_space(
 def get_space(
         space_id: str,
         region: str | None = None,
+        skip_ssl_verification: bool = False,
 ) -> SpaceResult:
     """Get Space details.
 
     Args:
         space_id: Space ID
         region: Region name (optional, defaults to cn-north-4)
+        skip_ssl_verification: Skip SSL certificate verification (default: False)
 
     Returns:
         SpaceResult with space details
     """
     try:
-        client = _get_client(region=region)
+        verify_ssl = not skip_ssl_verification
+        client = _get_client(region=region, verify_ssl=verify_ssl)
         space = client.get_space(space_id)
         space_dict = _space_info_to_dict(space)
 
@@ -171,6 +178,7 @@ def list_spaces(
         limit: int = 20,
         offset: int = 0,
         region: str | None = None,
+        skip_ssl_verification: bool = False,
 ) -> SpaceListResult:
     """List Spaces.
 
@@ -178,12 +186,14 @@ def list_spaces(
         limit: Maximum number of spaces to return (default: 20)
         offset: Offset for pagination (default: 0)
         region: Region name (optional, defaults to cn-north-4)
+        skip_ssl_verification: Skip SSL certificate verification (default: False)
 
     Returns:
         SpaceListResult with list of spaces
     """
     try:
-        client = _get_client(region=region)
+        verify_ssl = not skip_ssl_verification
+        client = _get_client(region=region, verify_ssl=verify_ssl)
         result = client.list_spaces(limit=limit, offset=offset)
 
         # 转换为字典列表以保持向后兼容
@@ -216,6 +226,7 @@ def update_space(
         memory_strategies_builtin: list[str] | None = None,
         tags: list[dict[str, str]] | None = None,
         region: str | None = None,
+        skip_ssl_verification: bool = False,
         **kwargs,
 ) -> SpaceResult:
     """Update a Space.
@@ -232,13 +243,15 @@ def update_space(
         memory_strategies_builtin: Built-in memory strategies (optional list)
         tags: Tags for the space (optional list of key-value dicts)
         region: Region name (optional, defaults to cn-north-4)
+        skip_ssl_verification: Skip SSL certificate verification (default: False)
         **kwargs: Additional update parameters (ignored, for backward compatibility)
 
     Returns:
         SpaceResult with updated space details
     """
     try:
-        client = _get_client(region=region)
+        verify_ssl = not skip_ssl_verification
+        client = _get_client(region=region, verify_ssl=verify_ssl)
 
         # 使用关键字参数调用 update_space（适配新 API）
         space = client.update_space(
@@ -274,18 +287,21 @@ def update_space(
 def delete_space(
         space_id: str,
         region: str | None = None,
+        skip_ssl_verification: bool = False,
 ) -> SpaceResult:
     """Delete a Space.
 
     Args:
         space_id: Space ID
         region: Region name (optional, defaults to cn-north-4)
+        skip_ssl_verification: Skip SSL certificate verification (default: False)
 
     Returns:
         SpaceResult indicating success or failure
     """
     try:
-        client = _get_client(region=region)
+        verify_ssl = not skip_ssl_verification
+        client = _get_client(region=region, verify_ssl=verify_ssl)
         client.delete_space(space_id)
 
         logger.info(f"Space deleted successfully: {space_id}")

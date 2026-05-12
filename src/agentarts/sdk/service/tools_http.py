@@ -21,8 +21,13 @@ class ToolsAPIError(BaseException):
 
 
 class ControlToolsHttpClient(BaseHTTPClient):
-    def __init__(self, region_name: str, endpoint_url: str):
-        request_config = RequestConfig(base_url=endpoint_url, verify_ssl=False)
+    def __init__(
+        self,
+        region_name: str,
+        endpoint_url: str,
+        verify_ssl: bool | str = True,
+    ):
+        request_config = RequestConfig(base_url=endpoint_url, verify_ssl=verify_ssl)
         super().__init__(request_config, open_ak_sk=True)
         self.region_name = region_name
 
@@ -84,7 +89,7 @@ class ControlToolsHttpClient(BaseHTTPClient):
 
 
 class DataToolsHttpClient(BaseHTTPClient):
-    def __init__(self, region_name: str, endpoint_url: str, auth_type: str = "API_KEY"):
+    def __init__(self, region_name: str, endpoint_url: str, auth_type: str = "API_KEY", verify_ssl: bool | str = True):
         """Initialize the data tools HTTP client.
 
         Args:
@@ -94,13 +99,13 @@ class DataToolsHttpClient(BaseHTTPClient):
         """
         if auth_type == "IAM":
             super().__init__(
-                RequestConfig(base_url=endpoint_url, verify_ssl=False),
+                RequestConfig(base_url=endpoint_url, verify_ssl=verify_ssl),
                 open_ak_sk=True,
                 sign_mode=SignMode.V11_HMAC_SHA256,
                 region_id=region_name,
             )
         else:
-            super().__init__(RequestConfig(base_url=endpoint_url, verify_ssl=False))
+            super().__init__(RequestConfig(base_url=endpoint_url, verify_ssl=verify_ssl))
         self.region_name = region_name
 
     @property

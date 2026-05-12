@@ -28,6 +28,10 @@ import urllib3
 warnings.filterwarnings("ignore", message="Unverified HTTPS request")
 warnings.filterwarnings("ignore", category=urllib3.exceptions.InsecureRequestWarning)
 
+from agentarts.sdk.utils.logging import setup_logging
+
+setup_logging()
+
 from agentarts import __author__, __version__
 from agentarts.sdk.identity import (
     IdentityClient,

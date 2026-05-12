@@ -46,12 +46,22 @@ class SignMode(Enum):
 
 @dataclass
 class RequestConfig:
-    """Configuration for HTTP requests."""
+    """Configuration for HTTP requests.
+
+    Attributes:
+        base_url: Base URL for API requests.
+        timeout: Request timeout in seconds.
+        headers: Default headers for all requests.
+        verify_ssl: SSL verification setting.
+            - True: Verify SSL certificates using system CA bundle (default)
+            - False: Skip SSL verification (not recommended for production)
+            - str: Path to custom CA certificate file
+    """
 
     base_url: str = ""
     timeout: float = 30.0
     headers: dict[str, str] = field(default_factory=dict)
-    verify_ssl: bool = True
+    verify_ssl: bool | str = True
 
 
 @dataclass

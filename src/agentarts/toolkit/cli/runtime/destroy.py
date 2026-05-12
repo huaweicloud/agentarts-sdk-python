@@ -20,6 +20,10 @@ def destroy(
         bool,
         typer.Option("--yes", "-y", help="Skip confirmation prompt"),
     ] = False,
+    skip_ssl_verification: Annotated[
+        bool,
+        typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification"),
+    ] = False,
 ):
     """
     Destroy agent from Huawei Cloud.
@@ -28,8 +32,8 @@ def destroy(
 
     Examples:
         agentarts destroy
-        agentarts destroy --agent my-agent
-        agentarts destroy --agent my-agent --region cn-southwest-2
+        agentarts destroy --agent myagent
+        agentarts destroy --agent myagent --region cn-southwest-2
         agentarts destroy --yes  # Skip confirmation
     """
     from rich.console import Console as RichConsole
@@ -47,6 +51,7 @@ def destroy(
     success = destroy_agent(
         agent_name=agent,
         region=region,
+        skip_ssl_verification=skip_ssl_verification,
     )
 
     if not success:
