@@ -40,7 +40,7 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "huaweicloudsdkcore>=3.1.0",
+    "huaweicloudsdkagentidentity>=3.1.0",
     "huaweicloudsdkiam>=3.1.0",
     "huaweicloudsdkswr>=3.1.0",
     "starlette>=0.46.2",
@@ -132,7 +132,7 @@ Changelog = "https://github.com/huaweicloud/agentarts-sdk-python/blob/main/CHANG
 agentarts = "agentarts.toolkit.main:cli"
 
 [tool.uv.build-backend]
-module-name = ["agentarts", "huaweicloudsdkagentidentity"]
+module-name = ["agentarts"]
 module-root = "src"
 
 [tool.black]
