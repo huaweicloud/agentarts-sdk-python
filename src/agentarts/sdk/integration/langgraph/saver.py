@@ -99,6 +99,10 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             falls back to HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable)
         max_messages: Maximum number of messages to retrieve per query, default 10
         serde: Serializer/deserializer for checkpoints (default: JsonPlusSerializer)
+        verify_ssl: SSL verification setting (default: True). Can be:
+            - True: Verify SSL certificates using system CA bundle
+            - False: Skip SSL verification (not recommended for production)
+            - str: Path to custom CA certificate file
     """
 
     def __init__(
@@ -108,6 +112,7 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             api_key: str | None = None,
             max_messages: int = 10,
             serde: JsonPlusSerializer | None = None,
+            verify_ssl: bool | str = True,
     ) -> None:
         if not LANGGRAPH_AVAILABLE:
             msg = (
@@ -123,9 +128,11 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         self._region = region or get_region()
         self._api_key = api_key
         self._max_messages = max_messages
+        self._verify_ssl = verify_ssl
         self._client = MemoryClient(
             region_name=self._region,
-            api_key=api_key
+            api_key=api_key,
+            verify_ssl=verify_ssl
         )
 
     @property

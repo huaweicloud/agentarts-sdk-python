@@ -45,17 +45,23 @@ class SWRClient:
         region: Huawei Cloud region (e.g., "cn-north-4").
         endpoint: Override SWR endpoint URL.
             If ``None``, the URL is derived from the region.
+        verify_ssl: SSL verification setting (default: True). Can be:
+            - True: Verify SSL certificates using system CA bundle
+            - False: Skip SSL verification (not recommended for production)
+            - str: Path to custom CA certificate file
     """
 
     def __init__(
         self,
         region: str,
         endpoint: str | None = None,
+        verify_ssl: bool | str = True,
     ) -> None:
 
         self._region = region
         self._endpoint = endpoint or get_swr_endpoint(region)
         self._swr_registry = f"swr.{region}.myhuaweicloud.com"
+        self._verify_ssl = verify_ssl
         self._client = None
         self._credentials = None
 
@@ -90,7 +96,10 @@ class SWRClient:
             credentials = self._get_credentials()
 
             http_config = HttpConfig.get_default_config()
-            http_config.ignore_ssl_verification = True
+            if isinstance(self._verify_ssl, str):
+                http_config.ssl_ca_cert = self._verify_ssl
+            else:
+                http_config.ignore_ssl_verification = not self._verify_ssl
 
             try:
                 swr_region = SwrRegion.value_of(self._region)
@@ -149,7 +158,7 @@ class SWRClient:
             }
 
         except Exception as e:
-            print(f"Organization '{organization}' not found: {e}")
+            print(f"Organization '{organization}' query failed: {e}")
             return None
 
     def create_organization(
@@ -244,7 +253,7 @@ class SWRClient:
             }
 
         except Exception as e:
-            print(f"Repository '{organization}/{repository}' not found: {e}")
+            print(f"Repository '{organization}/{repository}' query failed: {e}")
             return None
 
     def create_repository(

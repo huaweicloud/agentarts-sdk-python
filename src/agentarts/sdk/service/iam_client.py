@@ -10,15 +10,24 @@ class IAMClient:
     IAM Client for making API calls to IAM service.
 
     Uses huaweicloudsdkiam.v5.IamClient to make API calls.
+
+    Args:
+        verify_ssl: SSL verification setting (default: True). Can be:
+            - True: Verify SSL certificates using system CA bundle
+            - False: Skip SSL verification (not recommended for production)
+            - str: Path to custom CA certificate file
     """
 
-    def __init__(self):
+    def __init__(self, verify_ssl: bool | str = True):
         """
         Initialize IAM client.
 
         All configuration will be loaded from environment variables via constant module.
+
+        Args:
+            verify_ssl: SSL verification setting (default: True)
         """
-        # Do not execute any code here
+        self._verify_ssl = verify_ssl
 
     def _get_iam_client(self):
         """
@@ -38,9 +47,12 @@ class IAMClient:
         # Create credentials
         credentials = create_credential()
 
-        # Create HTTP config with ignore_ssl_verification=True
+        # Create HTTP config
         http_config = HttpConfig.get_default_config()
-        http_config.ignore_ssl_verification = True
+        if isinstance(self._verify_ssl, str):
+            http_config.ssl_ca_cert = self._verify_ssl
+        else:
+            http_config.ignore_ssl_verification = not self._verify_ssl
 
         # Create region object
         final_region = Region(id=get_region(), endpoint=get_iam_endpoint())

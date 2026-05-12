@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from agentarts.sdk.mcpgateway.mcp_gateway_client import MCPGatewayClient
-from agentarts.sdk.service.http_client import RequestConfig, RequestResult
+from agentarts.sdk.service.http_client import RequestResult
 
 
 class TestMCPGatewayClient:
@@ -15,7 +15,7 @@ class TestMCPGatewayClient:
 
     def setup_method(self):
         """Setup test method"""
-        self.client = MCPGatewayClient(RequestConfig(base_url="http://test.example.com"))
+        self.client = MCPGatewayClient(verify_ssl=True)
 
     @patch("agentarts.sdk.mcpgateway.mcp_gateway_client.MCPGatewayClient.post")
     def test_create_mcp_gateway(self, mock_post):
@@ -59,16 +59,15 @@ class TestMCPGatewayClient:
         assert result.success
         mock_put.assert_called_once()
 
-    @pytest.mark.parametrize(("description", "authorizer_config", "log_config"), [
-        (None, None, None),
+    @pytest.mark.parametrize(("description", "log_config"), [
+        (None, None),
     ])
-    def test_update_mcp_gateway_no_params(self, description, authorizer_config, log_config):
+    def test_update_mcp_gateway_no_params(self, description, log_config):
         """Test update_mcp_gateway with no parameters"""
         with pytest.raises(ValueError):
             self.client.update_mcp_gateway(
                 gateway_id="123",
                 description=description,
-                authorizer_configuration=authorizer_config,
                 log_delivery_configuration=log_config
             )
 
