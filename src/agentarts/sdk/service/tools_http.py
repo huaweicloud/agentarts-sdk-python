@@ -21,12 +21,7 @@ class ToolsAPIError(BaseException):
 
 
 class ControlToolsHttpClient(BaseHTTPClient):
-    def __init__(
-        self,
-        region_name: str,
-        endpoint_url: str,
-        verify_ssl: bool | str = True,
-    ):
+    def __init__(self, region_name: str, endpoint_url: str, verify_ssl: bool | str = True):
         request_config = RequestConfig(base_url=endpoint_url, verify_ssl=verify_ssl)
         super().__init__(request_config, open_ak_sk=True)
         self.region_name = region_name
@@ -89,13 +84,23 @@ class ControlToolsHttpClient(BaseHTTPClient):
 
 
 class DataToolsHttpClient(BaseHTTPClient):
-    def __init__(self, region_name: str, endpoint_url: str, auth_type: str = "API_KEY", verify_ssl: bool | str = True):
+    def __init__(
+        self,
+        region_name: str,
+        endpoint_url: str,
+        auth_type: str = "API_KEY",
+        verify_ssl: bool | str = True,
+    ):
         """Initialize the data tools HTTP client.
 
         Args:
             region_name (str): The region name
             endpoint_url (str): The endpoint URL for data plane API
             auth_type (str, optional): Authentication type, supports "API_KEY" or "IAM". Defaults to "API_KEY"
+            verify_ssl (bool | str, optional): SSL verification setting. Defaults to True
+            - True: Verify SSL certificates using system CA bundle (default)
+            - False: Skip SSL verification
+            - str: Path to custom CA certificate file
         """
         if auth_type == "IAM":
             super().__init__(

@@ -141,7 +141,7 @@ CodeInterpreter
 ### 初始化
 
 ```python
-CodeInterpreter(region: Optional[str] = None, data_endpoint: Optional[str] = None, auth_type: str = "API_KEY")
+CodeInterpreter(region: Optional[str] = None, data_endpoint: Optional[str] = None, auth_type: str = "API_KEY", verify_ssl: Union[bool, str] = True)
 ```
 
 **参数说明**：
@@ -151,6 +151,7 @@ CodeInterpreter(region: Optional[str] = None, data_endpoint: Optional[str] = Non
 | region | str | 否 | 从环境变量获取 | 华为云区域名称 |
 | data_endpoint | str | 否 | 从环境变量获取 | 数据面端点，优先从环境变量 AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT 读取 |
 | auth_type | str | 否 | "API_KEY" | 认证类型，支持 "API_KEY" 或 "IAM" |
+| verify_ssl | bool \| str | 否 | True | 是否验证服务器的 SSL 证书，如果为字符串则作为 CA 证书包路径 |
 
 **使用示例**：
 
@@ -168,6 +169,18 @@ client = CodeInterpreter(
 client = CodeInterpreter(
     region="cn-southwest-2",
     auth_type="IAM"
+)
+
+# 禁用 SSL 证书验证（不推荐用于生产环境）
+client = CodeInterpreter(
+    region="cn-southwest-2",
+    verify_ssl=False
+)
+
+# 使用自定义 CA 证书包
+client = CodeInterpreter(
+    region="cn-southwest-2",
+    verify_ssl="/path/to/ca-bundle.crt"
 )
 ```
 
@@ -524,8 +537,8 @@ result[Dict]: 包含文件上传结果的字典
 # 上传CSV文件
 result = client.upload_file(
     path="/home/user/my-file.csv",
-    content="data, revenue\n2026-01-01, 1000\n2026-01-02, 2000",
-    description='Daily sales data with columns: data, revenue'
+    content="date, revenue\n2026-01-01, 1000\n2026-01-02, 2000",
+    description='Daily sales data with columns: date, revenue'
 )
 ```
 

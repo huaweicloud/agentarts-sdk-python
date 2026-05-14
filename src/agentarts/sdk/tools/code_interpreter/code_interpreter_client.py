@@ -45,7 +45,13 @@ class CodeInterpreter:
         data_plane_client: Client for interacting with data plane API
     """
 
-    def __init__(self, region: str | None, data_endpoint: str | None = None, auth_type: str = "API_KEY") -> None:
+    def __init__(
+        self,
+        region: str | None,
+        data_endpoint: str | None = None,
+        auth_type: str = "API_KEY",
+        verify_ssl: bool | str = True,
+    ) -> None:
         """Initialize the code interpreter client in the specified region.
 
         Args:
@@ -53,12 +59,14 @@ class CodeInterpreter:
             data_endpoint: Data plane endpoint, optional. If not provided,
                 will be retrieved from environment variable AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT
             auth_type: Authentication type, optional. Defaults to "API_KEY"
+            verify_ssl: Whether to verify the SSL certificate of the server, optional. Defaults to True
+            If verify_ssl is a string, it is used as the CA bundle path.
         """
         region = region or get_region()
 
         # Control plane client for managing code interpreters
         self.control_plane_client = ControlToolsHttpClient(
-            region_name=region, endpoint_url=get_control_plane_endpoint()
+            region_name=region, endpoint_url=get_control_plane_endpoint(), verify_ssl=verify_ssl
         )
 
         # Data plane client for managing code interpreter sessions
@@ -66,9 +74,16 @@ class CodeInterpreter:
         endpoint_url = get_code_interpreter_data_plane_endpoint(endpoint=data_endpoint)
 
         if auth_type == "IAM":
-            self.data_plane_client = DataToolsHttpClient(region_name=region, endpoint_url=endpoint_url, auth_type=auth_type)
+            self.data_plane_client = DataToolsHttpClient(
+                region_name=region,
+                endpoint_url=endpoint_url,
+                auth_type=auth_type,
+                verify_ssl=verify_ssl,
+            )
         else:
-            self.data_plane_client = DataToolsHttpClient(region_name=region, endpoint_url=endpoint_url)
+            self.data_plane_client = DataToolsHttpClient(
+                region_name=region, endpoint_url=endpoint_url, verify_ssl=verify_ssl
+            )
 
         self._code_interpreter_name = None
         self._session_id = None
