@@ -24,10 +24,6 @@ def deploy(
         str,
         typer.Option("--tag", "-t", help="Docker image tag"),
     ] = "latest",
-    port: Annotated[
-        int | None,
-        typer.Option("--port", "-p", help="Service port (overrides config)"),
-    ] = None,
     local_port: Annotated[
         int | None,
         typer.Option("--local-port", "-l", help="Local port mapping (for local mode)"),
@@ -44,6 +40,10 @@ def deploy(
         str | None,
         typer.Option("--description", "-d", help="Agent description (overrides config)"),
     ] = None,
+    skip_build: Annotated[
+        bool,
+        typer.Option("--skip-build", help="Skip build/push, use config URL to create agent directly"),
+    ] = False,
     skip_ssl_verification: Annotated[
         bool,
         typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification"),
@@ -93,11 +93,11 @@ def deploy(
         agent_name=agent,
         mode=deploy_mode,
         image_tag=tag,
-        port=port,
         local_port=local_port,
         swr_org=swr_org,
         swr_repo=swr_repo,
         description=description,
+        skip_build=skip_build,
         skip_ssl_verification=skip_ssl_verification,
     )
 

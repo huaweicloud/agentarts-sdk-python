@@ -13,11 +13,12 @@
 | `--agent` | `-a` | Agent 名称 | 使用默认 Agent |
 | `--mode` | `-m` | 部署模式（local/cloud） | `cloud` |
 | `--tag` | `-t` | Docker 镜像标签 | `latest` |
-| `--port` | `-p` | 服务端口（覆盖配置） | 从配置文件读取 |
 | `--local-port` | `-l` | 本地端口映射（本地模式） | 从配置文件读取 |
 | `--swr-org` | 无 | SWR 组织（覆盖配置） | 从配置文件读取 |
 | `--swr-repo` | 无 | SWR 仓库（覆盖配置） | 从配置文件读取 |
 | `--description` | `-d` | Agent 描述（覆盖配置） | 从配置文件读取 |
+| `--skip-build` | 无 | 跳过构建推送，使用配置文件 URL 创建 Agent | `false` |
+| `--skip-ssl-verification` | `-k` | 跳过 SSL 证书验证 | `false` |
 
 ### 部署模式说明
 
@@ -25,6 +26,59 @@
 |------|------|
 | `cloud` | 构建镜像、推送至 SWR、创建 AgentArts 运行时（默认） |
 | `local` | 构建镜像并在本地 Docker 中运行 |
+
+### --skip-build 参数说明
+
+`--skip-build` 参数用于跳过镜像构建和推送流程，直接使用配置文件中的镜像 URL 创建 Agent。
+
+**适用场景**：
+- 使用预构建的镜像
+- CI/CD 多阶段部署流程
+- 使用外部镜像仓库（如 Docker Hub、阿里云等）
+- 快速创建 Agent 而不重新构建镜像
+
+**使用条件**：
+- 必须在配置文件中设置 `runtime.artifact_source.url`
+- 仅支持云端模式（`--mode cloud`）
+
+## 镜像 URL 配置逻辑
+
+### URL 优先级规则
+
+部署时镜像 URL 的确定遵循以下优先级：
+
+1. **配置文件 URL（最高优先级）**
+   - 如果配置文件中有 `runtime.artifact_source.url`，优先使用
+   - 适用于自定义镜像 URL 的场景
+
+2. **命令行参数拼接**
+   - 如果配置文件中没有 URL，使用参数拼接：
+   - `swr.{region}.myhuaweicloud.com/{org}/{repo}:{tag}`
+   - 参数来源：`--tag`、`--swr-org`、`--swr-repo` 或配置文件默认值
+
+3. **--skip-build 强制配置文件 URL**
+   - 使用 `--skip-build` 时，必须使用配置文件 URL
+   - 如果配置文件没有 URL，命令会报错
+
+### 默认值说明
+
+| 参数 | CLI 默认 | 配置文件默认 | 最终默认行为 |
+|------|---------|------------|-------------|
+| `--tag` | `"latest"` | 不参与 | 使用 `"latest"` |
+| `--swr-org` | `None` | 自动生成 | 使用自动生成的组织名（基于 AK） |
+| `--swr-repo` | `None` | 自动生成 | 使用 `agent_{项目名}` |
+
+### 自定义镜像 URL
+
+要在配置文件中自定义镜像 URL：
+
+```yaml
+runtime:
+  artifact_source:
+    url: "docker.io/myorg/myagent:v1.0"  # Docker Hub
+    url: "registry.aliyuncs.com/myorg/agent:prod"  # 阿里云
+    url: "swr.cn-north-4.myhuaweicloud.com/org/repo:latest"  # 华为云 SWR
+```
 
 ## 部署流程
 
