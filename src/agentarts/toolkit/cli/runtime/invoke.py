@@ -8,92 +8,9 @@ from rich.console import Console
 from agentarts.toolkit.operations.runtime.invoke import (
     InvokeMode,
     invoke_agent,
-    status_agent,
 )
 
 rich_console = Console()
-
-
-def status(
-    agent: Annotated[
-        str | None,
-        typer.Option("--agent", "-a", help="Agent name (uses default if not specified for cloud mode)"),
-    ] = None,
-    mode: Annotated[
-        str,
-        typer.Option(
-            "--mode",
-            "-m",
-            help="Status mode: 'local' for Docker container, 'cloud' for AgentArts runtime (default)",
-        ),
-    ] = "cloud",
-    region: Annotated[
-        str | None,
-        typer.Option("--region", "-r", help="Huawei Cloud region (for cloud mode)"),
-    ] = None,
-    port: Annotated[
-        int | None,
-        typer.Option("--port", "-p", help="Local port (for local mode, default: 8080)"),
-    ] = None,
-    endpoint: Annotated[
-        str | None,
-        typer.Option("--endpoint", "-e", help="Endpoint name"),
-    ] = None,
-    session_id: Annotated[
-        str | None,
-        typer.Option("--session", "-s", help="Session ID for stateful agents"),
-    ] = None,
-    bearer_token: Annotated[
-        str | None,
-        typer.Option("--bearer-token", "-bt", help="Bearer token for authentication"),
-    ] = None,
-    skip_ssl_verification: Annotated[
-        bool,
-        typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification"),
-    ] = False,
-    user_id: Annotated[
-        str | None,
-        typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials"),
-    ] = None,
-):
-    """
-    Check agent health status.
-
-    Two status modes are supported:
-    - cloud (default): Check AgentArts runtime on Huawei Cloud
-    - local: Check local Docker container
-
-    Examples:
-        agentarts status
-        agentarts status --agent myagent
-        agentarts status --mode local --port 8080
-        agentarts status --endpoint custom-endpoint
-        agentarts status --session my-session-123
-        agentarts status --bearer-token my-token
-        agentarts status --user-id my-user-id
-        agentarts status -bt my-token
-    """
-    status_mode = InvokeMode.CLOUD
-    if mode.lower() == "local":
-        status_mode = InvokeMode.LOCAL
-    elif mode.lower() != "cloud":
-        rich_console.print(f"[red]Error: Invalid mode '{mode}'. Use 'local' or 'cloud'.[/red]")
-        raise typer.Exit(1)
-
-    success = status_agent(
-        agent_name=agent,
-        mode=status_mode,
-        region=region,
-        port=port,
-        endpoint=endpoint,
-        session_id=session_id,
-        bearer_token=bearer_token,
-        skip_ssl_verification=skip_ssl_verification,
-        user_id=user_id,
-    )
-
-    if not success:
-        raise typer.Exit(1)
 
 
 def invoke(

@@ -32,7 +32,6 @@ from agentarts.toolkit.operations.runtime.init import init_project
 from agentarts.toolkit.operations.runtime.invoke import (
     InvokeMode,
     invoke_agent,
-    status_agent,
 )
 
 __all__ = [
@@ -59,5 +58,4 @@ __all__ = [
     "save_config",
     "set_config_value",
     "set_default_agent",
-    "status_agent",
 ]
