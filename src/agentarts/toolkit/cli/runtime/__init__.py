@@ -8,7 +8,7 @@ from agentarts.toolkit.cli.runtime.config import config_app
 from agentarts.toolkit.cli.runtime.deploy import deploy
 from agentarts.toolkit.cli.runtime.dev import dev
 from agentarts.toolkit.cli.runtime.init import init
-from agentarts.toolkit.cli.runtime.invoke import invoke, status
+from agentarts.toolkit.cli.runtime.invoke import invoke
 
 __all__ = [
     "config_app",
@@ -16,5 +16,4 @@ __all__ = [
     "dev",
     "init",
     "invoke",
-    "status",
 ]

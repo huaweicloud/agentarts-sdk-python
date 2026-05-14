@@ -113,6 +113,11 @@ def init(
     if name is None:
         name = prompt_for_name()
 
+    original_name = name
+    name = name.lower()
+    if name != original_name:
+        console.print(f"[yellow]Agent name converted to lowercase: [cyan]{name}[/cyan] (only lowercase letters, digits and hyphens are allowed)[/yellow]")
+
     if template is None:
         template = prompt_for_template()
 
