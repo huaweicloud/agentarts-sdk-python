@@ -70,6 +70,11 @@ def main(
         console.print(f"[bold]Agent name{prompt_hint}:[/bold]")
         agent_name = Prompt.ask("  Name", default=default_name or "")
 
+    original_name = agent_name
+    agent_name = agent_name.lower()
+    if agent_name != original_name:
+        console.print(f"[yellow]Agent name converted to lowercase: [cyan]{agent_name}[/cyan] (only lowercase letters, digits and hyphens are allowed)[/yellow]")
+
     if not agent_name:
         echo_error("Agent name is required")
         raise typer.Exit(1)

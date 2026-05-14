@@ -246,6 +246,22 @@ def invoke_agent(
         json.loads(normalized_payload)
     except json.JSONDecodeError:
         echo_error("Payload must be valid JSON")
+        console.print()
+        console.print("[yellow]Usage Tips:[/yellow]")
+        console.print("  1. Use [cyan]single quotes[/cyan] to wrap JSON payload")
+        console.print("  2. Use [cyan]compact JSON format[/cyan] (no spaces after colon/comma)")
+        console.print()
+        console.print("[green]✓ Correct Examples:[/green]")
+        console.print('  [white]agentarts invoke \'{"message":"hello world"}\'[white]')
+        console.print('  [white]agentarts invoke \'{"name":"test","message":"hello world"}\'[white]')
+        console.print()
+        console.print("[red]✗ Common Mistakes:[/red]")
+        console.print("  [dim]Spaces after colon/comma will cause parsing issues in PowerShell:[/dim]")
+        console.print('  [dim]agentarts invoke \'{"message": "hello world"}\'[/dim]')
+        console.print()
+        console.print("[yellow]Alternative for complex JSON:[/yellow]")
+        console.print("  Use [cyan]--%[/cyan] stop-parsing symbol in PowerShell:")
+        console.print('  [white]agentarts --% invoke \'{"message": "hello world"}\'[white]')
         return False
 
     actual_bearer_token = bearer_token or os.environ.get("BEARER_TOKEN")
@@ -325,118 +341,6 @@ def invoke_agent(
         console.print("[bold green]Streaming Response:[/bold green]")
         for event in result:
             console.print(f"[dim]{event}[/dim]")
-        return True
-
-    except RuntimeError as e:
-        echo_error(str(e))
-        return False
-    except Exception as e:
-        echo_error(str(e))
-        return False
-
-
-def status_agent(
-    agent_name: str | None = None,
-    mode: InvokeMode = InvokeMode.CLOUD,
-    region: str | None = None,
-    port: int | None = None,
-    endpoint: str | None = None,
-    session_id: str | None = None,
-    bearer_token: str | None = None,
-    skip_ssl_verification: bool = False,
-    user_id: str | None = None,
-) -> bool:
-    """
-    Check agent health status.
-
-    Args:
-        agent_name: Agent name (for cloud mode)
-        mode: Invoke mode (local or cloud)
-        region: Huawei Cloud region (for cloud mode)
-        port: Local port (for local mode)
-        endpoint: Optional endpoint name
-        session_id: Session ID for stateful agents (auto-generated if None)
-        bearer_token: Optional bearer token
-        skip_ssl_verification: Skip SSL certificate verification
-        user_id: Optional user ID for OAuth2 outbound credentials
-
-    Returns:
-        True if healthy, False otherwise
-    """
-    actual_session_id = session_id or str(uuid.uuid4())
-    actual_bearer_token = bearer_token or os.environ.get("BEARER_TOKEN")
-
-    try:
-        if mode == InvokeMode.LOCAL:
-            local_port = port or 8080
-            client = LocalRuntimeClient(port=local_port)
-
-            console.print()
-            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Local[/yellow]\n[cyan]Endpoint:[/cyan] [white]localhost:{local_port}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]")
-
-            result = client.ping_agent(
-                bearer_token=actual_bearer_token,
-                endpoint=endpoint,
-                session_id=actual_session_id,
-                user_id=user_id,
-            )
-
-            status = result.get("status", "Unknown")
-            if status.lower() in ("healthy", "ok", "running"):
-                echo_success(f"Status: {status}")
-                return True
-            echo_error(f"Status: {status}")
-            return False
-        agent_name, region, agent_id, auth_type = _resolve_agent_info(agent_name, region)
-
-        if agent_name is None:
-            echo_error("No agent specified")
-            return False
-
-        actual_region = region or get_region()
-        verify_ssl = not skip_ssl_verification
-
-        data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id, verify_ssl)
-
-        if not data_endpoint:
-            echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent {agent_name}")
-            console.print("[dim]Set AGENTARTS_RUNTIME_DATA_ENDPOINT environment variable or ensure agent is deployed[/dim]")
-            return False
-
-        sign_mode = SignMode.SDK_HMAC_SHA256
-        if auth_type and auth_type.upper() == "IAM":
-            sign_mode = SignMode.V11_HMAC_SHA256
-        elif not actual_bearer_token:
-            echo_error("Bearer token is required for non-IAM authentication")
-            console.print("[dim]Specify --bearer-token or set BEARER_TOKEN environment variable[/dim]")
-            return False
-
-        console.print()
-        echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]\n[cyan]Auth Type:[/cyan] [dim]{auth_type or 'None'}[/dim]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]")
-
-        client = RuntimeClient(
-            data_endpoint=data_endpoint,
-            verify_ssl=verify_ssl,
-            sign_mode=sign_mode,
-            region_id=actual_region,
-        )
-
-        result = client.ping_agent(
-            agent_name=agent_name,
-            bearer_token=actual_bearer_token,
-            endpoint=endpoint,
-            session_id=actual_session_id,
-            user_id=user_id,
-        )
-
-        if isinstance(result, dict):
-            status = result.get("status", "Unknown")
-            if status.lower() in ("healthy", "ok", "running"):
-                echo_success(f"Status: {status}")
-                return True
-            console.print(f"[yellow]Status: {status}[/yellow]")
-            return True
-        echo_success("Status: Healthy (streaming)")
         return True
 
     except RuntimeError as e:

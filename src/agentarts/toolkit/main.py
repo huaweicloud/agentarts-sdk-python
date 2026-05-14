@@ -18,9 +18,30 @@ from agentarts.toolkit.cli.memory.commands import memory_app
 from agentarts.toolkit.cli.runtime import deploy, dev, init
 from agentarts.toolkit.cli.runtime.config import config_app
 from agentarts.toolkit.cli.runtime.destroy import destroy
-from agentarts.toolkit.cli.runtime.invoke import invoke, status
+from agentarts.toolkit.cli.runtime.invoke import invoke
 
 console = Console()
+
+_COMMAND_ORDER = [
+    "init",
+    "config",
+    "dev",
+    "launch",
+    "invoke",
+    "destroy",
+    "mcp-gateway",
+    "memory",
+    "deploy",
+    "configure",
+]
+
+
+class _OrderedHelpGroup(typer.core.TyperGroup):
+    def list_commands(self, ctx):
+        commands = super().list_commands(ctx)
+        ordered = [c for c in _COMMAND_ORDER if c in commands]
+        remaining = [c for c in commands if c not in _COMMAND_ORDER]
+        return ordered + remaining
 
 
 def setup_logging(verbose: bool = False):
@@ -44,6 +65,7 @@ def setup_logging(verbose: bool = False):
 
 app = typer.Typer(
     name="agentarts",
+    cls=_OrderedHelpGroup,
     help="AgentArts CLI - Huawei Cloud Agent Development Toolkit\n\nBuild, test, and deploy Agent applications quickly.",
     add_completion=False,
     rich_markup_mode="rich",
@@ -95,14 +117,13 @@ def main(
 
 
 app.command(name="init")(init)
-app.command(name="dev")(dev)
-app.command(name="deploy", help="Deploy agent to Huawei Cloud or run locally. (alias: launch)")(deploy)
-app.command(name="launch", help="Alias for 'deploy' command.")(deploy)
-app.command(name="status", help="Check agent health status.")(status)
-app.command(name="destroy", help="Destroy agent from Huawei Cloud.")(destroy)
-app.command(name="invoke", help="Invoke agent with JSON payload.")(invoke)
 app.add_typer(config_app, name="config", help="Configuration management. (alias: configure)")
 app.add_typer(config_app, name="configure", hidden=True)
+app.command(name="dev")(dev)
+app.command(name="deploy", hidden=True)(deploy)
+app.command(name="launch", help="Deploy agent to Huawei Cloud or run locally. (alias: deploy)")(deploy)
+app.command(name="invoke", help="Invoke agent with JSON payload.")(invoke)
+app.command(name="destroy", help="Destroy agent from Huawei Cloud.")(destroy)
 app.add_typer(mcp_gateway, name="mcp-gateway")
 app.add_typer(memory_app, name="memory")
 

@@ -9,7 +9,7 @@ The client is divided into two logical groups:
 - **Control Plane** – agent and endpoint lifecycle management
   (create, update, delete, query agents and endpoints).
 
-- **Data Plane** – runtime invocation (invoke an agent, health-check).
+- **Data Plane** – runtime invocation (invoke an agent).
 
 Usage::
 
@@ -23,7 +23,6 @@ Usage::
 
     # Data plane
     result = client.invoke_agent(agent_id="xxx", payload={"input": "hello"})
-    health = client.ping_agent(agent_id="xxx")
 
     # Local runtime
     local_client = LocalRuntimeClient(port=8080)
@@ -674,61 +673,6 @@ class RuntimeClient:
         )
 
         return self._dispatch_response(result, "invoke_agent")
-
-    def ping_agent(
-        self,
-        agent_name: str,
-        bearer_token: str | None = None,
-        endpoint: str | None = None,
-        session_id: str | None = None,
-        timeout: int = 900,
-        user_id: str | None = None,
-    ) -> dict[str, Any] | Iterator[str]:
-        """
-        Health-check an agent on the data plane.
-
-        If the server responds with ``Content-Type: text/event-stream``, the
-        return value is an :term:`iterator` that yields one decoded SSE event
-        string per iteration.  Otherwise a parsed JSON ``dict`` is returned.
-
-        Args:
-            agent_name: The agent to ping.
-            bearer_token: Optional bearer token for ``Authorization`` header.
-            endpoint: Optional endpoint name, appended as a query parameter.
-            session_id: Session identifier for stateful agents,
-                passed as the ``SESSION_HEADER`` header.
-            timeout: Request timeout in seconds.
-            user_id: Optional user ID for OAuth2 outbound credentials,
-                passed as the ``USER_ID_HEADER`` header.
-
-        Returns:
-            A ``dict`` with at least a ``status`` field (e.g. ``"Healthy"``),
-            or an ``Iterator[str]`` for SSE streaming responses.
-        """
-        from agentarts.sdk.runtime.model import SESSION_HEADER, USER_ID_HEADER
-
-        headers: dict[str, str] = {}
-        if bearer_token:
-            headers["Authorization"] = f"Bearer {bearer_token}"
-        if session_id:
-            headers[SESSION_HEADER] = session_id
-        if user_id:
-            headers[USER_ID_HEADER] = user_id
-
-        params: dict[str, Any] = {}
-        if endpoint:
-            params["endpoint"] = endpoint
-
-        result = self._data(
-            "GET",
-            f"/runtimes/{agent_name}/ping",
-            params=params if params else None,
-            headers=headers if headers else None,
-            timeout=timeout,
-        )
-
-
-        return self._dispatch_response(result, "ping_agent")
 
 
 class LocalRuntimeClient(BaseHTTPClient):

@@ -305,9 +305,6 @@ agentarts config set region cn-southwest-2
 # Deploy to cloud
 agentarts deploy
 
-# Check deployment status
-agentarts status
-
 # Invoke deployed agent
 agentarts invoke '{"message": "Hello, AgentArts!"}'
 
@@ -324,7 +321,6 @@ agentarts destroy
 | `agentarts config`      | Configure SDK settings (alias: `configure`)    |
 | `agentarts deploy`      | Deploy agent to Huawei Cloud (alias: `launch`) |
 | `agentarts invoke`      | Invoke deployed agent                          |
-| `agentarts status`      | Check deployment status                        |
 | `agentarts destroy`     | Remove deployed agent                          |
 | `agentarts mcp-gateway` | Manage MCP gateways                            |
 
