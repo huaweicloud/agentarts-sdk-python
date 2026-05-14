@@ -258,9 +258,7 @@ def add_agent(
         final_org = swr_organization or generate_swr_org_name(region=final_region)
         final_repo = swr_repository or f"agent_{name}"
 
-        artifact_url = f"swr.{final_region}.myhuaweicloud.com/{final_org}/{final_repo}:latest"
         agent_config_dict = agent_config.to_dict()
-        agent_config_dict.setdefault("runtime", {}).setdefault("artifact_source", {})["url"] = artifact_url
         agent_config = AgentArtsConfig.from_dict(agent_config_dict)
 
     config.add_agent(name, agent_config)
