@@ -361,7 +361,7 @@ Refer to [Huawei Cloud AgentArts Documentation](https://docs.huaweicloud.com/age
 ## Documentation
 
 - [SDK User Guides](docs/cn/sdk_user_guide/) - Memory, Code Interpreter, MCP Gateway
-- [CLI User Guides](docs/cn/toolkit_user_guide/) - init, config, deploy, invoke, status, destroy
+- [CLI User Guides](docs/cn/toolkit_user_guide/) - init, config, deploy, invoke, destroy
 - [Contributing Guide](CONTRIBUTING.md) - Development setup and guidelines
 - [Architecture](ARCHITECTURE.md) - System architecture overview
 
