@@ -92,13 +92,16 @@ def init_project(
     echo_info(
         "Project structure",
         f"[cyan]{name}/[/cyan]\n"
-        f"  ├── [green]agent.py[/green]              # Agent implementation\n"
-        f"  ├── [green]requirements.txt[/green]      # Dependencies\n"
         f"  ├── [green].agentarts_config.yaml[/green] # Configuration\n"
-        f"  └── [green]Dockerfile[/green]            # Docker build file"
+        f"  ├── [green]agent.py[/green]              # Agent implementation\n"
+        f"  ├── [green]Dockerfile[/green]            # Docker build file\n"
+        f"  └── [green]requirements.txt[/green]      # Dependencies"
     )
 
     console.print()
+    console.print("[bold green]Next Steps - How to Deploy Agent[/bold green]")
+    console.print()
+
     echo_step(1, "Navigate to project directory")
     console.print(f"    [cyan]cd {name}[/cyan]")
 
@@ -107,7 +110,11 @@ def init_project(
 
     echo_step(3, "Edit agent.py to implement your agent logic")
 
-    echo_step(4, "Deploy to Huawei Cloud")
+    echo_step(4, "Edit .agentarts_config.yaml and run config command (optional)")
+    console.print("    [dim]Modify configuration as needed, then:[/dim]")
+    console.print("    [cyan]agentarts config[/cyan]")
+
+    echo_step(5, "Deploy to Huawei Cloud")
     console.print("    [cyan]agentarts deploy[/cyan]")
 
     return True

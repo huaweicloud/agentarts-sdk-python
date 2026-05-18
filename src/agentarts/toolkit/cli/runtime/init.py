@@ -96,10 +96,10 @@ def init(
     Initialize a new AgentArts project.
 
     Creates a complete project structure with:
-    - agent.py: Agent implementation based on selected template
-    - requirements.txt: Dependencies including SDK and framework packages
     - .agentarts_config.yaml: Configuration file for deployment
+    - agent.py: Agent implementation based on selected template
     - Dockerfile: Docker build file for containerization
+    - requirements.txt: Dependencies including SDK and framework packages
 
     After initialization, you can directly deploy using 'agentarts deploy'.
 
