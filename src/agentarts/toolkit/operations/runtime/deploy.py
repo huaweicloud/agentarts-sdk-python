@@ -46,7 +46,7 @@ def create_agentarts_runtime(
     agent_config: Any | None = None,
     description: str | None = None,
     verify_ssl: bool | str = True,
-) -> dict | None:
+) -> dict[str, Any] | None:
     """
     Create or update AgentArts runtime using RuntimeClient.
 
@@ -89,7 +89,7 @@ def create_agentarts_runtime(
             if runtime_cfg.invoke_config:
                 invoke_config = {
                     "protocol": runtime_cfg.invoke_config.protocol,
-                    "port": port or runtime_cfg.invoke_config.port,
+                    "port": runtime_cfg.invoke_config.port,
                 }
 
             if runtime_cfg.network_config:
@@ -119,7 +119,7 @@ def create_agentarts_runtime(
         if not invoke_config:
             invoke_config = {
                 "protocol": "HTTP",
-                "port": port or 8080,
+                "port": 8080,
             }
 
         agent_description = description or f"Agent created by AgentArts SDK Toolkit, deployed from {swr_image}"
@@ -153,7 +153,6 @@ def deploy_project(
     agent_name: str | None = None,
     mode: DeployMode = DeployMode.CLOUD,
     image_tag: str = "latest",
-    port: int | None = None,
     local_port: int | None = None,
     swr_org: str | None = None,
     swr_repo: str | None = None,
@@ -168,7 +167,6 @@ def deploy_project(
         agent_name: Agent name (uses default if None)
         mode: Deploy mode (local or swr)
         image_tag: Docker image tag
-        port: Service port (for cloud mode)
         local_port: Local port (for local mode)
         swr_org: SWR organization (overrides config)
         swr_repo: SWR repository (overrides config)
@@ -272,7 +270,7 @@ def deploy_project(
         console.print("[dim]Skipping build and push (--skip-build enabled)[/dim]")
     else:
         final_swr_org = swr_org or agent_config.swr_config.organization
-        final_swr_repo = swr_repo or agent_config.swr_repo
+        final_swr_repo = swr_repo or agent_config.swr_config.repository
 
         if not final_swr_org or not final_swr_repo:
             echo_error("SWR organization and repository must be configured")
