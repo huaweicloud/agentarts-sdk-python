@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 import uuid
 from enum import Enum
 
@@ -20,10 +21,57 @@ from agentarts.toolkit.operations.runtime.config import (
     get_config_file_path,
     load_config,
 )
-from agentarts.toolkit.utils.common import echo_error, echo_info, echo_success
+from agentarts.toolkit.utils.common import echo_error, echo_info
 
 console = Console()
 logger = logging.getLogger(__name__)
+
+
+def _validate_and_normalize_suffix(suffix: str | None) -> str | None:
+    """
+    Validate and normalize URL suffix.
+
+    Rules:
+    - Must not be empty string
+    - Must not contain leading/trailing slashes (will be stripped)
+    - Must be valid URL path segment (alphanumeric, hyphens, underscores, slashes for nested paths)
+    - Must not contain special characters that could cause URL injection
+
+    Args:
+        suffix: Raw suffix string from CLI
+
+    Returns:
+        Normalized suffix string, or None if not provided
+
+    Raises:
+        ValueError: If suffix contains invalid characters
+    """
+    if not suffix:
+        return None
+
+    suffix = suffix.strip()
+
+    if not suffix:
+        return None
+
+    if suffix.startswith("/"):
+        suffix = suffix[1:]
+    if suffix.endswith("/"):
+        suffix = suffix[:-1]
+
+    if not suffix:
+        return None
+
+    valid_pattern = r"^[a-zA-Z0-9_\-./]+$"
+    if not re.match(valid_pattern, suffix):
+        msg = f"Invalid suffix '{suffix}'. Only alphanumeric characters, hyphens, underscores, dots, and slashes are allowed."
+        raise ValueError(msg)
+
+    if ".." in suffix:
+        msg = f"Invalid suffix '{suffix}'. Path traversal sequences ('..') are not allowed."
+        raise ValueError(msg)
+
+    return suffix
 
 
 def _resolve_agent_info(
@@ -221,6 +269,7 @@ def invoke_agent(
     timeout: int = 900,
     skip_ssl_verification: bool = False,
     user_id: str | None = None,
+    suffix: str | None = None,
 ) -> bool:
     """
     Invoke agent locally or on cloud.
@@ -237,10 +286,12 @@ def invoke_agent(
         timeout: Request timeout in seconds
         skip_ssl_verification: Skip SSL certificate verification
         user_id: Optional user ID for OAuth2 outbound credentials
+        suffix: Optional URL suffix appended to /invocations path
 
     Returns:
         True if successful, False otherwise
     """
+    normalized_suffix = _validate_and_normalize_suffix(suffix)
     normalized_payload = _normalize_json_payload(payload)
     try:
         json.loads(normalized_payload)
@@ -281,6 +332,7 @@ def invoke_agent(
                 endpoint=endpoint,
                 timeout=timeout,
                 user_id=user_id,
+                suffix=normalized_suffix,
             )
         else:
             agent_name, region, agent_id, auth_type = _resolve_agent_info(agent_name, region)
@@ -326,6 +378,7 @@ def invoke_agent(
                 endpoint=endpoint,
                 timeout=timeout,
                 user_id=user_id,
+                suffix=normalized_suffix,
             )
 
         if isinstance(result, dict):
