@@ -2,12 +2,14 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from agentarts.sdk.utils.constant import _ensure_https
 from agentarts.toolkit.operations.runtime.invoke import (
     InvokeMode,
     _resolve_agent_info,
+    _validate_and_normalize_suffix,
     invoke_agent,
-    status_agent,
 )
 
 
@@ -196,67 +198,150 @@ agents:
                 assert call_args.kwargs["bearer_token"] == "cli-token"
 
 
-class TestStatusAgent:
-    """Tests for status_agent() function."""
+class TestValidateAndNormalizeSuffix:
+    """Tests for _validate_and_normalize_suffix() function."""
 
-    @patch("agentarts.toolkit.operations.runtime.invoke.LocalRuntimeClient")
-    def test_local_mode_returns_true_for_healthy(self, mock_client, tmp_path, monkeypatch):
-        """Local mode returns True for healthy status."""
-        mock_client_instance = MagicMock()
-        mock_client.return_value = mock_client_instance
-        mock_client_instance.ping_agent.return_value = {"status": "healthy"}
+    def test_returns_none_for_none_input(self):
+        assert _validate_and_normalize_suffix(None) is None
 
-        monkeypatch.chdir(tmp_path)
+    def test_returns_none_for_empty_string(self):
+        assert _validate_and_normalize_suffix("") is None
 
-        result = status_agent(mode=InvokeMode.LOCAL)
+    def test_returns_none_for_whitespace_only(self):
+        assert _validate_and_normalize_suffix("   ") is None
 
-        assert result is True
+    def test_strips_leading_slash(self):
+        result = _validate_and_normalize_suffix("/stream")
+        assert result == "stream"
 
-    @patch("agentarts.toolkit.operations.runtime.invoke.LocalRuntimeClient")
-    def test_local_mode_returns_false_for_unhealthy(self, mock_client, tmp_path, monkeypatch):
-        """Local mode returns False for unhealthy status."""
-        mock_client_instance = MagicMock()
-        mock_client.return_value = mock_client_instance
-        mock_client_instance.ping_agent.return_value = {"status": "error"}
+    def test_strips_trailing_slash(self):
+        result = _validate_and_normalize_suffix("stream/")
+        assert result == "stream"
 
-        monkeypatch.chdir(tmp_path)
+    def test_strips_both_slashes(self):
+        result = _validate_and_normalize_suffix("/stream/")
+        assert result == "stream"
 
-        result = status_agent(mode=InvokeMode.LOCAL)
+    def test_validates_simple_suffix(self):
+        result = _validate_and_normalize_suffix("stream")
+        assert result == "stream"
 
-        assert result is False
+    def test_validates_nested_path(self):
+        result = _validate_and_normalize_suffix("api/v2/stream")
+        assert result == "api/v2/stream"
 
-    def test_generates_session_id_when_not_provided(self, tmp_path, monkeypatch):
-        """Generates session_id when not provided."""
+    def test_validates_with_hyphens(self):
+        result = _validate_and_normalize_suffix("custom-endpoint")
+        assert result == "custom-endpoint"
+
+    def test_validates_with_underscores(self):
+        result = _validate_and_normalize_suffix("custom_endpoint")
+        assert result == "custom_endpoint"
+
+    def test_validates_with_dots(self):
+        result = _validate_and_normalize_suffix("api.v2.endpoint")
+        assert result == "api.v2.endpoint"
+
+    def test_validates_complex_suffix(self):
+        result = _validate_and_normalize_suffix("api/v2/custom-endpoint_stream.json")
+        assert result == "api/v2/custom-endpoint_stream.json"
+
+    def test_rejects_special_characters(self):
+        with pytest.raises(ValueError, match="Invalid suffix"):
+            _validate_and_normalize_suffix("stream!test")
+
+    def test_rejects_at_symbol(self):
+        with pytest.raises(ValueError, match="Invalid suffix"):
+            _validate_and_normalize_suffix("stream@test")
+
+    def test_rejects_hash_symbol(self):
+        with pytest.raises(ValueError, match="Invalid suffix"):
+            _validate_and_normalize_suffix("stream#test")
+
+    def test_rejects_dollar_symbol(self):
+        with pytest.raises(ValueError, match="Invalid suffix"):
+            _validate_and_normalize_suffix("stream$test")
+
+    def test_rejects_percent_symbol(self):
+        with pytest.raises(ValueError, match="Invalid suffix"):
+            _validate_and_normalize_suffix("stream%test")
+
+    def test_rejects_ampersand_symbol(self):
+        with pytest.raises(ValueError, match="Invalid suffix"):
+            _validate_and_normalize_suffix("stream&test")
+
+    def test_rejects_star_symbol(self):
+        with pytest.raises(ValueError, match="Invalid suffix"):
+            _validate_and_normalize_suffix("stream*test")
+
+    def test_rejects_parentheses(self):
+        with pytest.raises(ValueError, match="Invalid suffix"):
+            _validate_and_normalize_suffix("stream(test)")
+
+    def test_rejects_spaces(self):
+        with pytest.raises(ValueError, match="Invalid suffix"):
+            _validate_and_normalize_suffix("stream test")
+
+    def test_rejects_path_traversal(self):
+        with pytest.raises(ValueError, match="Path traversal"):
+            _validate_and_normalize_suffix("../etc/passwd")
+
+    def test_rejects_path_traversal_in_middle(self):
+        with pytest.raises(ValueError, match="Path traversal"):
+            _validate_and_normalize_suffix("api/../secret")
+
+    def test_rejects_path_traversal_complex(self):
+        with pytest.raises(ValueError, match="Path traversal"):
+            _validate_and_normalize_suffix("api/..../endpoint")
+
+
+class TestInvokeAgentSuffix:
+    """Tests for invoke_agent() with suffix parameter."""
+
+    def test_suffix_passed_to_local_client(self, tmp_path, monkeypatch):
         config_content = """
 default_agent: test-agent
 agents:
   test-agent:
     base:
       name: test-agent
-      region: cn-north-4
 """
         (tmp_path / ".agentarts_config.yaml").write_text(config_content)
         monkeypatch.chdir(tmp_path)
 
-        with patch("agentarts.toolkit.operations.runtime.invoke.RuntimeClient") as mock_runtime:
+        with patch("agentarts.toolkit.operations.runtime.invoke.LocalRuntimeClient") as mock_client:
             mock_instance = MagicMock()
-            mock_runtime.return_value = mock_instance
-            mock_instance.ping_agent.return_value = {"status": "healthy"}
+            mock_client.return_value = mock_instance
+            mock_instance.invoke_agent.return_value = {"status": "ok"}
 
-            with patch("agentarts.toolkit.operations.runtime.invoke._get_data_endpoint") as mock_endpoint:
-                mock_endpoint.return_value = "https://example.com"
+            invoke_agent(
+                payload='{"message": "hello"}',
+                mode=InvokeMode.LOCAL,
+                suffix="stream",
+            )
 
-                status_agent(mode=InvokeMode.CLOUD)
+            call_args = mock_instance.invoke_agent.call_args
+            assert call_args.kwargs["suffix"] == "stream"
 
-                call_args = mock_instance.ping_agent.call_args
-                session_id = call_args.kwargs["session_id"]
-                assert session_id is not None
-                assert len(session_id) == 36  # UUID format
+    def test_invalid_suffix_raises_error(self, tmp_path, monkeypatch):
+        config_content = """
+default_agent: test-agent
+agents:
+  test-agent:
+    base:
+      name: test-agent
+"""
+        (tmp_path / ".agentarts_config.yaml").write_text(config_content)
+        monkeypatch.chdir(tmp_path)
 
-    def test_uses_bearer_token_from_env(self, tmp_path, monkeypatch):
-        """Uses BEARER_TOKEN from environment variable for status."""
-        monkeypatch.setenv("BEARER_TOKEN", "env-token")
+        with pytest.raises(ValueError, match="Invalid suffix"):
+            invoke_agent(
+                payload='{"message": "hello"}',
+                mode=InvokeMode.LOCAL,
+                suffix="invalid!suffix",
+            )
 
+    def test_suffix_passed_to_cloud_client(self, tmp_path, monkeypatch):
         config_content = """
 default_agent: test-agent
 agents:
@@ -270,16 +355,21 @@ agents:
 """
         (tmp_path / ".agentarts_config.yaml").write_text(config_content)
         monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("BEARER_TOKEN", "test-token")
 
         with patch("agentarts.toolkit.operations.runtime.invoke.RuntimeClient") as mock_runtime:
             mock_instance = MagicMock()
             mock_runtime.return_value = mock_instance
-            mock_instance.ping_agent.return_value = {"status": "healthy"}
+            mock_instance.invoke_agent.return_value = {"status": "ok"}
 
             with patch("agentarts.toolkit.operations.runtime.invoke._get_data_endpoint") as mock_endpoint:
                 mock_endpoint.return_value = "https://example.com"
 
-                status_agent(mode=InvokeMode.CLOUD)
+                invoke_agent(
+                    payload='{"message": "hello"}',
+                    mode=InvokeMode.CLOUD,
+                    suffix="api/v2/stream",
+                )
 
-                call_args = mock_instance.ping_agent.call_args
-                assert call_args.kwargs["bearer_token"] == "env-token"
+                call_args = mock_instance.invoke_agent.call_args
+                assert call_args.kwargs["suffix"] == "api/v2/stream"
