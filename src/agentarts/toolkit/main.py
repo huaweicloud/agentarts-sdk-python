@@ -16,6 +16,7 @@ from rich.logging import RichHandler
 from agentarts.toolkit.cli.mcp_gateway import mcp_gateway
 from agentarts.toolkit.cli.memory.commands import memory_app
 from agentarts.toolkit.cli.runtime import deploy, dev, init
+from agentarts.toolkit.cli.runtime.commands import runtime_app
 from agentarts.toolkit.cli.runtime.config import config_app
 from agentarts.toolkit.cli.runtime.destroy import destroy
 from agentarts.toolkit.cli.runtime.invoke import invoke
@@ -28,6 +29,7 @@ _COMMAND_ORDER = [
     "dev",
     "launch",
     "invoke",
+    "runtime",
     "destroy",
     "mcp-gateway",
     "memory",
@@ -126,6 +128,7 @@ app.command(name="invoke", help="Invoke agent with JSON payload.")(invoke)
 app.command(name="destroy", help="Destroy agent from Huawei Cloud.")(destroy)
 app.add_typer(mcp_gateway, name="mcp-gateway")
 app.add_typer(memory_app, name="memory")
+app.add_typer(runtime_app, name="runtime")
 
 
 def cli():

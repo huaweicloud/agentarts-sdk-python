@@ -34,6 +34,8 @@ from __future__ import annotations
 
 import json
 import logging
+from contextlib import ExitStack
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from agentarts.sdk.service.http_client import BaseHTTPClient, RequestConfig, RequestResult, SignMode
@@ -46,6 +48,38 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
 log = logging.getLogger(__name__)
+
+
+@dataclass
+class StreamDownloadResult:
+    """Streaming download result."""
+
+    success: bool
+    status_code: int
+    content_type: str = ""
+    error: str | None = None
+    _raw_response: Any = field(default=None, repr=False)
+
+    def iter_bytes(self) -> Iterator[bytes]:
+        """Iterate over downloaded byte stream."""
+        if self._raw_response is None:
+            msg = "No response available"
+            raise RuntimeError(msg)
+        for chunk in self._raw_response.iter_content(chunk_size=None):
+            if chunk:
+                yield chunk
+
+    def close(self) -> None:
+        """Close the underlying response."""
+        if self._raw_response is not None:
+            self._raw_response.close()
+            self._raw_response = None
+
+
+_STREAM_RESPONSE_TYPES = {
+    "application/octet-stream",
+    "application/x-tar",
+}
 
 
 class RuntimeClient:
@@ -621,6 +655,7 @@ class RuntimeClient:
         endpoint: str | None = None,
         timeout: int = 900,
         user_id: str | None = None,
+        suffix: str | None = None,
         **extra: Any,
     ) -> dict[str, Any] | Iterator[str]:
         """
@@ -641,6 +676,8 @@ class RuntimeClient:
             timeout: Request timeout in seconds.
             user_id: Optional user ID for OAuth2 outbound credentials,
                 passed as the ``USER_ID_HEADER`` header.
+            suffix: Optional URL suffix appended to /invocations path
+                (e.g., 'stream' -> /invocations/stream).
             **extra: Additional fields merged into the request.
 
         Returns:
@@ -650,6 +687,8 @@ class RuntimeClient:
         from agentarts.sdk.runtime.model import SESSION_HEADER, USER_ID_HEADER
 
         path = f"/runtimes/{agent_name}/invocations"
+        if suffix:
+            path = f"{path}/{suffix}"
         params: dict[str, Any] = {}
         if endpoint:
             params["endpoint"] = endpoint
@@ -673,6 +712,381 @@ class RuntimeClient:
         )
 
         return self._dispatch_response(result, "invoke_agent")
+
+    def exec_command(
+        self,
+        agent_name: str,
+        session_id: str,
+        command: list[str],
+        chunked: bool = False,
+        bearer_token: str | None = None,
+        timeout: int = 900,
+    ) -> dict[str, Any] | Iterator[str]:
+        """
+        Execute command in runtime with optional streaming response.
+
+        Args:
+            agent_name: The agent name.
+            session_id: Session identifier.
+            command: Command array to execute (e.g., ["ls", "-la"]).
+            chunked: If True, use chunked streaming with Command-Type: chunked header.
+                     Backend responds with application/x-ndjson (each line is a JSON object).
+            bearer_token: Optional bearer token for authentication.
+            timeout: Request timeout in seconds.
+
+        Returns:
+            dict for normal mode, Iterator[str] for chunked mode (ndjson lines).
+        """
+        from agentarts.sdk.runtime.model import SESSION_HEADER
+
+        path = f"/runtimes/{agent_name}/exec"
+        headers: dict[str, str] = {
+            SESSION_HEADER: session_id,
+            "Content-Type": "application/json",
+        }
+        if chunked:
+            headers["Command-Type"] = "chunked"
+        if bearer_token:
+            headers["Authorization"] = f"Bearer {bearer_token}"
+
+        payload = {"command": command}
+        result = self._data(
+            "POST",
+            path,
+            json=payload,
+            headers=headers,
+            timeout=timeout,
+        )
+
+        if not result.success:
+            log.error(
+                "exec_command failed: status=%s, error=%s",
+                result.status_code,
+                result.error,
+            )
+            msg = f"exec_command failed (HTTP {result.status_code}): {result.error}"
+            raise RuntimeError(msg)
+
+        if chunked:
+            content_type = result.headers.get("Content-Type", "")
+            if "application/x-ndjson" in content_type or result.streaming:
+                return self._parse_ndjson_stream(result)
+
+        return result.data if isinstance(result.data, dict) else {"result": result.data}
+
+    def _parse_ndjson_stream(self, result: RequestResult) -> Iterator[str]:
+        """Parse ndjson streaming response (each line is a JSON object)."""
+        try:
+            for line in result.iter_lines():
+                if line:
+                    yield line
+        finally:
+            result.close()
+
+    def upload_files(
+        self,
+        agent_name: str,
+        session_id: str,
+        files: list[dict[str, Any]],
+        username: str | None = None,
+        groupname: str | None = None,
+        filemode: str | None = None,
+        bearer_token: str | None = None,
+        timeout: int = 900,
+    ) -> dict[str, Any]:
+        """
+        Upload files to runtime.
+
+        Automatically selects upload mode:
+        - Single file: application/octet-stream (streaming upload from file)
+        - Multiple files: multipart/form-data
+
+        Args:
+            agent_name: The agent name.
+            session_id: Session identifier.
+            files: List of file specs, each with "path" (remote path) and "local_file" (local file path).
+            username: File owner username.
+            groupname: File owner groupname.
+            filemode: File permissions mode (e.g., "644").
+            bearer_token: Optional bearer token.
+            timeout: Request timeout in seconds.
+
+        Returns:
+            Upload result dict.
+        """
+        from agentarts.sdk.runtime.model import SESSION_HEADER
+
+        if not files:
+            raise ValueError("Files list cannot be empty")
+
+        if len(files) == 1:
+            file = files[0]
+            path = file.get("path", "")
+            local_file = file.get("local_file")
+            if not local_file:
+                content = file.get("content")
+                if content is None:
+                    raise ValueError("File local_file or content is required")
+            else:
+                content = None
+
+            endpoint = f"/runtimes/{agent_name}/files/upload"
+            headers: dict[str, str] = {
+                SESSION_HEADER: session_id,
+                "Content-Type": "application/octet-stream",
+            }
+            if bearer_token:
+                headers["Authorization"] = f"Bearer {bearer_token}"
+
+            params: dict[str, str] = {"path": path}
+            if username:
+                params["username"] = username
+            if groupname:
+                params["groupname"] = groupname
+            if filemode:
+                params["filemode"] = filemode
+
+            if local_file:
+                with open(local_file, "rb") as f:
+                    result = self._data(
+                        "POST",
+                        endpoint,
+                        data=f,
+                        headers=headers,
+                        params=params,
+                        timeout=timeout,
+                    )
+            else:
+                if isinstance(content, str):
+                    content = content.encode("utf-8")
+                result = self._data(
+                    "POST",
+                    endpoint,
+                    data=content,
+                    headers=headers,
+                    params=params,
+                    timeout=timeout,
+                )
+        else:
+            endpoint = f"/runtimes/{agent_name}/files/upload"
+            headers: dict[str, str] = {SESSION_HEADER: session_id}
+            if bearer_token:
+                headers["Authorization"] = f"Bearer {bearer_token}"
+
+            params: dict[str, str] = {}
+            if username:
+                params["username"] = username
+            if groupname:
+                params["groupname"] = groupname
+            if filemode:
+                params["filemode"] = filemode
+
+            multipart_files: list[tuple[str, tuple[str, Any, str]]] = []
+            with ExitStack() as stack:
+                for i, file_spec in enumerate(files):
+                    path = file_spec.get("path", f"file_{i}")
+                    local_file = file_spec.get("local_file")
+                    filename = path.split("/")[-1] if "/" in path else path
+
+                    if local_file:
+                        f = stack.enter_context(open(local_file, "rb"))
+                        multipart_files.append(("files", (filename, f, "application/octet-stream")))
+                    else:
+                        content = file_spec.get("content")
+                        if isinstance(content, bytes):
+                            multipart_files.append(("files", (filename, content, "application/octet-stream")))
+                        else:
+                            multipart_files.append(("files", (filename, str(content).encode("utf-8"), "text/plain")))
+                    params[f"paths[{i}]"] = path
+
+                result = self._data(
+                    "POST",
+                    endpoint,
+                    files=multipart_files,
+                    headers=headers,
+                    params=params,
+                    timeout=timeout,
+                )
+
+        if not result.success:
+            log.error(
+                "upload_files failed: status=%s, error=%s",
+                result.status_code,
+                result.error,
+            )
+            msg = f"upload_files failed (HTTP {result.status_code}): {result.error}"
+            raise RuntimeError(msg)
+
+        return result.data if isinstance(result.data, dict) else {"status": "uploaded", "files": len(files)}
+
+    def download_files(
+        self,
+        agent_name: str,
+        session_id: str,
+        path: str,
+        recursive: bool = False,
+        bearer_token: str | None = None,
+        timeout: int = 900,
+    ) -> StreamDownloadResult:
+        """
+        Download file or directory from runtime with streaming response.
+
+        Args:
+            agent_name: The agent name.
+            session_id: Session identifier.
+            path: Remote file/directory path.
+            recursive: If False, download single file. If True, download directory as tar.
+            bearer_token: Optional bearer token.
+            timeout: Request timeout in seconds.
+
+        Returns:
+            StreamDownloadResult - use iter_bytes() to consume content.
+        """
+        from agentarts.sdk.runtime.model import SESSION_HEADER
+
+        endpoint = f"/runtimes/{agent_name}/files/download"
+        headers: dict[str, str] = {SESSION_HEADER: session_id}
+        if bearer_token:
+            headers["Authorization"] = f"Bearer {bearer_token}"
+
+        params: dict[str, str | bool] = {"path": path, "recursive": str(recursive).lower()}
+
+        result = self._request_stream(
+            "GET",
+            endpoint,
+            accept_stream=True,
+            headers=headers,
+            params=params,
+            timeout=timeout,
+        )
+
+        if isinstance(result, StreamDownloadResult):
+            return result
+
+        return StreamDownloadResult(
+            success=result.success,
+            status_code=result.status_code,
+            content_type=result.headers.get("Content-Type", ""),
+            error=result.error,
+        )
+
+    def _request_stream(
+        self,
+        method: str,
+        url: str,
+        accept_stream: bool = False,
+        **kwargs: Any,
+    ) -> RequestResult | StreamDownloadResult:
+        """
+        Execute HTTP request with streaming response handling.
+
+        Args:
+            method: HTTP method
+            url: Relative URL path
+            accept_stream: Whether to return StreamDownloadResult for octet-stream/tar
+            **kwargs: Additional request arguments
+        """
+        full_url = self._data_client._config.base_url + url
+
+        timeout = kwargs.pop("timeout", self._data_client._config.timeout)
+
+        try:
+            response = self._data_client._session.request(
+                method,
+                full_url,
+                timeout=timeout,
+                verify=self._data_client._config.verify_ssl,
+                stream=True,
+                **kwargs,
+            )
+
+            content_type = response.headers.get("Content-Type", "")
+            is_stream = any(ct in content_type for ct in _STREAM_RESPONSE_TYPES)
+
+            if accept_stream and is_stream and response.ok:
+                return StreamDownloadResult(
+                    success=True,
+                    status_code=response.status_code,
+                    content_type=content_type,
+                    _raw_response=response,
+                )
+
+            if is_stream:
+                return RequestResult(
+                    success=response.ok,
+                    status_code=response.status_code,
+                    data=None,
+                    headers=dict(response.headers),
+                    streaming=True,
+                    _raw_response=response,
+                )
+
+            try:
+                data = response.json()
+            except Exception:
+                data = response.text if response.content else None
+            response.close()
+
+            error_msg = None
+            if not response.ok:
+                if isinstance(data, dict):
+                    error_msg = data.get("error") or data.get("message") or data.get("error_msg") or response.text
+                else:
+                    error_msg = response.text or f"HTTP {response.status_code}"
+
+            return RequestResult(
+                success=response.ok,
+                status_code=response.status_code,
+                data=data,
+                error=error_msg,
+                headers=dict(response.headers),
+            )
+
+        except Exception as e:
+            return RequestResult(
+                success=False,
+                status_code=0,
+                error=str(e),
+            )
+
+    def stop_session(
+        self,
+        agent_name: str,
+        session_id: str,
+        bearer_token: str | None = None,
+        timeout: int = 30,
+    ) -> dict[str, Any]:
+        """
+        Stop runtime session.
+
+        Args:
+            agent_name: The agent name.
+            session_id: Session identifier.
+            bearer_token: Optional bearer token.
+            timeout: Request timeout in seconds.
+
+        Returns:
+            Stop result dict.
+        """
+        from agentarts.sdk.runtime.model import SESSION_HEADER
+
+        path = f"/runtimes/{agent_name}/sessions/stop"
+        headers: dict[str, str] = {SESSION_HEADER: session_id}
+        if bearer_token:
+            headers["Authorization"] = f"Bearer {bearer_token}"
+
+        result = self._data("PUT", path, headers=headers, timeout=timeout)
+
+        if not result.success:
+            log.error(
+                "stop_session failed: status=%s, error=%s",
+                result.status_code,
+                result.error,
+            )
+            msg = f"stop_session failed (HTTP {result.status_code}): {result.error}"
+            raise RuntimeError(msg)
+
+        return result.data if isinstance(result.data, dict) else {"status": "stopped"}
 
 
 class LocalRuntimeClient(BaseHTTPClient):
@@ -707,6 +1121,7 @@ class LocalRuntimeClient(BaseHTTPClient):
         endpoint: str | None = None,
         timeout: int | None = None,
         user_id: str | None = None,
+        suffix: str | None = None,
     ) -> dict[str, Any] | Iterator[str]:
         """
         Invoke a local agent.
@@ -719,6 +1134,8 @@ class LocalRuntimeClient(BaseHTTPClient):
             timeout: Request timeout in seconds.
             user_id: Optional user ID for OAuth2 outbound credentials,
                 passed as the ``USER_ID_HEADER`` header.
+            suffix: Optional URL suffix appended to /invocations path
+                (e.g., 'stream' -> /invocations/stream).
 
         Returns:
             A ``dict`` for JSON responses, or an ``Iterator[str]`` for
@@ -727,6 +1144,8 @@ class LocalRuntimeClient(BaseHTTPClient):
         from agentarts.sdk.runtime.model import SESSION_HEADER, USER_ID_HEADER
 
         path = "/invocations"
+        if suffix:
+            path = f"{path}/{suffix}"
         params: dict[str, Any] = {}
         if endpoint:
             params["endpoint"] = endpoint
