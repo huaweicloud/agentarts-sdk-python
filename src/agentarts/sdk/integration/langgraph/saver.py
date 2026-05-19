@@ -3,11 +3,14 @@ AgentArts Memory Session Saver for LangGraph
 
 Provides a checkpoint saver implementation that uses AgentArts Memory service
 for persisting LangGraph conversation state.
+
+Supports both synchronous and asynchronous operations:
+- Synchronous methods (get_tuple, put, etc.) use MemoryClient
+- Async methods (aget_tuple, aput, etc.) use AsyncMemoryClient for native async
 """
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import uuid
@@ -21,7 +24,7 @@ from agentarts.sdk.integration.langgraph.converter import (
     langgraph_messages_to_memory,
     memory_to_langgraph_message,
 )
-from agentarts.sdk.memory import MemoryClient
+from agentarts.sdk.memory import AsyncMemoryClient, MemoryClient
 from agentarts.sdk.utils.constant import get_region
 
 if TYPE_CHECKING:
@@ -65,11 +68,13 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         - Support for conversation resumption across sessions
         - Thread ID directly maps to session ID for simplicity
         - Built-in memory extraction and semantic search capabilities
+        - Native async support using AsyncMemoryClient (no thread pool overhead)
 
     Architecture:
         - Checkpoints are stored as messages in the Memory service
         - Each checkpoint is tagged with metadata for retrieval
         - Thread ID is used directly as session ID
+        - Sync methods use MemoryClient, async methods use AsyncMemoryClient
 
     Usage:
         >>> from agentarts.sdk.integration.langgraph import AgentArtsMemorySessionSaver
@@ -81,13 +86,19 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         ...     max_messages=10
         ... )
         >>>
-        >>> # Use with LangGraph
+        >>> # Use with LangGraph (sync)
         >>> from langgraph.graph import StateGraph
         >>> graph = StateGraph(...)
         >>> compiled = graph.compile(checkpointer=checkpointer)
         >>>
-        >>> # Run with thread_id for stateful conversation
+        >>> # Run with thread_id for stateful conversation (sync)
         >>> result = compiled.invoke(
+        ...     {"input": "hello"},
+        ...     config={"configurable": {"thread_id": "conversation-123"}}
+        ... )
+        >>>
+        >>> # Run with thread_id for stateful conversation (async - recommended)
+        >>> result = await compiled.ainvoke(
         ...     {"input": "hello"},
         ...     config={"configurable": {"thread_id": "conversation-123"}}
         ... )
@@ -129,7 +140,13 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         self._api_key = api_key
         self._max_messages = max_messages
         self._verify_ssl = verify_ssl
+
         self._client = MemoryClient(
+            region_name=self._region,
+            api_key=api_key,
+            verify_ssl=verify_ssl
+        )
+        self._async_client = AsyncMemoryClient(
             region_name=self._region,
             api_key=api_key,
             verify_ssl=verify_ssl
@@ -444,7 +461,7 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
 
     def close(self) -> None:
         """
-        Close the underlying MemoryClient connection.
+        Close the underlying MemoryClient connections.
 
         Releases all underlying connection resources.
         """
@@ -460,13 +477,92 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         """
         Asynchronously get a checkpoint tuple from the memory service.
 
+        Uses AsyncMemoryClient for native async HTTP calls (no thread pool overhead).
+
         Args:
             config: Runnable config containing thread_id
 
         Returns:
             CheckpointTuple if messages found, None otherwise
         """
-        return await asyncio.to_thread(self.get_tuple, config)
+        runtime_config = self._get_runtime_config(config)
+        session_id = runtime_config.session_id
+
+        checkpoint_id_from_config = config.get("configurable", {}).get("checkpoint_id")
+
+        try:
+            messages = await self._async_client.get_last_k_messages(
+                session_id=session_id,
+                k=self._max_messages,
+                space_id=self._space_id
+            )
+
+        except Exception as e:
+            logger.exception(f"Failed to get checkpoint tuple: {e}")
+            return None
+        if not messages:
+            return None
+
+        langgraph_messages = []
+        for msg in messages:
+            try:
+                lg_msg = memory_to_langgraph_message(msg)
+                langgraph_messages.append(lg_msg)
+            except Exception as e:
+                logger.debug(f"Failed to convert message: {e}")
+                continue
+
+        if not langgraph_messages:
+            return None
+
+        step = 0
+        source = "loop"
+        checkpoint_id = str(uuid.uuid4())
+        checkpoint_ts = datetime.now(timezone.utc).isoformat()
+        if messages:
+            last_msg = messages[-1]
+            if hasattr(last_msg, "meta") and last_msg.meta:
+                try:
+                    meta = json.loads(last_msg.meta)
+                    step = meta.get("step", 0)
+                    source = meta.get("source", "loop")
+                    checkpoint_id = meta.get("checkpoint_id", checkpoint_id)
+                    checkpoint_ts = meta.get("checkpoint_ts", checkpoint_ts)
+                except (json.JSONDecodeError, TypeError):
+                    logger.debug(f"Failed to parse meta: {last_msg.meta}")
+
+        if checkpoint_id_from_config and checkpoint_id_from_config != checkpoint_id:
+            logger.debug(
+                f"Requested checkpoint_id {checkpoint_id_from_config} "
+                f"does not match latest {checkpoint_id}"
+            )
+            return None
+
+        checkpoint = Checkpoint(
+            v=1,
+            id=checkpoint_id,
+            ts=checkpoint_ts,
+            channel_values={"messages": langgraph_messages},
+            channel_versions={"messages": 1},
+            versions_seen={},
+            step=-1,
+            pending_sends=[],
+            parents={},
+        )
+
+        metadata = CheckpointMetadata(
+            source=source,
+            step=step,
+            writes={},
+            parents={},
+        )
+
+        return CheckpointTuple(
+            config=runtime_config.to_runnable_config(),
+            checkpoint=checkpoint,
+            metadata=metadata,
+            parent_config=None,
+        )
 
     async def aput(
             self,
@@ -478,6 +574,8 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         """
         Asynchronously store a checkpoint to the memory service.
 
+        Uses AsyncMemoryClient for native async HTTP calls (no thread pool overhead).
+
         Args:
             config: Runnable config containing thread_id
             checkpoint: Checkpoint data to store
@@ -487,9 +585,42 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         Returns:
             Updated config with checkpoint_id
         """
-        return await asyncio.to_thread(
-            self.put, config, checkpoint, metadata, new_versions
+        runtime_config = self._get_runtime_config(config)
+        session_id = runtime_config.session_id
+
+        channel_values = checkpoint.get("channel_values", {})
+        messages = channel_values.get("messages", [])
+        if not messages:
+            return config
+
+        step = metadata.get("step", 0)
+        source = metadata.get("source", "loop")
+        checkpoint_id = checkpoint.get("id", str(uuid.uuid4()))
+        checkpoint_ts = checkpoint.get("ts", datetime.now(timezone.utc).isoformat())
+        checkpoint_meta = json.dumps({
+            "step": step,
+            "source": source,
+            "checkpoint_id": checkpoint_id,
+            "checkpoint_ts": checkpoint_ts,
+        }, ensure_ascii=False)
+        cloud_messages = langgraph_messages_to_memory(
+            messages,
+            runtime_config.actor_id,
+            runtime_config.assistant_id,
+            meta=checkpoint_meta
         )
+
+        try:
+            await self._async_client.add_messages(
+                space_id=self._space_id,
+                session_id=session_id,
+                messages=cloud_messages
+            )
+
+        except Exception as e:
+            logger.exception(f"Failed to put checkpoint for session {session_id} with: {e}")
+
+        return config
 
     async def aput_writes(
             self,
@@ -502,6 +633,7 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         Asynchronously store intermediate writes linked to a checkpoint.
 
         Note: This method is not fully supported with Memory service backend.
+        Writes are typically handled through the normal message flow.
 
         Args:
             config: Runnable config containing thread_id
@@ -509,8 +641,9 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             task_id: Task identifier
             task_path: Task path (optional)
         """
-        return await asyncio.to_thread(
-            self.put_writes, config, writes, task_id, task_path
+        logger.warning(
+            "AgentArtsMemorySessionSaver.aput_writes() is not fully implemented. "
+            "Writes are handled through normal message flow."
         )
 
     async def alist(
@@ -524,6 +657,8 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         """
         Asynchronously list checkpoints for a given thread.
 
+        Uses AsyncMemoryClient for native async HTTP calls (no thread pool overhead).
+
         Args:
             config: Runnable config containing thread_id
             filter: Optional filter criteria
@@ -533,17 +668,94 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         Returns:
             List of CheckpointTuple objects
         """
-        return await asyncio.to_thread(
-            self.list, config, filter=filter, before=before, limit=limit
+        if config is None:
+            return []
+
+        runtime_config = self._get_runtime_config(config)
+        session_id = runtime_config.session_id
+
+        try:
+            result = await self._async_client.list_messages(
+                space_id=self._space_id,
+                session_id=session_id,
+                limit=limit or self._max_messages,
+                offset=0
+            )
+        except Exception as e:
+            logger.exception(f"Failed to list checkpoints: {e}")
+            return []
+        messages = result.items if hasattr(result, "items") else []
+
+        if not messages:
+            return []
+
+        langgraph_messages = []
+        for msg in messages:
+            try:
+                lg_msg = memory_to_langgraph_message(msg)
+                langgraph_messages.append(lg_msg)
+            except Exception as e:
+                logger.debug(f"Failed to convert message: {e}")
+                continue
+
+        if not langgraph_messages:
+            return []
+
+        step = 0
+        source = "loop"
+        checkpoint_id = str(uuid.uuid4())
+        checkpoint_ts = datetime.now(timezone.utc).isoformat()
+        if messages:
+            last_msg = messages[-1]
+            if hasattr(last_msg, "meta") and last_msg.meta:
+                try:
+                    meta = json.loads(last_msg.meta)
+                    step = meta.get("step", 0)
+                    source = meta.get("source", "loop")
+                    checkpoint_id = meta.get("checkpoint_id", checkpoint_id)
+                    checkpoint_ts = meta.get("checkpoint_ts", checkpoint_ts)
+                except (json.JSONDecodeError, TypeError):
+                    logger.debug(f"Failed to parse meta: {last_msg.meta}")
+
+        checkpoint = Checkpoint(
+            v=1,
+            id=checkpoint_id,
+            ts=checkpoint_ts,
+            channel_values={"messages": langgraph_messages},
+            channel_versions={"messages": 1},
+            versions_seen={},
+            step=-1,
+            pending_sends=[],
+            parents={},
         )
+
+        metadata = CheckpointMetadata(
+            source=source,
+            step=step,
+            writes={},
+            parents={},
+        )
+
+        return [
+            CheckpointTuple(
+                config=runtime_config.to_runnable_config(),
+                checkpoint=checkpoint,
+                metadata=metadata,
+                parent_config=None,
+            )
+        ]
 
     async def adelete(self, config: RunnableConfig) -> None:
         """
         Asynchronously delete session for a given thread.
 
         Note: Memory service does not support direct session deletion.
+        Sessions are cleaned up based on TTL configuration.
 
         Args:
             config: Runnable config containing thread_id
         """
-        return await asyncio.to_thread(self.delete, config)
+        logger.warning(
+            "AgentArtsMemorySessionSaver.adelete() is not supported. "
+            "Sessions are cleaned up automatically based on TTL."
+        )

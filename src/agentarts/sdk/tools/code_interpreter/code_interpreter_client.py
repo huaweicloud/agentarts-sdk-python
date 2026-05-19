@@ -58,7 +58,7 @@ class CodeInterpreter:
 
         # Control plane client for managing code interpreters
         self.control_plane_client = ControlToolsHttpClient(
-            region_name=region, endpoint_url=get_control_plane_endpoint()
+            region_name=region, endpoint_url=get_control_plane_endpoint(region=region)
         )
 
         # Data plane client for managing code interpreter sessions
