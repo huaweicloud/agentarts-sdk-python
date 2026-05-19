@@ -50,6 +50,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0",
     "requests>=2.31.0",
+    "httpx>=0.25.0",
     "tenacity>=8.2.0",
     "typer>=0.9.0",
     "rich>=13.0.0",
@@ -72,7 +73,6 @@ dev = [
     "types-PyYAML>=6.0.0",
     "types-redis>=4.6.0",
     "ruff>=0.1.0",
-    "httpx>=0.25.0",
 ]
 
 [project.optional-dependencies]

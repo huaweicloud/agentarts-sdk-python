@@ -11,8 +11,11 @@ Quick Start:
     # Tools
     from agentarts.sdk import CodeInterpreter, code_session
 
-    # Memory
+    # Memory (sync)
     from agentarts.sdk import MemoryClient
+
+    # Memory (async)
+    from agentarts.sdk import AsyncMemoryClient
 
     # MCP Gateway
     from agentarts.sdk import MCPGatewayClient
@@ -40,7 +43,7 @@ from agentarts.sdk.identity import (
     require_sts_token,
 )
 from agentarts.sdk.mcpgateway import MCPGatewayClient
-from agentarts.sdk.memory import MemoryClient
+from agentarts.sdk.memory import AsyncMemoryClient, MemoryClient
 from agentarts.sdk.runtime.app import AgentArtsRuntimeApp
 from agentarts.sdk.runtime.context import AgentArtsRuntimeContext, RequestContext
 from agentarts.sdk.runtime.model import PingStatus
@@ -49,6 +52,7 @@ from agentarts.sdk.tools import CodeInterpreter, code_session
 __all__ = [
     "AgentArtsRuntimeApp",
     "AgentArtsRuntimeContext",
+    "AsyncMemoryClient",
     "CodeInterpreter",
     "IdentityClient",
     "MCPGatewayClient",

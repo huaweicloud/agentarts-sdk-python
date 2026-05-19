@@ -66,7 +66,11 @@ class CodeInterpreter:
 
         # Control plane client for managing code interpreters
         self.control_plane_client = ControlToolsHttpClient(
+<<<<<<< HEAD
             region_name=region, endpoint_url=get_control_plane_endpoint(), verify_ssl=verify_ssl
+=======
+            region_name=region, endpoint_url=get_control_plane_endpoint(region=region)
+>>>>>>> cdf36d0 (feature: add async memoryclient)
         )
 
         # Data plane client for managing code interpreter sessions
