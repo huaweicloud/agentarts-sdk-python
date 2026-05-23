@@ -5,6 +5,7 @@ This module defines configuration models for the AgentArts toolkit.
 All models use Pydantic for validation and serialization.
 """
 
+import platform as platform_module
 from enum import Enum
 from typing import Any
 
@@ -17,6 +18,33 @@ class NetworkProtocol(str, Enum):
     HTTP = "HTTP"
     MCP = "MCP"
     WEBSOCKET = "WEBSOCKET"
+
+
+class UrlMatchType(str, Enum):
+    """URL match type for invoke configuration."""
+
+    ACCURATE_MATCH = "ACCURATE_MATCH"
+    PREFIX_MATCH = "PREFIX_MATCH"
+
+
+class ArchType(str, Enum):
+    """Architecture type."""
+
+    ARM64 = "arm64"
+    X86_64 = "x86_64"
+
+
+def detect_arch() -> ArchType:
+    """
+    Detect the current machine architecture.
+
+    Returns:
+        ArchType: Architecture type (arm64 or x86_64)
+    """
+    machine = platform_module.machine().lower()
+    if machine in ("aarch64", "arm64"):
+        return ArchType.ARM64
+    return ArchType.X86_64
 
 
 class AuthType(str, Enum):
@@ -94,6 +122,19 @@ class SWRConfig(BaseModel):
     }
 
 
+class FileTransferConfig(BaseModel):
+    """File transfer configuration."""
+
+    enabled: bool = Field(
+        default=False,
+        description="Whether to enable file upload/download functionality",
+    )
+
+    model_config = {
+        "extra": "allow",
+    }
+
+
 class InvokeConfig(BaseModel):
     """Invoke configuration."""
 
@@ -106,6 +147,14 @@ class InvokeConfig(BaseModel):
         ge=1,
         le=65535,
         description="Port number of the server",
+    )
+    file_transfer_config: FileTransferConfig | None = Field(
+        default=None,
+        description="File transfer configuration for upload/download functionality",
+    )
+    url_match_type: UrlMatchType = Field(
+        default=UrlMatchType.ACCURATE_MATCH,
+        description="URL match type: ACCURATE_MATCH for absolute path matching, PREFIX_MATCH for prefix matching",
     )
 
     model_config = {
@@ -413,6 +462,10 @@ class AgentArtsRuntimeConfig(BaseModel):
         default=None,
         description="Agent gateway ID",
     )
+    arch: ArchType = Field(
+        default=ArchType.X86_64,
+        description="Architecture type: arm64 or x86_64",
+    )
     execution_agency_name: str | None = Field(
         default=None,
         description="Execution agency name",
@@ -517,7 +570,7 @@ class AgentArtsConfig(BaseModel):
                 if "runtime" in ordered_agents[agent_name]:
                     ordered_agents[agent_name]["runtime"] = order_dict(
                         ordered_agents[agent_name]["runtime"],
-                        ["agent_id", "agent_gateway_id", "execution_agency_name", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "environment_variables", "tags"]
+                        ["agent_id", "agent_gateway_id", "arch", "execution_agency_name", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "environment_variables", "tags"]
                     )
             ordered_data["agents"] = ordered_agents
 

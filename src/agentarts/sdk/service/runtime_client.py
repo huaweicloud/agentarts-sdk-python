@@ -655,7 +655,7 @@ class RuntimeClient:
         endpoint: str | None = None,
         timeout: int = 900,
         user_id: str | None = None,
-        suffix: str | None = None,
+        custom_path: str | None = None,
         **extra: Any,
     ) -> dict[str, Any] | Iterator[str]:
         """
@@ -676,7 +676,7 @@ class RuntimeClient:
             timeout: Request timeout in seconds.
             user_id: Optional user ID for OAuth2 outbound credentials,
                 passed as the ``USER_ID_HEADER`` header.
-            suffix: Optional URL suffix appended to /invocations path
+            custom_path: Optional custom path appended to /invocations path
                 (e.g., 'stream' -> /invocations/stream).
             **extra: Additional fields merged into the request.
 
@@ -687,8 +687,8 @@ class RuntimeClient:
         from agentarts.sdk.runtime.model import SESSION_HEADER, USER_ID_HEADER
 
         path = f"/runtimes/{agent_name}/invocations"
-        if suffix:
-            path = f"{path}/{suffix}"
+        if custom_path:
+            path = f"{path}/{custom_path}"
         params: dict[str, Any] = {}
         if endpoint:
             params["endpoint"] = endpoint
@@ -739,7 +739,7 @@ class RuntimeClient:
         """
         from agentarts.sdk.runtime.model import SESSION_HEADER
 
-        path = f"/runtimes/{agent_name}/exec"
+        path = f"/runtimes/{agent_name}/commands"
         headers: dict[str, str] = {
             SESSION_HEADER: session_id,
             "Content-Type": "application/json",
@@ -788,9 +788,9 @@ class RuntimeClient:
         agent_name: str,
         session_id: str,
         files: list[dict[str, Any]],
-        username: str | None = None,
-        groupname: str | None = None,
-        filemode: str | None = None,
+        user_id: int = 1000,
+        group_id: int = 1000,
+        file_mode: str = "0644",
         bearer_token: str | None = None,
         timeout: int = 900,
     ) -> dict[str, Any]:
@@ -805,9 +805,9 @@ class RuntimeClient:
             agent_name: The agent name.
             session_id: Session identifier.
             files: List of file specs, each with "path" (remote path) and "local_file" (local file path).
-            username: File owner username.
-            groupname: File owner groupname.
-            filemode: File permissions mode (e.g., "644").
+            user_id: File owner user ID (default: 1000).
+            group_id: File owner group ID (default: 1000).
+            file_mode: File permissions mode in octal (default: "0644").
             bearer_token: Optional bearer token.
             timeout: Request timeout in seconds.
 
@@ -822,6 +822,8 @@ class RuntimeClient:
         if len(files) == 1:
             file = files[0]
             path = file.get("path", "")
+            if not path:
+                raise ValueError("path is required for each file")
             local_file = file.get("local_file")
             if not local_file:
                 content = file.get("content")
@@ -830,7 +832,7 @@ class RuntimeClient:
             else:
                 content = None
 
-            endpoint = f"/runtimes/{agent_name}/files/upload"
+            endpoint = f"/runtimes/{agent_name}/upload-files"
             headers: dict[str, str] = {
                 SESSION_HEADER: session_id,
                 "Content-Type": "application/octet-stream",
@@ -838,13 +840,12 @@ class RuntimeClient:
             if bearer_token:
                 headers["Authorization"] = f"Bearer {bearer_token}"
 
-            params: dict[str, str] = {"path": path}
-            if username:
-                params["username"] = username
-            if groupname:
-                params["groupname"] = groupname
-            if filemode:
-                params["filemode"] = filemode
+            params: dict[str, Any] = {
+                "path": path,
+                "user_id": user_id,
+                "group_id": group_id,
+                "file_mode": file_mode,
+            }
 
             if local_file:
                 with open(local_file, "rb") as f:
@@ -868,23 +869,23 @@ class RuntimeClient:
                     timeout=timeout,
                 )
         else:
-            endpoint = f"/runtimes/{agent_name}/files/upload"
+            endpoint = f"/runtimes/{agent_name}/upload-files"
             headers: dict[str, str] = {SESSION_HEADER: session_id}
             if bearer_token:
                 headers["Authorization"] = f"Bearer {bearer_token}"
 
-            params: dict[str, str] = {}
-            if username:
-                params["username"] = username
-            if groupname:
-                params["groupname"] = groupname
-            if filemode:
-                params["filemode"] = filemode
+            params: dict[str, Any] = {
+                "user_id": user_id,
+                "group_id": group_id,
+                "file_mode": file_mode,
+            }
 
             multipart_files: list[tuple[str, tuple[str, Any, str]]] = []
             with ExitStack() as stack:
                 for i, file_spec in enumerate(files):
                     path = file_spec.get("path", f"file_{i}")
+                    if not path:
+                        raise ValueError(f"path is required for file {i}")
                     local_file = file_spec.get("local_file")
                     filename = path.split("/")[-1] if "/" in path else path
 
@@ -944,7 +945,7 @@ class RuntimeClient:
         """
         from agentarts.sdk.runtime.model import SESSION_HEADER
 
-        endpoint = f"/runtimes/{agent_name}/files/download"
+        endpoint = f"/runtimes/{agent_name}/download-files"
         headers: dict[str, str] = {SESSION_HEADER: session_id}
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
@@ -1088,6 +1089,41 @@ class RuntimeClient:
 
         return result.data if isinstance(result.data, dict) else {"status": "stopped"}
 
+    def start_session(
+        self,
+        agent_name: str,
+        bearer_token: str | None = None,
+        timeout: int = 30,
+    ) -> dict[str, Any]:
+        """
+        Start runtime session.
+
+        Args:
+            agent_name: The agent name.
+            bearer_token: Optional bearer token.
+            timeout: Request timeout in seconds.
+
+        Returns:
+            Start result dict with session_id.
+        """
+        path = f"/runtimes/{agent_name}/sessions-start"
+        headers: dict[str, str] = {}
+        if bearer_token:
+            headers["Authorization"] = f"Bearer {bearer_token}"
+
+        result = self._data("POST", path, headers=headers, timeout=timeout)
+
+        if not result.success:
+            log.error(
+                "start_session failed: status=%s, error=%s",
+                result.status_code,
+                result.error,
+            )
+            msg = f"start_session failed (HTTP {result.status_code}): {result.error}"
+            raise RuntimeError(msg)
+
+        return result.data if isinstance(result.data, dict) else {}
+
 
 class LocalRuntimeClient(BaseHTTPClient):
     """
@@ -1121,7 +1157,7 @@ class LocalRuntimeClient(BaseHTTPClient):
         endpoint: str | None = None,
         timeout: int | None = None,
         user_id: str | None = None,
-        suffix: str | None = None,
+        custom_path: str | None = None,
     ) -> dict[str, Any] | Iterator[str]:
         """
         Invoke a local agent.
@@ -1134,7 +1170,7 @@ class LocalRuntimeClient(BaseHTTPClient):
             timeout: Request timeout in seconds.
             user_id: Optional user ID for OAuth2 outbound credentials,
                 passed as the ``USER_ID_HEADER`` header.
-            suffix: Optional URL suffix appended to /invocations path
+            custom_path: Optional custom path appended to /invocations path
                 (e.g., 'stream' -> /invocations/stream).
 
         Returns:
@@ -1144,8 +1180,8 @@ class LocalRuntimeClient(BaseHTTPClient):
         from agentarts.sdk.runtime.model import SESSION_HEADER, USER_ID_HEADER
 
         path = "/invocations"
-        if suffix:
-            path = f"{path}/{suffix}"
+        if custom_path:
+            path = f"{path}/{custom_path}"
         params: dict[str, Any] = {}
         if endpoint:
             params["endpoint"] = endpoint

@@ -11,6 +11,7 @@ from agentarts.toolkit.utils.common import (
     echo_step,
     echo_success,
 )
+from agentarts.toolkit.utils.runtime.config import detect_arch
 from agentarts.toolkit.utils.swr_org import generate_swr_org_name
 from agentarts.toolkit.utils.templates.manager import template_manager
 
@@ -159,6 +160,7 @@ def create_config_file(
     actual_swr_org = swr_org or generate_swr_org_name(region=actual_region)
     actual_swr_repo = swr_repo or f"agent_{name}"
     detected_platform = detect_platform()
+    detected_arch = detect_arch()
 
     artifact_url = f"swr.{actual_region}.myhuaweicloud.com/{actual_swr_org}/{actual_swr_repo}:latest"
 
@@ -191,9 +193,13 @@ agents:
       repository_auto_create: true
 
     runtime:
+      arch: {detected_arch.value}
       invoke_config:
         protocol: HTTP
         port: 8080
+        file_transfer_config:
+          enabled: false
+        url_match_type: ACCURATE_MATCH
 
       network_config:
         network_mode: PUBLIC

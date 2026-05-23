@@ -4,6 +4,7 @@ import os
 import tarfile
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from rich.console import Console
 
@@ -22,11 +23,29 @@ def download_runtime_files(
     path: str | None = None,
     output: str | None = None,
     recursive: bool = False,
+    bearer_token: str | None = None,
     region: str | None = None,
-) -> str:
-    """Download files from runtime."""
+) -> dict[str, Any]:
+    """
+    Download files from runtime.
+
+    Args:
+        agent_name: Agent name
+        session_id: Session ID (required)
+        path: Remote file/directory path (required)
+        output: Local output path
+        recursive: Download directory as tar archive
+        bearer_token: Optional bearer token
+        region: Region name
+
+    Returns:
+        Download result dict with saved_path, size, content_type
+    """
     if not path:
-        raise ValueError("Path is required")
+        raise ValueError("Path is required (--path)")
+
+    if not session_id:
+        raise ValueError("Session ID is required (--session)")
 
     agent_name, region, agent_id, auth_type = _resolve_agent_info(agent_name, region)
 
@@ -54,6 +73,7 @@ def download_runtime_files(
         session_id=session_id,
         path=path,
         recursive=recursive,
+        bearer_token=bearer_token,
     )
 
     if not result.success:
@@ -63,14 +83,17 @@ def download_runtime_files(
     output = output or filename
 
     saved_path: str = ""
+    total_size: int = 0
+    content_type: str = result.content_type
 
     try:
-        if recursive and "application/x-tar" in result.content_type:
+        if recursive and "application/x-tar" in content_type:
             Path(output).mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(suffix=".tar", delete=False) as tmp_file:
                 tmp_path = tmp_file.name
                 for chunk in result.iter_bytes():
                     tmp_file.write(chunk)
+                    total_size += len(chunk)
 
             try:
                 with tarfile.open(tmp_path, mode="r") as tar:
@@ -86,8 +109,14 @@ def download_runtime_files(
             with open(output, "wb") as f:
                 for chunk in result.iter_bytes():
                     f.write(chunk)
+                    total_size += len(chunk)
             saved_path = output
     finally:
         result.close()
 
-    return saved_path
+    return {
+        "saved_path": saved_path,
+        "size": total_size,
+        "content_type": content_type,
+        "path": path,
+    }

@@ -62,9 +62,9 @@ def invoke(
         str | None,
         typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials"),
     ] = None,
-    suffix: Annotated[
+    custom_path: Annotated[
         str | None,
-        typer.Option("--suffix", help="URL suffix appended to /invocations path (e.g., 'stream' -> /invocations/stream)"),
+        typer.Option("--custom-path", help="Custom path appended to /invocations (e.g., 'stream' -> /invocations/stream)"),
     ] = None,
 ):
     """
@@ -82,7 +82,7 @@ def invoke(
         agentarts invoke '{"message": "hello"}' --mode local --port 8080
         agentarts invoke '{"message": "test"}' --session my-session-123
         agentarts invoke '{"message": "test"}' --user-id my-user-id
-        agentarts invoke '{"message": "test"}' --suffix stream
+        agentarts invoke '{"message": "test"}' --custom-path stream
     """
     invoke_mode = InvokeMode.CLOUD
     if mode.lower() == "local":
@@ -103,7 +103,7 @@ def invoke(
         timeout=timeout,
         skip_ssl_verification=skip_ssl_verification,
         user_id=user_id,
-        suffix=suffix,
+        custom_path=custom_path,
     )
 
     if not success:

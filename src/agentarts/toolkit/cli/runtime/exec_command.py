@@ -18,6 +18,7 @@ def exec_command_cmd(
     agent: Annotated[str, typer.Option("--agent", "-a", help="Agent name [required]")] = None,
     session: Annotated[str, typer.Option("--session", "-s", help="Session ID")] = None,
     chunked: Annotated[bool, typer.Option("--chunked", help="Enable chunked streaming response (application/x-ndjson)")] = False,
+    bearer_token: Annotated[str | None, typer.Option("--bearer-token", "-bt", help="Bearer token for authentication")] = None,
     region: Annotated[str | None, typer.Option("--region", "-r", help="Region name")] = None,
 ) -> None:
     """
@@ -29,7 +30,7 @@ def exec_command_cmd(
     Examples:
         agentarts runtime exec-command "ls -la" --agent myagent --session <session-id>
         agentarts runtime exec-command "ls -la" --agent myagent --session <session-id> --chunked
-        agentarts runtime exec-command "ls" --agent myagent --session <session-id>
+        agentarts runtime exec-command "ls" --agent myagent --session <session-id> -bt <bearer-token>
     """
     try:
         result = exec_runtime_command(
@@ -37,6 +38,7 @@ def exec_command_cmd(
             agent_name=agent,
             session_id=session,
             chunked=chunked,
+            bearer_token=bearer_token,
             region=region,
         )
 

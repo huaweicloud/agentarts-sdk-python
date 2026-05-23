@@ -91,6 +91,12 @@ def create_agentarts_runtime(
                     "protocol": runtime_cfg.invoke_config.protocol,
                     "port": runtime_cfg.invoke_config.port,
                 }
+                if runtime_cfg.invoke_config.file_transfer_config:
+                    invoke_config["file_transfer_config"] = {
+                        "enabled": runtime_cfg.invoke_config.file_transfer_config.enabled,
+                    }
+                if runtime_cfg.invoke_config.url_match_type:
+                    invoke_config["url_match_type"] = runtime_cfg.invoke_config.url_match_type
 
             if runtime_cfg.network_config:
                 network_config = runtime_cfg.network_config.to_dict()
@@ -120,6 +126,8 @@ def create_agentarts_runtime(
             invoke_config = {
                 "protocol": "HTTP",
                 "port": 8080,
+                "file_transfer_config": {"enabled": False},
+                "url_match_type": "ACCURATE_MATCH",
             }
 
         agent_description = description or f"Agent created by AgentArts SDK Toolkit, deployed from {swr_image}"
