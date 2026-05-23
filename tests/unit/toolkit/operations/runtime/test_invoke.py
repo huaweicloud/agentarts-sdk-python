@@ -8,7 +8,7 @@ from agentarts.sdk.utils.constant import _ensure_https
 from agentarts.toolkit.operations.runtime.invoke import (
     InvokeMode,
     _resolve_agent_info,
-    _validate_and_normalize_suffix,
+    _validate_and_normalize_custom_path,
     invoke_agent,
 )
 
@@ -198,107 +198,107 @@ agents:
                 assert call_args.kwargs["bearer_token"] == "cli-token"
 
 
-class TestValidateAndNormalizeSuffix:
-    """Tests for _validate_and_normalize_suffix() function."""
+class TestValidateAndNormalizeCustomPath:
+    """Tests for _validate_and_normalize_custom_path() function."""
 
     def test_returns_none_for_none_input(self):
-        assert _validate_and_normalize_suffix(None) is None
+        assert _validate_and_normalize_custom_path(None) is None
 
     def test_returns_none_for_empty_string(self):
-        assert _validate_and_normalize_suffix("") is None
+        assert _validate_and_normalize_custom_path("") is None
 
     def test_returns_none_for_whitespace_only(self):
-        assert _validate_and_normalize_suffix("   ") is None
+        assert _validate_and_normalize_custom_path("   ") is None
 
     def test_strips_leading_slash(self):
-        result = _validate_and_normalize_suffix("/stream")
+        result = _validate_and_normalize_custom_path("/stream")
         assert result == "stream"
 
     def test_strips_trailing_slash(self):
-        result = _validate_and_normalize_suffix("stream/")
+        result = _validate_and_normalize_custom_path("stream/")
         assert result == "stream"
 
     def test_strips_both_slashes(self):
-        result = _validate_and_normalize_suffix("/stream/")
+        result = _validate_and_normalize_custom_path("/stream/")
         assert result == "stream"
 
-    def test_validates_simple_suffix(self):
-        result = _validate_and_normalize_suffix("stream")
+    def test_validates_simple_custom_path(self):
+        result = _validate_and_normalize_custom_path("stream")
         assert result == "stream"
 
     def test_validates_nested_path(self):
-        result = _validate_and_normalize_suffix("api/v2/stream")
+        result = _validate_and_normalize_custom_path("api/v2/stream")
         assert result == "api/v2/stream"
 
     def test_validates_with_hyphens(self):
-        result = _validate_and_normalize_suffix("custom-endpoint")
+        result = _validate_and_normalize_custom_path("custom-endpoint")
         assert result == "custom-endpoint"
 
     def test_validates_with_underscores(self):
-        result = _validate_and_normalize_suffix("custom_endpoint")
+        result = _validate_and_normalize_custom_path("custom_endpoint")
         assert result == "custom_endpoint"
 
     def test_validates_with_dots(self):
-        result = _validate_and_normalize_suffix("api.v2.endpoint")
+        result = _validate_and_normalize_custom_path("api.v2.endpoint")
         assert result == "api.v2.endpoint"
 
-    def test_validates_complex_suffix(self):
-        result = _validate_and_normalize_suffix("api/v2/custom-endpoint_stream.json")
+    def test_validates_complex_custom_path(self):
+        result = _validate_and_normalize_custom_path("api/v2/custom-endpoint_stream.json")
         assert result == "api/v2/custom-endpoint_stream.json"
 
     def test_rejects_special_characters(self):
-        with pytest.raises(ValueError, match="Invalid suffix"):
-            _validate_and_normalize_suffix("stream!test")
+        with pytest.raises(ValueError, match="Invalid custom path"):
+            _validate_and_normalize_custom_path("stream!test")
 
     def test_rejects_at_symbol(self):
-        with pytest.raises(ValueError, match="Invalid suffix"):
-            _validate_and_normalize_suffix("stream@test")
+        with pytest.raises(ValueError, match="Invalid custom path"):
+            _validate_and_normalize_custom_path("stream@test")
 
     def test_rejects_hash_symbol(self):
-        with pytest.raises(ValueError, match="Invalid suffix"):
-            _validate_and_normalize_suffix("stream#test")
+        with pytest.raises(ValueError, match="Invalid custom path"):
+            _validate_and_normalize_custom_path("stream#test")
 
     def test_rejects_dollar_symbol(self):
-        with pytest.raises(ValueError, match="Invalid suffix"):
-            _validate_and_normalize_suffix("stream$test")
+        with pytest.raises(ValueError, match="Invalid custom path"):
+            _validate_and_normalize_custom_path("stream$test")
 
     def test_rejects_percent_symbol(self):
-        with pytest.raises(ValueError, match="Invalid suffix"):
-            _validate_and_normalize_suffix("stream%test")
+        with pytest.raises(ValueError, match="Invalid custom path"):
+            _validate_and_normalize_custom_path("stream%test")
 
     def test_rejects_ampersand_symbol(self):
-        with pytest.raises(ValueError, match="Invalid suffix"):
-            _validate_and_normalize_suffix("stream&test")
+        with pytest.raises(ValueError, match="Invalid custom path"):
+            _validate_and_normalize_custom_path("stream&test")
 
     def test_rejects_star_symbol(self):
-        with pytest.raises(ValueError, match="Invalid suffix"):
-            _validate_and_normalize_suffix("stream*test")
+        with pytest.raises(ValueError, match="Invalid custom path"):
+            _validate_and_normalize_custom_path("stream*test")
 
     def test_rejects_parentheses(self):
-        with pytest.raises(ValueError, match="Invalid suffix"):
-            _validate_and_normalize_suffix("stream(test)")
+        with pytest.raises(ValueError, match="Invalid custom path"):
+            _validate_and_normalize_custom_path("stream(test)")
 
     def test_rejects_spaces(self):
-        with pytest.raises(ValueError, match="Invalid suffix"):
-            _validate_and_normalize_suffix("stream test")
+        with pytest.raises(ValueError, match="Invalid custom path"):
+            _validate_and_normalize_custom_path("stream test")
 
     def test_rejects_path_traversal(self):
         with pytest.raises(ValueError, match="Path traversal"):
-            _validate_and_normalize_suffix("../etc/passwd")
+            _validate_and_normalize_custom_path("../etc/passwd")
 
     def test_rejects_path_traversal_in_middle(self):
         with pytest.raises(ValueError, match="Path traversal"):
-            _validate_and_normalize_suffix("api/../secret")
+            _validate_and_normalize_custom_path("api/../secret")
 
     def test_rejects_path_traversal_complex(self):
         with pytest.raises(ValueError, match="Path traversal"):
-            _validate_and_normalize_suffix("api/..../endpoint")
+            _validate_and_normalize_custom_path("api/..../endpoint")
 
 
-class TestInvokeAgentSuffix:
-    """Tests for invoke_agent() with suffix parameter."""
+class TestInvokeAgentCustomPath:
+    """Tests for invoke_agent() with custom_path parameter."""
 
-    def test_suffix_passed_to_local_client(self, tmp_path, monkeypatch):
+    def test_custom_path_passed_to_local_client(self, tmp_path, monkeypatch):
         config_content = """
 default_agent: test-agent
 agents:
@@ -317,13 +317,13 @@ agents:
             invoke_agent(
                 payload='{"message": "hello"}',
                 mode=InvokeMode.LOCAL,
-                suffix="stream",
+                custom_path="stream",
             )
 
             call_args = mock_instance.invoke_agent.call_args
-            assert call_args.kwargs["suffix"] == "stream"
+            assert call_args.kwargs["custom_path"] == "stream"
 
-    def test_invalid_suffix_raises_error(self, tmp_path, monkeypatch):
+    def test_invalid_custom_path_raises_error(self, tmp_path, monkeypatch):
         config_content = """
 default_agent: test-agent
 agents:
@@ -334,14 +334,14 @@ agents:
         (tmp_path / ".agentarts_config.yaml").write_text(config_content)
         monkeypatch.chdir(tmp_path)
 
-        with pytest.raises(ValueError, match="Invalid suffix"):
+        with pytest.raises(ValueError, match="Invalid custom path"):
             invoke_agent(
                 payload='{"message": "hello"}',
                 mode=InvokeMode.LOCAL,
-                suffix="invalid!suffix",
+                custom_path="invalid!path",
             )
 
-    def test_suffix_passed_to_cloud_client(self, tmp_path, monkeypatch):
+    def test_custom_path_passed_to_cloud_client(self, tmp_path, monkeypatch):
         config_content = """
 default_agent: test-agent
 agents:
@@ -368,8 +368,8 @@ agents:
                 invoke_agent(
                     payload='{"message": "hello"}',
                     mode=InvokeMode.CLOUD,
-                    suffix="api/v2/stream",
+                    custom_path="api/v2/stream",
                 )
 
                 call_args = mock_instance.invoke_agent.call_args
-                assert call_args.kwargs["suffix"] == "api/v2/stream"
+                assert call_args.kwargs["custom_path"] == "api/v2/stream"

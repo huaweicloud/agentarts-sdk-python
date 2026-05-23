@@ -12,18 +12,36 @@ from agentarts.toolkit.utils.common import echo_error, echo_info
 console = Console()
 
 DEFAULT_PATH = "/home/user"
+DEFAULT_USER_ID = 1000
+DEFAULT_GROUP_ID = 1000
+DEFAULT_FILE_MODE = "0644"
 
 
 def upload_runtime_files(
     agent_name: str | None = None,
     session_id: str | None = None,
     files: list[dict[str, str]] | None = None,
-    username: str | None = None,
-    groupname: str | None = None,
-    filemode: str | None = None,
+    user_id: int = DEFAULT_USER_ID,
+    group_id: int = DEFAULT_GROUP_ID,
+    file_mode: str = DEFAULT_FILE_MODE,
+    bearer_token: str | None = None,
     region: str | None = None,
 ) -> dict[str, Any]:
-    """Upload files to runtime."""
+    """Upload files to runtime.
+
+    Args:
+        agent_name: Agent name
+        session_id: Session ID
+        files: List of file specs with path and local_file
+        user_id: File owner user ID (default: 1000)
+        group_id: File owner group ID (default: 1000)
+        file_mode: File permissions in octal (default: "0644")
+        bearer_token: Optional bearer token
+        region: Region name
+
+    Returns:
+        Upload result dict
+    """
     if not files:
         raise ValueError("Files are required")
 
@@ -32,6 +50,9 @@ def upload_runtime_files(
     if agent_name is None:
         echo_error("No agent specified and no default agent configured")
         raise ValueError("Agent name is required")
+
+    if session_id is None:
+        raise ValueError("Session ID is required")
 
     data_endpoint = _get_data_endpoint(agent_name, region or "", agent_id)
 
@@ -46,7 +67,7 @@ def upload_runtime_files(
 
     echo_info(
         "Upload Files",
-        f"[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{session_id}[/dim]\n[cyan]Files:[/cyan] [yellow]{len(files)}[/yellow]",
+        f"[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{session_id}[/dim]\n[cyan]Files:[/cyan] [yellow]{len(files)}[/yellow]\n[cyan]User ID:[/cyan] [dim]{user_id}[/dim]\n[cyan]Group ID:[/cyan] [dim]{group_id}[/dim]\n[cyan]File Mode:[/cyan] [dim]{file_mode}[/dim]",
     )
 
     client = RuntimeClient(data_endpoint=data_endpoint, region_id=region or "")
@@ -54,7 +75,8 @@ def upload_runtime_files(
         agent_name=agent_name,
         session_id=session_id,
         files=files,
-        username=username,
-        groupname=groupname,
-        filemode=filemode,
+        user_id=user_id,
+        group_id=group_id,
+        file_mode=file_mode,
+        bearer_token=bearer_token,
     )

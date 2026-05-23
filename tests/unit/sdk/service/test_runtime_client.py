@@ -47,7 +47,7 @@ class TestRuntimeClientExecCommand:
 
         call_args = mock_data.call_args
         assert call_args[0][0] == "POST"
-        assert call_args[0][1] == "/runtimes/test-agent/exec"
+        assert call_args[0][1] == "/runtimes/test-agent/commands"
 
     @patch("agentarts.sdk.service.runtime_client.RuntimeClient._data")
     def test_exec_command_with_chunked_header(self, mock_data):
@@ -228,16 +228,16 @@ class TestRuntimeClientUploadFiles:
                 agent_name="test-agent",
                 session_id="session-123",
                 files=[{"path": "/home/user/test.txt", "local_file": tmp_path}],
-                username="testuser",
-                groupname="testgroup",
-                filemode="644",
+                user_id=1001,
+                group_id=1001,
+                file_mode="0755",
             )
 
             call_kwargs = mock_data.call_args.kwargs
             params = call_kwargs.get("params", {})
-            assert params.get("username") == "testuser"
-            assert params.get("groupname") == "testgroup"
-            assert params.get("filemode") == "644"
+            assert params.get("user_id") == 1001
+            assert params.get("group_id") == 1001
+            assert params.get("file_mode") == "0755"
         finally:
             Path(tmp_path).unlink()
 

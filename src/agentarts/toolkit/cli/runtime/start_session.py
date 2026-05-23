@@ -1,0 +1,46 @@
+"""Runtime start-session command"""
+
+import json
+from typing import Annotated
+
+import typer
+from rich.console import Console
+
+from agentarts.toolkit.operations.runtime.start_session import start_runtime_session
+from agentarts.toolkit.utils.common import echo_error, echo_success
+
+console = Console()
+
+
+def start_session_cmd(
+    agent: Annotated[str, typer.Option("--agent", "-a", help="Agent name [required]")] = None,
+    region: Annotated[str | None, typer.Option("--region", "-r", help="Region name")] = None,
+    bearer_token: Annotated[str | None, typer.Option("--bearer-token", "-bt", help="Bearer token for authentication")] = None,
+) -> None:
+    """
+    Start runtime session (cloud only).
+
+    Returns a session ID that can be used for subsequent operations.
+
+    Examples:
+        agentarts runtime start-session --agent myagent
+        agentarts runtime start-session -a myagent -r cn-southwest-2
+        agentarts runtime start-session -a myagent -bt <bearer-token>
+    """
+    try:
+        result = start_runtime_session(
+            agent_name=agent,
+            region=region,
+            bearer_token=bearer_token,
+        )
+
+        echo_success("Session started successfully")
+        console.print(f"  Agent: [bold]{agent}[/bold]")
+        console.print(f"  Response: [dim]{json.dumps(result, ensure_ascii=False)}[/dim]")
+
+    except ValueError as e:
+        echo_error(f"Validation error: {e}")
+        raise typer.Exit(1)
+    except Exception as e:
+        echo_error(f"Failed to start session: {e}")
+        raise typer.Exit(1)

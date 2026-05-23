@@ -33,6 +33,7 @@ from agentarts.toolkit.operations.runtime.invoke import (
     InvokeMode,
     invoke_agent,
 )
+from agentarts.toolkit.operations.runtime.start_session import start_runtime_session
 
 __all__ = [
     "DeployMode",
@@ -58,4 +59,5 @@ __all__ = [
     "save_config",
     "set_config_value",
     "set_default_agent",
+    "start_runtime_session",
 ]

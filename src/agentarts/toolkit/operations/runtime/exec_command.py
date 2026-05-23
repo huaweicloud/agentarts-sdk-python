@@ -18,9 +18,23 @@ def exec_runtime_command(
     agent_name: str | None = None,
     session_id: str | None = None,
     chunked: bool = False,
+    bearer_token: str | None = None,
     region: str | None = None,
 ) -> dict[str, Any] | Iterator[str]:
-    """Execute command in runtime."""
+    """
+    Execute command in runtime.
+
+    Args:
+        command: Command string to execute
+        agent_name: Agent name
+        session_id: Session ID
+        chunked: Use chunked streaming mode
+        bearer_token: Optional bearer token for authentication
+        region: Region name
+
+    Returns:
+        dict for normal mode, Iterator[str] for chunked mode
+    """
     if not command:
         raise ValueError("Command is required")
 
@@ -51,4 +65,5 @@ def exec_runtime_command(
         session_id=session_id,
         command=command_array,
         chunked=chunked,
+        bearer_token=bearer_token,
     )

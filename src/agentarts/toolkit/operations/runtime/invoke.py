@@ -27,9 +27,9 @@ console = Console()
 logger = logging.getLogger(__name__)
 
 
-def _validate_and_normalize_suffix(suffix: str | None) -> str | None:
+def _validate_and_normalize_custom_path(custom_path: str | None) -> str | None:
     """
-    Validate and normalize URL suffix.
+    Validate and normalize custom URL path.
 
     Rules:
     - Must not be empty string
@@ -38,40 +38,40 @@ def _validate_and_normalize_suffix(suffix: str | None) -> str | None:
     - Must not contain special characters that could cause URL injection
 
     Args:
-        suffix: Raw suffix string from CLI
+        custom_path: Raw custom path string from CLI
 
     Returns:
-        Normalized suffix string, or None if not provided
+        Normalized custom path string, or None if not provided
 
     Raises:
-        ValueError: If suffix contains invalid characters
+        ValueError: If custom path contains invalid characters
     """
-    if not suffix:
+    if not custom_path:
         return None
 
-    suffix = suffix.strip()
+    custom_path = custom_path.strip()
 
-    if not suffix:
+    if not custom_path:
         return None
 
-    if suffix.startswith("/"):
-        suffix = suffix[1:]
-    if suffix.endswith("/"):
-        suffix = suffix[:-1]
+    if custom_path.startswith("/"):
+        custom_path = custom_path[1:]
+    if custom_path.endswith("/"):
+        custom_path = custom_path[:-1]
 
-    if not suffix:
+    if not custom_path:
         return None
 
     valid_pattern = r"^[a-zA-Z0-9_\-./]+$"
-    if not re.match(valid_pattern, suffix):
-        msg = f"Invalid suffix '{suffix}'. Only alphanumeric characters, hyphens, underscores, dots, and slashes are allowed."
+    if not re.match(valid_pattern, custom_path):
+        msg = f"Invalid custom path '{custom_path}'. Only alphanumeric characters, hyphens, underscores, dots, and slashes are allowed."
         raise ValueError(msg)
 
-    if ".." in suffix:
-        msg = f"Invalid suffix '{suffix}'. Path traversal sequences ('..') are not allowed."
+    if ".." in custom_path:
+        msg = f"Invalid custom path '{custom_path}'. Path traversal sequences ('..') are not allowed."
         raise ValueError(msg)
 
-    return suffix
+    return custom_path
 
 
 def _resolve_agent_info(
@@ -269,7 +269,7 @@ def invoke_agent(
     timeout: int = 900,
     skip_ssl_verification: bool = False,
     user_id: str | None = None,
-    suffix: str | None = None,
+    custom_path: str | None = None,
 ) -> bool:
     """
     Invoke agent locally or on cloud.
@@ -286,12 +286,12 @@ def invoke_agent(
         timeout: Request timeout in seconds
         skip_ssl_verification: Skip SSL certificate verification
         user_id: Optional user ID for OAuth2 outbound credentials
-        suffix: Optional URL suffix appended to /invocations path
+        custom_path: Optional custom path appended to /invocations path
 
     Returns:
         True if successful, False otherwise
     """
-    normalized_suffix = _validate_and_normalize_suffix(suffix)
+    normalized_custom_path = _validate_and_normalize_custom_path(custom_path)
     normalized_payload = _normalize_json_payload(payload)
     try:
         json.loads(normalized_payload)
@@ -332,7 +332,7 @@ def invoke_agent(
                 endpoint=endpoint,
                 timeout=timeout,
                 user_id=user_id,
-                suffix=normalized_suffix,
+                custom_path=normalized_custom_path,
             )
         else:
             agent_name, region, agent_id, auth_type = _resolve_agent_info(agent_name, region)
@@ -378,7 +378,7 @@ def invoke_agent(
                 endpoint=endpoint,
                 timeout=timeout,
                 user_id=user_id,
-                suffix=normalized_suffix,
+                custom_path=normalized_custom_path,
             )
 
         if isinstance(result, dict):
