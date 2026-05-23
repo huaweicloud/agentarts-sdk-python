@@ -15,6 +15,9 @@ def start_runtime_session(
     agent_name: str | None = None,
     region: str | None = None,
     bearer_token: str | None = None,
+    endpoint: str | None = None,
+    skip_ssl_verification: bool = False,
+    user_id: str | None = None,
 ) -> dict[str, Any]:
     """
     Start runtime session.
@@ -23,6 +26,9 @@ def start_runtime_session(
         agent_name: Agent name
         region: Region name
         bearer_token: Optional bearer token for authentication
+        endpoint: Optional endpoint name
+        skip_ssl_verification: Skip SSL certificate verification
+        user_id: Optional user ID for OAuth2 outbound credentials
 
     Returns:
         Start result dict with session_id
@@ -33,7 +39,8 @@ def start_runtime_session(
         echo_error("No agent specified and no default agent configured")
         raise ValueError("Agent name is required")
 
-    data_endpoint = _get_data_endpoint(agent_name, region or "", agent_id)
+    verify_ssl = not skip_ssl_verification
+    data_endpoint = _get_data_endpoint(agent_name, region or "", agent_id, verify_ssl)
 
     if not data_endpoint:
         raise ValueError(f"No data endpoint for agent {agent_name}")
@@ -43,8 +50,10 @@ def start_runtime_session(
         f"[cyan]Agent:[/cyan] [white]{agent_name}[/white]",
     )
 
-    client = RuntimeClient(data_endpoint=data_endpoint, region_id=region or "")
+    client = RuntimeClient(data_endpoint=data_endpoint, region_id=region or "", verify_ssl=verify_ssl)
     return client.start_session(
         agent_name=agent_name,
         bearer_token=bearer_token,
+        endpoint=endpoint,
+        user_id=user_id,
     )

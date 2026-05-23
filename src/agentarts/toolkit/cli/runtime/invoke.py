@@ -76,6 +76,17 @@ def invoke(
 
     The payload must be a valid JSON string.
 
+    Configuration Requirement for --custom-path:
+        Using --custom-path requires url_match_type=PREFIX_MATCH to be configured on the deployed agent.
+        You can configure it in two ways:
+        1. Set url_match_type=PREFIX_MATCH in .agentarts_config.yaml and redeploy with 'agentarts deploy'
+        2. Update the configuration directly on Huawei Cloud AgentArts console
+
+    Example configuration in .agentarts_config.yaml:
+        runtime:
+          invoke_config:
+            url_match_type: PREFIX_MATCH
+
     Examples:
         agentarts invoke '{"message": "hello"}'
         agentarts invoke '{"message": "hello"}' --agent myagent

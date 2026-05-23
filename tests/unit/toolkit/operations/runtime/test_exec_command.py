@@ -146,3 +146,43 @@ agents:
 
                 call_args = mock_instance.exec_command.call_args
                 assert call_args.kwargs["agent_name"] == "custom-agent"
+
+    def test_exec_command_timeout_zero_raises_error(self):
+        """Test that timeout=0 raises ValueError."""
+        with pytest.raises(ValueError, match="Timeout must be a positive number"):
+            exec_runtime_command(command="ls", timeout=0)
+
+    def test_exec_command_timeout_negative_raises_error(self):
+        """Test that negative timeout raises ValueError."""
+        with pytest.raises(ValueError, match="Timeout must be a positive number"):
+            exec_runtime_command(command="ls", timeout=-10)
+
+    def test_exec_command_timeout_exceeds_max_raises_error(self):
+        """Test that timeout exceeding max (300) raises ValueError."""
+        with pytest.raises(ValueError, match="Timeout exceeds maximum allowed value"):
+            exec_runtime_command(command="ls", timeout=500)
+
+    def test_exec_command_timeout_valid_passes(self, tmp_path, monkeypatch):
+        """Test that valid timeout passes validation."""
+        config_content = """
+default_agent: test-agent
+agents:
+  test-agent:
+    base:
+      name: test-agent
+      region: cn-north-4
+"""
+        (tmp_path / ".agentarts_config.yaml").write_text(config_content)
+        monkeypatch.chdir(tmp_path)
+
+        with patch("agentarts.toolkit.operations.runtime.exec_command._get_data_endpoint") as mock_endpoint:
+            with patch("agentarts.toolkit.operations.runtime.exec_command.RuntimeClient") as mock_client:
+                mock_endpoint.return_value = "https://test.example.com"
+                mock_instance = MagicMock()
+                mock_client.return_value = mock_instance
+                mock_instance.exec_command.return_value = {"stdout": ""}
+
+                exec_runtime_command(command="ls", timeout=120)
+
+                call_args = mock_instance.exec_command.call_args
+                assert call_args.kwargs["timeout"] == 120

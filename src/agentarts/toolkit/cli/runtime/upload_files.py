@@ -41,8 +41,24 @@ def upload_files_cmd(
     file_mode: Annotated[str, typer.Option("--file-mode", "-m", help="File permissions in octal (default: 0644)")] = DEFAULT_FILE_MODE,
     bearer_token: Annotated[str | None, typer.Option("--bearer-token", "-bt", help="Bearer token for authentication")] = None,
     region: Annotated[str | None, typer.Option("--region", "-r", help="Region name")] = None,
+    endpoint: Annotated[str | None, typer.Option("--endpoint", "-e", help="Endpoint name")] = None,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", help="Skip SSL certificate verification")] = False,
+    oauth_user_id: Annotated[str | None, typer.Option("--oauth-user-id", help="User ID for OAuth2 outbound credentials")] = None,
+    timeout: Annotated[int, typer.Option("--timeout", help="Request timeout in seconds (default: 900)")] = 900,
 ) -> None:
     """Upload files to runtime (cloud only).
+
+    Configuration Requirement:
+        This command requires file transfer to be enabled on the deployed agent.
+        You can enable it in two ways:
+        1. Set file_transfer_config.enabled=true in .agentarts_config.yaml and redeploy with 'agentarts deploy'
+        2. Update the configuration directly on Huawei Cloud AgentArts console
+
+    Example configuration in .agentarts_config.yaml:
+        runtime:
+          invoke_config:
+            file_transfer_config:
+              enabled: true
 
     Examples:
         # Single file
@@ -121,6 +137,10 @@ def upload_files_cmd(
                 file_mode=file_mode,
                 bearer_token=bearer_token,
                 region=region,
+                endpoint=endpoint,
+                skip_ssl_verification=skip_ssl_verification,
+                oauth_user_id=oauth_user_id,
+                timeout=timeout,
             )
 
             progress.update(task, completed=True, description="[green]Upload complete")
