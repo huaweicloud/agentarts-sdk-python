@@ -17,6 +17,9 @@ def stop_session_cmd(
     session: Annotated[str, typer.Option("--session", "-s", help="Session ID [required]")] = None,
     bearer_token: Annotated[str | None, typer.Option("--bearer-token", "-bt", help="Bearer token for authentication")] = None,
     region: Annotated[str | None, typer.Option("--region", "-r", help="Region name")] = None,
+    endpoint: Annotated[str | None, typer.Option("--endpoint", "-e", help="Endpoint name")] = None,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", help="Skip SSL certificate verification")] = False,
+    user_id: Annotated[str | None, typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials")] = None,
 ) -> None:
     """
     Stop runtime session (cloud only).
@@ -24,6 +27,8 @@ def stop_session_cmd(
     Examples:
         agentarts runtime stop-session --agent myagent --session <session-id>
         agentarts runtime stop-session -a myagent -s <session-id> -bt <bearer-token>
+        agentarts runtime stop-session -a myagent -s <session-id> -e myendpoint
+        agentarts runtime stop-session -a myagent -s <session-id> --skip-ssl-verification
     """
     try:
         result = stop_runtime_session(
@@ -31,6 +36,9 @@ def stop_session_cmd(
             session_id=session,
             bearer_token=bearer_token,
             region=region,
+            endpoint=endpoint,
+            skip_ssl_verification=skip_ssl_verification,
+            user_id=user_id,
         )
 
         echo_success("Session stopped successfully")

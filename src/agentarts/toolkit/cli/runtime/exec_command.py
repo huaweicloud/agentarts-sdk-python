@@ -12,6 +12,20 @@ from agentarts.toolkit.utils.common import echo_error, echo_success
 
 console = Console()
 
+DEFAULT_TIMEOUT = 60
+MAX_TIMEOUT = 300
+
+
+def validate_timeout(timeout: int) -> int:
+    """Validate timeout parameter."""
+    if timeout <= 0:
+        echo_error(f"Timeout must be a positive number: {timeout}")
+        raise typer.Exit(1)
+    if timeout > MAX_TIMEOUT:
+        echo_error(f"Timeout exceeds maximum allowed value ({MAX_TIMEOUT}): {timeout}")
+        raise typer.Exit(1)
+    return timeout
+
 
 def exec_command_cmd(
     command: Annotated[str, typer.Argument(help="Command to execute (e.g., 'ls -la' or 'ls')")],
@@ -20,6 +34,10 @@ def exec_command_cmd(
     chunked: Annotated[bool, typer.Option("--chunked", help="Enable chunked streaming response (application/x-ndjson)")] = False,
     bearer_token: Annotated[str | None, typer.Option("--bearer-token", "-bt", help="Bearer token for authentication")] = None,
     region: Annotated[str | None, typer.Option("--region", "-r", help="Region name")] = None,
+    endpoint: Annotated[str | None, typer.Option("--endpoint", "-e", help="Endpoint name")] = None,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", help="Skip SSL certificate verification")] = False,
+    user_id: Annotated[str | None, typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials")] = None,
+    timeout: Annotated[int, typer.Option("--timeout", help=f"Request timeout in seconds (default: {DEFAULT_TIMEOUT}, max: {MAX_TIMEOUT})")] = DEFAULT_TIMEOUT,
 ) -> None:
     """
     Execute command in runtime (cloud only).
@@ -31,8 +49,12 @@ def exec_command_cmd(
         agentarts runtime exec-command "ls -la" --agent myagent --session <session-id>
         agentarts runtime exec-command "ls -la" --agent myagent --session <session-id> --chunked
         agentarts runtime exec-command "ls" --agent myagent --session <session-id> -bt <bearer-token>
+        agentarts runtime exec-command "ls" --agent myagent --session <session-id> -e myendpoint
+        agentarts runtime exec-command "ls" --agent myagent --session <session-id> --skip-ssl-verification
     """
     try:
+        validated_timeout = validate_timeout(timeout)
+
         result = exec_runtime_command(
             command=command,
             agent_name=agent,
@@ -40,6 +62,10 @@ def exec_command_cmd(
             chunked=chunked,
             bearer_token=bearer_token,
             region=region,
+            endpoint=endpoint,
+            skip_ssl_verification=skip_ssl_verification,
+            user_id=user_id,
+            timeout=validated_timeout,
         )
 
         if chunked and isinstance(result, Iterator):

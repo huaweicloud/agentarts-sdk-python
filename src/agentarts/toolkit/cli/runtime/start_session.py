@@ -16,6 +16,9 @@ def start_session_cmd(
     agent: Annotated[str, typer.Option("--agent", "-a", help="Agent name [required]")] = None,
     region: Annotated[str | None, typer.Option("--region", "-r", help="Region name")] = None,
     bearer_token: Annotated[str | None, typer.Option("--bearer-token", "-bt", help="Bearer token for authentication")] = None,
+    endpoint: Annotated[str | None, typer.Option("--endpoint", "-e", help="Endpoint name")] = None,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", help="Skip SSL certificate verification")] = False,
+    user_id: Annotated[str | None, typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials")] = None,
 ) -> None:
     """
     Start runtime session (cloud only).
@@ -26,12 +29,17 @@ def start_session_cmd(
         agentarts runtime start-session --agent myagent
         agentarts runtime start-session -a myagent -r cn-southwest-2
         agentarts runtime start-session -a myagent -bt <bearer-token>
+        agentarts runtime start-session -a myagent -e myendpoint
+        agentarts runtime start-session -a myagent --skip-ssl-verification
     """
     try:
         result = start_runtime_session(
             agent_name=agent,
             region=region,
             bearer_token=bearer_token,
+            endpoint=endpoint,
+            skip_ssl_verification=skip_ssl_verification,
+            user_id=user_id,
         )
 
         echo_success("Session started successfully")

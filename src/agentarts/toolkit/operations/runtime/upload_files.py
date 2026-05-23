@@ -26,6 +26,10 @@ def upload_runtime_files(
     file_mode: str = DEFAULT_FILE_MODE,
     bearer_token: str | None = None,
     region: str | None = None,
+    endpoint: str | None = None,
+    skip_ssl_verification: bool = False,
+    oauth_user_id: str | None = None,
+    timeout: int = 900,
 ) -> dict[str, Any]:
     """Upload files to runtime.
 
@@ -38,6 +42,10 @@ def upload_runtime_files(
         file_mode: File permissions in octal (default: "0644")
         bearer_token: Optional bearer token
         region: Region name
+        endpoint: Optional endpoint name
+        skip_ssl_verification: Skip SSL certificate verification
+        oauth_user_id: Optional user ID for OAuth2 outbound credentials
+        timeout: Request timeout in seconds
 
     Returns:
         Upload result dict
@@ -54,7 +62,8 @@ def upload_runtime_files(
     if session_id is None:
         raise ValueError("Session ID is required")
 
-    data_endpoint = _get_data_endpoint(agent_name, region or "", agent_id)
+    verify_ssl = not skip_ssl_verification
+    data_endpoint = _get_data_endpoint(agent_name, region or "", agent_id, verify_ssl)
 
     if not data_endpoint:
         raise ValueError(f"No data endpoint for agent {agent_name}")
@@ -70,7 +79,7 @@ def upload_runtime_files(
         f"[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{session_id}[/dim]\n[cyan]Files:[/cyan] [yellow]{len(files)}[/yellow]\n[cyan]User ID:[/cyan] [dim]{user_id}[/dim]\n[cyan]Group ID:[/cyan] [dim]{group_id}[/dim]\n[cyan]File Mode:[/cyan] [dim]{file_mode}[/dim]",
     )
 
-    client = RuntimeClient(data_endpoint=data_endpoint, region_id=region or "")
+    client = RuntimeClient(data_endpoint=data_endpoint, region_id=region or "", verify_ssl=verify_ssl)
     return client.upload_files(
         agent_name=agent_name,
         session_id=session_id,
@@ -79,4 +88,7 @@ def upload_runtime_files(
         group_id=group_id,
         file_mode=file_mode,
         bearer_token=bearer_token,
+        endpoint=endpoint,
+        oauth_user_id=oauth_user_id,
+        timeout=timeout,
     )

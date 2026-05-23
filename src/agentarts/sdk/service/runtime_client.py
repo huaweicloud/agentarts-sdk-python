@@ -720,6 +720,8 @@ class RuntimeClient:
         command: list[str],
         chunked: bool = False,
         bearer_token: str | None = None,
+        endpoint: str | None = None,
+        user_id: str | None = None,
         timeout: int = 900,
     ) -> dict[str, Any] | Iterator[str]:
         """
@@ -732,12 +734,14 @@ class RuntimeClient:
             chunked: If True, use chunked streaming with Command-Type: chunked header.
                      Backend responds with application/x-ndjson (each line is a JSON object).
             bearer_token: Optional bearer token for authentication.
+            endpoint: Optional endpoint name.
+            user_id: Optional user ID for OAuth2 outbound credentials.
             timeout: Request timeout in seconds.
 
         Returns:
             dict for normal mode, Iterator[str] for chunked mode (ndjson lines).
         """
-        from agentarts.sdk.runtime.model import SESSION_HEADER
+        from agentarts.sdk.runtime.model import SESSION_HEADER, USER_ID_HEADER
 
         path = f"/runtimes/{agent_name}/commands"
         headers: dict[str, str] = {
@@ -748,12 +752,19 @@ class RuntimeClient:
             headers["Command-Type"] = "chunked"
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
+        if user_id:
+            headers[USER_ID_HEADER] = user_id
+
+        params: dict[str, str] = {}
+        if endpoint:
+            params["endpoint"] = endpoint
 
         payload = {"command": command}
         result = self._data(
             "POST",
             path,
             json=payload,
+            params=params if params else None,
             headers=headers,
             timeout=timeout,
         )
@@ -792,6 +803,8 @@ class RuntimeClient:
         group_id: int = 1000,
         file_mode: str = "0644",
         bearer_token: str | None = None,
+        endpoint: str | None = None,
+        oauth_user_id: str | None = None,
         timeout: int = 900,
     ) -> dict[str, Any]:
         """
@@ -809,12 +822,14 @@ class RuntimeClient:
             group_id: File owner group ID (default: 1000).
             file_mode: File permissions mode in octal (default: "0644").
             bearer_token: Optional bearer token.
+            endpoint: Optional endpoint name.
+            oauth_user_id: Optional user ID for OAuth2 outbound credentials.
             timeout: Request timeout in seconds.
 
         Returns:
             Upload result dict.
         """
-        from agentarts.sdk.runtime.model import SESSION_HEADER
+        from agentarts.sdk.runtime.model import SESSION_HEADER, USER_ID_HEADER
 
         if not files:
             raise ValueError("Files list cannot be empty")
@@ -832,13 +847,15 @@ class RuntimeClient:
             else:
                 content = None
 
-            endpoint = f"/runtimes/{agent_name}/upload-files"
+            api_endpoint = f"/runtimes/{agent_name}/upload-files"
             headers: dict[str, str] = {
                 SESSION_HEADER: session_id,
                 "Content-Type": "application/octet-stream",
             }
             if bearer_token:
                 headers["Authorization"] = f"Bearer {bearer_token}"
+            if oauth_user_id:
+                headers[USER_ID_HEADER] = oauth_user_id
 
             params: dict[str, Any] = {
                 "path": path,
@@ -846,12 +863,14 @@ class RuntimeClient:
                 "group_id": group_id,
                 "file_mode": file_mode,
             }
+            if endpoint:
+                params["endpoint"] = endpoint
 
             if local_file:
                 with open(local_file, "rb") as f:
                     result = self._data(
                         "POST",
-                        endpoint,
+                        api_endpoint,
                         data=f,
                         headers=headers,
                         params=params,
@@ -862,23 +881,27 @@ class RuntimeClient:
                     content = content.encode("utf-8")
                 result = self._data(
                     "POST",
-                    endpoint,
+                    api_endpoint,
                     data=content,
                     headers=headers,
                     params=params,
                     timeout=timeout,
                 )
         else:
-            endpoint = f"/runtimes/{agent_name}/upload-files"
+            api_endpoint = f"/runtimes/{agent_name}/upload-files"
             headers: dict[str, str] = {SESSION_HEADER: session_id}
             if bearer_token:
                 headers["Authorization"] = f"Bearer {bearer_token}"
+            if oauth_user_id:
+                headers[USER_ID_HEADER] = oauth_user_id
 
             params: dict[str, Any] = {
                 "user_id": user_id,
                 "group_id": group_id,
                 "file_mode": file_mode,
             }
+            if endpoint:
+                params["endpoint"] = endpoint
 
             multipart_files: list[tuple[str, tuple[str, Any, str]]] = []
             with ExitStack() as stack:
@@ -902,7 +925,7 @@ class RuntimeClient:
 
                 result = self._data(
                     "POST",
-                    endpoint,
+                    api_endpoint,
                     files=multipart_files,
                     headers=headers,
                     params=params,
@@ -927,6 +950,8 @@ class RuntimeClient:
         path: str,
         recursive: bool = False,
         bearer_token: str | None = None,
+        endpoint: str | None = None,
+        user_id: str | None = None,
         timeout: int = 900,
     ) -> StreamDownloadResult:
         """
@@ -938,23 +963,29 @@ class RuntimeClient:
             path: Remote file/directory path.
             recursive: If False, download single file. If True, download directory as tar.
             bearer_token: Optional bearer token.
+            endpoint: Optional endpoint name.
+            user_id: Optional user ID for OAuth2 outbound credentials.
             timeout: Request timeout in seconds.
 
         Returns:
             StreamDownloadResult - use iter_bytes() to consume content.
         """
-        from agentarts.sdk.runtime.model import SESSION_HEADER
+        from agentarts.sdk.runtime.model import SESSION_HEADER, USER_ID_HEADER
 
-        endpoint = f"/runtimes/{agent_name}/download-files"
+        api_endpoint = f"/runtimes/{agent_name}/download-files"
         headers: dict[str, str] = {SESSION_HEADER: session_id}
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
+        if user_id:
+            headers[USER_ID_HEADER] = user_id
 
         params: dict[str, str | bool] = {"path": path, "recursive": str(recursive).lower()}
+        if endpoint:
+            params["endpoint"] = endpoint
 
         result = self._request_stream(
             "GET",
-            endpoint,
+            api_endpoint,
             accept_stream=True,
             headers=headers,
             params=params,
@@ -1055,6 +1086,8 @@ class RuntimeClient:
         agent_name: str,
         session_id: str,
         bearer_token: str | None = None,
+        endpoint: str | None = None,
+        user_id: str | None = None,
         timeout: int = 30,
     ) -> dict[str, Any]:
         """
@@ -1064,19 +1097,27 @@ class RuntimeClient:
             agent_name: The agent name.
             session_id: Session identifier.
             bearer_token: Optional bearer token.
+            endpoint: Optional endpoint name.
+            user_id: Optional user ID for OAuth2 outbound credentials.
             timeout: Request timeout in seconds.
 
         Returns:
             Stop result dict.
         """
-        from agentarts.sdk.runtime.model import SESSION_HEADER
+        from agentarts.sdk.runtime.model import SESSION_HEADER, USER_ID_HEADER
 
         path = f"/runtimes/{agent_name}/sessions/stop"
         headers: dict[str, str] = {SESSION_HEADER: session_id}
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
+        if user_id:
+            headers[USER_ID_HEADER] = user_id
 
-        result = self._data("PUT", path, headers=headers, timeout=timeout)
+        params: dict[str, str] = {}
+        if endpoint:
+            params["endpoint"] = endpoint
+
+        result = self._data("PUT", path, headers=headers, params=params if params else None, timeout=timeout)
 
         if not result.success:
             log.error(
@@ -1093,6 +1134,8 @@ class RuntimeClient:
         self,
         agent_name: str,
         bearer_token: str | None = None,
+        endpoint: str | None = None,
+        user_id: str | None = None,
         timeout: int = 30,
     ) -> dict[str, Any]:
         """
@@ -1101,17 +1144,27 @@ class RuntimeClient:
         Args:
             agent_name: The agent name.
             bearer_token: Optional bearer token.
+            endpoint: Optional endpoint name.
+            user_id: Optional user ID for OAuth2 outbound credentials.
             timeout: Request timeout in seconds.
 
         Returns:
             Start result dict with session_id.
         """
+        from agentarts.sdk.runtime.model import USER_ID_HEADER
+
         path = f"/runtimes/{agent_name}/sessions-start"
         headers: dict[str, str] = {}
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
+        if user_id:
+            headers[USER_ID_HEADER] = user_id
 
-        result = self._data("POST", path, headers=headers, timeout=timeout)
+        params: dict[str, str] = {}
+        if endpoint:
+            params["endpoint"] = endpoint
+
+        result = self._data("POST", path, headers=headers, params=params if params else None, timeout=timeout)
 
         if not result.success:
             log.error(

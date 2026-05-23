@@ -26,12 +26,28 @@ def download_files_cmd(
     session: Annotated[str, typer.Option("--session", "-s", help="Session ID [required]")] = None,
     path: Annotated[str, typer.Option("--path", "-p", help="Remote file/directory path [required]")] = "",
     output: Annotated[str | None, typer.Option("--output", "-o", help="Local output path")] = None,
-    recursive: Annotated[bool, typer.Option("--recursive", "-r", help="Download directory as tar archive")] = False,
+    recursive: Annotated[bool, typer.Option("--recursive", help="Download directory as tar archive")] = False,
     bearer_token: Annotated[str | None, typer.Option("--bearer-token", "-bt", help="Bearer token for authentication")] = None,
-    region: Annotated[str | None, typer.Option("--region", "-r", help="Region name")] = None,
+    region: Annotated[str | None, typer.Option("--region", help="Region name")] = None,
+    endpoint: Annotated[str | None, typer.Option("--endpoint", "-e", help="Endpoint name")] = None,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", help="Skip SSL certificate verification")] = False,
+    user_id: Annotated[str | None, typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials")] = None,
+    timeout: Annotated[int, typer.Option("--timeout", help="Request timeout in seconds (default: 900)")] = 900,
 ) -> None:
     """
     Download files from runtime (cloud only).
+
+    Configuration Requirement:
+        This command requires file transfer to be enabled on the deployed agent.
+        You can enable it in two ways:
+        1. Set file_transfer_config.enabled=true in .agentarts_config.yaml and redeploy with 'agentarts deploy'
+        2. Update the configuration directly on Huawei Cloud AgentArts console
+
+    Example configuration in .agentarts_config.yaml:
+        runtime:
+          invoke_config:
+            file_transfer_config:
+              enabled: true
 
     Examples:
         # Download single file
@@ -77,6 +93,10 @@ def download_files_cmd(
                 recursive=recursive,
                 bearer_token=bearer_token,
                 region=region,
+                endpoint=endpoint,
+                skip_ssl_verification=skip_ssl_verification,
+                user_id=user_id,
+                timeout=timeout,
             )
 
             progress.update(task, completed=True, description="[green]Download complete[/green]")

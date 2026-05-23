@@ -37,6 +37,8 @@ class TestStartRuntimeSession:
                     mock_client.start_session.assert_called_once_with(
                         agent_name="myagent",
                         bearer_token=None,
+                        endpoint=None,
+                        user_id=None,
                     )
                     assert result == mock_response
 
@@ -70,6 +72,8 @@ class TestStartRuntimeSession:
                     mock_client.start_session.assert_called_once_with(
                         agent_name="myagent",
                         bearer_token="test-token",
+                        endpoint=None,
+                        user_id=None,
                     )
 
     def test_start_session_no_agent_raises(self):
@@ -230,6 +234,9 @@ class TestStartSessionCli:
                         agent_name="myagent",
                         region=None,
                         bearer_token=None,
+                        endpoint=None,
+                        skip_ssl_verification=False,
+                        user_id=None,
                     )
                     assert mock_console.print.called
 
@@ -254,4 +261,7 @@ class TestStartSessionCli:
                         agent_name="myagent",
                         region=None,
                         bearer_token="test-token",
+                        endpoint=None,
+                        skip_ssl_verification=False,
+                        user_id=None,
                     )

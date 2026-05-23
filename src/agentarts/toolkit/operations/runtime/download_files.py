@@ -25,6 +25,10 @@ def download_runtime_files(
     recursive: bool = False,
     bearer_token: str | None = None,
     region: str | None = None,
+    endpoint: str | None = None,
+    skip_ssl_verification: bool = False,
+    user_id: str | None = None,
+    timeout: int = 900,
 ) -> dict[str, Any]:
     """
     Download files from runtime.
@@ -37,6 +41,10 @@ def download_runtime_files(
         recursive: Download directory as tar archive
         bearer_token: Optional bearer token
         region: Region name
+        endpoint: Optional endpoint name
+        skip_ssl_verification: Skip SSL certificate verification
+        user_id: Optional user ID for OAuth2 outbound credentials
+        timeout: Request timeout in seconds
 
     Returns:
         Download result dict with saved_path, size, content_type
@@ -53,7 +61,8 @@ def download_runtime_files(
         echo_error("No agent specified and no default agent configured")
         raise ValueError("Agent name is required")
 
-    data_endpoint = _get_data_endpoint(agent_name, region or "", agent_id)
+    verify_ssl = not skip_ssl_verification
+    data_endpoint = _get_data_endpoint(agent_name, region or "", agent_id, verify_ssl)
 
     if not data_endpoint:
         raise ValueError(f"No data endpoint for agent {agent_name}")
@@ -67,13 +76,16 @@ def download_runtime_files(
         f"[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{session_id}[/dim]\n[cyan]Path:[/cyan] [yellow]{path}[/yellow]",
     )
 
-    client = RuntimeClient(data_endpoint=data_endpoint, region_id=region or "")
+    client = RuntimeClient(data_endpoint=data_endpoint, region_id=region or "", verify_ssl=verify_ssl)
     result = client.download_files(
         agent_name=agent_name,
         session_id=session_id,
         path=path,
         recursive=recursive,
         bearer_token=bearer_token,
+        endpoint=endpoint,
+        user_id=user_id,
+        timeout=timeout,
     )
 
     if not result.success:
