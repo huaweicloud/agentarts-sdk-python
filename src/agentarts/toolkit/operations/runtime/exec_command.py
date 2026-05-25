@@ -6,6 +6,7 @@ from typing import Any
 
 from rich.console import Console
 
+from agentarts.sdk.service.http_client import SignMode
 from agentarts.sdk.service.runtime_client import RuntimeClient
 from agentarts.toolkit.operations.runtime.invoke import _get_data_endpoint, _resolve_agent_info
 from agentarts.toolkit.utils.common import echo_error, echo_info
@@ -76,7 +77,19 @@ def exec_runtime_command(
         f"[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{session_id}[/dim]\n[cyan]Mode:[/cyan] [yellow]{mode_str}[/yellow]\n[cyan]Command:[/cyan] [dim]{command_array}[/dim]",
     )
 
-    client = RuntimeClient(data_endpoint=data_endpoint, region_id=region or "", verify_ssl=verify_ssl)
+    sign_mode = SignMode.SDK_HMAC_SHA256
+    if auth_type and auth_type.upper() == "IAM":
+        sign_mode = SignMode.V11_HMAC_SHA256
+
+    client = RuntimeClient(
+        data_endpoint=data_endpoint,
+        region_id=region or "",
+        verify_ssl=verify_ssl,
+        sign_mode=sign_mode,
+    )
+    if bearer_token:
+        client.set_auth_token(bearer_token)
+
     return client.exec_command(
         agent_name=agent_name,
         session_id=session_id,

@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from agentarts.sdk.service.runtime_client import StreamDownloadResult
-from agentarts.toolkit.operations.runtime.download_files import DEFAULT_PATH, download_runtime_files
+from agentarts.toolkit.operations.runtime.download_files import download_runtime_files
 
 
 class TestDownloadRuntimeFiles:
@@ -64,7 +64,7 @@ agents:
                 assert result["saved_path"] == output_path
                 call_args = mock_instance.download_files.call_args
                 path_arg = call_args.kwargs["path"]
-                assert path_arg.startswith(DEFAULT_PATH)
+                assert path_arg == "test.txt"
 
     def test_download_files_preserves_full_path(self, tmp_path, monkeypatch):
         config_content = """
