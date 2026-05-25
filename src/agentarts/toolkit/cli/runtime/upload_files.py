@@ -114,7 +114,14 @@ def upload_files_cmd(
 
         upload_mode = "streaming (octet-stream)" if len(file_list) == 1 else "multipart"
         console.print(f"[dim]Upload mode: {upload_mode}[/dim]")
-        console.print(f"[dim]Total size: {total_size / 1024:.1f} KB[/dim]")
+        
+        if total_size >= 1024 * 1024:
+            size_str = f"{total_size / 1024 / 1024:.1f} MB"
+        elif total_size >= 1024:
+            size_str = f"{total_size / 1024:.1f} KB"
+        else:
+            size_str = f"{total_size} bytes"
+        console.print(f"[dim]Total size: {size_str}[/dim]")
 
         with Progress(
             SpinnerColumn(),
