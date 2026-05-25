@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agentarts.toolkit.operations.runtime.upload_files import DEFAULT_PATH, upload_runtime_files
+from agentarts.toolkit.operations.runtime.upload_files import upload_runtime_files
 
 
 class TestUploadRuntimeFiles:
@@ -72,7 +72,7 @@ agents:
                     assert result["status"] == "uploaded"
                     call_args = mock_instance.upload_files.call_args
                     files_arg = call_args.kwargs["files"]
-                    assert files_arg[0]["path"].startswith(DEFAULT_PATH)
+                    assert files_arg[0]["path"] == "test.txt"
         finally:
             Path(tmp_path_file).unlink()
 
