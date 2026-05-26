@@ -162,8 +162,6 @@ def create_config_file(
     detected_platform = detect_platform()
     detected_arch = detect_arch()
 
-    artifact_url = f"swr.{actual_region}.myhuaweicloud.com/{actual_swr_org}/{actual_swr_repo}:latest"
-
     env_vars = get_template_env_vars(template)
 
     env_vars_yaml = ""
@@ -228,7 +226,7 @@ agents:
           enabled: false
 
       artifact_source:
-        url: {artifact_url}
+        url: null  # Auto-generated during deploy from swr_config
         commands: []
 
       environment_variables:{env_vars_yaml}
