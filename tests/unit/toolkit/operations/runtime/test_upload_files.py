@@ -181,14 +181,14 @@ agents:
                     upload_runtime_files(
                         files=[{"path": "/home/user/test.txt", "local_file": tmp_path_file}],
                         session_id="session-123",
-                        user_id=1001,
-                        group_id=1001,
+                        file_user_id=1001,
+                        file_group_id=1001,
                         file_mode="0755",
                     )
 
                     call_args = mock_instance.upload_files.call_args
-                    assert call_args.kwargs["user_id"] == 1001
-                    assert call_args.kwargs["group_id"] == 1001
+                    assert call_args.kwargs["file_user_id"] == 1001
+                    assert call_args.kwargs["file_group_id"] == 1001
                     assert call_args.kwargs["file_mode"] == "0755"
         finally:
             Path(tmp_path_file).unlink()
@@ -223,8 +223,8 @@ agents:
                     )
 
                     call_args = mock_instance.upload_files.call_args
-                    assert call_args.kwargs["user_id"] == 1000
-                    assert call_args.kwargs["group_id"] == 1000
+                    assert call_args.kwargs["file_user_id"] == 1000
+                    assert call_args.kwargs["file_group_id"] == 1000
                     assert call_args.kwargs["file_mode"] == "0644"
         finally:
             Path(tmp_path_file).unlink()
@@ -322,7 +322,7 @@ class TestUploadFilesClient:
                 assert "/runtimes/myagent/upload-files" in call_args[0][1]
 
     def test_upload_files_includes_user_group_params(self):
-        """Test that user_id and group_id are included in params."""
+        """Test that file_user_id and file_group_id are included in params."""
         from agentarts.sdk.service.runtime_client import RuntimeClient
 
         mock_data_client = MagicMock()
@@ -340,8 +340,8 @@ class TestUploadFilesClient:
                 agent_name="myagent",
                 session_id="session-123",
                 files=[{"path": "/test.txt", "content": b"test"}],
-                user_id=1001,
-                group_id=1002,
+                file_user_id=1001,
+                file_group_id=1002,
                 file_mode="0755",
             )
 

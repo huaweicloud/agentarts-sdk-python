@@ -36,14 +36,14 @@ def upload_files_cmd(
         list[str] | None,
         typer.Option("--files", "-f", help="Local file to upload. Use '/remote/path@local_file' format to specify remote path. Can be specified multiple times for multiple files [required]"),
     ] = None,
-    user_id: Annotated[int, typer.Option("--user-id", "-u", help="File owner user ID (default: 1000)")] = DEFAULT_USER_ID,
-    group_id: Annotated[int, typer.Option("--group-id", "-g", help="File owner group ID (default: 1000)")] = DEFAULT_GROUP_ID,
+    file_user_id: Annotated[int, typer.Option("--file-user-id", help="File owner user ID (default: 1000)")] = DEFAULT_USER_ID,
+    file_group_id: Annotated[int, typer.Option("--file-group-id", help="File owner group ID (default: 1000)")] = DEFAULT_GROUP_ID,
     file_mode: Annotated[str, typer.Option("--file-mode", "-m", help="File permissions in octal (default: 0644)")] = DEFAULT_FILE_MODE,
     bearer_token: Annotated[str | None, typer.Option("--bearer-token", "-bt", help="Bearer token for authentication")] = None,
     region: Annotated[str | None, typer.Option("--region", "-r", help="Region name")] = None,
     endpoint: Annotated[str | None, typer.Option("--endpoint", "-e", help="Endpoint name")] = None,
     skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", help="Skip SSL certificate verification")] = False,
-    oauth_user_id: Annotated[str | None, typer.Option("--oauth-user-id", help="User ID for OAuth2 outbound credentials")] = None,
+    user_id: Annotated[str | None, typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials (used in OAuth authentication flow)")] = None,
     timeout: Annotated[int, typer.Option("--timeout", help="Request timeout in seconds (default: 900)")] = 900,
 ) -> None:
     """Upload files to runtime (cloud only).
@@ -73,8 +73,11 @@ def upload_files_cmd(
         # With custom permissions
         agentarts runtime upload-files --agent myagent --session <session-id> -f script.sh --file-mode 0755
 
-        # With custom owner
-        agentarts runtime upload-files --agent myagent --session <session-id> -f data.txt --user-id 1001 --group-id 1001
+        # With custom file owner
+        agentarts runtime upload-files --agent myagent --session <session-id> -f data.txt --file-user-id 1001 --file-group-id 1001
+
+        # With OAuth user ID
+        agentarts runtime upload-files --agent myagent --session <session-id> -f data.txt --user-id oauth-user-123
     """
     try:
         if not files:
@@ -139,22 +142,22 @@ def upload_files_cmd(
                 agent_name=agent,
                 session_id=session,
                 files=file_list,
-                user_id=user_id,
-                group_id=group_id,
+                file_user_id=file_user_id,
+                file_group_id=file_group_id,
                 file_mode=file_mode,
                 bearer_token=bearer_token,
                 region=region,
                 endpoint=endpoint,
                 skip_ssl_verification=skip_ssl_verification,
-                oauth_user_id=oauth_user_id,
+                user_id=user_id,
                 timeout=timeout,
             )
 
             progress.update(task, completed=True, description="[green]Upload complete")
 
         echo_success(f"Uploaded {len(file_list)} files successfully")
-        console.print(f"[cyan]User ID:[/cyan] [dim]{user_id}[/dim]")
-        console.print(f"[cyan]Group ID:[/cyan] [dim]{group_id}[/dim]")
+        console.print(f"[cyan]File User ID:[/cyan] [dim]{file_user_id}[/dim]")
+        console.print(f"[cyan]File Group ID:[/cyan] [dim]{file_group_id}[/dim]")
         console.print(f"[cyan]File Mode:[/cyan] [dim]{file_mode}[/dim]")
         
         for file_spec in file_list:
