@@ -66,11 +66,7 @@ class CodeInterpreter:
 
         # Control plane client for managing code interpreters
         self.control_plane_client = ControlToolsHttpClient(
-<<<<<<< HEAD
-            region_name=region, endpoint_url=get_control_plane_endpoint(), verify_ssl=verify_ssl
-=======
-            region_name=region, endpoint_url=get_control_plane_endpoint(region=region)
->>>>>>> cdf36d0 (feature: add async memoryclient)
+            region_name=region, endpoint_url=get_control_plane_endpoint(region=region), verify_ssl=verify_ssl
         )
 
         # Data plane client for managing code interpreter sessions
@@ -177,9 +173,9 @@ class CodeInterpreter:
             >>> code_interpreter_id = code_interpreter["id"]
         """
         logging.info(f"Creating code interpreter with name: {name}")
-        pattern = r"[a-z][a-z0-9-]{0,46}[a-z0-9]$"
+        pattern = r"[a-z][a-z0-9-]{0,38}[a-z0-9]$"
         if not bool(re.match(pattern, name)):
-            msg = "Name must match the pattern, please check your code_interpreter_name."
+            msg = "Name must start with lowercase letter, end with lowercase letter or digit, contain only lowercase letters, digits, and hyphens, and be 2-40 characters long."
             raise ValueError(msg)
         if auth_type == "API_KEY" and api_key_name is None:
             msg = "API_KEY auth_type requires api_key_name."

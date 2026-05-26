@@ -1102,3 +1102,118 @@ class TestCodeInterpreterClient(unittest.TestCase):
             },
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
+
+
+class TestCodeInterpreterNameValidation:
+    """Tests for code interpreter name validation."""
+
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_AK")
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_SK")
+    @patch("agentarts.sdk.utils.constant.get_control_plane_endpoint")
+    @patch("agentarts.sdk.utils.constant.get_code_interpreter_data_plane_endpoint")
+    @patch.object(ControlToolsHttpClient, "create_code_interpreter")
+    def test_valid_name_min_length(self, mock_create, mock_data, mock_control, mock_sk, mock_ak):
+        """Test valid name with minimum length (2 chars)."""
+        mock_control.return_value = "https://control-plane.example.com"
+        mock_data.return_value = "https://data-plane.example.com"
+        mock_ak.return_value = "test_ak"
+        mock_sk.return_value = "test-sk"
+        mock_create.return_value = {"name": "ab"}
+
+        client = CodeInterpreter(region="test-region")
+        result = client.create_code_interpreter(name="ab", auth_type="IAM")
+        assert result["name"] == "ab"
+
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_AK")
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_SK")
+    @patch("agentarts.sdk.utils.constant.get_control_plane_endpoint")
+    @patch("agentarts.sdk.utils.constant.get_code_interpreter_data_plane_endpoint")
+    @patch.object(ControlToolsHttpClient, "create_code_interpreter")
+    def test_valid_name_max_length(self, mock_create, mock_data, mock_control, mock_sk, mock_ak):
+        """Test valid name with maximum length (40 chars)."""
+        mock_control.return_value = "https://control-plane.example.com"
+        mock_data.return_value = "https://data-plane.example.com"
+        mock_ak.return_value = "test_ak"
+        mock_sk.return_value = "test-sk"
+        max_name = "a" + "b" * 38 + "c"  # 40 chars
+        mock_create.return_value = {"name": max_name}
+
+        client = CodeInterpreter(region="test-region")
+        result = client.create_code_interpreter(name=max_name, auth_type="IAM")
+        assert result["name"] == max_name
+
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_AK")
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_SK")
+    @patch("agentarts.sdk.utils.constant.get_control_plane_endpoint")
+    @patch("agentarts.sdk.utils.constant.get_code_interpreter_data_plane_endpoint")
+    def test_invalid_name_too_short(self, mock_data, mock_control, mock_sk, mock_ak):
+        """Test invalid name with length < 2."""
+        mock_control.return_value = "https://control-plane.example.com"
+        mock_data.return_value = "https://data-plane.example.com"
+        mock_ak.return_value = "test_ak"
+        mock_sk.return_value = "test-sk"
+
+        client = CodeInterpreter(region="test-region")
+        with pytest.raises(ValueError, match="2-40 characters"):
+            client.create_code_interpreter(name="a", auth_type="IAM")
+
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_AK")
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_SK")
+    @patch("agentarts.sdk.utils.constant.get_control_plane_endpoint")
+    @patch("agentarts.sdk.utils.constant.get_code_interpreter_data_plane_endpoint")
+    def test_invalid_name_too_long(self, mock_data, mock_control, mock_sk, mock_ak):
+        """Test invalid name with length > 40."""
+        mock_control.return_value = "https://control-plane.example.com"
+        mock_data.return_value = "https://data-plane.example.com"
+        mock_ak.return_value = "test_ak"
+        mock_sk.return_value = "test-sk"
+        long_name = "a" + "b" * 40 + "c"  # 42 chars
+
+        client = CodeInterpreter(region="test-region")
+        with pytest.raises(ValueError, match="2-40 characters"):
+            client.create_code_interpreter(name=long_name, auth_type="IAM")
+
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_AK")
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_SK")
+    @patch("agentarts.sdk.utils.constant.get_control_plane_endpoint")
+    @patch("agentarts.sdk.utils.constant.get_code_interpreter_data_plane_endpoint")
+    def test_invalid_name_starts_with_digit(self, mock_data, mock_control, mock_sk, mock_ak):
+        """Test invalid name starting with digit."""
+        mock_control.return_value = "https://control-plane.example.com"
+        mock_data.return_value = "https://data-plane.example.com"
+        mock_ak.return_value = "test_ak"
+        mock_sk.return_value = "test-sk"
+
+        client = CodeInterpreter(region="test-region")
+        with pytest.raises(ValueError, match="start with lowercase letter"):
+            client.create_code_interpreter(name="1test-code", auth_type="IAM")
+
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_AK")
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_SK")
+    @patch("agentarts.sdk.utils.constant.get_control_plane_endpoint")
+    @patch("agentarts.sdk.utils.constant.get_code_interpreter_data_plane_endpoint")
+    def test_invalid_name_ends_with_hyphen(self, mock_data, mock_control, mock_sk, mock_ak):
+        """Test invalid name ending with hyphen."""
+        mock_control.return_value = "https://control-plane.example.com"
+        mock_data.return_value = "https://data-plane.example.com"
+        mock_ak.return_value = "test_ak"
+        mock_sk.return_value = "test-sk"
+
+        client = CodeInterpreter(region="test-region")
+        with pytest.raises(ValueError, match="end with lowercase letter or digit"):
+            client.create_code_interpreter(name="test-code-", auth_type="IAM")
+
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_AK")
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_SK")
+    @patch("agentarts.sdk.utils.constant.get_control_plane_endpoint")
+    @patch("agentarts.sdk.utils.constant.get_code_interpreter_data_plane_endpoint")
+    def test_invalid_name_uppercase(self, mock_data, mock_control, mock_sk, mock_ak):
+        """Test invalid name with uppercase."""
+        mock_control.return_value = "https://control-plane.example.com"
+        mock_data.return_value = "https://data-plane.example.com"
+        mock_ak.return_value = "test_ak"
+        mock_sk.return_value = "test-sk"
+
+        client = CodeInterpreter(region="test-region")
+        with pytest.raises(ValueError, match="lowercase"):
+            client.create_code_interpreter(name="TestCode", auth_type="IAM")
