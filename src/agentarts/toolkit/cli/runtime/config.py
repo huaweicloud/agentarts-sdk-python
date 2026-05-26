@@ -11,6 +11,7 @@ from agentarts.toolkit.utils.common import (
     echo_error,
     echo_info,
     echo_success,
+    validate_agent_name,
 )
 from agentarts.toolkit.utils.swr_org import generate_swr_org_name
 
@@ -77,6 +78,11 @@ def main(
 
     if not agent_name:
         echo_error("Agent name is required")
+        raise typer.Exit(1)
+
+    is_valid, error_msg = validate_agent_name(agent_name)
+    if not is_valid:
+        echo_error(error_msg)
         raise typer.Exit(1)
 
     agent_entrypoint = entrypoint
@@ -214,7 +220,16 @@ def set_default(
     Examples:
         agentarts config set-default my-agent
     """
-    success = config_op.set_default_agent(name)
+    name_lower = name.lower()
+    if name_lower != name:
+        console.print(f"[yellow]Agent name converted to lowercase: [cyan]{name_lower}[/cyan][/yellow]")
+
+    is_valid, error_msg = validate_agent_name(name_lower)
+    if not is_valid:
+        echo_error(error_msg)
+        raise typer.Exit(1)
+
+    success = config_op.set_default_agent(name_lower)
     if not success:
         raise typer.Exit(1)
 
@@ -255,6 +270,17 @@ def set(
         agentarts config set base.region cn-southwest-2
         agentarts config set base.name new-name --agent old-name
     """
+    if key == "base.name":
+        value_lower = value.lower()
+        if value_lower != value:
+            console.print(f"[yellow]Agent name converted to lowercase: [cyan]{value_lower}[/cyan][/yellow]")
+
+        is_valid, error_msg = validate_agent_name(value_lower)
+        if not is_valid:
+            echo_error(error_msg)
+            raise typer.Exit(1)
+        value = value_lower
+
     success = config_op.set_config_value(key, value, agent)
     if not success:
         raise typer.Exit(1)

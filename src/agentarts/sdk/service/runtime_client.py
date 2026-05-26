@@ -799,12 +799,12 @@ class RuntimeClient:
         agent_name: str,
         session_id: str,
         files: list[dict[str, Any]],
-        user_id: int = 1000,
-        group_id: int = 1000,
+        file_user_id: int = 1000,
+        file_group_id: int = 1000,
         file_mode: str = "0644",
         bearer_token: str | None = None,
         endpoint: str | None = None,
-        oauth_user_id: str | None = None,
+        user_id: str | None = None,
         timeout: int = 900,
     ) -> dict[str, Any]:
         """
@@ -818,12 +818,12 @@ class RuntimeClient:
             agent_name: The agent name.
             session_id: Session identifier.
             files: List of file specs, each with "path" (remote path) and "local_file" (local file path).
-            user_id: File owner user ID (default: 1000).
-            group_id: File owner group ID (default: 1000).
+            file_user_id: File owner user ID (default: 1000).
+            file_group_id: File owner group ID (default: 1000).
             file_mode: File permissions mode in octal (default: "0644").
             bearer_token: Optional bearer token.
             endpoint: Optional endpoint name.
-            oauth_user_id: Optional user ID for OAuth2 outbound credentials.
+            user_id: Optional user ID for OAuth2 outbound credentials.
             timeout: Request timeout in seconds.
 
         Returns:
@@ -854,13 +854,13 @@ class RuntimeClient:
             }
             if bearer_token:
                 headers["Authorization"] = f"Bearer {bearer_token}"
-            if oauth_user_id:
-                headers[USER_ID_HEADER] = oauth_user_id
+            if user_id:
+                headers[USER_ID_HEADER] = user_id
 
             params: dict[str, Any] = {
                 "path": path,
-                "user_id": user_id,
-                "group_id": group_id,
+                "user_id": file_user_id,
+                "group_id": file_group_id,
                 "file_mode": file_mode,
             }
             if endpoint:
@@ -892,12 +892,12 @@ class RuntimeClient:
             headers: dict[str, str] = {SESSION_HEADER: session_id}
             if bearer_token:
                 headers["Authorization"] = f"Bearer {bearer_token}"
-            if oauth_user_id:
-                headers[USER_ID_HEADER] = oauth_user_id
+            if user_id:
+                headers[USER_ID_HEADER] = user_id
 
             params: dict[str, Any] = {
-                "user_id": user_id,
-                "group_id": group_id,
+                "user_id": file_user_id,
+                "group_id": file_group_id,
                 "file_mode": file_mode,
             }
             if endpoint:
@@ -1106,7 +1106,7 @@ class RuntimeClient:
         """
         from agentarts.sdk.runtime.model import SESSION_HEADER, USER_ID_HEADER
 
-        path = f"/runtimes/{agent_name}/sessions/stop"
+        path = f"/runtimes/{agent_name}/sessions-stop"
         headers: dict[str, str] = {SESSION_HEADER: session_id}
         if bearer_token:
             headers["Authorization"] = f"Bearer {bearer_token}"
@@ -1117,7 +1117,7 @@ class RuntimeClient:
         if endpoint:
             params["endpoint"] = endpoint
 
-        result = self._data("PUT", path, headers=headers, params=params if params else None, timeout=timeout)
+        result = self._data("POST", path, headers=headers, params=params if params else None, timeout=timeout)
 
         if not result.success:
             log.error(
