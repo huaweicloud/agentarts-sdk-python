@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.prompt import Prompt
 
 from agentarts.toolkit.operations.runtime import init as init_op
+from agentarts.toolkit.utils.common import echo_error, validate_agent_name
 from agentarts.toolkit.utils.swr_org import generate_default_agent_name
 
 console = Console()
@@ -117,6 +118,11 @@ def init(
     name = name.lower()
     if name != original_name:
         console.print(f"[yellow]Agent name converted to lowercase: [cyan]{name}[/cyan] (only lowercase letters, digits and hyphens are allowed)[/yellow]")
+
+    is_valid, error_msg = validate_agent_name(name)
+    if not is_valid:
+        echo_error(error_msg)
+        raise typer.Exit(1)
 
     if template is None:
         template = prompt_for_template()
