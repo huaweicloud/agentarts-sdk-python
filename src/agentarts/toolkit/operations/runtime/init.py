@@ -192,6 +192,7 @@ agents:
 
     runtime:
       arch: {detected_arch.value}
+      agent_gateway_id: null
       invoke_config:
         protocol: HTTP
         port: 8080

@@ -78,9 +78,13 @@ def create_agentarts_runtime(
         tags_config = None
         execution_agency_name = None
         agent_gateway_id = None
+        arch = None
 
         if agent_config is not None:
             runtime_cfg = agent_config.runtime
+
+            if runtime_cfg.arch:
+                arch = runtime_cfg.arch.value
 
             if runtime_cfg.artifact_source:
                 artifact_source_config = runtime_cfg.artifact_source.to_dict()
@@ -144,6 +148,7 @@ def create_agentarts_runtime(
             tags_config=tags_config,
             execution_agency_name=execution_agency_name,
             agent_gateway_id=agent_gateway_id,
+            arch=arch,
         )
 
         agent_id = agent.get("id")
