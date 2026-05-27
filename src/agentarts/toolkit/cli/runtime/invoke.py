@@ -56,7 +56,7 @@ def invoke(
     ] = 900,
     skip_ssl_verification: Annotated[
         bool,
-        typer.Option("--skip-ssl-verification", help="Skip SSL certificate verification"),
+        typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification"),
     ] = False,
     user_id: Annotated[
         str | None,

@@ -223,9 +223,9 @@ agents:
                     )
 
                     call_args = mock_instance.upload_files.call_args
-                    assert call_args.kwargs["file_user_id"] == 1000
-                    assert call_args.kwargs["file_group_id"] == 1000
-                    assert call_args.kwargs["file_mode"] == "0644"
+                    assert call_args.kwargs["file_user_id"] is None
+                    assert call_args.kwargs["file_group_id"] is None
+                    assert call_args.kwargs["file_mode"] is None
         finally:
             Path(tmp_path_file).unlink()
 

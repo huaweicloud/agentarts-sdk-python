@@ -16,7 +16,7 @@ from rich.progress import (
 )
 
 from agentarts.toolkit.operations.runtime.download_files import download_runtime_files
-from agentarts.toolkit.utils.common import echo_error, echo_success
+from agentarts.toolkit.utils.common import echo_error, echo_info, echo_success
 
 console = Console()
 
@@ -30,7 +30,7 @@ def download_files_cmd(
     bearer_token: Annotated[str | None, typer.Option("--bearer-token", "-bt", help="Bearer token for authentication")] = None,
     region: Annotated[str | None, typer.Option("--region", help="Region name")] = None,
     endpoint: Annotated[str | None, typer.Option("--endpoint", "-e", help="Endpoint name")] = None,
-    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", help="Skip SSL certificate verification")] = False,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
     user_id: Annotated[str | None, typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials")] = None,
     timeout: Annotated[int, typer.Option("--timeout", help="Request timeout in seconds (default: 900)")] = 900,
 ) -> None:
@@ -73,6 +73,11 @@ def download_files_cmd(
 
         download_mode = "directory (tar archive)" if recursive else "single file"
         console.print(f"[dim]Download mode: {download_mode}[/dim]")
+
+        echo_info(
+            "Download Files",
+            f"[cyan]Agent:[/cyan] [white]{agent}[/white]\n[cyan]Session:[/cyan] [dim]{session}[/dim]\n[cyan]Path:[/cyan] [yellow]{path}[/yellow]",
+        )
 
         with Progress(
             SpinnerColumn(),

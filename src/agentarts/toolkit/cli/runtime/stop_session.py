@@ -7,7 +7,7 @@ import typer
 from rich.console import Console
 
 from agentarts.toolkit.operations.runtime.stop_session import stop_runtime_session
-from agentarts.toolkit.utils.common import echo_error, echo_success
+from agentarts.toolkit.utils.common import echo_error, echo_info, echo_success
 
 console = Console()
 
@@ -18,7 +18,7 @@ def stop_session_cmd(
     bearer_token: Annotated[str | None, typer.Option("--bearer-token", "-bt", help="Bearer token for authentication")] = None,
     region: Annotated[str | None, typer.Option("--region", "-r", help="Region name")] = None,
     endpoint: Annotated[str | None, typer.Option("--endpoint", "-e", help="Endpoint name")] = None,
-    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", help="Skip SSL certificate verification")] = False,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
     user_id: Annotated[str | None, typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials")] = None,
 ) -> None:
     """
@@ -31,6 +31,11 @@ def stop_session_cmd(
         agentarts runtime stop-session -a myagent -s <session-id> --skip-ssl-verification
     """
     try:
+        echo_info(
+            "Stop Session",
+            f"[cyan]Agent:[/cyan] [white]{agent}[/white]\n[cyan]Session:[/cyan] [dim]{session}[/dim]",
+        )
+
         result = stop_runtime_session(
             agent_name=agent,
             session_id=session,

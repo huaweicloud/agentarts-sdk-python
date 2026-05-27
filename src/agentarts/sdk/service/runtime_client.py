@@ -799,9 +799,9 @@ class RuntimeClient:
         agent_name: str,
         session_id: str,
         files: list[dict[str, Any]],
-        file_user_id: int = 1000,
-        file_group_id: int = 1000,
-        file_mode: str = "0644",
+        file_user_id: int | None = None,
+        file_group_id: int | None = None,
+        file_mode: str | None = None,
         bearer_token: str | None = None,
         endpoint: str | None = None,
         user_id: str | None = None,
@@ -818,9 +818,9 @@ class RuntimeClient:
             agent_name: The agent name.
             session_id: Session identifier.
             files: List of file specs, each with "path" (remote path) and "local_file" (local file path).
-            file_user_id: File owner user ID (default: 1000).
-            file_group_id: File owner group ID (default: 1000).
-            file_mode: File permissions mode in octal (default: "0644").
+            file_user_id: File owner user ID (None for backend default).
+            file_group_id: File owner group ID (None for backend default).
+            file_mode: File permissions mode in octal (None for backend default).
             bearer_token: Optional bearer token.
             endpoint: Optional endpoint name.
             user_id: Optional user ID for OAuth2 outbound credentials.
@@ -857,12 +857,13 @@ class RuntimeClient:
             if user_id:
                 headers[USER_ID_HEADER] = user_id
 
-            params: dict[str, Any] = {
-                "path": path,
-                "user_id": file_user_id,
-                "group_id": file_group_id,
-                "file_mode": file_mode,
-            }
+            params: dict[str, Any] = {"path": path}
+            if file_user_id is not None:
+                params["user_id"] = file_user_id
+            if file_group_id is not None:
+                params["group_id"] = file_group_id
+            if file_mode is not None:
+                params["file_mode"] = file_mode
             if endpoint:
                 params["endpoint"] = endpoint
 
@@ -889,17 +890,19 @@ class RuntimeClient:
                 )
         else:
             api_endpoint = f"/runtimes/{agent_name}/upload-files"
-            headers: dict[str, str] = {SESSION_HEADER: session_id}
+            headers = {SESSION_HEADER: session_id}
             if bearer_token:
                 headers["Authorization"] = f"Bearer {bearer_token}"
             if user_id:
                 headers[USER_ID_HEADER] = user_id
 
-            params: dict[str, Any] = {
-                "user_id": file_user_id,
-                "group_id": file_group_id,
-                "file_mode": file_mode,
-            }
+            params = {}
+            if file_user_id is not None:
+                params["user_id"] = file_user_id
+            if file_group_id is not None:
+                params["group_id"] = file_group_id
+            if file_mode is not None:
+                params["file_mode"] = file_mode
             if endpoint:
                 params["endpoint"] = endpoint
 

@@ -1,16 +1,11 @@
 """Runtime upload-files operation"""
 
-import os
 from typing import Any
-
-from rich.console import Console
 
 from agentarts.sdk.service.http_client import SignMode
 from agentarts.sdk.service.runtime_client import RuntimeClient
 from agentarts.toolkit.operations.runtime.invoke import _get_data_endpoint, _resolve_agent_info
-from agentarts.toolkit.utils.common import echo_error, echo_info
-
-console = Console()
+from agentarts.toolkit.utils.common import echo_error
 
 DEFAULT_FILE_USER_ID = 1000
 DEFAULT_FILE_GROUP_ID = 1000
@@ -21,9 +16,9 @@ def upload_runtime_files(
     agent_name: str | None = None,
     session_id: str | None = None,
     files: list[dict[str, str]] | None = None,
-    file_user_id: int = DEFAULT_FILE_USER_ID,
-    file_group_id: int = DEFAULT_FILE_GROUP_ID,
-    file_mode: str = DEFAULT_FILE_MODE,
+    file_user_id: int | None = None,
+    file_group_id: int | None = None,
+    file_mode: str | None = None,
     bearer_token: str | None = None,
     region: str | None = None,
     endpoint: str | None = None,
@@ -37,9 +32,9 @@ def upload_runtime_files(
         agent_name: Agent name
         session_id: Session ID
         files: List of file specs with path and local_file
-        file_user_id: File owner user ID (default: 1000)
-        file_group_id: File owner group ID (default: 1000)
-        file_mode: File permissions in octal (default: "0644")
+        file_user_id: File owner user ID (None for backend default)
+        file_group_id: File owner group ID (None for backend default)
+        file_mode: File permissions in octal (None for backend default)
         bearer_token: Optional bearer token
         region: Region name
         endpoint: Optional endpoint name
@@ -67,11 +62,6 @@ def upload_runtime_files(
 
     if not data_endpoint:
         raise ValueError(f"No data endpoint for agent {agent_name}")
-
-    echo_info(
-        "Upload Files",
-        f"[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{session_id}[/dim]\n[cyan]Files:[/cyan] [yellow]{len(files)}[/yellow]\n[cyan]File User ID:[/cyan] [dim]{file_user_id}[/dim]\n[cyan]File Group ID:[/cyan] [dim]{file_group_id}[/dim]\n[cyan]File Mode:[/cyan] [dim]{file_mode}[/dim]",
-    )
 
     sign_mode = SignMode.SDK_HMAC_SHA256
     if auth_type and auth_type.upper() == "IAM":

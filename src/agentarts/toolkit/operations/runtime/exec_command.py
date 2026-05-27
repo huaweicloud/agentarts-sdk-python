@@ -4,14 +4,10 @@ import shlex
 from collections.abc import Iterator
 from typing import Any
 
-from rich.console import Console
-
 from agentarts.sdk.service.http_client import SignMode
 from agentarts.sdk.service.runtime_client import RuntimeClient
 from agentarts.toolkit.operations.runtime.invoke import _get_data_endpoint, _resolve_agent_info
-from agentarts.toolkit.utils.common import echo_error, echo_info
-
-console = Console()
+from agentarts.toolkit.utils.common import echo_error
 
 DEFAULT_TIMEOUT = 60
 MAX_TIMEOUT = 300
@@ -70,12 +66,6 @@ def exec_runtime_command(
 
     if not data_endpoint:
         raise ValueError(f"No data endpoint for agent {agent_name}")
-
-    mode_str = "chunked (ndjson)" if chunked else "json"
-    echo_info(
-        "Exec Command",
-        f"[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Session:[/cyan] [dim]{session_id}[/dim]\n[cyan]Mode:[/cyan] [yellow]{mode_str}[/yellow]\n[cyan]Command:[/cyan] [dim]{command_array}[/dim]",
-    )
 
     sign_mode = SignMode.SDK_HMAC_SHA256
     if auth_type and auth_type.upper() == "IAM":

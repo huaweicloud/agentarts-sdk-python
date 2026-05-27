@@ -10,7 +10,7 @@ from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeRemainingColumn
 
 from agentarts.toolkit.operations.runtime.upload_files import upload_runtime_files
-from agentarts.toolkit.utils.common import echo_error, echo_success
+from agentarts.toolkit.utils.common import echo_error, echo_info, echo_success
 
 console = Console()
 
@@ -36,13 +36,13 @@ def upload_files_cmd(
         list[str] | None,
         typer.Option("--files", "-f", help="Local file to upload. Use '/remote/path@local_file' format to specify remote path. Can be specified multiple times for multiple files [required]"),
     ] = None,
-    file_user_id: Annotated[int, typer.Option("--file-user-id", help="File owner user ID (default: 1000)")] = DEFAULT_USER_ID,
-    file_group_id: Annotated[int, typer.Option("--file-group-id", help="File owner group ID (default: 1000)")] = DEFAULT_GROUP_ID,
-    file_mode: Annotated[str, typer.Option("--file-mode", "-m", help="File permissions in octal (default: 0644)")] = DEFAULT_FILE_MODE,
+    file_user_id: Annotated[int | None, typer.Option("--file-user-id", help="File owner user ID (default: 1000)")] = None,
+    file_group_id: Annotated[int | None, typer.Option("--file-group-id", help="File owner group ID (default: 1000)")] = None,
+    file_mode: Annotated[str | None, typer.Option("--file-mode", "-m", help="File permissions in octal (default: 0644)")] = None,
     bearer_token: Annotated[str | None, typer.Option("--bearer-token", "-bt", help="Bearer token for authentication")] = None,
     region: Annotated[str | None, typer.Option("--region", "-r", help="Region name")] = None,
     endpoint: Annotated[str | None, typer.Option("--endpoint", "-e", help="Endpoint name")] = None,
-    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", help="Skip SSL certificate verification")] = False,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
     user_id: Annotated[str | None, typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials (used in OAuth authentication flow)")] = None,
     timeout: Annotated[int, typer.Option("--timeout", help="Request timeout in seconds (default: 900)")] = 900,
 ) -> None:
@@ -88,7 +88,7 @@ def upload_files_cmd(
             echo_error("Session ID is required (--session)")
             raise typer.Exit(1)
 
-        if not validate_file_mode(file_mode):
+        if file_mode is not None and not validate_file_mode(file_mode):
             echo_error(f"Invalid file mode: {file_mode}. Must be valid octal (e.g., 0644, 0755)")
             raise typer.Exit(1)
 
@@ -117,7 +117,7 @@ def upload_files_cmd(
 
         upload_mode = "streaming (octet-stream)" if len(file_list) == 1 else "multipart"
         console.print(f"[dim]Upload mode: {upload_mode}[/dim]")
-        
+
         if total_size >= 1024 * 1024:
             size_str = f"{total_size / 1024 / 1024:.1f} MB"
         elif total_size >= 1024:
@@ -125,6 +125,19 @@ def upload_files_cmd(
         else:
             size_str = f"{total_size} bytes"
         console.print(f"[dim]Total size: {size_str}[/dim]")
+
+        display_file_user_id = file_user_id if file_user_id is not None else DEFAULT_USER_ID
+        display_file_group_id = file_group_id if file_group_id is not None else DEFAULT_GROUP_ID
+        display_file_mode = file_mode if file_mode is not None else DEFAULT_FILE_MODE
+
+        user_id_note = "" if file_user_id is not None else " (default)"
+        group_id_note = "" if file_group_id is not None else " (default)"
+        mode_note = "" if file_mode is not None else " (default)"
+
+        echo_info(
+            "Upload Files",
+            f"[cyan]Agent:[/cyan] [white]{agent}[/white]\n[cyan]Session:[/cyan] [dim]{session}[/dim]\n[cyan]Files:[/cyan] [yellow]{len(file_list)}[/yellow]\n[cyan]File User ID:[/cyan] [dim]{display_file_user_id}{user_id_note}[/dim]\n[cyan]File Group ID:[/cyan] [dim]{display_file_group_id}{group_id_note}[/dim]\n[cyan]File Mode:[/cyan] [dim]{display_file_mode}{mode_note}[/dim]",
+        )
 
         with Progress(
             SpinnerColumn(),
@@ -156,10 +169,10 @@ def upload_files_cmd(
             progress.update(task, completed=True, description="[green]Upload complete")
 
         echo_success(f"Uploaded {len(file_list)} files successfully")
-        console.print(f"[cyan]File User ID:[/cyan] [dim]{file_user_id}[/dim]")
-        console.print(f"[cyan]File Group ID:[/cyan] [dim]{file_group_id}[/dim]")
-        console.print(f"[cyan]File Mode:[/cyan] [dim]{file_mode}[/dim]")
-        
+        console.print(f"[cyan]File User ID:[/cyan] [dim]{display_file_user_id}{user_id_note}[/dim]")
+        console.print(f"[cyan]File Group ID:[/cyan] [dim]{display_file_group_id}{group_id_note}[/dim]")
+        console.print(f"[cyan]File Mode:[/cyan] [dim]{display_file_mode}{mode_note}[/dim]")
+
         for file_spec in file_list:
             console.print(f"  [green]✓[/green] {file_spec['path']}")
 

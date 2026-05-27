@@ -8,7 +8,7 @@ import typer
 from rich.console import Console
 
 from agentarts.toolkit.operations.runtime.exec_command import exec_runtime_command
-from agentarts.toolkit.utils.common import echo_error, echo_success
+from agentarts.toolkit.utils.common import echo_error, echo_info, echo_success
 
 console = Console()
 
@@ -35,7 +35,7 @@ def exec_command_cmd(
     bearer_token: Annotated[str | None, typer.Option("--bearer-token", "-bt", help="Bearer token for authentication")] = None,
     region: Annotated[str | None, typer.Option("--region", "-r", help="Region name")] = None,
     endpoint: Annotated[str | None, typer.Option("--endpoint", "-e", help="Endpoint name")] = None,
-    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", help="Skip SSL certificate verification")] = False,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
     user_id: Annotated[str | None, typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials")] = None,
     timeout: Annotated[int, typer.Option("--timeout", help=f"Request timeout in seconds (default: {DEFAULT_TIMEOUT}, max: {MAX_TIMEOUT})")] = DEFAULT_TIMEOUT,
 ) -> None:
@@ -54,6 +54,12 @@ def exec_command_cmd(
     """
     try:
         validated_timeout = validate_timeout(timeout)
+
+        mode_str = "chunked (ndjson)" if chunked else "json"
+        echo_info(
+            "Exec Command",
+            f"[cyan]Agent:[/cyan] [white]{agent}[/white]\n[cyan]Session:[/cyan] [dim]{session}[/dim]\n[cyan]Mode:[/cyan] [yellow]{mode_str}[/yellow]\n[cyan]Command:[/cyan] [dim]{command}[/dim]",
+        )
 
         result = exec_runtime_command(
             command=command,
