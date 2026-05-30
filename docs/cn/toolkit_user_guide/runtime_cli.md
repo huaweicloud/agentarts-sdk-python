@@ -313,7 +313,7 @@ agentarts runtime upload-files -a my-agent -s session-xxx -f local_file.txt
 
 #### 自定义远程路径
 
-使用 `/remote/path@local_file` 格式指定远程路径：
+使用 `remote_file_path@local_file_path` 格式指定远程路径：
 
 ```bash
 agentarts runtime upload-files -a my-agent -s session-xxx -f "/app/config.yaml@local_config.yaml"
@@ -540,4 +540,4 @@ agentarts runtime stop-session --agent my-agent --session session-xxx
 5. **认证类型**: IAM 认证使用 AK/SK 签名，其他认证类型使用 Bearer Token
 6. **会话生命周期**: 建议在操作完成后停止会话释放资源
 7. **文件权限**: 上传文件时注意设置正确的用户 ID、组 ID 和权限
-8. **路径格式**: 自定义远程路径使用 `/remote/path@local_file` 格式
+8. **路径格式**: 自定义远程路径使用 `remote_file_path@local_file_path` 格式
