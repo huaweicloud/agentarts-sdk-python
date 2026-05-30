@@ -290,7 +290,10 @@ class RuntimeClient:
         Returns:
             The created agent object from the API.
         """
-        payload: dict[str, Any] = {"name": name, **extra}
+        payload: dict[str, Any] = {"name": name}
+        for key, value in extra.items():
+            if value is not None:
+                payload[key] = value
         if description:
             payload["description"] = description
         if artifact_source_config is not None:
@@ -348,7 +351,10 @@ class RuntimeClient:
         Returns:
             The updated agent object.
         """
-        payload: dict[str, Any] = {**extra}
+        payload: dict[str, Any] = {}
+        for key, value in extra.items():
+            if value is not None:
+                payload[key] = value
         if description is not None:
             payload["description"] = description
         if artifact_source_config is not None:
@@ -906,7 +912,7 @@ class RuntimeClient:
             if endpoint:
                 params["endpoint"] = endpoint
 
-            multipart_files: list[tuple[str, tuple[str, Any, str]]] = []
+            multipart_files: list[tuple[str, tuple[str, Any, str] | tuple[None, str]]] = []
             with ExitStack() as stack:
                 for i, file_spec in enumerate(files):
                     path = file_spec.get("path", f"file_{i}")
@@ -917,14 +923,15 @@ class RuntimeClient:
 
                     if local_file:
                         f = stack.enter_context(open(local_file, "rb"))
-                        multipart_files.append(("files", (filename, f, "application/octet-stream")))
+                        multipart_files.append(("file", (filename, f, "application/octet-stream")))
                     else:
                         content = file_spec.get("content")
                         if isinstance(content, bytes):
-                            multipart_files.append(("files", (filename, content, "application/octet-stream")))
+                            multipart_files.append(("file", (filename, content, "application/octet-stream")))
                         else:
-                            multipart_files.append(("files", (filename, str(content).encode("utf-8"), "text/plain")))
-                    params[f"paths[{i}]"] = path
+                            multipart_files.append(("file", (filename, str(content).encode("utf-8"), "text/plain")))
+
+                    multipart_files.append(("path", (None, path)))
 
                 result = self._data(
                     "POST",
