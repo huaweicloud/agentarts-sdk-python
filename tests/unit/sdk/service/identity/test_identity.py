@@ -1,12 +1,6 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from huaweicloudsdkcore.exceptions.exceptions import (
-    ConnectionException,
-    ServiceResponseException,
-)
-
-from agentarts.sdk.service.identity.identity_client import IdentityClient
 from huaweicloudsdkagentidentity.v1 import (
     AgentIdentityClient,
     CompleteResourceTokenAuthResponse,
@@ -17,6 +11,12 @@ from huaweicloudsdkagentidentity.v1 import (
     Tag,
     UserIdentifier,
 )
+from huaweicloudsdkcore.exceptions.exceptions import (
+    ConnectionException,
+    ServiceResponseException,
+)
+
+from agentarts.sdk.service.identity.identity_client import IdentityClient
 
 
 @pytest.fixture

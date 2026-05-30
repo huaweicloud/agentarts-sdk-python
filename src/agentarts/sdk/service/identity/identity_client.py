@@ -4,27 +4,6 @@ import uuid
 from collections.abc import Callable
 from typing import Any, Literal
 
-from huaweicloudsdkcore.exceptions.exceptions import (
-    SdkException,
-    ServiceResponseException,
-)
-from huaweicloudsdkcore.http.http_config import HttpConfig
-from huaweicloudsdkcore.region.region import Region
-from huaweicloudsdkcore.retry.backoff_strategy import BackoffStrategies
-from huaweicloudsdkcore.sdk_response import SdkResponse
-
-from agentarts.sdk.identity.types import (
-    OAuth2Discovery,
-    OAuth2Vendor,
-    StsCredentials,
-)
-from agentarts.sdk.service.identity.polling.token_poller import (
-    DefaultApiTokenPoller,
-    PollingResult,
-    PollingStatus,
-    TokenPoller,
-)
-from agentarts.sdk.utils.constant import get_identity_endpoint
 from huaweicloudsdkagentidentity.v1 import (
     AgentIdentityClient,
     ApiKeyCredentialProvider,
@@ -77,6 +56,27 @@ from huaweicloudsdkagentidentity.v1 import (
     UserIdentifier,
     WorkloadIdentity,
 )
+from huaweicloudsdkcore.exceptions.exceptions import (
+    SdkException,
+    ServiceResponseException,
+)
+from huaweicloudsdkcore.http.http_config import HttpConfig
+from huaweicloudsdkcore.region.region import Region
+from huaweicloudsdkcore.retry.backoff_strategy import BackoffStrategies
+from huaweicloudsdkcore.sdk_response import SdkResponse
+
+from agentarts.sdk.identity.types import (
+    OAuth2Discovery,
+    OAuth2Vendor,
+    StsCredentials,
+)
+from agentarts.sdk.service.identity.polling.token_poller import (
+    DefaultApiTokenPoller,
+    PollingResult,
+    PollingStatus,
+    TokenPoller,
+)
+from agentarts.sdk.utils.constant import get_identity_endpoint
 
 
 class IdentityClient:
