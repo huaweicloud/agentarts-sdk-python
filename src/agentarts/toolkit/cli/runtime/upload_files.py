@@ -34,7 +34,7 @@ def upload_files_cmd(
     session: Annotated[str, typer.Option("--session", "-s", help="Session ID [required]")] = None,
     files: Annotated[
         list[str] | None,
-        typer.Option("--files", "-f", help="Local file to upload. Use '/remote/path@local_file' format to specify remote path. Can be specified multiple times for multiple files [required]"),
+        typer.Option("--files", "-f", help="Local file to upload. Use 'remote_file_path@local_file_path' format to specify remote path. Can be specified multiple times for multiple files [required]"),
     ] = None,
     file_user_id: Annotated[int | None, typer.Option("--file-user-id", help="File owner user ID (default: 1000)")] = None,
     file_group_id: Annotated[int | None, typer.Option("--file-group-id", help="File owner group ID (default: 1000)")] = None,
