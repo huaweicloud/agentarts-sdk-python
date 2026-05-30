@@ -19,7 +19,7 @@ resolution-markers = [
 
 [[package]]
 name = "agentarts-sdk"
-version = "0.1.0"
+version = "0.1.2"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
@@ -151,8 +151,8 @@ requires-dist = [
     { name = "opentelemetry-sdk", marker = "extra == 'monitoring'", specifier = ">=1.20.0" },
     { name = "prometheus-client", marker = "extra == 'monitoring'", specifier = ">=0.19.0" },
     { name = "pyautogen", marker = "extra == 'autogen'", specifier = ">=0.2.0" },
-    { name = "pydantic", specifier = ">=2.10.0" },
-    { name = "pydantic-settings", specifier = ">=2.6.0" },
+    { name = "pydantic", specifier = ">=2.0.0,<3.0.0" },
+    { name = "pydantic-settings", specifier = ">=2.0.0,<3.0.0" },
     { name = "pyjwt", specifier = ">=2.8.0" },
     { name = "pymilvus", marker = "extra == 'vector-stores'", specifier = ">=2.3.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
@@ -1788,18 +1788,18 @@ wheels = [
 
 [[package]]
 name = "huaweicloudsdkagentidentity"
-version = "3.1.192"
+version = "3.1.197"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "huaweicloudsdkcore" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/ef/8e75ec23db8e89023270e1fa6138ee567a8bb36b0a9212b6de24f3de640d/huaweicloudsdkagentidentity-3.1.192-py3-none-any.whl", hash = "sha256:a346d82062e32992c75e97edde79da040d3e3cdf9a8b82bb959b0673b3560f67", size = 188877, upload-time = "2026-04-24T08:04:03.141Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/32/6f261d673e412d5c64ab21cd154712814f89509210417b61a9a973d197ff/huaweicloudsdkagentidentity-3.1.197-py3-none-any.whl", hash = "sha256:84c01be173fa1463a5b3d5ce42063dcc8be67388d5c0c971e9e5f536ab295690", size = 188869, upload-time = "2026-05-28T08:33:44.007Z" },
 ]
 
 [[package]]
 name = "huaweicloudsdkcore"
-version = "3.1.192"
+version = "3.1.197"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "certifi" },
@@ -1812,7 +1812,7 @@ dependencies = [
     { name = "six" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/44/4fd3a4ae3034e64a47c3dfd57057278f4ef22828f6c6e8a846d13afcc489/huaweicloudsdkcore-3.1.192-py3-none-any.whl", hash = "sha256:69de5f5283abdcec69a7a428a1fc51cc5dd6530c3074c512f2a115cb3c141956", size = 69555, upload-time = "2026-04-24T08:39:06.383Z" },
+    { url = "https://files.pythonhosted.org/packages/c8/c1/705df1e91a8a8e7d0ebbc58572484b0c6ead67fa84ca6ec69e842669f067/huaweicloudsdkcore-3.1.197-py3-none-any.whl", hash = "sha256:b9fa711911c90b90ba4eb276fa0d55e8e3fd5eadf82dc439170ae971fd9452b9", size = 69557, upload-time = "2026-05-28T08:34:41.027Z" },
 ]
 
 [[package]]
