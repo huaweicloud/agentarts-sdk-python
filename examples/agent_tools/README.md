@@ -24,44 +24,36 @@ pip install -r requirements.txt
 ```
 
 ```python
-import os
 import json
-from typing import TypedDict, Union
+import os
+from typing import Annotated, TypedDict
 
-from langgraph.graph import StateGraph, END
-from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.tools import tool
-
+from langchain_openai import ChatOpenAI
+from langgraph.graph import END, StateGraph
+from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
-from agentarts.sdk.tools import code_session
+
 from agentarts.sdk import AgentArtsRuntimeApp
+from agentarts.sdk.tools import code_session
 ```
 
 ### 2. 定义系统提示词
 定义Agent的行为和能力
 ```python
 app = AgentArtsRuntimeApp()
-SYSTEM_PROMPT = """你是一个通过代码执行验证所有答案的优秀AI助手
+SYSTEM_PROMPT = """你是一个AI助手，可以使用Python代码执行工具来解决问题。
 
-验证原则：
-1. 当需要代码，算法或者计算来验证时，你需要编写代码来验证它们。
-2. 使用execute_python_tool工具来测试数学计算，算法和逻辑
-3. 返回答案前，使用测试脚本来验证你的理解
-4. 只能通过实际的代码执行展示工作过程
-5. 如果存在不确定的情况，详细说明限制条件并尽可能做验证
+可用工具：
+- execute_python_tool(code: str, description: str): 执行Python代码
 
-方法：
-- 如果问题涉及编程，通过代码实现
-- 如果要求你计算，编写程序计算并显示具体代码
-- 如果需要实现算法，你还要编写测试用例来进行确认
-- 记录验证的过程展示给用户
-
-工具：
-- execute_python_tool: 执行Python代码并返回结果
-
-响应格式：execute_python_tool, 包括：
-- content: 内容对象的数组，每个对象包含type和text/data"""
+使用原则：
+1. 仅在需要精确计算或复杂逻辑时使用工具
+2. 简单问题直接回答，无需工具验证
+3. 工具调用最多1-2次，避免重复验证
+4. 获得结果后立即返回答案
+"""
 ```
 
 ### 3. 定义代码执行工具
@@ -73,19 +65,24 @@ def execute_python_tool(code: str, description: str) -> str | None:
 
     if description:
         code = f"# {description}\n{code}"
-    
+
     print(f"\n Generated Code: {code}")
 
-    with code_session("your_region", "your_code_interpreter_name") as code_client:
+    # 需配置环境 HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY
+    api_key = os.environ.get(
+        "HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY", ""
+    )  # 配置环境变量后，api_key无需在代码中传递亦可正常工作
+    with code_session("your_region", "your_code_interpreter_name", api_key=api_key) as code_client:
         response = code_client.invoke(
             operate_type="execute_code",
+            api_key=api_key,
             arguments={
                 "code": code,
                 "language": "python",
                 "clear_context": False,
-            }
+            },
         )
-    
+
     return json.dumps(response["result"])
 ```
 
@@ -104,32 +101,37 @@ llm = ChatOpenAI(
 # 创建工具列表 
 tools = [execute_python_tool]
 # 工具绑定Agent
-llm.bind_tools(tools)
+llm = llm.bind_tools(tools)
 
 # 定义graph状态
 class AgentState(TypedDict):
-    messages: list[Union[HumanMessage, SystemMessage, AIMessage]]
+    messages: Annotated[list[BaseMessage], add_messages]
+
 
 def call_model(state: AgentState):
     """调用模型并返回响应"""
-    if not state["messages"] or all(not isinstance(msg, SystemMessage) for msg in state["messages"]):
+    if not state["messages"] or all(
+        not isinstance(msg, SystemMessage) for msg in state["messages"]
+    ):
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + state["messages"]
     else:
         messages = state["messages"]
-    
+
     response = llm.invoke(messages)
     return {"messages": [response]}
+
 
 def should_continue(state):
     """判断是否继续使用工具"""
     last_message = state["messages"][-1]
 
-    # 如果包含工具调用，则继续执行
-    if last_message.tool_calls:
-        return "tools"
+    if isinstance(last_message, AIMessage):
+        has_tool_calls = bool(last_message.tool_calls)
+        if has_tool_calls:
+            return "tools"
 
-    # 否则结束
     return END
+
 
 # 创建LangGraph工作流
 workflow = StateGraph(AgentState)
@@ -141,35 +143,27 @@ workflow.add_node("tools", ToolNode(tools))
 workflow.set_entry_point("agent")
 
 # 添加边
-workflow.add_conditional_edges(
-    "agent",
-    should_continue,
-    {
-        "tools": "tools",
-        "__end__": "__end__"
-    }
-)
+workflow.add_conditional_edges("agent", should_continue, {"tools": "tools", "__end__": "__end__"})
 workflow.add_edge("tools", "agent")
 agent = workflow.compile()
 ```
 
 ## 5. 定义问题
 ```python
-query = "告诉我1到100之间最大的随机质数"
+query = "告诉我1到100之间最大的质数"
 ```
 
 ## 6. Agent执行与响应
 ```python
 @app.entrypoint
-def agent_chat():
-    query = "告诉我1到100之间最大的随机质数"
+def agent_chat(payload: dict):
+    query = "告诉我1到100之间最大的质数"
 
     # 运行Agent
-    result = agent.invoke({
-        "messages": [HumanMessage(content=query)]
-    })
+    result = agent.invoke({"messages": [HumanMessage(content=query)]})
 
-    print(result["messages"][-1].content)
+    return result["messages"][-1].content
+
 
 if __name__ == "__main__":
     app.run()

@@ -82,6 +82,7 @@ def _get_data_endpoint(
     agent_name: str,
     region: str,
     agent_id: str | None = None,
+    verify_ssl: bool | str = True,
 ) -> str | None:
     """
     Get data plane endpoint for the agent.
@@ -101,7 +102,7 @@ def _get_data_endpoint(
 
     if not data_endpoint:
         control_endpoint = get_control_plane_endpoint(region)
-        control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=False)
+        control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=verify_ssl)
 
         if agent_id:
             agent_detail = control_client.find_agent_by_id(agent_id)
@@ -137,6 +138,77 @@ class InvokeMode(str, Enum):
     CLOUD = "cloud"
 
 
+def _normalize_json_payload(payload: str) -> str:
+    """
+    Normalize JSON payload to handle Windows PowerShell quote stripping.
+
+    On Windows PowerShell, double quotes inside single-quoted strings may be
+    stripped when passed to subprocess, causing '{"message":"hello"}' to become
+    '{message:hello}'. This function attempts to restore proper JSON formatting.
+
+    Args:
+        payload: Raw payload string received from CLI
+
+    Returns:
+        Normalized JSON string
+    """
+    if not payload:
+        return payload
+
+    payload = payload.strip()
+
+    try:
+        json.loads(payload)
+        return payload
+    except json.JSONDecodeError:
+        pass
+
+    if payload.startswith("'") and payload.endswith("'"):
+        payload = payload[1:-1]
+
+    if '\\"' in payload:
+        payload = payload.replace('\\"', '"')
+        try:
+            json.loads(payload)
+            return payload
+        except json.JSONDecodeError:
+            pass
+
+    if payload.startswith("{") and payload.endswith("}"):
+        inner = payload[1:-1].strip()
+        if not inner:
+            return "{}"
+
+        result_parts = []
+        parts = inner.split(",")
+        for part in parts:
+            part = part.strip()
+            if ":" in part:
+                key_val = part.split(":", 1)
+                key = key_val[0].strip()
+                val = key_val[1].strip() if len(key_val) > 1 else ""
+
+                if not key.startswith('"') and not key.startswith("'"):
+                    key = f'"{key}"'
+
+                if val:
+                    if not val.startswith('"') and not val.startswith("'") and not val.startswith("[") and not val.startswith("{") and not val.isdigit() and val.lower() not in ("true", "false", "null"):
+                        val = f'"{val}"'
+
+                result_parts.append(f"{key}:{val}")
+            else:
+                result_parts.append(part)
+
+        reconstructed = "{" + ",".join(result_parts) + "}"
+        try:
+            json.loads(reconstructed)
+            return reconstructed
+        except json.JSONDecodeError:
+            pass
+
+    return payload
+
+
 def invoke_agent(
     payload: str,
     agent_name: str | None = None,
@@ -147,6 +219,8 @@ def invoke_agent(
     session_id: str | None = None,
     bearer_token: str | None = None,
     timeout: int = 900,
+    skip_ssl_verification: bool = False,
+    user_id: str | None = None,
 ) -> bool:
     """
     Invoke agent locally or on cloud.
@@ -161,12 +235,15 @@ def invoke_agent(
         session_id: Session ID for stateful agents
         bearer_token: Optional bearer token
         timeout: Request timeout in seconds
+        skip_ssl_verification: Skip SSL certificate verification
+        user_id: Optional user ID for OAuth2 outbound credentials
 
     Returns:
         True if successful, False otherwise
     """
+    normalized_payload = _normalize_json_payload(payload)
     try:
-        json.loads(payload)
+        json.loads(normalized_payload)
     except json.JSONDecodeError:
         echo_error("Payload must be valid JSON")
         return False
@@ -182,11 +259,12 @@ def invoke_agent(
             echo_info("Invoke Request", f"[cyan]Mode:[/cyan] [yellow]Local[/yellow]\n[cyan]Endpoint:[/cyan] [white]localhost:{local_port}[/white]")
 
             result = client.invoke_agent(
-                payload=payload,
+                payload=normalized_payload,
                 session_id=session_id,
                 bearer_token=actual_bearer_token,
                 endpoint=endpoint,
                 timeout=timeout,
+                user_id=user_id,
             )
         else:
             agent_name, region, agent_id, auth_type = _resolve_agent_info(agent_name, region)
@@ -198,8 +276,9 @@ def invoke_agent(
 
             actual_region = region or get_region()
             actual_session_id = session_id or str(uuid.uuid4())
+            verify_ssl = not skip_ssl_verification
 
-            data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id)
+            data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id, verify_ssl)
 
             if not data_endpoint:
                 echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent [yellow]{agent_name} {actual_region}[/yellow]")
@@ -218,7 +297,7 @@ def invoke_agent(
 
             client = RuntimeClient(
                 data_endpoint=data_endpoint,
-                verify_ssl=False,
+                verify_ssl=verify_ssl,
                 sign_mode=sign_mode,
                 region_id=actual_region,
             )
@@ -226,10 +305,11 @@ def invoke_agent(
             result = client.invoke_agent(
                 agent_name=agent_name,
                 session_id=actual_session_id,
-                payload=payload,
+                payload=normalized_payload,
                 bearer_token=actual_bearer_token,
                 endpoint=endpoint,
                 timeout=timeout,
+                user_id=user_id,
             )
 
         if isinstance(result, dict):
@@ -263,6 +343,8 @@ def status_agent(
     endpoint: str | None = None,
     session_id: str | None = None,
     bearer_token: str | None = None,
+    skip_ssl_verification: bool = False,
+    user_id: str | None = None,
 ) -> bool:
     """
     Check agent health status.
@@ -275,6 +357,8 @@ def status_agent(
         endpoint: Optional endpoint name
         session_id: Session ID for stateful agents (auto-generated if None)
         bearer_token: Optional bearer token
+        skip_ssl_verification: Skip SSL certificate verification
+        user_id: Optional user ID for OAuth2 outbound credentials
 
     Returns:
         True if healthy, False otherwise
@@ -294,6 +378,7 @@ def status_agent(
                 bearer_token=actual_bearer_token,
                 endpoint=endpoint,
                 session_id=actual_session_id,
+                user_id=user_id,
             )
 
             status = result.get("status", "Unknown")
@@ -309,8 +394,9 @@ def status_agent(
             return False
 
         actual_region = region or get_region()
+        verify_ssl = not skip_ssl_verification
 
-        data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id)
+        data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id, verify_ssl)
 
         if not data_endpoint:
             echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent {agent_name}")
@@ -330,7 +416,7 @@ def status_agent(
 
         client = RuntimeClient(
             data_endpoint=data_endpoint,
-            verify_ssl=False,
+            verify_ssl=verify_ssl,
             sign_mode=sign_mode,
             region_id=actual_region,
         )
@@ -340,6 +426,7 @@ def status_agent(
             bearer_token=actual_bearer_token,
             endpoint=endpoint,
             session_id=actual_session_id,
+            user_id=user_id,
         )
 
         if isinstance(result, dict):

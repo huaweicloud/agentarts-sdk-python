@@ -210,6 +210,45 @@ export HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT="https://agent-identity.cn-north-4
 
 ## 其他配置
 
+### SDK 日志级别
+
+用于控制 SDK 的日志输出级别：
+
+| 环境变量 | 说明 | 默认值 |
+|----------|------|--------|
+| `AGENTARTS_LOG_LEVEL` | SDK 日志级别 | `INFO` |
+
+**可选值：** `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
+
+**配置示例：**
+
+```bash
+# 开启详细日志（调试模式）
+export AGENTARTS_LOG_LEVEL="DEBUG"
+
+# 只显示警告及以上级别的日志
+export AGENTARTS_LOG_LEVEL="WARNING"
+```
+
+**代码配置方式：**
+
+```python
+from agentarts.sdk.utils.logging import setup_logging
+
+# 设置日志级别
+setup_logging(level="DEBUG")
+
+# 或使用环境变量（自动读取 AGENTARTS_LOG_LEVEL）
+setup_logging()
+
+# 自定义日志输出到文件
+import logging
+setup_logging(
+    level="DEBUG",
+    handler=logging.FileHandler("/var/log/agentarts/app.log")
+)
+```
+
 ### Python 基础镜像
 
 用于指定 Agent 部署时的 Python 基础镜像：
@@ -222,6 +261,31 @@ export HUAWEICLOUD_SDK_AGENTIDENTITY_ENDPOINT="https://agent-identity.cn-north-4
 
 ```bash
 export PYTHON_BASE_IMAGE="python:3.11-slim"
+```
+
+### 运行时监听地址
+
+用于指定 Agent 运行时的监听地址：
+
+| 环境变量 | 说明 | 默认值 |
+|----------|------|--------|
+| `AGENTARTS_BIND_IP` | 运行时监听地址 | Docker: 自动获取 eth0 IP，本地: `127.0.0.1` |
+
+**默认行为：**
+
+| 环境 | 默认监听地址 |
+|------|-------------|
+| Docker 容器 | 自动获取 eth0 接口 IP（通过 `ip addr show eth0`） |
+| 本地开发 | `127.0.0.1` |
+
+**配置示例：**
+
+```bash
+# 手动指定监听地址
+export AGENTARTS_BIND_IP="0.0.0.0"
+
+# 或在代码中指定
+app.run(host="0.0.0.0", port=8080)
 ```
 
 ---
