@@ -187,15 +187,18 @@ class TestRuntimeClientUploadFiles:
                 agent_name="test-agent",
                 session_id="session-123",
                 files=[
-                    {"path": "/home/user/file1.txt", "local_file": tmp1_path},
-                    {"path": "/home/user/file2.txt", "local_file": tmp2_path},
+                    {"local_file": tmp1_path},
+                    {"local_file": tmp2_path},
                 ],
+                path="/home/user/",
             )
 
             assert result["files"] == 2
 
             call_kwargs = mock_data.call_args.kwargs
             assert "files" in call_kwargs
+            params = call_kwargs.get("params", {})
+            assert params.get("path") == "/home/user/"
         finally:
             Path(tmp1_path).unlink()
             Path(tmp2_path).unlink()
@@ -228,8 +231,8 @@ class TestRuntimeClientUploadFiles:
                 agent_name="test-agent",
                 session_id="session-123",
                 files=[{"path": "/home/user/test.txt", "local_file": tmp_path}],
-                user_id=1001,
-                group_id=1001,
+                file_user_id=1001,
+                file_group_id=1001,
                 file_mode="0755",
             )
 
@@ -291,6 +294,33 @@ class TestRuntimeClientUploadFiles:
                 )
         finally:
             Path(tmp_path).unlink()
+
+    def test_upload_files_oversized_file_raises_error(self):
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            tmp.write(b"x" * (100 * 1024 * 1024 + 1))
+            tmp_path = tmp.name
+
+        try:
+            client = RuntimeClient(data_endpoint="https://test.example.com")
+
+            with pytest.raises(ValueError, match="File too large"):
+                client.upload_files(
+                    agent_name="test-agent",
+                    session_id="session-123",
+                    files=[{"path": "/home/user/test.txt", "local_file": tmp_path}],
+                )
+        finally:
+            Path(tmp_path).unlink()
+
+    def test_upload_files_oversized_content_raises_error(self):
+        client = RuntimeClient(data_endpoint="https://test.example.com")
+
+        with pytest.raises(ValueError, match="Content too large"):
+            client.upload_files(
+                agent_name="test-agent",
+                session_id="session-123",
+                files=[{"content": b"x" * (100 * 1024 * 1024 + 1)}],
+            )
 
 
 class TestRuntimeClientDownloadFiles:

@@ -126,6 +126,56 @@ def _resolve_agent_info(
     return agent_name, region, agent_id, auth_type
 
 
+def _check_file_transfer_enabled(
+    agent_name: str,
+    region: str,
+    agent_id: str | None = None,
+    verify_ssl: bool = True,
+) -> None:
+    """
+    Check if file transfer is enabled for the agent.
+
+    Args:
+        agent_name: Agent name
+        region: Huawei Cloud region
+        agent_id: Optional agent ID from config file
+        verify_ssl: SSL verification setting
+
+    Raises:
+        ValueError: If file transfer is not enabled for the agent
+    """
+    control_endpoint = get_control_plane_endpoint(region)
+    control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=verify_ssl)
+
+    agent_detail = None
+    if agent_id:
+        agent_detail = control_client.find_agent_by_id(agent_id)
+    else:
+        agent_info = control_client.find_agent_by_name(agent_name)
+        if agent_info:
+            agent_id = agent_info.get("id")
+            if agent_id:
+                agent_detail = control_client.find_agent_by_id(agent_id)
+
+    if not agent_detail:
+        raise ValueError(f"Agent '{agent_name}' not found")
+
+    version_detail = agent_detail.get("version_detail") or {}
+    invoke_config_resp = version_detail.get("invoke_config") or {}
+    file_transfer_config = invoke_config_resp.get("file_transfer_config") or {}
+
+    if not file_transfer_config.get("enabled", False):
+        msg = (
+            f"File transfer is not enabled for agent '{agent_name}'. "
+            "Please enable it in your configuration file:\n"
+            "  runtime:\n"
+            "    invoke_config:\n"
+            "      file_transfer_config:\n"
+            "        enabled: true"
+        )
+        raise ValueError(msg)
+
+
 def _get_data_endpoint(
     agent_name: str,
     region: str,

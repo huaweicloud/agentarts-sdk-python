@@ -805,6 +805,7 @@ class RuntimeClient:
         agent_name: str,
         session_id: str,
         files: list[dict[str, Any]],
+        path: str = "/home/user/",
         file_user_id: int | None = None,
         file_group_id: int | None = None,
         file_mode: str | None = None,
@@ -823,7 +824,10 @@ class RuntimeClient:
         Args:
             agent_name: The agent name.
             session_id: Session identifier.
-            files: List of file specs, each with "path" (remote path) and "local_file" (local file path).
+            files: List of file specs, each with "local_file" (local file path).
+            path: Remote directory path (must end with '/'). For single file upload,
+                  this is the full remote file path. For multiple files, this is the
+                  remote directory where files will be uploaded.
             file_user_id: File owner user ID (None for backend default).
             file_group_id: File owner group ID (None for backend default).
             file_mode: File permissions mode in octal (None for backend default).
@@ -835,10 +839,29 @@ class RuntimeClient:
         Returns:
             Upload result dict.
         """
+        from pathlib import Path as _Path
+
         from agentarts.sdk.runtime.model import SESSION_HEADER, USER_ID_HEADER
 
         if not files:
             raise ValueError("Files list cannot be empty")
+
+        MAX_FILE_SIZE = 100 * 1024 * 1024
+        for i, file_spec in enumerate(files):
+            local_file = file_spec.get("local_file")
+            if local_file and _Path(local_file).exists():
+                file_size = _Path(local_file).stat().st_size
+                if file_size > MAX_FILE_SIZE:
+                    raise ValueError(
+                        f"File too large: {local_file} ({file_size / 1024 / 1024:.1f}MB, max 100MB)"
+                    )
+            content = file_spec.get("content")
+            if content is not None:
+                content_size = len(content) if isinstance(content, (bytes, str)) else 0
+                if content_size > MAX_FILE_SIZE:
+                    raise ValueError(
+                        f"Content too large for file {i} ({content_size / 1024 / 1024:.1f}MB, max 100MB)"
+                    )
 
         if len(files) == 1:
             file = files[0]
@@ -902,7 +925,7 @@ class RuntimeClient:
             if user_id:
                 headers[USER_ID_HEADER] = user_id
 
-            params = {}
+            params = {"path": path}
             if file_user_id is not None:
                 params["user_id"] = file_user_id
             if file_group_id is not None:
@@ -912,26 +935,21 @@ class RuntimeClient:
             if endpoint:
                 params["endpoint"] = endpoint
 
-            multipart_files: list[tuple[str, tuple[str, Any, str] | tuple[None, str]]] = []
+            multipart_files: list[tuple[str, tuple[str, Any, str]]] = []
             with ExitStack() as stack:
                 for i, file_spec in enumerate(files):
-                    path = file_spec.get("path", f"file_{i}")
-                    if not path:
-                        raise ValueError(f"path is required for file {i}")
                     local_file = file_spec.get("local_file")
-                    filename = path.split("/")[-1] if "/" in path else path
-
                     if local_file:
+                        filename = local_file.split("\\")[-1] if "\\" in local_file else local_file.split("/")[-1]
                         f = stack.enter_context(open(local_file, "rb"))
                         multipart_files.append(("file", (filename, f, "application/octet-stream")))
                     else:
                         content = file_spec.get("content")
+                        filename = file_spec.get("filename", f"file_{i}")
                         if isinstance(content, bytes):
                             multipart_files.append(("file", (filename, content, "application/octet-stream")))
                         else:
                             multipart_files.append(("file", (filename, str(content).encode("utf-8"), "text/plain")))
-
-                    multipart_files.append(("path", (None, path)))
 
                 result = self._data(
                     "POST",

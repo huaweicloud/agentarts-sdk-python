@@ -39,32 +39,33 @@ agents:
         (tmp_path / ".agentarts_config.yaml").write_text(config_content)
         monkeypatch.chdir(tmp_path)
 
-        with patch("agentarts.toolkit.operations.runtime.download_files._get_data_endpoint") as mock_endpoint:
-            with patch("agentarts.toolkit.operations.runtime.download_files.RuntimeClient") as mock_client:
-                mock_endpoint.return_value = "https://test.example.com"
-                mock_instance = MagicMock()
-                mock_client.return_value = mock_instance
+        with patch("agentarts.toolkit.operations.runtime.download_files._check_file_transfer_enabled"):
+            with patch("agentarts.toolkit.operations.runtime.download_files._get_data_endpoint") as mock_endpoint:
+                with patch("agentarts.toolkit.operations.runtime.download_files.RuntimeClient") as mock_client:
+                    mock_endpoint.return_value = "https://test.example.com"
+                    mock_instance = MagicMock()
+                    mock_client.return_value = mock_instance
 
-                mock_result = StreamDownloadResult(
-                    success=True,
-                    status_code=200,
-                    content_type="application/octet-stream",
-                    _raw_response=MagicMock(),
-                )
-                mock_result._raw_response.iter_content.return_value = iter([b"test content"])
-                mock_instance.download_files.return_value = mock_result
+                    mock_result = StreamDownloadResult(
+                        success=True,
+                        status_code=200,
+                        content_type="application/octet-stream",
+                        _raw_response=MagicMock(),
+                    )
+                    mock_result._raw_response.iter_content.return_value = iter([b"test content"])
+                    mock_instance.download_files.return_value = mock_result
 
-                output_path = str(tmp_path / "output.txt")
-                result = download_runtime_files(
-                    path="test.txt",
-                    output=output_path,
-                    session_id="session-123",
-                )
+                    output_path = str(tmp_path / "output.txt")
+                    result = download_runtime_files(
+                        path="test.txt",
+                        output=output_path,
+                        session_id="session-123",
+                    )
 
-                assert result["saved_path"] == output_path
-                call_args = mock_instance.download_files.call_args
-                path_arg = call_args.kwargs["path"]
-                assert path_arg == "test.txt"
+                    assert result["saved_path"] == output_path
+                    call_args = mock_instance.download_files.call_args
+                    path_arg = call_args.kwargs["path"]
+                    assert path_arg == "test.txt"
 
     def test_download_files_preserves_full_path(self, tmp_path, monkeypatch):
         config_content = """
@@ -78,30 +79,31 @@ agents:
         (tmp_path / ".agentarts_config.yaml").write_text(config_content)
         monkeypatch.chdir(tmp_path)
 
-        with patch("agentarts.toolkit.operations.runtime.download_files._get_data_endpoint") as mock_endpoint:
-            with patch("agentarts.toolkit.operations.runtime.download_files.RuntimeClient") as mock_client:
-                mock_endpoint.return_value = "https://test.example.com"
-                mock_instance = MagicMock()
-                mock_client.return_value = mock_instance
+        with patch("agentarts.toolkit.operations.runtime.download_files._check_file_transfer_enabled"):
+            with patch("agentarts.toolkit.operations.runtime.download_files._get_data_endpoint") as mock_endpoint:
+                with patch("agentarts.toolkit.operations.runtime.download_files.RuntimeClient") as mock_client:
+                    mock_endpoint.return_value = "https://test.example.com"
+                    mock_instance = MagicMock()
+                    mock_client.return_value = mock_instance
 
-                mock_result = StreamDownloadResult(
-                    success=True,
-                    status_code=200,
-                    content_type="application/octet-stream",
-                    _raw_response=MagicMock(),
-                )
-                mock_result._raw_response.iter_content.return_value = iter([b"test content"])
-                mock_instance.download_files.return_value = mock_result
+                    mock_result = StreamDownloadResult(
+                        success=True,
+                        status_code=200,
+                        content_type="application/octet-stream",
+                        _raw_response=MagicMock(),
+                    )
+                    mock_result._raw_response.iter_content.return_value = iter([b"test content"])
+                    mock_instance.download_files.return_value = mock_result
 
-                output_path = str(tmp_path / "output.txt")
-                download_runtime_files(
-                    path="/home/user/custom/file.txt",
-                    output=output_path,
-                    session_id="session-123",
-                )
+                    output_path = str(tmp_path / "output.txt")
+                    download_runtime_files(
+                        path="/home/user/custom/file.txt",
+                        output=output_path,
+                        session_id="session-123",
+                    )
 
-                call_args = mock_instance.download_files.call_args
-                assert call_args.kwargs["path"] == "/home/user/custom/file.txt"
+                    call_args = mock_instance.download_files.call_args
+                    assert call_args.kwargs["path"] == "/home/user/custom/file.txt"
 
     def test_download_files_recursive_tar(self, tmp_path, monkeypatch):
         import tarfile
@@ -125,34 +127,35 @@ agents:
 
         tar_bytes = tar_path.read_bytes()
 
-        with patch("agentarts.toolkit.operations.runtime.download_files._get_data_endpoint") as mock_endpoint:
-            with patch("agentarts.toolkit.operations.runtime.download_files.RuntimeClient") as mock_client:
-                mock_endpoint.return_value = "https://test.example.com"
-                mock_instance = MagicMock()
-                mock_client.return_value = mock_instance
+        with patch("agentarts.toolkit.operations.runtime.download_files._check_file_transfer_enabled"):
+            with patch("agentarts.toolkit.operations.runtime.download_files._get_data_endpoint") as mock_endpoint:
+                with patch("agentarts.toolkit.operations.runtime.download_files.RuntimeClient") as mock_client:
+                    mock_endpoint.return_value = "https://test.example.com"
+                    mock_instance = MagicMock()
+                    mock_client.return_value = mock_instance
 
-                mock_response = MagicMock()
-                mock_response.iter_content.return_value = iter([tar_bytes])
+                    mock_response = MagicMock()
+                    mock_response.iter_content.return_value = iter([tar_bytes])
 
-                mock_result = StreamDownloadResult(
-                    success=True,
-                    status_code=200,
-                    content_type="application/x-tar",
-                    _raw_response=mock_response,
-                )
-                mock_instance.download_files.return_value = mock_result
+                    mock_result = StreamDownloadResult(
+                        success=True,
+                        status_code=200,
+                        content_type="application/x-tar",
+                        _raw_response=mock_response,
+                    )
+                    mock_instance.download_files.return_value = mock_result
 
-                output_dir = str(tmp_path / "output_dir")
-                result = download_runtime_files(
-                    path="/home/user/data",
-                    output=output_dir,
-                    recursive=True,
-                    session_id="session-123",
-                )
+                    output_dir = str(tmp_path / "output_dir")
+                    result = download_runtime_files(
+                        path="/home/user/data",
+                        output=output_dir,
+                        recursive=True,
+                        session_id="session-123",
+                    )
 
-                assert result["saved_path"] == output_dir
-                call_args = mock_instance.download_files.call_args
-                assert call_args.kwargs["recursive"] is True
+                    assert result["saved_path"] == output_dir
+                    call_args = mock_instance.download_files.call_args
+                    assert call_args.kwargs["recursive"] is True
 
     def test_download_files_with_session_id(self, tmp_path, monkeypatch):
         config_content = """
@@ -166,30 +169,31 @@ agents:
         (tmp_path / ".agentarts_config.yaml").write_text(config_content)
         monkeypatch.chdir(tmp_path)
 
-        with patch("agentarts.toolkit.operations.runtime.download_files._get_data_endpoint") as mock_endpoint:
-            with patch("agentarts.toolkit.operations.runtime.download_files.RuntimeClient") as mock_client:
-                mock_endpoint.return_value = "https://test.example.com"
-                mock_instance = MagicMock()
-                mock_client.return_value = mock_instance
+        with patch("agentarts.toolkit.operations.runtime.download_files._check_file_transfer_enabled"):
+            with patch("agentarts.toolkit.operations.runtime.download_files._get_data_endpoint") as mock_endpoint:
+                with patch("agentarts.toolkit.operations.runtime.download_files.RuntimeClient") as mock_client:
+                    mock_endpoint.return_value = "https://test.example.com"
+                    mock_instance = MagicMock()
+                    mock_client.return_value = mock_instance
 
-                mock_result = StreamDownloadResult(
-                    success=True,
-                    status_code=200,
-                    content_type="application/octet-stream",
-                    _raw_response=MagicMock(),
-                )
-                mock_result._raw_response.iter_content.return_value = iter([b"test"])
-                mock_instance.download_files.return_value = mock_result
+                    mock_result = StreamDownloadResult(
+                        success=True,
+                        status_code=200,
+                        content_type="application/octet-stream",
+                        _raw_response=MagicMock(),
+                    )
+                    mock_result._raw_response.iter_content.return_value = iter([b"test"])
+                    mock_instance.download_files.return_value = mock_result
 
-                output_path = str(tmp_path / "output.txt")
-                download_runtime_files(
-                    path="/home/user/test.txt",
-                    output=output_path,
-                    session_id="session-123",
-                )
+                    output_path = str(tmp_path / "output.txt")
+                    download_runtime_files(
+                        path="/home/user/test.txt",
+                        output=output_path,
+                        session_id="session-123",
+                    )
 
-                call_args = mock_instance.download_files.call_args
-                assert call_args.kwargs["session_id"] == "session-123"
+                    call_args = mock_instance.download_files.call_args
+                    assert call_args.kwargs["session_id"] == "session-123"
 
     def test_download_files_with_bearer_token(self, tmp_path, monkeypatch):
         config_content = """
@@ -203,31 +207,32 @@ agents:
         (tmp_path / ".agentarts_config.yaml").write_text(config_content)
         monkeypatch.chdir(tmp_path)
 
-        with patch("agentarts.toolkit.operations.runtime.download_files._get_data_endpoint") as mock_endpoint:
-            with patch("agentarts.toolkit.operations.runtime.download_files.RuntimeClient") as mock_client:
-                mock_endpoint.return_value = "https://test.example.com"
-                mock_instance = MagicMock()
-                mock_client.return_value = mock_instance
+        with patch("agentarts.toolkit.operations.runtime.download_files._check_file_transfer_enabled"):
+            with patch("agentarts.toolkit.operations.runtime.download_files._get_data_endpoint") as mock_endpoint:
+                with patch("agentarts.toolkit.operations.runtime.download_files.RuntimeClient") as mock_client:
+                    mock_endpoint.return_value = "https://test.example.com"
+                    mock_instance = MagicMock()
+                    mock_client.return_value = mock_instance
 
-                mock_result = StreamDownloadResult(
-                    success=True,
-                    status_code=200,
-                    content_type="application/octet-stream",
-                    _raw_response=MagicMock(),
-                )
-                mock_result._raw_response.iter_content.return_value = iter([b"test"])
-                mock_instance.download_files.return_value = mock_result
+                    mock_result = StreamDownloadResult(
+                        success=True,
+                        status_code=200,
+                        content_type="application/octet-stream",
+                        _raw_response=MagicMock(),
+                    )
+                    mock_result._raw_response.iter_content.return_value = iter([b"test"])
+                    mock_instance.download_files.return_value = mock_result
 
-                output_path = str(tmp_path / "output.txt")
-                download_runtime_files(
-                    path="/home/user/test.txt",
-                    output=output_path,
-                    session_id="session-123",
-                    bearer_token="test-token",
-                )
+                    output_path = str(tmp_path / "output.txt")
+                    download_runtime_files(
+                        path="/home/user/test.txt",
+                        output=output_path,
+                        session_id="session-123",
+                        bearer_token="test-token",
+                    )
 
-                call_args = mock_instance.download_files.call_args
-                assert call_args.kwargs["bearer_token"] == "test-token"
+                    call_args = mock_instance.download_files.call_args
+                    assert call_args.kwargs["bearer_token"] == "test-token"
 
     def test_download_files_failure_raises_error(self, tmp_path, monkeypatch):
         config_content = """
@@ -241,25 +246,26 @@ agents:
         (tmp_path / ".agentarts_config.yaml").write_text(config_content)
         monkeypatch.chdir(tmp_path)
 
-        with patch("agentarts.toolkit.operations.runtime.download_files._get_data_endpoint") as mock_endpoint:
-            with patch("agentarts.toolkit.operations.runtime.download_files.RuntimeClient") as mock_client:
-                mock_endpoint.return_value = "https://test.example.com"
-                mock_instance = MagicMock()
-                mock_client.return_value = mock_instance
+        with patch("agentarts.toolkit.operations.runtime.download_files._check_file_transfer_enabled"):
+            with patch("agentarts.toolkit.operations.runtime.download_files._get_data_endpoint") as mock_endpoint:
+                with patch("agentarts.toolkit.operations.runtime.download_files.RuntimeClient") as mock_client:
+                    mock_endpoint.return_value = "https://test.example.com"
+                    mock_instance = MagicMock()
+                    mock_client.return_value = mock_instance
 
-                mock_result = StreamDownloadResult(
-                    success=False,
-                    status_code=404,
-                    content_type="application/json",
-                    error="File not found",
-                )
-                mock_instance.download_files.return_value = mock_result
-
-                with pytest.raises(RuntimeError, match="Download failed"):
-                    download_runtime_files(
-                        path="/home/user/test.txt",
-                        session_id="session-123",
+                    mock_result = StreamDownloadResult(
+                        success=False,
+                        status_code=404,
+                        content_type="application/json",
+                        error="File not found",
                     )
+                    mock_instance.download_files.return_value = mock_result
+
+                    with pytest.raises(RuntimeError, match="Download failed"):
+                        download_runtime_files(
+                            path="/home/user/test.txt",
+                            session_id="session-123",
+                        )
 
     def test_download_files_no_data_endpoint_raises_error(self, tmp_path, monkeypatch):
         config_content = """
@@ -273,14 +279,15 @@ agents:
         (tmp_path / ".agentarts_config.yaml").write_text(config_content)
         monkeypatch.chdir(tmp_path)
 
-        with patch("agentarts.toolkit.operations.runtime.download_files._get_data_endpoint") as mock_endpoint:
-            mock_endpoint.return_value = None
+        with patch("agentarts.toolkit.operations.runtime.download_files._check_file_transfer_enabled"):
+            with patch("agentarts.toolkit.operations.runtime.download_files._get_data_endpoint") as mock_endpoint:
+                mock_endpoint.return_value = None
 
-            with pytest.raises(ValueError, match="No data endpoint"):
-                download_runtime_files(
-                    path="/home/user/test.txt",
-                    session_id="session-123",
-                )
+                with pytest.raises(ValueError, match="No data endpoint"):
+                    download_runtime_files(
+                        path="/home/user/test.txt",
+                        session_id="session-123",
+                    )
 
 
 class TestDownloadFilesClient:

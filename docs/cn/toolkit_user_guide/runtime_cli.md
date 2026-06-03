@@ -290,7 +290,8 @@ agentarts runtime exec-command "cat /home/user/data.txt" -a my-agent -s session-
 |------|------|------|--------|
 | `--agent` | `-a` | Agent 名称（必填） | 无 |
 | `--session` | `-s` | 会话 ID（必填） | 无 |
-| `--files` | `-f` | 本地文件路径（可多次指定） | 无 |
+| `--files` | `-f` | 本地文件路径（可多次指定，必填） | 无 |
+| `--path` | `-p` | 远程目录路径，必须以 `/` 结尾（如 `/home/user/`） | `/home/user/` |
 | `--file-user-id` | 无 | 文件所有者用户 ID | `1000` |
 | `--file-group-id` | 无 | 文件所有者组 ID | `1000` |
 | `--file-mode` | `-m` | 文件权限（八进制格式） | `0644` |
@@ -303,36 +304,36 @@ agentarts runtime exec-command "cat /home/user/data.txt" -a my-agent -s session-
 
 ### 文件路径格式
 
-#### 简单格式
+#### 默认目录上传
 
-文件上传到 `/home/user/{filename}`：
+文件上传到默认目录 `/home/user/`：
 
 ```bash
 agentarts runtime upload-files -a my-agent -s session-xxx -f local_file.txt
 ```
 
-#### 自定义远程路径
+#### 指定远程目录
 
-使用 `remote_file_path@local_file_path` 格式指定远程路径：
+使用 `--path` / `-p` 参数指定远程目录，路径必须以 `/` 结尾：
 
 ```bash
-agentarts runtime upload-files -a my-agent -s session-xxx -f "/app/config.yaml@local_config.yaml"
+agentarts runtime upload-files -a my-agent -s session-xxx -f local_file.txt -p /app/data/
 ```
 
 #### 多文件上传
 
-多次使用 `-f` 参数：
+多次使用 `-f` 参数，所有文件上传到同一目录：
 
 ```bash
 agentarts runtime upload-files -a my-agent -s session-xxx -f file1.txt -f file2.txt -f file3.txt
 ```
 
-#### 多文件自定义路径
+#### 多文件上传到自定义目录
 
 ```bash
 agentarts runtime upload-files -a my-agent -s session-xxx \
-  -f "/app/config.yaml@config.yaml" \
-  -f "/data/input.txt@input.txt"
+  -f file1.txt -f file2.txt -f file3.txt \
+  -p /app/data/
 ```
 
 ### 配置要求
@@ -350,7 +351,7 @@ runtime:
 
 ### 使用示例
 
-#### 示例 1: 单文件上传
+#### 示例 1: 单文件上传（默认目录）
 
 ```bash
 agentarts runtime upload-files --agent my-agent --session session-xxx -f data.txt
@@ -362,10 +363,10 @@ agentarts runtime upload-files --agent my-agent --session session-xxx -f data.tx
 agentarts runtime upload-files -a my-agent -s session-xxx -f file1.txt -f file2.txt
 ```
 
-#### 示例 3: 自定义远程路径
+#### 示例 3: 指定远程目录
 
 ```bash
-agentarts runtime upload-files -a my-agent -s session-xxx -f "/app/data.txt@local_data.txt"
+agentarts runtime upload-files -a my-agent -s session-xxx -f file1.txt -f file2.txt -p /app/data/
 ```
 
 #### 示例 4: 自定义文件权限
@@ -540,4 +541,4 @@ agentarts runtime stop-session --agent my-agent --session session-xxx
 5. **认证类型**: IAM 认证使用 AK/SK 签名，其他认证类型使用 Bearer Token
 6. **会话生命周期**: 建议在操作完成后停止会话释放资源
 7. **文件权限**: 上传文件时注意设置正确的用户 ID、组 ID 和权限
-8. **路径格式**: 自定义远程路径使用 `remote_file_path@local_file_path` 格式
+8. **远程目录**: upload-files 的 `--path` 参数必须以 `/` 结尾，多文件上传到同一目录

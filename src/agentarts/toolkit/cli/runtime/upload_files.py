@@ -34,8 +34,9 @@ def upload_files_cmd(
     session: Annotated[str, typer.Option("--session", "-s", help="Session ID [required]")] = None,
     files: Annotated[
         list[str] | None,
-        typer.Option("--files", "-f", help="Local file to upload. Use 'remote_file_path@local_file_path' format to specify remote path. Can be specified multiple times for multiple files [required]"),
+        typer.Option("--files", "-f", help="Local file path to upload. Can be specified multiple times for multiple files [required]"),
     ] = None,
+    path: Annotated[str, typer.Option("--path", "-p", help="Remote directory path to upload files to. Must end with '/' (e.g., /home/user/). Default: /home/user/")] = "/home/user/",
     file_user_id: Annotated[int | None, typer.Option("--file-user-id", help="File owner user ID (default: 1000)")] = None,
     file_group_id: Annotated[int | None, typer.Option("--file-group-id", help="File owner group ID (default: 1000)")] = None,
     file_mode: Annotated[str | None, typer.Option("--file-mode", "-m", help="File permissions in octal (default: 0644)")] = None,
@@ -61,14 +62,14 @@ def upload_files_cmd(
               enabled: true
 
     Examples:
-        # Single file
+        # Single file (uploaded to default /home/user/)
         agentarts runtime upload-files --agent myagent --session <session-id> -f file1.txt
 
         # Multiple files (use -f multiple times)
         agentarts runtime upload-files --agent myagent --session <session-id> -f file1.txt -f file2.txt
 
-        # Specify remote path with @ format
-        agentarts runtime upload-files --agent myagent --session <session-id> -f "/home/user/data.txt@local_file.txt"
+        # Specify remote directory path (must end with '/')
+        agentarts runtime upload-files --agent myagent --session <session-id> -f file1.txt -f file2.txt -p /app/data/
 
         # With custom permissions
         agentarts runtime upload-files --agent myagent --session <session-id> -f script.sh --file-mode 0755
@@ -88,6 +89,10 @@ def upload_files_cmd(
             echo_error("Session ID is required (--session)")
             raise typer.Exit(1)
 
+        if not path.endswith("/"):
+            echo_error(f"Remote path must be a directory and end with '/': {path}")
+            raise typer.Exit(1)
+
         if file_mode is not None and not validate_file_mode(file_mode):
             echo_error(f"Invalid file mode: {file_mode}. Must be valid octal (e.g., 0644, 0755)")
             raise typer.Exit(1)
@@ -95,13 +100,7 @@ def upload_files_cmd(
         file_list: list[dict[str, str]] = []
         total_size = 0
         for item in files:
-            item = item.strip()
-            if "@" in item:
-                remote_path, local_path = item.split("@", 1)
-            else:
-                filename = Path(item).name
-                remote_path = f"/home/user/{filename}"
-                local_path = item
+            local_path = item.strip()
 
             if not os.path.exists(local_path):
                 echo_error(f"Local file not found: {local_path}")
@@ -113,7 +112,7 @@ def upload_files_cmd(
                 raise typer.Exit(1)
 
             total_size += file_size
-            file_list.append({"path": remote_path, "local_file": local_path})
+            file_list.append({"local_file": local_path})
 
         upload_mode = "streaming (octet-stream)" if len(file_list) == 1 else "multipart"
         console.print(f"[dim]Upload mode: {upload_mode}[/dim]")
@@ -155,6 +154,7 @@ def upload_files_cmd(
                 agent_name=agent,
                 session_id=session,
                 files=file_list,
+                path=path,
                 file_user_id=file_user_id,
                 file_group_id=file_group_id,
                 file_mode=file_mode,
@@ -174,7 +174,8 @@ def upload_files_cmd(
         console.print(f"[cyan]File Mode:[/cyan] [dim]{display_file_mode}{mode_note}[/dim]")
 
         for file_spec in file_list:
-            console.print(f"  [green]✓[/green] {file_spec['path']}")
+            filename = Path(file_spec["local_file"]).name
+            console.print(f"  [green]✓[/green] {path}{filename}")
 
         console.print()
         console.print("[cyan]API Response:[/cyan]")

@@ -870,6 +870,7 @@ def code_session(
     code_interpreter_name: str,
     auth_type: str = "API_KEY",
     api_key: str | None = None,
+    verify_ssl: bool | str = True,
 ) -> Generator[CodeInterpreter, None, None]:
     """Code interpreter session context manager.
 
@@ -880,6 +881,8 @@ def code_session(
         code_interpreter_name (str): Code interpreter name
         api_key (Optional[str]): API Key for authentication, use only when auth_type is "API_KEY",
             if not provided will be retrieved from environment variable API_KEY
+        verify_ssl (bool | str, optional): SSL verification. True to verify, False to skip,
+            or a string path to a CA bundle. Default True.
 
     Yields:
         CodeInterpreter: Code interpreter instance with session started
@@ -895,9 +898,13 @@ def code_session(
         >>> # With IAM
         >>> with code_session("cn-southwest-2", "my-code-interpreter-name", auth_type="IAM") as client:
         >>>     client.execute_code("print('Hello, World!')")
+        >>>
+        >>> # Skip SSL verification
+        >>> with code_session("cn-southwest-2", "my-code-interpreter-name", verify_ssl=False) as client:
+        >>>     client.execute_code("print('Hello, World!')")
     """
 
-    client = CodeInterpreter(region=region, auth_type=auth_type)
+    client = CodeInterpreter(region=region, auth_type=auth_type, verify_ssl=verify_ssl)
 
     default_session_name = "default-session-name"
     client.start_session(

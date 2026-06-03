@@ -8,7 +8,11 @@ from typing import Any
 
 from agentarts.sdk.service.http_client import SignMode
 from agentarts.sdk.service.runtime_client import RuntimeClient
-from agentarts.toolkit.operations.runtime.invoke import _get_data_endpoint, _resolve_agent_info
+from agentarts.toolkit.operations.runtime.invoke import (
+    _check_file_transfer_enabled,
+    _get_data_endpoint,
+    _resolve_agent_info,
+)
 from agentarts.toolkit.utils.common import echo_error
 
 
@@ -57,6 +61,9 @@ def download_runtime_files(
         raise ValueError("Agent name is required")
 
     verify_ssl = not skip_ssl_verification
+
+    _check_file_transfer_enabled(agent_name, region or "", agent_id, verify_ssl)
+
     data_endpoint = _get_data_endpoint(agent_name, region or "", agent_id, verify_ssl)
 
     if not data_endpoint:

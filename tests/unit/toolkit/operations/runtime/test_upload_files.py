@@ -37,10 +37,11 @@ agents:
         (tmp_path / ".agentarts_config.yaml").write_text(config_content)
         monkeypatch.chdir(tmp_path)
 
-        with pytest.raises(ValueError, match="Session ID is required"):
-            upload_runtime_files(files=[{"path": "/test.txt", "local_file": "/tmp/test.txt"}])
+        with patch("agentarts.toolkit.operations.runtime.upload_files._check_file_transfer_enabled"):
+            with pytest.raises(ValueError, match="Session ID is required"):
+                upload_runtime_files(files=[{"path": "/test.txt", "local_file": "/tmp/test.txt"}])
 
-    def test_upload_files_normalizes_path(self, tmp_path, monkeypatch):
+    def test_upload_files_passes_path(self, tmp_path, monkeypatch):
         config_content = """
 default_agent: test-agent
 agents:
@@ -57,26 +58,27 @@ agents:
             tmp_path_file = tmp.name
 
         try:
-            with patch("agentarts.toolkit.operations.runtime.upload_files._get_data_endpoint") as mock_endpoint:
-                with patch("agentarts.toolkit.operations.runtime.upload_files.RuntimeClient") as mock_client:
-                    mock_endpoint.return_value = "https://test.example.com"
-                    mock_instance = MagicMock()
-                    mock_client.return_value = mock_instance
-                    mock_instance.upload_files.return_value = {"status": "uploaded"}
+            with patch("agentarts.toolkit.operations.runtime.upload_files._check_file_transfer_enabled"):
+                with patch("agentarts.toolkit.operations.runtime.upload_files._get_data_endpoint") as mock_endpoint:
+                    with patch("agentarts.toolkit.operations.runtime.upload_files.RuntimeClient") as mock_client:
+                        mock_endpoint.return_value = "https://test.example.com"
+                        mock_instance = MagicMock()
+                        mock_client.return_value = mock_instance
+                        mock_instance.upload_files.return_value = {"status": "uploaded"}
 
-                    result = upload_runtime_files(
-                        files=[{"path": "test.txt", "local_file": tmp_path_file}],
-                        session_id="session-123",
-                    )
+                        result = upload_runtime_files(
+                            files=[{"local_file": tmp_path_file}],
+                            path="/app/data/",
+                            session_id="session-123",
+                        )
 
-                    assert result["status"] == "uploaded"
-                    call_args = mock_instance.upload_files.call_args
-                    files_arg = call_args.kwargs["files"]
-                    assert files_arg[0]["path"] == "test.txt"
+                        assert result["status"] == "uploaded"
+                        call_args = mock_instance.upload_files.call_args
+                        assert call_args.kwargs["path"] == "/app/data/"
         finally:
             Path(tmp_path_file).unlink()
 
-    def test_upload_files_preserves_full_path(self, tmp_path, monkeypatch):
+    def test_upload_files_default_path(self, tmp_path, monkeypatch):
         config_content = """
 default_agent: test-agent
 agents:
@@ -93,21 +95,21 @@ agents:
             tmp_path_file = tmp.name
 
         try:
-            with patch("agentarts.toolkit.operations.runtime.upload_files._get_data_endpoint") as mock_endpoint:
-                with patch("agentarts.toolkit.operations.runtime.upload_files.RuntimeClient") as mock_client:
-                    mock_endpoint.return_value = "https://test.example.com"
-                    mock_instance = MagicMock()
-                    mock_client.return_value = mock_instance
-                    mock_instance.upload_files.return_value = {"status": "uploaded"}
+            with patch("agentarts.toolkit.operations.runtime.upload_files._check_file_transfer_enabled"):
+                with patch("agentarts.toolkit.operations.runtime.upload_files._get_data_endpoint") as mock_endpoint:
+                    with patch("agentarts.toolkit.operations.runtime.upload_files.RuntimeClient") as mock_client:
+                        mock_endpoint.return_value = "https://test.example.com"
+                        mock_instance = MagicMock()
+                        mock_client.return_value = mock_instance
+                        mock_instance.upload_files.return_value = {"status": "uploaded"}
 
-                    result = upload_runtime_files(
-                        files=[{"path": "/home/user/custom/path.txt", "local_file": tmp_path_file}],
-                        session_id="session-123",
-                    )
+                        result = upload_runtime_files(
+                            files=[{"local_file": tmp_path_file}],
+                            session_id="session-123",
+                        )
 
-                    call_args = mock_instance.upload_files.call_args
-                    files_arg = call_args.kwargs["files"]
-                    assert files_arg[0]["path"] == "/home/user/custom/path.txt"
+                        call_args = mock_instance.upload_files.call_args
+                        assert call_args.kwargs["path"] == "/home/user/"
         finally:
             Path(tmp_path_file).unlink()
 
@@ -131,25 +133,28 @@ agents:
             tmp2_path = tmp2.name
 
         try:
-            with patch("agentarts.toolkit.operations.runtime.upload_files._get_data_endpoint") as mock_endpoint:
-                with patch("agentarts.toolkit.operations.runtime.upload_files.RuntimeClient") as mock_client:
-                    mock_endpoint.return_value = "https://test.example.com"
-                    mock_instance = MagicMock()
-                    mock_client.return_value = mock_instance
-                    mock_instance.upload_files.return_value = {"status": "uploaded", "files": 2}
+            with patch("agentarts.toolkit.operations.runtime.upload_files._check_file_transfer_enabled"):
+                with patch("agentarts.toolkit.operations.runtime.upload_files._get_data_endpoint") as mock_endpoint:
+                    with patch("agentarts.toolkit.operations.runtime.upload_files.RuntimeClient") as mock_client:
+                        mock_endpoint.return_value = "https://test.example.com"
+                        mock_instance = MagicMock()
+                        mock_client.return_value = mock_instance
+                        mock_instance.upload_files.return_value = {"status": "uploaded", "files": 2}
 
-                    result = upload_runtime_files(
-                        files=[
-                            {"path": "/home/user/file1.txt", "local_file": tmp1_path},
-                            {"path": "/home/user/file2.txt", "local_file": tmp2_path},
-                        ],
-                        session_id="session-123",
-                    )
+                        result = upload_runtime_files(
+                            files=[
+                                {"local_file": tmp1_path},
+                                {"local_file": tmp2_path},
+                            ],
+                            path="/home/user/",
+                            session_id="session-123",
+                        )
 
-                    assert result["files"] == 2
-                    call_args = mock_instance.upload_files.call_args
-                    files_arg = call_args.kwargs["files"]
-                    assert len(files_arg) == 2
+                        assert result["files"] == 2
+                        call_args = mock_instance.upload_files.call_args
+                        files_arg = call_args.kwargs["files"]
+                        assert len(files_arg) == 2
+                        assert call_args.kwargs["path"] == "/home/user/"
         finally:
             Path(tmp1_path).unlink()
             Path(tmp2_path).unlink()
@@ -171,25 +176,26 @@ agents:
             tmp_path_file = tmp.name
 
         try:
-            with patch("agentarts.toolkit.operations.runtime.upload_files._get_data_endpoint") as mock_endpoint:
-                with patch("agentarts.toolkit.operations.runtime.upload_files.RuntimeClient") as mock_client:
-                    mock_endpoint.return_value = "https://test.example.com"
-                    mock_instance = MagicMock()
-                    mock_client.return_value = mock_instance
-                    mock_instance.upload_files.return_value = {"status": "uploaded"}
+            with patch("agentarts.toolkit.operations.runtime.upload_files._check_file_transfer_enabled"):
+                with patch("agentarts.toolkit.operations.runtime.upload_files._get_data_endpoint") as mock_endpoint:
+                    with patch("agentarts.toolkit.operations.runtime.upload_files.RuntimeClient") as mock_client:
+                        mock_endpoint.return_value = "https://test.example.com"
+                        mock_instance = MagicMock()
+                        mock_client.return_value = mock_instance
+                        mock_instance.upload_files.return_value = {"status": "uploaded"}
 
-                    upload_runtime_files(
-                        files=[{"path": "/home/user/test.txt", "local_file": tmp_path_file}],
-                        session_id="session-123",
-                        file_user_id=1001,
-                        file_group_id=1001,
-                        file_mode="0755",
-                    )
+                        upload_runtime_files(
+                            files=[{"path": "/home/user/test.txt", "local_file": tmp_path_file}],
+                            session_id="session-123",
+                            file_user_id=1001,
+                            file_group_id=1001,
+                            file_mode="0755",
+                        )
 
-                    call_args = mock_instance.upload_files.call_args
-                    assert call_args.kwargs["file_user_id"] == 1001
-                    assert call_args.kwargs["file_group_id"] == 1001
-                    assert call_args.kwargs["file_mode"] == "0755"
+                        call_args = mock_instance.upload_files.call_args
+                        assert call_args.kwargs["file_user_id"] == 1001
+                        assert call_args.kwargs["file_group_id"] == 1001
+                        assert call_args.kwargs["file_mode"] == "0755"
         finally:
             Path(tmp_path_file).unlink()
 
@@ -210,22 +216,23 @@ agents:
             tmp_path_file = tmp.name
 
         try:
-            with patch("agentarts.toolkit.operations.runtime.upload_files._get_data_endpoint") as mock_endpoint:
-                with patch("agentarts.toolkit.operations.runtime.upload_files.RuntimeClient") as mock_client:
-                    mock_endpoint.return_value = "https://test.example.com"
-                    mock_instance = MagicMock()
-                    mock_client.return_value = mock_instance
-                    mock_instance.upload_files.return_value = {"status": "uploaded"}
+            with patch("agentarts.toolkit.operations.runtime.upload_files._check_file_transfer_enabled"):
+                with patch("agentarts.toolkit.operations.runtime.upload_files._get_data_endpoint") as mock_endpoint:
+                    with patch("agentarts.toolkit.operations.runtime.upload_files.RuntimeClient") as mock_client:
+                        mock_endpoint.return_value = "https://test.example.com"
+                        mock_instance = MagicMock()
+                        mock_client.return_value = mock_instance
+                        mock_instance.upload_files.return_value = {"status": "uploaded"}
 
-                    upload_runtime_files(
-                        files=[{"path": "/home/user/test.txt", "local_file": tmp_path_file}],
-                        session_id="session-123",
-                    )
+                        upload_runtime_files(
+                            files=[{"path": "/home/user/test.txt", "local_file": tmp_path_file}],
+                            session_id="session-123",
+                        )
 
-                    call_args = mock_instance.upload_files.call_args
-                    assert call_args.kwargs["file_user_id"] is None
-                    assert call_args.kwargs["file_group_id"] is None
-                    assert call_args.kwargs["file_mode"] is None
+                        call_args = mock_instance.upload_files.call_args
+                        assert call_args.kwargs["file_user_id"] is None
+                        assert call_args.kwargs["file_group_id"] is None
+                        assert call_args.kwargs["file_mode"] is None
         finally:
             Path(tmp_path_file).unlink()
 
@@ -246,21 +253,22 @@ agents:
             tmp_path_file = tmp.name
 
         try:
-            with patch("agentarts.toolkit.operations.runtime.upload_files._get_data_endpoint") as mock_endpoint:
-                with patch("agentarts.toolkit.operations.runtime.upload_files.RuntimeClient") as mock_client:
-                    mock_endpoint.return_value = "https://test.example.com"
-                    mock_instance = MagicMock()
-                    mock_client.return_value = mock_instance
-                    mock_instance.upload_files.return_value = {"status": "uploaded"}
+            with patch("agentarts.toolkit.operations.runtime.upload_files._check_file_transfer_enabled"):
+                with patch("agentarts.toolkit.operations.runtime.upload_files._get_data_endpoint") as mock_endpoint:
+                    with patch("agentarts.toolkit.operations.runtime.upload_files.RuntimeClient") as mock_client:
+                        mock_endpoint.return_value = "https://test.example.com"
+                        mock_instance = MagicMock()
+                        mock_client.return_value = mock_instance
+                        mock_instance.upload_files.return_value = {"status": "uploaded"}
 
-                    upload_runtime_files(
-                        files=[{"path": "/home/user/test.txt", "local_file": tmp_path_file}],
-                        session_id="session-123",
-                        bearer_token="test-token",
-                    )
+                        upload_runtime_files(
+                            files=[{"path": "/home/user/test.txt", "local_file": tmp_path_file}],
+                            session_id="session-123",
+                            bearer_token="test-token",
+                        )
 
-                    call_args = mock_instance.upload_files.call_args
-                    assert call_args.kwargs["bearer_token"] == "test-token"
+                        call_args = mock_instance.upload_files.call_args
+                        assert call_args.kwargs["bearer_token"] == "test-token"
         finally:
             Path(tmp_path_file).unlink()
 
@@ -281,14 +289,15 @@ agents:
             tmp_path_file = tmp.name
 
         try:
-            with patch("agentarts.toolkit.operations.runtime.upload_files._get_data_endpoint") as mock_endpoint:
-                mock_endpoint.return_value = None
+            with patch("agentarts.toolkit.operations.runtime.upload_files._check_file_transfer_enabled"):
+                with patch("agentarts.toolkit.operations.runtime.upload_files._get_data_endpoint") as mock_endpoint:
+                    mock_endpoint.return_value = None
 
-                with pytest.raises(ValueError, match="No data endpoint"):
-                    upload_runtime_files(
-                        files=[{"path": "/test.txt", "local_file": tmp_path_file}],
-                        session_id="session-123",
-                    )
+                    with pytest.raises(ValueError, match="No data endpoint"):
+                        upload_runtime_files(
+                            files=[{"path": "/test.txt", "local_file": tmp_path_file}],
+                            session_id="session-123",
+                        )
         finally:
             Path(tmp_path_file).unlink()
 
@@ -350,3 +359,35 @@ class TestUploadFilesClient:
             assert params["user_id"] == 1001
             assert params["group_id"] == 1002
             assert params["file_mode"] == "0755"
+
+    def test_upload_files_multipart_path_in_query(self):
+        """Test that multipart upload puts path in query params, not form fields."""
+        from agentarts.sdk.service.runtime_client import RuntimeClient
+
+        mock_data_client = MagicMock()
+        mock_data_client._request.return_value = MagicMock(
+            success=True,
+            data={"status": "uploaded", "files": 2},
+        )
+
+        with patch.object(RuntimeClient, "__init__", lambda self, *args, **kwargs: None):
+            client = RuntimeClient.__new__(RuntimeClient)
+            client._data_client = mock_data_client
+            client._data = lambda method, path, **kwargs: mock_data_client._request(method, path, **kwargs)
+
+            client.upload_files(
+                agent_name="myagent",
+                session_id="session-123",
+                files=[
+                    {"content": b"test1", "filename": "file1.txt"},
+                    {"content": b"test2", "filename": "file2.txt"},
+                ],
+                path="/app/data/",
+            )
+
+            call_args = mock_data_client._request.call_args
+            params = call_args.kwargs.get("params", {})
+            assert params["path"] == "/app/data/"
+            multipart_files = call_args.kwargs.get("files", [])
+            for field_name, _ in multipart_files:
+                assert field_name == "file"

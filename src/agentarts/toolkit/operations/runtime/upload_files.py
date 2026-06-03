@@ -4,7 +4,11 @@ from typing import Any
 
 from agentarts.sdk.service.http_client import SignMode
 from agentarts.sdk.service.runtime_client import RuntimeClient
-from agentarts.toolkit.operations.runtime.invoke import _get_data_endpoint, _resolve_agent_info
+from agentarts.toolkit.operations.runtime.invoke import (
+    _check_file_transfer_enabled,
+    _get_data_endpoint,
+    _resolve_agent_info,
+)
 from agentarts.toolkit.utils.common import echo_error
 
 DEFAULT_FILE_USER_ID = 1000
@@ -16,6 +20,7 @@ def upload_runtime_files(
     agent_name: str | None = None,
     session_id: str | None = None,
     files: list[dict[str, str]] | None = None,
+    path: str = "/home/user/",
     file_user_id: int | None = None,
     file_group_id: int | None = None,
     file_mode: str | None = None,
@@ -31,7 +36,8 @@ def upload_runtime_files(
     Args:
         agent_name: Agent name
         session_id: Session ID
-        files: List of file specs with path and local_file
+        files: List of file specs with local_file
+        path: Remote directory path (must end with '/')
         file_user_id: File owner user ID (None for backend default)
         file_group_id: File owner group ID (None for backend default)
         file_mode: File permissions in octal (None for backend default)
@@ -53,6 +59,10 @@ def upload_runtime_files(
     if agent_name is None:
         echo_error("No agent specified and no default agent configured")
         raise ValueError("Agent name is required")
+
+    verify_ssl = not skip_ssl_verification
+
+    _check_file_transfer_enabled(agent_name, region or "", agent_id, verify_ssl)
 
     if session_id is None:
         raise ValueError("Session ID is required")
@@ -80,6 +90,7 @@ def upload_runtime_files(
         agent_name=agent_name,
         session_id=session_id,
         files=files,
+        path=path,
         file_user_id=file_user_id,
         file_group_id=file_group_id,
         file_mode=file_mode,
