@@ -167,10 +167,11 @@ def _check_file_transfer_enabled(
     if not file_transfer_config.get("enabled", False):
         msg = (
             f"File transfer is not enabled for agent '{agent_name}'. "
-            "Please enable it via one of the following methods:\n"
-            "  1. Set file_transfer_config.enabled=true in .agentarts_config.yaml "
-            "and redeploy with 'agentarts deploy'\n"
-            "  2. Enable file transfer directly on the Huawei Cloud AgentArts console"
+            "To enable file transfer, please:\n"
+            "  1. Set file_transfer_config.enabled=true in .agentarts_config.yaml\n"
+            "  2. Create a new agent with 'agentarts deploy'\n"
+            "Note: The file_transfer_config.enabled parameter cannot be modified "
+            "for existing agents. You need to create a new agent with file transfer enabled."
         )
         raise ValueError(msg)
 

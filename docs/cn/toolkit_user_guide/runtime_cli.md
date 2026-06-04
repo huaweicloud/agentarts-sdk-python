@@ -336,9 +336,13 @@ agentarts runtime upload-files -a my-agent -s session-xxx \
   -p /app/data/
 ```
 
+### 文件大小限制
+
+单个文件最大 100MB，超过将报错拦截。
+
 ### 配置要求
 
-使用 `upload-files` 需要在配置文件中启用文件传输：
+使用 `upload-files` 需要在部署时启用文件传输：
 
 ```yaml
 runtime:
@@ -348,6 +352,8 @@ runtime:
 ```
 
 若配置为 `false`（默认），上传操作将失败。
+
+> **注意**: `file_transfer_config.enabled` 参数不支持对已有 agent 进行修改。如需启用文件传输，请创建新的 agent 并在配置中设置 `enabled: true`，然后通过 `agentarts deploy` 部署。
 
 ### 使用示例
 
