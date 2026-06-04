@@ -33,7 +33,6 @@ def main(
     dependency_file: Annotated[str | None, typer.Option("--dependency-file", "-d", help="Path to dependency file (e.g., requirements.txt)")] = None,
     swr_organization: Annotated[str | None, typer.Option("--swr-org", help="SWR organization name")] = None,
     swr_repository: Annotated[str | None, typer.Option("--swr-repo", help="SWR repository name")] = None,
-    set_default: Annotated[bool, typer.Option("--set-default/--no-set-default", help="Set as default agent")] = True,
 ):
     """
     Configure agent settings.
@@ -187,7 +186,7 @@ def main(
         dependency_file=agent_dependency_file if agent_dependency_file else None,
         swr_organization=org,
         swr_repository=repo,
-        set_as_default=set_default,
+        set_as_default=True,
         organization_auto_create=auto_create_org,
         repository_auto_create=auto_create_repo,
     )

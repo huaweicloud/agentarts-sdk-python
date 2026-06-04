@@ -7,6 +7,8 @@ and implementation logic is in operations/.
 """
 
 import logging
+import os
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -65,11 +67,46 @@ def setup_logging(verbose: bool = False):
     logging.getLogger("huaweicloudsdkcore").setLevel(logging.WARNING)
 
 
+def _auto_install_completion():
+    """Auto-install shell completion on first run.
+
+    Checks if completion has already been attempted (via marker file).
+    Tries to install silently; on failure, prints a tip for manual install.
+    """
+    if os.getenv("_AGENTARTS_COMPLETE"):
+        return
+
+    marker = Path.home() / ".agentarts" / ".completion_shown"
+    if marker.exists():
+        return
+
+    try:
+        from typer.completion import install
+
+        shell, installed_path = install(
+            prog_name="agentarts",
+            complete_var="_AGENTARTS_COMPLETE",
+        )
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.touch()
+        console.print(
+            f"[dim]Tab completion installed for {shell}. "
+            f"Restart your shell to enable it.[/dim]"
+        )
+    except Exception:
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.touch()
+        console.print(
+            "[dim]Tip: Run [cyan]agentarts --install-completion[/cyan] "
+            "to enable tab completion.[/dim]"
+        )
+
+
 app = typer.Typer(
     name="agentarts",
     cls=_OrderedHelpGroup,
     help="AgentArts CLI - Huawei Cloud Agent Development Toolkit\n\nBuild, test, and deploy Agent applications quickly.",
-    add_completion=False,
+    add_completion=True,
     rich_markup_mode="rich",
 )
 
@@ -97,6 +134,7 @@ def main(
         agentarts deploy -r cn-southwest-2 -e production
     """
     setup_logging(verbose=verbose)
+    _auto_install_completion()
 
     if version:
         from agentarts import __version__

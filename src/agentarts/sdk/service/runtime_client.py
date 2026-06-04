@@ -865,9 +865,6 @@ class RuntimeClient:
 
         if len(files) == 1:
             file = files[0]
-            path = file.get("path", "")
-            if not path:
-                raise ValueError("path is required for each file")
             local_file = file.get("local_file")
             if not local_file:
                 content = file.get("content")
@@ -875,6 +872,12 @@ class RuntimeClient:
                     raise ValueError("File local_file or content is required")
             else:
                 content = None
+
+            if local_file:
+                filename = _Path(local_file).name
+            else:
+                filename = file.get("filename", "file_0")
+            remote_path = file.get("path") or f"{path}{filename}"
 
             api_endpoint = f"/runtimes/{agent_name}/upload-files"
             headers: dict[str, str] = {
@@ -886,7 +889,7 @@ class RuntimeClient:
             if user_id:
                 headers[USER_ID_HEADER] = user_id
 
-            params: dict[str, Any] = {"path": path}
+            params: dict[str, Any] = {"path": remote_path}
             if file_user_id is not None:
                 params["user_id"] = file_user_id
             if file_group_id is not None:
