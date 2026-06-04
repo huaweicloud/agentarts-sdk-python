@@ -165,11 +165,6 @@ def _check_file_transfer_enabled(
     file_transfer_config = invoke_config_resp.get("file_transfer_config") or {}
 
     if not file_transfer_config.get("enabled", False):
-        from agentarts.toolkit.utils.common import echo_warning
-        echo_warning(
-            "The file_transfer_config.enabled parameter cannot be modified for existing agents. "
-            "You need to create a new agent with file transfer enabled."
-        )
         msg = (
             f"File transfer is not enabled for agent '{agent_name}'. "
             "To enable file transfer, please:\n"

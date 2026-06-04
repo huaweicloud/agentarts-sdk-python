@@ -138,6 +138,14 @@ def upload_files_cmd(
             f"[cyan]Agent:[/cyan] [white]{agent}[/white]\n[cyan]Session:[/cyan] [dim]{session}[/dim]\n[cyan]Files:[/cyan] [yellow]{len(file_list)}[/yellow]\n[cyan]File User ID:[/cyan] [dim]{display_file_user_id}{user_id_note}[/dim]\n[cyan]File Group ID:[/cyan] [dim]{display_file_group_id}{group_id_note}[/dim]\n[cyan]File Mode:[/cyan] [dim]{display_file_mode}{mode_note}[/dim]",
         )
 
+        from agentarts.toolkit.operations.runtime.invoke import (
+            _check_file_transfer_enabled,
+            _resolve_agent_info,
+        )
+        resolved_name, resolved_region, agent_id, _ = _resolve_agent_info(agent, region)
+        if resolved_name:
+            _check_file_transfer_enabled(resolved_name, resolved_region or "", agent_id, not skip_ssl_verification)
+
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -183,6 +191,12 @@ def upload_files_cmd(
 
     except ValueError as e:
         echo_error(f"Validation error: {e}")
+        if "file transfer is not enabled" in str(e).lower():
+            from agentarts.toolkit.utils.common import echo_warning
+            echo_warning(
+                "The file_transfer_config.enabled parameter cannot be modified for existing agents. "
+                "You need to create a new agent with file transfer enabled."
+            )
         raise typer.Exit(1)
     except FileNotFoundError as e:
         echo_error(f"File error: {e}")
