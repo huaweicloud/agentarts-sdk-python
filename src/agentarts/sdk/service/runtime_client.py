@@ -455,7 +455,7 @@ class RuntimeClient:
     def get_agents(
         self,
         agent_name: str = "",
-        offset: int = 0,
+        offset: int = 1,
         limit: int = 10,
         **extra: Any,
     ) -> list[dict[Any, Any]]:
