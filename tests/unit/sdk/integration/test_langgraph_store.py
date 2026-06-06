@@ -9,7 +9,6 @@ Tests cover:
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -57,8 +56,9 @@ class TestAgentArtsMemoryStorePut:
 
     def test_put_requires_session_id(self):
         """Test that Put requires session_id in value"""
-        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
         from langgraph.store.base import PutOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
             with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
@@ -79,8 +79,9 @@ class TestAgentArtsMemoryStorePut:
 
     def test_put_requires_content(self):
         """Test that Put requires content in value"""
-        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
         from langgraph.store.base import PutOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
             with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
@@ -101,8 +102,9 @@ class TestAgentArtsMemoryStorePut:
 
     def test_put_calls_add_messages(self):
         """Test that Put calls add_messages with correct params"""
-        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
         from langgraph.store.base import PutOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
             with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
@@ -136,8 +138,9 @@ class TestAgentArtsMemoryStorePut:
 
     def test_put_delete_not_supported(self):
         """Test that delete (value=None) is not supported"""
-        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
         from langgraph.store.base import PutOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
             with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
@@ -163,8 +166,9 @@ class TestAgentArtsMemoryStoreSearch:
 
     def test_search_with_query_calls_search_memories(self):
         """Test that search with query calls search_memories"""
-        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
         from langgraph.store.base import SearchOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         mock_memory_info = MagicMock()
         mock_memory_info.id = "memory-123"
@@ -208,8 +212,9 @@ class TestAgentArtsMemoryStoreSearch:
 
     def test_search_with_filter_params(self):
         """Test that filter params are passed to search_memories"""
-        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
         from langgraph.store.base import SearchOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         mock_response = MagicMock()
         mock_response.results = []
@@ -245,8 +250,9 @@ class TestAgentArtsMemoryStoreSearch:
 
     def test_search_without_query_calls_list_memories(self):
         """Test that search without query calls list_memories"""
-        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
         from langgraph.store.base import SearchOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         mock_memory_info = MagicMock()
         mock_memory_info.id = "memory-123"
@@ -288,8 +294,9 @@ class TestAgentArtsMemoryStoreGet:
 
     def test_get_returns_item_when_found(self):
         """Test that get returns Item when memory exists"""
-        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
         from langgraph.store.base import GetOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         mock_memory_info = MagicMock()
         mock_memory_info.id = "memory-123"
@@ -320,8 +327,9 @@ class TestAgentArtsMemoryStoreGet:
 
     def test_get_returns_none_when_not_found(self):
         """Test that get returns None when memory doesn't exist"""
-        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
         from langgraph.store.base import GetOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
             with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
@@ -344,8 +352,9 @@ class TestAgentArtsMemoryStoreBatch:
 
     def test_batch_processes_multiple_ops(self):
         """Test that batch processes multiple operations"""
-        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
         from langgraph.store.base import GetOp, PutOp, SearchOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         mock_response = MagicMock()
         mock_response.results = []
@@ -385,8 +394,9 @@ class TestAgentArtsMemoryStoreAsync:
     @pytest.mark.asyncio
     async def test_async_put_calls_async_client(self):
         """Test that async put uses AsyncMemoryClient"""
-        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
         from langgraph.store.base import PutOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
             with patch("agentarts.sdk.integration.langgraph.store.MemoryClient"):
@@ -409,8 +419,9 @@ class TestAgentArtsMemoryStoreAsync:
     @pytest.mark.asyncio
     async def test_async_search_calls_async_client(self):
         """Test that async search uses AsyncMemoryClient"""
-        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
         from langgraph.store.base import SearchOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         mock_response = MagicMock()
         mock_response.results = []
@@ -433,8 +444,9 @@ class TestAgentArtsMemoryStoreAsync:
     @pytest.mark.asyncio
     async def test_abatch_processes_multiple_ops(self):
         """Test that abatch processes multiple operations"""
-        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
         from langgraph.store.base import GetOp, PutOp, SearchOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         mock_response = MagicMock()
         mock_response.results = []
@@ -481,8 +493,9 @@ class TestAgentArtsMemoryStoreNamespaceFilter:
 
     def test_filter_contains_actor_session(self):
         """Test that filter can contain actor_id/session_id"""
-        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
         from langgraph.store.base import SearchOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         mock_response = MagicMock()
         mock_response.results = []
@@ -515,8 +528,9 @@ class TestAgentArtsMemoryStoreNamespaceFilter:
 
     def test_only_session_id_in_filter(self):
         """Test that only session_id can be used in filter"""
-        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
         from langgraph.store.base import SearchOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         mock_response = MagicMock()
         mock_response.results = []
@@ -551,8 +565,8 @@ class TestLangGraphAgentSimulation:
 
     def test_store_put_search_flow(self):
         """Simulate agent putting memory and searching later"""
+
         from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
-        from langgraph.store.base import PutOp, SearchOp
 
         mock_memory_info = MagicMock()
         mock_memory_info.id = "mem-001"
@@ -603,8 +617,8 @@ class TestLangGraphAgentSimulation:
 
     def test_cross_thread_memory_access(self):
         """Simulate accessing memory from different thread (session)"""
+
         from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
-        from langgraph.store.base import SearchOp
 
         mock_memory_info = MagicMock()
         mock_memory_info.id = "mem-001"

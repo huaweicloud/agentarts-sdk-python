@@ -39,7 +39,6 @@ from agentarts.sdk.service.memory_service import MemoryHttpService
 from .async_client import AsyncMemoryClient
 from .async_session import AsyncMemorySession
 from .client import MemoryClient
-from .session import MemorySession
 
 # Data types
 from .inner.config import (
@@ -69,6 +68,7 @@ from .inner.config import (
     ToolCallMessage,
     ToolResultMessage,
 )
+from .session import MemorySession
 
 __all__ = [
     "AddMessagesRequest",
