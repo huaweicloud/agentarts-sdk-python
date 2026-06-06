@@ -16,6 +16,9 @@
 | `config set` | 设置配置值 |
 | `config set-default` | 设置默认 Agent |
 | `config remove` | 删除 Agent 配置 |
+| `config set-env` | 设置环境变量 |
+| `config remove-env` | 删除环境变量 |
+| `config list-env` | 列出环境变量 |
 
 ## 参数解释
 
@@ -57,6 +60,27 @@
 | 参数 | 说明 | 是否必填 |
 |------|------|----------|
 | `name` | Agent 名称 | 是 |
+
+### config set-env
+
+| 参数 | 简写 | 说明 | 是否必填 |
+|------|------|------|----------|
+| `key` | 无 | 环境变量名称 | 是 |
+| `value` | 无 | 环境变量值 | 是 |
+| `--agent` | `-a` | Agent 名称 | 否，使用默认 Agent |
+
+### config remove-env
+
+| 参数 | 简写 | 说明 | 是否必填 |
+|------|------|------|----------|
+| `key` | 无 | 环境变量名称 | 是 |
+| `--agent` | `-a` | Agent 名称 | 否，使用默认 Agent |
+
+### config list-env
+
+| 参数 | 简写 | 说明 | 是否必填 |
+|------|------|------|----------|
+| `--agent` | `-a` | Agent 名称 | 否，使用默认 Agent |
 
 ## 配置键格式
 
@@ -193,6 +217,52 @@ agentarts config set-default my-agent
 agentarts config remove my-agent
 ```
 
+### 示例 10: 设置环境变量
+
+```bash
+agentarts config set-env HUAWEICLOUD_SDK_AK your-access-key
+```
+
+指定 Agent：
+```bash
+agentarts config set-env HUAWEICLOUD_SDK_AK your-access-key --agent my-agent
+```
+
+如果环境变量已存在，值会被更新。
+
+### 示例 11: 列出环境变量
+
+```bash
+agentarts config list-env
+```
+
+指定 Agent：
+```bash
+agentarts config list-env --agent my-agent
+```
+
+输出示例：
+```
+  Environment Variables (my-agent)
++------------------------------------+
+| Key                | Value         |
+|--------------------+---------------|
+| HUAWEICLOUD_SDK_AK | your-ak       |
+| HUAWEICLOUD_SDK_SK | your-sk       |
++------------------------------------+
+```
+
+### 示例 12: 删除环境变量
+
+```bash
+agentarts config remove-env HUAWEICLOUD_SDK_AK
+```
+
+指定 Agent：
+```bash
+agentarts config remove-env HUAWEICLOUD_SDK_AK --agent my-agent
+```
+
 ## 配置文件示例
 
 `.agentarts_config.yaml` 文件结构：
@@ -228,6 +298,12 @@ agents:
 
       identity_configuration:
         authorizer_type: IAM
+
+      environment_variables:
+        - key: HUAWEICLOUD_SDK_AK
+          value: your-access-key
+        - key: HUAWEICLOUD_SDK_SK
+          value: your-secret-key
 ```
 
 ### artifact_source.url 配置说明
@@ -251,3 +327,4 @@ agents:
 3. **SWR 配置**: 首次使用会自动创建组织和仓库
 4. **默认 Agent**: 设置默认 Agent 后，其他命令可省略 `--agent` 参数
 5. **配置文件**: 配置保存在项目根目录的 `.agentarts_config.yaml` 文件中
+6. **环境变量管理**: 使用 `set-env` / `remove-env` / `list-env` 子命令管理运行时环境变量，环境变量会在部署时注入到运行时容器中

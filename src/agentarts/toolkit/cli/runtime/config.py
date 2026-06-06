@@ -298,3 +298,56 @@ def remove(
     success = config_op.remove_agent(name)
     if not success:
         raise typer.Exit(1)
+
+
+@config_app.command("set-env")
+def set_env(
+    key: Annotated[str, typer.Argument(help="Environment variable name")],
+    value: Annotated[str, typer.Argument(help="Environment variable value")],
+    agent: Annotated[str | None, typer.Option("--agent", "-a", help="Agent name")] = None,
+):
+    """
+    Set an environment variable for an agent.
+
+    If the variable already exists, its value is updated.
+
+    Examples:
+        agentarts config set-env HUAWEICLOUD_SDK_AK your-ak
+        agentarts config set-env MY_VAR my-value --agent myagent
+    """
+    success = config_op.set_env(key, value, agent)
+    if not success:
+        raise typer.Exit(1)
+
+
+@config_app.command("remove-env")
+def remove_env(
+    key: Annotated[str, typer.Argument(help="Environment variable name to remove")],
+    agent: Annotated[str | None, typer.Option("--agent", "-a", help="Agent name")] = None,
+):
+    """
+    Remove an environment variable from an agent.
+
+    Examples:
+        agentarts config remove-env HUAWEICLOUD_SDK_AK
+        agentarts config remove-env MY_VAR --agent myagent
+    """
+    success = config_op.remove_env(key, agent)
+    if not success:
+        raise typer.Exit(1)
+
+
+@config_app.command("list-env")
+def list_env(
+    agent: Annotated[str | None, typer.Option("--agent", "-a", help="Agent name")] = None,
+):
+    """
+    List environment variables for an agent.
+
+    Examples:
+        agentarts config list-env
+        agentarts config list-env --agent myagent
+    """
+    success = config_op.list_env(agent)
+    if not success:
+        raise typer.Exit(1)
