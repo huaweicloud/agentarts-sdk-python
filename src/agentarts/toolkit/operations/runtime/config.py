@@ -461,6 +461,140 @@ def get_config_value(key: str, agent_name: str | None = None) -> bool:
         return False
 
 
+def set_env(key: str, value: str, agent_name: str | None = None) -> bool:
+    """
+    Set an environment variable for an agent.
+
+    Args:
+        key: Environment variable name
+        value: Environment variable value
+        agent_name: Agent name (uses default if None)
+
+    Returns:
+        True if successful
+    """
+    config = load_config()
+
+    if agent_name is None:
+        agent_name = config.default_agent
+
+    if agent_name is None:
+        console.print("[red]Error: No agent specified and no default agent set[/red]")
+        return False
+
+    agent_config = config.get_agent(agent_name)
+    if agent_config is None:
+        console.print(f"[red]Error: Agent '{agent_name}' not found[/red]")
+        return False
+
+    config_dict = agent_config.to_dict()
+    env_vars: list[dict[str, str | None]] = config_dict.setdefault("runtime", {}).setdefault("environment_variables", [])
+
+    for env_var in env_vars:
+        if env_var.get("key") == key:
+            env_var["value"] = value
+            updated_config = AgentArtsConfig.from_dict(config_dict)
+            config.agents[agent_name] = updated_config
+            if save_config(config):
+                console.print(f"[green]Done:[/green] Updated env [cyan]{key}[/cyan] for agent [cyan]{agent_name}[/cyan]")
+                return True
+            return False
+
+    env_vars.append({"key": key, "value": value})
+    updated_config = AgentArtsConfig.from_dict(config_dict)
+    config.agents[agent_name] = updated_config
+    if save_config(config):
+        console.print(f"[green]Done:[/green] Added env [cyan]{key}[/cyan] for agent [cyan]{agent_name}[/cyan]")
+        return True
+    return False
+
+
+def remove_env(key: str, agent_name: str | None = None) -> bool:
+    """
+    Remove an environment variable from an agent.
+
+    Args:
+        key: Environment variable name to remove
+        agent_name: Agent name (uses default if None)
+
+    Returns:
+        True if successful
+    """
+    config = load_config()
+
+    if agent_name is None:
+        agent_name = config.default_agent
+
+    if agent_name is None:
+        console.print("[red]Error: No agent specified and no default agent set[/red]")
+        return False
+
+    agent_config = config.get_agent(agent_name)
+    if agent_config is None:
+        console.print(f"[red]Error: Agent '{agent_name}' not found[/red]")
+        return False
+
+    config_dict = agent_config.to_dict()
+    env_vars: list[dict[str, str | None]] = config_dict.get("runtime", {}).get("environment_variables", [])
+
+    original_len = len(env_vars)
+    env_vars[:] = [e for e in env_vars if e.get("key") != key]
+
+    if len(env_vars) == original_len:
+        console.print(f"[red]Error: Environment variable '{key}' not found for agent '{agent_name}'[/red]")
+        return False
+
+    config_dict["runtime"]["environment_variables"] = env_vars
+    updated_config = AgentArtsConfig.from_dict(config_dict)
+    config.agents[agent_name] = updated_config
+    if save_config(config):
+        console.print(f"[green]Done:[/green] Removed env [cyan]{key}[/cyan] from agent [cyan]{agent_name}[/cyan]")
+        return True
+    return False
+
+
+def list_env(agent_name: str | None = None) -> bool:
+    """
+    List environment variables for an agent.
+
+    Args:
+        agent_name: Agent name (uses default if None)
+
+    Returns:
+        True if successful
+    """
+    config = load_config()
+
+    if agent_name is None:
+        agent_name = config.default_agent
+
+    if agent_name is None:
+        console.print("[red]Error: No agent specified and no default agent set[/red]")
+        return False
+
+    agent_config = config.get_agent(agent_name)
+    if agent_config is None:
+        console.print(f"[red]Error: Agent '{agent_name}' not found[/red]")
+        return False
+
+    env_vars = agent_config.runtime.environment_variables or []
+
+    if not env_vars:
+        console.print(f"[dim]No environment variables configured for agent '{agent_name}'[/dim]")
+        return True
+
+    table = Table(title=f"Environment Variables ({agent_name})")
+    table.add_column("Key", style="cyan")
+    table.add_column("Value", style="yellow")
+
+    for env_var in env_vars:
+        display_value = env_var.value if env_var.value is not None else "[dim]<not set>[/dim]"
+        table.add_row(env_var.key, display_value)
+
+    console.print(table)
+    return True
+
+
 def generate_dockerfile(agent_name: str | None = None, output_path: str | None = None) -> bool:
     """
     Generate Dockerfile for an agent.
