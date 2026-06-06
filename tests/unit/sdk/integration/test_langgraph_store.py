@@ -14,6 +14,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+pytest.importorskip("langgraph")
+
 
 class TestAgentArtsMemoryStoreBasic:
     """Basic tests for AgentArtsMemoryStore"""
