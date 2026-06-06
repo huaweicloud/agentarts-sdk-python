@@ -1,6 +1,5 @@
 """Tests for common utility functions"""
 
-import pytest
 
 from agentarts.toolkit.utils.common import validate_agent_name
 

@@ -1,6 +1,5 @@
 """Runtime download-files command"""
 
-import json
 from typing import Annotated
 
 import typer

@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import json
 import logging
-import uuid
 from collections.abc import Iterable
 from datetime import datetime, timezone
 from typing import Any
@@ -161,7 +160,7 @@ class AgentArtsMemoryStore(BaseStore):
         """Close the underlying MemoryClient connections."""
         self._client.close()
 
-    def __enter__(self) -> "AgentArtsMemoryStore":
+    def __enter__(self) -> AgentArtsMemoryStore:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
@@ -746,7 +745,7 @@ class AgentArtsMemoryStore(BaseStore):
 
         if match_type == "prefix":
             return namespace[:len(path)] == path if len(namespace) >= len(path) else False
-        elif match_type == "suffix":
+        if match_type == "suffix":
             return namespace[-len(path):] == path if len(namespace) >= len(path) else False
 
         return True

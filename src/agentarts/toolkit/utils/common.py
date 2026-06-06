@@ -3,12 +3,13 @@ Common utility functions for CLI
 """
 
 import re
+
 from rich.console import Console
 from rich.panel import Panel
 
 console = Console()
 
-AGENT_NAME_PATTERN = re.compile(r'^[a-z][a-z0-9-]*[a-z0-9]$')
+AGENT_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9-]*[a-z0-9]$")
 AGENT_NAME_MIN_LENGTH = 2
 AGENT_NAME_MAX_LENGTH = 48
 
