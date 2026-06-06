@@ -305,9 +305,6 @@ agentarts config set region cn-southwest-2
 # Deploy to cloud
 agentarts deploy
 
-# Check deployment status
-agentarts status
-
 # Invoke deployed agent
 agentarts invoke '{"message": "Hello, AgentArts!"}'
 
@@ -324,7 +321,6 @@ agentarts destroy
 | `agentarts config`      | Configure SDK settings (alias: `configure`)    |
 | `agentarts deploy`      | Deploy agent to Huawei Cloud (alias: `launch`) |
 | `agentarts invoke`      | Invoke deployed agent                          |
-| `agentarts status`      | Check deployment status                        |
 | `agentarts destroy`     | Remove deployed agent                          |
 | `agentarts mcp-gateway` | Manage MCP gateways                            |
 
@@ -365,7 +361,7 @@ Refer to [Huawei Cloud AgentArts Documentation](https://docs.huaweicloud.com/age
 ## Documentation
 
 - [SDK User Guides](docs/cn/sdk_user_guide/) - Memory, Code Interpreter, MCP Gateway
-- [CLI User Guides](docs/cn/toolkit_user_guide/) - init, config, deploy, invoke, status, destroy
+- [CLI User Guides](docs/cn/toolkit_user_guide/) - init, config, deploy, invoke, destroy
 - [Contributing Guide](CONTRIBUTING.md) - Development setup and guidelines
 - [Architecture](ARCHITECTURE.md) - System architecture overview
 

@@ -277,9 +277,12 @@ class BaseHTTPClient:
         headers = kwargs.get("headers", {}) or {}
         data = kwargs.get("data")
         json_data = kwargs.get("json")
+        files = kwargs.get("files")
 
         body = None
-        if data is not None:
+        if files is not None:
+            headers["x-sdk-content-sha256"] = "UNSIGNED-PAYLOAD"
+        elif data is not None:
             if isinstance(data, dict):
                 import urllib.parse
                 body = urllib.parse.urlencode(data)

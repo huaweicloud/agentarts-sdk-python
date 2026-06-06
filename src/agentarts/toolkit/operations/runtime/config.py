@@ -227,14 +227,6 @@ def add_agent(
         existing_dict.setdefault("swr_config", {})["organization_auto_create"] = organization_auto_create
         existing_dict.setdefault("swr_config", {})["repository_auto_create"] = repository_auto_create
 
-        final_region = existing_dict.get("base", {}).get("region", "cn-southwest-2")
-        existing_org = existing_dict.get("swr_config", {}).get("organization")
-        final_org = existing_org or generate_swr_org_name(region=final_region)
-        final_repo = existing_dict.get("swr_config", {}).get("repository", f"agent_{name}")
-
-        artifact_url = f"swr.{final_region}.myhuaweicloud.com/{final_org}/{final_repo}:latest"
-        existing_dict.setdefault("runtime", {}).setdefault("artifact_source", {})["url"] = artifact_url
-
         agent_config = AgentArtsConfig.from_dict(existing_dict)
     else:
         detected_platform = detect_platform()
@@ -258,9 +250,7 @@ def add_agent(
         final_org = swr_organization or generate_swr_org_name(region=final_region)
         final_repo = swr_repository or f"agent_{name}"
 
-        artifact_url = f"swr.{final_region}.myhuaweicloud.com/{final_org}/{final_repo}:latest"
         agent_config_dict = agent_config.to_dict()
-        agent_config_dict.setdefault("runtime", {}).setdefault("artifact_source", {})["url"] = artifact_url
         agent_config = AgentArtsConfig.from_dict(agent_config_dict)
 
     config.add_agent(name, agent_config)

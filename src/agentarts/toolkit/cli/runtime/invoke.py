@@ -8,92 +8,9 @@ from rich.console import Console
 from agentarts.toolkit.operations.runtime.invoke import (
     InvokeMode,
     invoke_agent,
-    status_agent,
 )
 
 rich_console = Console()
-
-
-def status(
-    agent: Annotated[
-        str | None,
-        typer.Option("--agent", "-a", help="Agent name (uses default if not specified for cloud mode)"),
-    ] = None,
-    mode: Annotated[
-        str,
-        typer.Option(
-            "--mode",
-            "-m",
-            help="Status mode: 'local' for Docker container, 'cloud' for AgentArts runtime (default)",
-        ),
-    ] = "cloud",
-    region: Annotated[
-        str | None,
-        typer.Option("--region", "-r", help="Huawei Cloud region (for cloud mode)"),
-    ] = None,
-    port: Annotated[
-        int | None,
-        typer.Option("--port", "-p", help="Local port (for local mode, default: 8080)"),
-    ] = None,
-    endpoint: Annotated[
-        str | None,
-        typer.Option("--endpoint", "-e", help="Endpoint name"),
-    ] = None,
-    session_id: Annotated[
-        str | None,
-        typer.Option("--session", "-s", help="Session ID for stateful agents"),
-    ] = None,
-    bearer_token: Annotated[
-        str | None,
-        typer.Option("--bearer-token", "-bt", help="Bearer token for authentication"),
-    ] = None,
-    skip_ssl_verification: Annotated[
-        bool,
-        typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification"),
-    ] = False,
-    user_id: Annotated[
-        str | None,
-        typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials"),
-    ] = None,
-):
-    """
-    Check agent health status.
-
-    Two status modes are supported:
-    - cloud (default): Check AgentArts runtime on Huawei Cloud
-    - local: Check local Docker container
-
-    Examples:
-        agentarts status
-        agentarts status --agent myagent
-        agentarts status --mode local --port 8080
-        agentarts status --endpoint custom-endpoint
-        agentarts status --session my-session-123
-        agentarts status --bearer-token my-token
-        agentarts status --user-id my-user-id
-        agentarts status -bt my-token
-    """
-    status_mode = InvokeMode.CLOUD
-    if mode.lower() == "local":
-        status_mode = InvokeMode.LOCAL
-    elif mode.lower() != "cloud":
-        rich_console.print(f"[red]Error: Invalid mode '{mode}'. Use 'local' or 'cloud'.[/red]")
-        raise typer.Exit(1)
-
-    success = status_agent(
-        agent_name=agent,
-        mode=status_mode,
-        region=region,
-        port=port,
-        endpoint=endpoint,
-        session_id=session_id,
-        bearer_token=bearer_token,
-        skip_ssl_verification=skip_ssl_verification,
-        user_id=user_id,
-    )
-
-    if not success:
-        raise typer.Exit(1)
 
 
 def invoke(
@@ -139,11 +56,15 @@ def invoke(
     ] = 900,
     skip_ssl_verification: Annotated[
         bool,
-        typer.Option("--skip-ssl-verification", help="Skip SSL certificate verification"),
+        typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification"),
     ] = False,
     user_id: Annotated[
         str | None,
         typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials"),
+    ] = None,
+    custom_path: Annotated[
+        str | None,
+        typer.Option("--custom-path", help="Custom path appended to /invocations (e.g., 'stream' -> /invocations/stream)"),
     ] = None,
 ):
     """
@@ -155,12 +76,24 @@ def invoke(
 
     The payload must be a valid JSON string.
 
+    Configuration Requirement for --custom-path:
+        Using --custom-path requires url_match_type=PREFIX_MATCH to be configured on the deployed agent.
+        You can configure it in two ways:
+        1. Set url_match_type=PREFIX_MATCH in .agentarts_config.yaml and redeploy with 'agentarts deploy'
+        2. Update the configuration directly on Huawei Cloud AgentArts console
+
+    Example configuration in .agentarts_config.yaml:
+        runtime:
+          invoke_config:
+            url_match_type: PREFIX_MATCH
+
     Examples:
         agentarts invoke '{"message": "hello"}'
         agentarts invoke '{"message": "hello"}' --agent myagent
         agentarts invoke '{"message": "hello"}' --mode local --port 8080
         agentarts invoke '{"message": "test"}' --session my-session-123
         agentarts invoke '{"message": "test"}' --user-id my-user-id
+        agentarts invoke '{"message": "test"}' --custom-path stream
     """
     invoke_mode = InvokeMode.CLOUD
     if mode.lower() == "local":
@@ -181,6 +114,7 @@ def invoke(
         timeout=timeout,
         skip_ssl_verification=skip_ssl_verification,
         user_id=user_id,
+        custom_path=custom_path,
     )
 
     if not success:

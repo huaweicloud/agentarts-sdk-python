@@ -1,0 +1,94 @@
+"""Runtime exec-command command"""
+
+import json
+from collections.abc import Iterator
+from typing import Annotated
+
+import typer
+from rich.console import Console
+
+from agentarts.toolkit.operations.runtime.exec_command import exec_runtime_command
+from agentarts.toolkit.utils.common import echo_error, echo_info, echo_success
+
+console = Console()
+
+DEFAULT_TIMEOUT = 60
+MAX_TIMEOUT = 300
+
+
+def validate_timeout(timeout: int) -> int:
+    """Validate timeout parameter."""
+    if timeout <= 0:
+        echo_error(f"Timeout must be a positive number: {timeout}")
+        raise typer.Exit(1)
+    if timeout > MAX_TIMEOUT:
+        echo_error(f"Timeout exceeds maximum allowed value ({MAX_TIMEOUT}): {timeout}")
+        raise typer.Exit(1)
+    return timeout
+
+
+def exec_command_cmd(
+    command: Annotated[str, typer.Argument(help="Command to execute (e.g., 'ls -la' or 'ls')")],
+    agent: Annotated[str, typer.Option("--agent", "-a", help="Agent name [required]")] = None,
+    session: Annotated[str, typer.Option("--session", "-s", help="Session ID")] = None,
+    chunked: Annotated[bool, typer.Option("--chunked", help="Enable chunked streaming response (application/x-ndjson)")] = False,
+    bearer_token: Annotated[str | None, typer.Option("--bearer-token", "-bt", help="Bearer token for authentication")] = None,
+    region: Annotated[str | None, typer.Option("--region", "-r", help="Region name")] = None,
+    endpoint: Annotated[str | None, typer.Option("--endpoint", "-e", help="Endpoint name")] = None,
+    skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
+    user_id: Annotated[str | None, typer.Option("--user-id", "-u", help="User ID for OAuth2 outbound credentials")] = None,
+    timeout: Annotated[int, typer.Option("--timeout", help=f"Request timeout in seconds (default: {DEFAULT_TIMEOUT}, max: {MAX_TIMEOUT})")] = DEFAULT_TIMEOUT,
+) -> None:
+    """
+    Execute command in runtime (cloud only).
+
+    The command can be a simple string like 'ls' or 'ls -la'.
+    It will be parsed as a command array when sent to backend.
+
+    Examples:
+        agentarts runtime exec-command "ls -la" --agent myagent --session <session-id>
+        agentarts runtime exec-command "ls -la" --agent myagent --session <session-id> --chunked
+        agentarts runtime exec-command "ls" --agent myagent --session <session-id> -bt <bearer-token>
+        agentarts runtime exec-command "ls" --agent myagent --session <session-id> -e myendpoint
+        agentarts runtime exec-command "ls" --agent myagent --session <session-id> --skip-ssl-verification
+    """
+    try:
+        validated_timeout = validate_timeout(timeout)
+
+        mode_str = "chunked (ndjson)" if chunked else "json"
+        echo_info(
+            "Exec Command",
+            f"[cyan]Agent:[/cyan] [white]{agent}[/white]\n[cyan]Session:[/cyan] [dim]{session}[/dim]\n[cyan]Mode:[/cyan] [yellow]{mode_str}[/yellow]\n[cyan]Command:[/cyan] [dim]{command}[/dim]",
+        )
+
+        result = exec_runtime_command(
+            command=command,
+            agent_name=agent,
+            session_id=session,
+            chunked=chunked,
+            bearer_token=bearer_token,
+            region=region,
+            endpoint=endpoint,
+            skip_ssl_verification=skip_ssl_verification,
+            user_id=user_id,
+            timeout=validated_timeout,
+        )
+
+        if chunked and isinstance(result, Iterator):
+            echo_success("Streaming output (ndjson):")
+            for line in result:
+                try:
+                    data = json.loads(line)
+                    console.print_json(json.dumps(data, indent=2, ensure_ascii=False))
+                except json.JSONDecodeError:
+                    console.print(line)
+        else:
+            echo_success("Command executed")
+            console.print_json(json.dumps(result, indent=2, ensure_ascii=False))
+
+    except ValueError as e:
+        echo_error(f"Validation error: {e}")
+        raise typer.Exit(1)
+    except Exception as e:
+        echo_error(f"Failed to execute command: {e}")
+        raise typer.Exit(1)

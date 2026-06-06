@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import re
 import uuid
 from enum import Enum
 
@@ -20,10 +21,57 @@ from agentarts.toolkit.operations.runtime.config import (
     get_config_file_path,
     load_config,
 )
-from agentarts.toolkit.utils.common import echo_error, echo_info, echo_success
+from agentarts.toolkit.utils.common import echo_error, echo_info
 
 console = Console()
 logger = logging.getLogger(__name__)
+
+
+def _validate_and_normalize_custom_path(custom_path: str | None) -> str | None:
+    """
+    Validate and normalize custom URL path.
+
+    Rules:
+    - Must not be empty string
+    - Must not contain leading/trailing slashes (will be stripped)
+    - Must be valid URL path segment (alphanumeric, hyphens, underscores, slashes for nested paths)
+    - Must not contain special characters that could cause URL injection
+
+    Args:
+        custom_path: Raw custom path string from CLI
+
+    Returns:
+        Normalized custom path string, or None if not provided
+
+    Raises:
+        ValueError: If custom path contains invalid characters
+    """
+    if not custom_path:
+        return None
+
+    custom_path = custom_path.strip()
+
+    if not custom_path:
+        return None
+
+    if custom_path.startswith("/"):
+        custom_path = custom_path[1:]
+    if custom_path.endswith("/"):
+        custom_path = custom_path[:-1]
+
+    if not custom_path:
+        return None
+
+    valid_pattern = r"^[a-zA-Z0-9_\-./]+$"
+    if not re.match(valid_pattern, custom_path):
+        msg = f"Invalid custom path '{custom_path}'. Only alphanumeric characters, hyphens, underscores, dots, and slashes are allowed."
+        raise ValueError(msg)
+
+    if ".." in custom_path:
+        msg = f"Invalid custom path '{custom_path}'. Path traversal sequences ('..') are not allowed."
+        raise ValueError(msg)
+
+    return custom_path
 
 
 def _resolve_agent_info(
@@ -76,6 +124,54 @@ def _resolve_agent_info(
             logger.info("Agent '%s' not found in config, using default IAM authentication", agent_name)
             auth_type = "IAM"
     return agent_name, region, agent_id, auth_type
+
+
+def _check_file_transfer_enabled(
+    agent_name: str,
+    region: str,
+    agent_id: str | None = None,
+    verify_ssl: bool = True,
+) -> None:
+    """
+    Check if file transfer is enabled for the agent.
+
+    Args:
+        agent_name: Agent name
+        region: Huawei Cloud region
+        agent_id: Optional agent ID from config file
+        verify_ssl: SSL verification setting
+
+    Raises:
+        ValueError: If file transfer is not enabled for the agent
+    """
+    control_endpoint = get_control_plane_endpoint(region)
+    control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=verify_ssl)
+
+    agent_detail = None
+    if agent_id:
+        agent_detail = control_client.find_agent_by_id(agent_id)
+    else:
+        agent_info = control_client.find_agent_by_name(agent_name)
+        if agent_info:
+            agent_id = agent_info.get("id")
+            if agent_id:
+                agent_detail = control_client.find_agent_by_id(agent_id)
+
+    if not agent_detail:
+        raise ValueError(f"Agent '{agent_name}' not found")
+
+    version_detail = agent_detail.get("version_detail") or {}
+    invoke_config_resp = version_detail.get("invoke_config") or {}
+    file_transfer_config = invoke_config_resp.get("file_transfer_config") or {}
+
+    if not file_transfer_config.get("enabled", False):
+        msg = (
+            f"File transfer is not enabled for agent '{agent_name}'. "
+            "To enable file transfer, please:\n"
+            "  1. Set file_transfer_config.enabled=true in .agentarts_config.yaml\n"
+            "  2. Create a new agent with 'agentarts deploy'"
+        )
+        raise ValueError(msg)
 
 
 def _get_data_endpoint(
@@ -221,6 +317,7 @@ def invoke_agent(
     timeout: int = 900,
     skip_ssl_verification: bool = False,
     user_id: str | None = None,
+    custom_path: str | None = None,
 ) -> bool:
     """
     Invoke agent locally or on cloud.
@@ -237,15 +334,33 @@ def invoke_agent(
         timeout: Request timeout in seconds
         skip_ssl_verification: Skip SSL certificate verification
         user_id: Optional user ID for OAuth2 outbound credentials
+        custom_path: Optional custom path appended to /invocations path
 
     Returns:
         True if successful, False otherwise
     """
+    normalized_custom_path = _validate_and_normalize_custom_path(custom_path)
     normalized_payload = _normalize_json_payload(payload)
     try:
         json.loads(normalized_payload)
     except json.JSONDecodeError:
         echo_error("Payload must be valid JSON")
+        console.print()
+        console.print("[yellow]Usage Tips:[/yellow]")
+        console.print("  1. Use [cyan]single quotes[/cyan] to wrap JSON payload")
+        console.print("  2. Use [cyan]compact JSON format[/cyan] (no spaces after colon/comma)")
+        console.print()
+        console.print("[green]✓ Correct Examples:[/green]")
+        console.print('  [white]agentarts invoke \'{"message":"hello world"}\'[white]')
+        console.print('  [white]agentarts invoke \'{"name":"test","message":"hello world"}\'[white]')
+        console.print()
+        console.print("[red]✗ Common Mistakes:[/red]")
+        console.print("  [dim]Spaces after colon/comma will cause parsing issues in PowerShell:[/dim]")
+        console.print('  [dim]agentarts invoke \'{"message": "hello world"}\'[/dim]')
+        console.print()
+        console.print("[yellow]Alternative for complex JSON:[/yellow]")
+        console.print("  Use [cyan]--%[/cyan] stop-parsing symbol in PowerShell:")
+        console.print('  [white]agentarts --% invoke \'{"message": "hello world"}\'[white]')
         return False
 
     actual_bearer_token = bearer_token or os.environ.get("BEARER_TOKEN")
@@ -265,6 +380,7 @@ def invoke_agent(
                 endpoint=endpoint,
                 timeout=timeout,
                 user_id=user_id,
+                custom_path=normalized_custom_path,
             )
         else:
             agent_name, region, agent_id, auth_type = _resolve_agent_info(agent_name, region)
@@ -310,6 +426,7 @@ def invoke_agent(
                 endpoint=endpoint,
                 timeout=timeout,
                 user_id=user_id,
+                custom_path=normalized_custom_path,
             )
 
         if isinstance(result, dict):
@@ -325,118 +442,6 @@ def invoke_agent(
         console.print("[bold green]Streaming Response:[/bold green]")
         for event in result:
             console.print(f"[dim]{event}[/dim]")
-        return True
-
-    except RuntimeError as e:
-        echo_error(str(e))
-        return False
-    except Exception as e:
-        echo_error(str(e))
-        return False
-
-
-def status_agent(
-    agent_name: str | None = None,
-    mode: InvokeMode = InvokeMode.CLOUD,
-    region: str | None = None,
-    port: int | None = None,
-    endpoint: str | None = None,
-    session_id: str | None = None,
-    bearer_token: str | None = None,
-    skip_ssl_verification: bool = False,
-    user_id: str | None = None,
-) -> bool:
-    """
-    Check agent health status.
-
-    Args:
-        agent_name: Agent name (for cloud mode)
-        mode: Invoke mode (local or cloud)
-        region: Huawei Cloud region (for cloud mode)
-        port: Local port (for local mode)
-        endpoint: Optional endpoint name
-        session_id: Session ID for stateful agents (auto-generated if None)
-        bearer_token: Optional bearer token
-        skip_ssl_verification: Skip SSL certificate verification
-        user_id: Optional user ID for OAuth2 outbound credentials
-
-    Returns:
-        True if healthy, False otherwise
-    """
-    actual_session_id = session_id or str(uuid.uuid4())
-    actual_bearer_token = bearer_token or os.environ.get("BEARER_TOKEN")
-
-    try:
-        if mode == InvokeMode.LOCAL:
-            local_port = port or 8080
-            client = LocalRuntimeClient(port=local_port)
-
-            console.print()
-            echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Local[/yellow]\n[cyan]Endpoint:[/cyan] [white]localhost:{local_port}[/white]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]")
-
-            result = client.ping_agent(
-                bearer_token=actual_bearer_token,
-                endpoint=endpoint,
-                session_id=actual_session_id,
-                user_id=user_id,
-            )
-
-            status = result.get("status", "Unknown")
-            if status.lower() in ("healthy", "ok", "running"):
-                echo_success(f"Status: {status}")
-                return True
-            echo_error(f"Status: {status}")
-            return False
-        agent_name, region, agent_id, auth_type = _resolve_agent_info(agent_name, region)
-
-        if agent_name is None:
-            echo_error("No agent specified")
-            return False
-
-        actual_region = region or get_region()
-        verify_ssl = not skip_ssl_verification
-
-        data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id, verify_ssl)
-
-        if not data_endpoint:
-            echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent {agent_name}")
-            console.print("[dim]Set AGENTARTS_RUNTIME_DATA_ENDPOINT environment variable or ensure agent is deployed[/dim]")
-            return False
-
-        sign_mode = SignMode.SDK_HMAC_SHA256
-        if auth_type and auth_type.upper() == "IAM":
-            sign_mode = SignMode.V11_HMAC_SHA256
-        elif not actual_bearer_token:
-            echo_error("Bearer token is required for non-IAM authentication")
-            console.print("[dim]Specify --bearer-token or set BEARER_TOKEN environment variable[/dim]")
-            return False
-
-        console.print()
-        echo_info("Status Check", f"[cyan]Mode:[/cyan] [yellow]Cloud[/yellow]\n[cyan]Agent:[/cyan] [white]{agent_name}[/white]\n[cyan]Endpoint:[/cyan] [dim]{data_endpoint}[/dim]\n[cyan]Auth Type:[/cyan] [dim]{auth_type or 'None'}[/dim]\n[cyan]Session:[/cyan] [dim]{actual_session_id}[/dim]")
-
-        client = RuntimeClient(
-            data_endpoint=data_endpoint,
-            verify_ssl=verify_ssl,
-            sign_mode=sign_mode,
-            region_id=actual_region,
-        )
-
-        result = client.ping_agent(
-            agent_name=agent_name,
-            bearer_token=actual_bearer_token,
-            endpoint=endpoint,
-            session_id=actual_session_id,
-            user_id=user_id,
-        )
-
-        if isinstance(result, dict):
-            status = result.get("status", "Unknown")
-            if status.lower() in ("healthy", "ok", "running"):
-                echo_success(f"Status: {status}")
-                return True
-            console.print(f"[yellow]Status: {status}[/yellow]")
-            return True
-        echo_success("Status: Healthy (streaming)")
         return True
 
     except RuntimeError as e:

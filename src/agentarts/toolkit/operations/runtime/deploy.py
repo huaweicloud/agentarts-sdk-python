@@ -44,10 +44,9 @@ def create_agentarts_runtime(
     swr_image: str,
     region: str,
     agent_config: Any | None = None,
-    port: int | None = None,
     description: str | None = None,
     verify_ssl: bool | str = True,
-) -> dict | None:
+) -> dict[str, Any] | None:
     """
     Create or update AgentArts runtime using RuntimeClient.
 
@@ -56,7 +55,6 @@ def create_agentarts_runtime(
         swr_image: SWR image URL
         region: Huawei Cloud region
         agent_config: Agent configuration from yaml
-        port: Service port (overrides config)
         description: Agent description (overrides config)
 
     Returns:
@@ -80,18 +78,29 @@ def create_agentarts_runtime(
         tags_config = None
         execution_agency_name = None
         agent_gateway_id = None
+        arch = None
 
         if agent_config is not None:
             runtime_cfg = agent_config.runtime
 
+            if runtime_cfg.arch:
+                arch = runtime_cfg.arch.value
+
             if runtime_cfg.artifact_source:
                 artifact_source_config = runtime_cfg.artifact_source.to_dict()
+                artifact_source_config["url"] = swr_image
 
             if runtime_cfg.invoke_config:
                 invoke_config = {
                     "protocol": runtime_cfg.invoke_config.protocol,
-                    "port": port or runtime_cfg.invoke_config.port,
+                    "port": runtime_cfg.invoke_config.port,
                 }
+                if runtime_cfg.invoke_config.file_transfer_config:
+                    invoke_config["file_transfer_config"] = {
+                        "enabled": runtime_cfg.invoke_config.file_transfer_config.enabled,
+                    }
+                if runtime_cfg.invoke_config.url_match_type:
+                    invoke_config["url_match_type"] = runtime_cfg.invoke_config.url_match_type
 
             if runtime_cfg.network_config:
                 network_config = runtime_cfg.network_config.to_dict()
@@ -120,7 +129,9 @@ def create_agentarts_runtime(
         if not invoke_config:
             invoke_config = {
                 "protocol": "HTTP",
-                "port": port or 8080,
+                "port": 8080,
+                "file_transfer_config": {"enabled": False},
+                "url_match_type": "ACCURATE_MATCH",
             }
 
         agent_description = description or f"Agent created by AgentArts SDK Toolkit, deployed from {swr_image}"
@@ -137,6 +148,7 @@ def create_agentarts_runtime(
             tags_config=tags_config,
             execution_agency_name=execution_agency_name,
             agent_gateway_id=agent_gateway_id,
+            arch=arch,
         )
 
         agent_id = agent.get("id")
@@ -154,11 +166,11 @@ def deploy_project(
     agent_name: str | None = None,
     mode: DeployMode = DeployMode.CLOUD,
     image_tag: str = "latest",
-    port: int | None = None,
     local_port: int | None = None,
     swr_org: str | None = None,
     swr_repo: str | None = None,
     description: str | None = None,
+    skip_build: bool = False,
     skip_ssl_verification: bool = False,
 ) -> bool:
     """
@@ -168,11 +180,12 @@ def deploy_project(
         agent_name: Agent name (uses default if None)
         mode: Deploy mode (local or swr)
         image_tag: Docker image tag
-        port: Service port (for cloud mode)
         local_port: Local port (for local mode)
         swr_org: SWR organization (overrides config)
         swr_repo: SWR repository (overrides config)
         description: Agent description (overrides config)
+        skip_build: Skip build/push, use config URL directly
+        skip_ssl_verification: Skip SSL verification
 
     Returns:
         True if successful, False otherwise
@@ -190,32 +203,48 @@ def deploy_project(
 
     actual_agent_name = agent_config.base.name or agent_name or "agent"
     region = agent_config.base.region or get_region()
-    service_port = port or (agent_config.runtime.invoke_config.port if agent_config.runtime.invoke_config else 8080)
+    service_port = agent_config.runtime.invoke_config.port if agent_config.runtime.invoke_config else 8080
 
     echo_info("Deploy Configuration", f"[cyan]Agent:[/cyan] [white]{actual_agent_name}[/white]\n[cyan]Mode:[/cyan] [yellow]{mode.value}[/yellow]\n[cyan]Region:[/cyan] [yellow]{region}[/yellow]")
 
-    if not check_docker_available():
-        echo_error("Docker is not available or not running")
-        console.print("[dim]Please start Docker and try again[/dim]")
+    if skip_build and mode == DeployMode.LOCAL:
+        echo_error("--skip-build is only supported for cloud mode")
+        console.print("[dim]For local mode, you need to build the image first[/dim]")
         return False
 
-    if not check_dockerfile_exists():
-        echo_error("Dockerfile not found in current directory")
-        console.print("[dim]Run 'agentarts config' to generate Dockerfile first[/dim]")
-        return False
+    if not skip_build:
+        if not check_docker_available():
+            echo_error("Docker is not available or not running")
+            console.print("[dim]Please start Docker and try again[/dim]")
+            return False
 
-    local_image_name = f"{actual_agent_name}"
-    local_full_image = f"{local_image_name}:{image_tag}"
-
-    console.print(Panel(
-        f"[bold]Step 1/5[/bold] Building Docker image\n[dim]Image: {local_full_image}[/dim]",
-        title="[bold cyan]Deploy Progress[/bold cyan]",
-        border_style="cyan",
-    ))
-    if not build_docker_image(local_image_name, image_tag):
-        return False
+        if not check_dockerfile_exists():
+            echo_error("Dockerfile not found in current directory")
+            console.print("[dim]Run 'agentarts config' to generate Dockerfile first[/dim]")
+            return False
 
     if mode == DeployMode.LOCAL:
+        if not check_docker_available():
+            echo_error("Docker is not available or not running")
+            console.print("[dim]Please start Docker and try again[/dim]")
+            return False
+
+        if not check_dockerfile_exists():
+            echo_error("Dockerfile not found in current directory")
+            console.print("[dim]Run 'agentarts config' to generate Dockerfile first[/dim]")
+            return False
+
+        local_image_name = f"{actual_agent_name}"
+        local_full_image = f"{local_image_name}:{image_tag}"
+
+        console.print(Panel(
+            f"[bold]Step 1/2[/bold] Building Docker image\n[dim]Image: {local_full_image}[/dim]",
+            title="[bold cyan]Deploy Progress[/bold cyan]",
+            border_style="cyan",
+        ))
+        if not build_docker_image(local_image_name, image_tag):
+            return False
+
         local_service_port = local_port or service_port
         console.print(Panel(
             f"[bold]Step 2/2[/bold] Starting local container\n[dim]Port: {local_service_port}[/dim]",
@@ -229,103 +258,154 @@ def deploy_project(
             container_name=actual_agent_name,
         )
 
-    final_swr_org = swr_org or agent_config.swr_config.organization
-    final_swr_repo = swr_repo or agent_config.swr_config.repository
-
-    if not final_swr_org or not final_swr_repo:
-        echo_error("SWR organization and repository must be configured")
-        console.print("[dim]Specify via --swr-org and --swr-repo options, or configure in yaml[/dim]")
-        return False
-
-    console.print(Panel(
-        f"[bold]Step 2/5[/bold] Setting up SWR resources\n[dim]Organization: {final_swr_org}\n[dim]Repository: {final_swr_repo}[/dim]",
-        title="[bold cyan]Deploy Progress[/bold cyan]",
-        border_style="cyan",
-    ))
-
     verify_ssl = not skip_ssl_verification
 
-    try:
-        swr_client = SWRClient(region=region, verify_ssl=verify_ssl)
+    config_artifact_url = None
+    if agent_config.runtime and agent_config.runtime.artifact_source:
+        config_artifact_url = agent_config.runtime.artifact_source.url
 
-        if agent_config.swr_config.organization_auto_create:
-            org_result = swr_client.create_or_get_organization(final_swr_org)
-            if org_result is None:
-                echo_error(f"Failed to create/get organization '{final_swr_org}'")
-                return False
-            echo_success(f"Organization [cyan]{final_swr_org}[/cyan] ready")
-        else:
-            org_result = swr_client.get_organization(final_swr_org)
-            if org_result is None:
-                echo_error(f"Organization '{final_swr_org}' not found")
-                console.print("[dim]Set organization_auto_create: true in config to auto-create[/dim]")
-                return False
-            echo_success(f"Using existing organization [cyan]{final_swr_org}[/cyan]")
+    if skip_build:
+        if not config_artifact_url:
+            echo_error("No artifact URL found in configuration file")
+            console.print("[dim]When using --skip-build, you must set runtime.artifact_source.url in config file[/dim]")
+            console.print("[dim]Example:[/dim]")
+            console.print("[dim]  runtime:[/dim]")
+            console.print("[dim]    artifact_source:[/dim]")
+            console.print("[dim]      url: swr.cn-north-4.myhuaweicloud.com/org/repo:v1.0[/dim]")
+            return False
 
-        if agent_config.swr_config.repository_auto_create:
-            repo_result = swr_client.create_or_get_repository(final_swr_org, final_swr_repo)
-            if repo_result is None:
-                echo_error(f"Failed to create/get repository '{final_swr_org}/{final_swr_repo}'")
-                return False
-            echo_success(f"Repository [cyan]{final_swr_org}/{final_swr_repo}[/cyan] ready")
-        else:
-            repo_result = swr_client.get_repository(final_swr_org, final_swr_repo)
-            if repo_result is None:
-                echo_error(f"Repository '{final_swr_org}/{final_swr_repo}' not found")
-                console.print("[dim]Set repository_auto_create: true in config to auto-create[/dim]")
-                return False
-            echo_success(f"Using existing repository [cyan]{final_swr_org}/{final_swr_repo}[/cyan]")
-
+        final_swr_image = config_artifact_url
         console.print(Panel(
-            f"[bold]Step 3/5[/bold] Getting SWR credentials\n[dim]Registry: swr.{region}.myhuaweicloud.com[/dim]",
+            f"[bold]Step 1/2[/bold] Using existing image\n[dim]URL: {final_swr_image}[/dim]",
             title="[bold cyan]Deploy Progress[/bold cyan]",
             border_style="cyan",
         ))
-        login_server, username, password = swr_client.create_swr_secret()
-        if not username or not password:
-            echo_error("Failed to get SWR credentials")
+        console.print("[dim]Skipping build and push (--skip-build enabled)[/dim]")
+    else:
+        final_swr_org = swr_org or agent_config.swr_config.organization
+        final_swr_repo = swr_repo or agent_config.swr_config.repository
+
+        if not final_swr_org or not final_swr_repo:
+            echo_error("SWR organization and repository must be configured")
+            console.print("[dim]Specify via --swr-org and --swr-repo options, or configure in yaml[/dim]")
             return False
 
-        if not login_to_registry(login_server, username, password):
-            echo_error("Failed to login to SWR")
-            return False
+        if config_artifact_url:
+            final_swr_image = config_artifact_url
+            console.print(Panel(
+                f"[bold]Step 1/5[/bold] Using configured image URL\n[dim]URL: {final_swr_image}[/dim]",
+                title="[bold cyan]Deploy Progress[/bold cyan]",
+                border_style="cyan",
+            ))
+            console.print("[dim]Using artifact_source.url from configuration file[/dim]")
+        else:
+            if not check_docker_available():
+                echo_error("Docker is not available or not running")
+                console.print("[dim]Please start Docker and try again[/dim]")
+                return False
 
-        swr_image = swr_client.get_full_image_name(final_swr_org, final_swr_repo, image_tag)
+            if not check_dockerfile_exists():
+                echo_error("Dockerfile not found in current directory")
+                console.print("[dim]Run 'agentarts config' to generate Dockerfile first[/dim]")
+                return False
 
-        console.print(Panel(
-            f"[bold]Step 4/5[/bold] Tagging and pushing image\n[dim]Source: {local_full_image}\n[dim]Target: {swr_image}[/dim]",
-            title="[bold cyan]Deploy Progress[/bold cyan]",
-            border_style="cyan",
-        ))
-        if not tag_image(local_full_image, swr_image):
-            echo_error("Failed to tag image")
-            return False
+            local_image_name = f"{actual_agent_name}"
+            local_full_image = f"{local_image_name}:{image_tag}"
 
-        if not push_image(swr_image):
-            echo_error("Failed to push image to SWR")
-            return False
+            console.print(Panel(
+                f"[bold]Step 1/5[/bold] Building Docker image\n[dim]Image: {local_full_image}[/dim]",
+                title="[bold cyan]Deploy Progress[/bold cyan]",
+                border_style="cyan",
+            ))
+            if not build_docker_image(local_image_name, image_tag):
+                return False
 
-        echo_success(f"Image deployed to [cyan]{swr_image}[/cyan]")
+            console.print(Panel(
+                f"[bold]Step 2/5[/bold] Setting up SWR resources\n[dim]Organization: {final_swr_org}\n[dim]Repository: {final_swr_repo}[/dim]",
+                title="[bold cyan]Deploy Progress[/bold cyan]",
+                border_style="cyan",
+            ))
 
-    except ImportError:
-        echo_error("Huawei Cloud SDK not installed")
-        console.print("[dim]Install huaweicloudsdkswr for SWR deployment functionality.[/dim]")
-        return False
-    except Exception as e:
-        echo_error(f"SWR deployment failed: {e}")
-        return False
+            try:
+                swr_client = SWRClient(region=region, verify_ssl=verify_ssl)
+
+                if agent_config.swr_config.organization_auto_create:
+                    org_result = swr_client.create_or_get_organization(final_swr_org)
+                    if org_result is None:
+                        echo_error(f"Failed to create/get organization '{final_swr_org}'")
+                        return False
+                    echo_success(f"Organization [cyan]{final_swr_org}[/cyan] ready")
+                else:
+                    org_result = swr_client.get_organization(final_swr_org)
+                    if org_result is None:
+                        echo_error(f"Organization '{final_swr_org}' not found")
+                        console.print("[dim]Set organization_auto_create: true in config to auto-create[/dim]")
+                        return False
+                    echo_success(f"Using existing organization [cyan]{final_swr_org}[/cyan]")
+
+                if agent_config.swr_config.repository_auto_create:
+                    repo_result = swr_client.create_or_get_repository(final_swr_org, final_swr_repo)
+                    if repo_result is None:
+                        echo_error(f"Failed to create/get repository '{final_swr_org}/{final_swr_repo}'")
+                        return False
+                    echo_success(f"Repository [cyan]{final_swr_org}/{final_swr_repo}[/cyan] ready")
+                else:
+                    repo_result = swr_client.get_repository(final_swr_org, final_swr_repo)
+                    if repo_result is None:
+                        echo_error(f"Repository '{final_swr_org}/{final_swr_repo}' not found")
+                        console.print("[dim]Set repository_auto_create: true in config to auto-create[/dim]")
+                        return False
+                    echo_success(f"Using existing repository [cyan]{final_swr_org}/{final_swr_repo}[/cyan]")
+
+                console.print(Panel(
+                    f"[bold]Step 3/5[/bold] Getting SWR credentials\n[dim]Registry: swr.{region}.myhuaweicloud.com[/dim]",
+                    title="[bold cyan]Deploy Progress[/bold cyan]",
+                    border_style="cyan",
+                ))
+                login_server, username, password = swr_client.create_swr_secret()
+                if not username or not password:
+                    echo_error("Failed to get SWR credentials")
+                    return False
+
+                if not login_to_registry(login_server, username, password):
+                    echo_error("Failed to login to SWR")
+                    return False
+
+                final_swr_image = swr_client.get_full_image_name(final_swr_org, final_swr_repo, image_tag)
+
+                console.print(Panel(
+                    f"[bold]Step 4/5[/bold] Tagging and pushing image\n[dim]Source: {local_full_image}\n[dim]Target: {final_swr_image}[/dim]",
+                    title="[bold cyan]Deploy Progress[/bold cyan]",
+                    border_style="cyan",
+                ))
+                if not tag_image(local_full_image, final_swr_image):
+                    echo_error("Failed to tag image")
+                    return False
+
+                if not push_image(final_swr_image):
+                    echo_error("Failed to push image to SWR")
+                    return False
+
+                echo_success(f"Image deployed to [cyan]{final_swr_image}[/cyan]")
+
+            except ImportError:
+                echo_error("Huawei Cloud SDK not installed")
+                console.print("[dim]Install huaweicloudsdkswr for SWR deployment functionality.[/dim]")
+                return False
+            except Exception as e:
+                echo_error(f"SWR deployment failed: {e}")
+                return False
 
     console.print(Panel(
-        f"[bold]Step 5/5[/bold] Creating AgentArts runtime\n[dim]Agent: {actual_agent_name}\n[dim]Image: {swr_image}[/dim]",
+        f"[bold]Step 5/5[/bold] Creating AgentArts runtime\n[dim]Agent: {actual_agent_name}\n[dim]Image: {final_swr_image}[/dim]",
         title="[bold cyan]Deploy Progress[/bold cyan]",
         border_style="cyan",
     ))
     agent = create_agentarts_runtime(
         agent_name=actual_agent_name,
-        swr_image=swr_image,
+        swr_image=final_swr_image,
         region=region,
         agent_config=agent_config,
-        port=port,
         description=description,
         verify_ssl=verify_ssl,
     )
@@ -345,7 +425,7 @@ def deploy_project(
     summary = (
         f"[cyan]Agent Name:[/cyan] [white]{actual_agent_name}[/white]\n"
         f"[cyan]Runtime ID:[/cyan] [white]{runtime_id}[/white]\n"
-        f"[cyan]Image:[/cyan] [white]{swr_image}[/white]\n"
+        f"[cyan]Image:[/cyan] [white]{final_swr_image}[/white]\n"
         f"[cyan]Region:[/cyan] [yellow]{region}[/yellow]\n"
     )
     version_detail = agent.get("version_detail") or {}

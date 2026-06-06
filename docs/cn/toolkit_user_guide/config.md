@@ -221,10 +221,28 @@ agents:
       invoke_config:
         protocol: HTTP
         port: 8080
+      
+      artifact_source:
+        url: swr.cn-north-4.myhuaweicloud.com/org/repo:v1.0  # 可选：自定义镜像 URL
+        commands: []  # 可选：容器启动命令
 
       identity_configuration:
         authorizer_type: IAM
 ```
+
+### artifact_source.url 配置说明
+
+`runtime.artifact_source.url` 是可选配置，用于指定自定义镜像 URL：
+
+**何时配置**：
+- 使用外部镜像仓库（Docker Hub、阿里云等）
+- 使用预构建镜像，部署时配合 `--skip-build` 参数
+- 需要指定特定版本的镜像
+
+**注意事项**：
+- `config` 命令不会自动生成此字段
+- 需要手动编辑配置文件添加
+- 如果不设置，deploy 命令会使用参数自动拼接 URL
 
 ## 注意事项
 

@@ -11,6 +11,7 @@ from agentarts.toolkit.utils.common import (
     echo_error,
     echo_info,
     echo_success,
+    validate_agent_name,
 )
 from agentarts.toolkit.utils.swr_org import generate_swr_org_name
 
@@ -32,7 +33,6 @@ def main(
     dependency_file: Annotated[str | None, typer.Option("--dependency-file", "-d", help="Path to dependency file (e.g., requirements.txt)")] = None,
     swr_organization: Annotated[str | None, typer.Option("--swr-org", help="SWR organization name")] = None,
     swr_repository: Annotated[str | None, typer.Option("--swr-repo", help="SWR repository name")] = None,
-    set_default: Annotated[bool, typer.Option("--set-default/--no-set-default", help="Set as default agent")] = True,
 ):
     """
     Configure agent settings.
@@ -70,8 +70,18 @@ def main(
         console.print(f"[bold]Agent name{prompt_hint}:[/bold]")
         agent_name = Prompt.ask("  Name", default=default_name or "")
 
+    original_name = agent_name
+    agent_name = agent_name.lower()
+    if agent_name != original_name:
+        console.print(f"[yellow]Agent name converted to lowercase: [cyan]{agent_name}[/cyan] (only lowercase letters, digits and hyphens are allowed)[/yellow]")
+
     if not agent_name:
         echo_error("Agent name is required")
+        raise typer.Exit(1)
+
+    is_valid, error_msg = validate_agent_name(agent_name)
+    if not is_valid:
+        echo_error(error_msg)
         raise typer.Exit(1)
 
     agent_entrypoint = entrypoint
@@ -176,7 +186,7 @@ def main(
         dependency_file=agent_dependency_file if agent_dependency_file else None,
         swr_organization=org,
         swr_repository=repo,
-        set_as_default=set_default,
+        set_as_default=True,
         organization_auto_create=auto_create_org,
         repository_auto_create=auto_create_repo,
     )
@@ -209,7 +219,16 @@ def set_default(
     Examples:
         agentarts config set-default my-agent
     """
-    success = config_op.set_default_agent(name)
+    name_lower = name.lower()
+    if name_lower != name:
+        console.print(f"[yellow]Agent name converted to lowercase: [cyan]{name_lower}[/cyan][/yellow]")
+
+    is_valid, error_msg = validate_agent_name(name_lower)
+    if not is_valid:
+        echo_error(error_msg)
+        raise typer.Exit(1)
+
+    success = config_op.set_default_agent(name_lower)
     if not success:
         raise typer.Exit(1)
 
@@ -250,6 +269,17 @@ def set(
         agentarts config set base.region cn-southwest-2
         agentarts config set base.name new-name --agent old-name
     """
+    if key == "base.name":
+        value_lower = value.lower()
+        if value_lower != value:
+            console.print(f"[yellow]Agent name converted to lowercase: [cyan]{value_lower}[/cyan][/yellow]")
+
+        is_valid, error_msg = validate_agent_name(value_lower)
+        if not is_valid:
+            echo_error(error_msg)
+            raise typer.Exit(1)
+        value = value_lower
+
     success = config_op.set_config_value(key, value, agent)
     if not success:
         raise typer.Exit(1)

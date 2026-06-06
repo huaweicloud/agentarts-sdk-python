@@ -66,7 +66,7 @@ class CodeInterpreter:
 
         # Control plane client for managing code interpreters
         self.control_plane_client = ControlToolsHttpClient(
-            region_name=region, endpoint_url=get_control_plane_endpoint(), verify_ssl=verify_ssl
+            region_name=region, endpoint_url=get_control_plane_endpoint(region=region), verify_ssl=verify_ssl
         )
 
         # Data plane client for managing code interpreter sessions
@@ -173,9 +173,9 @@ class CodeInterpreter:
             >>> code_interpreter_id = code_interpreter["id"]
         """
         logging.info(f"Creating code interpreter with name: {name}")
-        pattern = r"[a-z][a-z0-9-]{0,46}[a-z0-9]$"
+        pattern = r"[a-z][a-z0-9-]{0,38}[a-z0-9]$"
         if not bool(re.match(pattern, name)):
-            msg = "Name must match the pattern, please check your code_interpreter_name."
+            msg = "Name must start with lowercase letter, end with lowercase letter or digit, contain only lowercase letters, digits, and hyphens, and be 2-40 characters long."
             raise ValueError(msg)
         if auth_type == "API_KEY" and api_key_name is None:
             msg = "API_KEY auth_type requires api_key_name."
@@ -870,6 +870,7 @@ def code_session(
     code_interpreter_name: str,
     auth_type: str = "API_KEY",
     api_key: str | None = None,
+    verify_ssl: bool | str = True,
 ) -> Generator[CodeInterpreter, None, None]:
     """Code interpreter session context manager.
 
@@ -880,6 +881,8 @@ def code_session(
         code_interpreter_name (str): Code interpreter name
         api_key (Optional[str]): API Key for authentication, use only when auth_type is "API_KEY",
             if not provided will be retrieved from environment variable API_KEY
+        verify_ssl (bool | str, optional): SSL verification. True to verify, False to skip,
+            or a string path to a CA bundle. Default True.
 
     Yields:
         CodeInterpreter: Code interpreter instance with session started
@@ -895,9 +898,13 @@ def code_session(
         >>> # With IAM
         >>> with code_session("cn-southwest-2", "my-code-interpreter-name", auth_type="IAM") as client:
         >>>     client.execute_code("print('Hello, World!')")
+        >>>
+        >>> # Skip SSL verification
+        >>> with code_session("cn-southwest-2", "my-code-interpreter-name", verify_ssl=False) as client:
+        >>>     client.execute_code("print('Hello, World!')")
     """
 
-    client = CodeInterpreter(region=region, auth_type=auth_type)
+    client = CodeInterpreter(region=region, auth_type=auth_type, verify_ssl=verify_ssl)
 
     default_session_name = "default-session-name"
     client.start_session(

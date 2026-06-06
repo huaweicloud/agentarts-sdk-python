@@ -11,6 +11,7 @@ from agentarts.toolkit.utils.common import (
     echo_step,
     echo_success,
 )
+from agentarts.toolkit.utils.runtime.config import detect_arch
 from agentarts.toolkit.utils.swr_org import generate_swr_org_name
 from agentarts.toolkit.utils.templates.manager import template_manager
 
@@ -92,13 +93,16 @@ def init_project(
     echo_info(
         "Project structure",
         f"[cyan]{name}/[/cyan]\n"
-        f"  ├── [green]agent.py[/green]              # Agent implementation\n"
-        f"  ├── [green]requirements.txt[/green]      # Dependencies\n"
         f"  ├── [green].agentarts_config.yaml[/green] # Configuration\n"
-        f"  └── [green]Dockerfile[/green]            # Docker build file"
+        f"  ├── [green]agent.py[/green]              # Agent implementation\n"
+        f"  ├── [green]Dockerfile[/green]            # Docker build file\n"
+        f"  └── [green]requirements.txt[/green]      # Dependencies"
     )
 
     console.print()
+    console.print("[bold green]Next Steps - How to Deploy Agent[/bold green]")
+    console.print()
+
     echo_step(1, "Navigate to project directory")
     console.print(f"    [cyan]cd {name}[/cyan]")
 
@@ -107,7 +111,11 @@ def init_project(
 
     echo_step(3, "Edit agent.py to implement your agent logic")
 
-    echo_step(4, "Deploy to Huawei Cloud")
+    echo_step(4, "Edit .agentarts_config.yaml and run config command (optional)")
+    console.print("    [dim]Modify configuration as needed, then:[/dim]")
+    console.print("    [cyan]agentarts config[/cyan]")
+
+    echo_step(5, "Deploy to Huawei Cloud")
     console.print("    [cyan]agentarts deploy[/cyan]")
 
     return True
@@ -152,8 +160,7 @@ def create_config_file(
     actual_swr_org = swr_org or generate_swr_org_name(region=actual_region)
     actual_swr_repo = swr_repo or f"agent_{name}"
     detected_platform = detect_platform()
-
-    artifact_url = f"swr.{actual_region}.myhuaweicloud.com/{actual_swr_org}/{actual_swr_repo}:latest"
+    detected_arch = detect_arch()
 
     env_vars = get_template_env_vars(template)
 
@@ -184,9 +191,14 @@ agents:
       repository_auto_create: true
 
     runtime:
+      arch: {detected_arch.value}
+      agent_gateway_id: null
       invoke_config:
         protocol: HTTP
         port: 8080
+        file_transfer_config:
+          enabled: false
+        url_match_type: ACCURATE_MATCH
 
       network_config:
         network_mode: PUBLIC
@@ -215,7 +227,7 @@ agents:
           enabled: false
 
       artifact_source:
-        url: {artifact_url}
+        url: null  # Auto-generated during deploy from swr_config
         commands: []
 
       environment_variables:{env_vars_yaml}

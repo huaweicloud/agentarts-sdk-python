@@ -2,11 +2,13 @@
 Refactored according to actual API specifications, integrates with Huawei Cloud Memory Service.
 
 Recommended usage:
-- MemoryClient: Unified entry point, provides all methods.
+- MemoryClient: Unified entry point, provides all methods (synchronous).
+- AsyncMemoryClient: Async version for non-blocking operations.
 
 Example:
     from agentarts.sdk.memory import (
         MemoryClient,
+        AsyncMemoryClient,
         SpaceCreateRequest,
         SpaceUpdateRequest,
         SessionCreateRequest,
@@ -16,14 +18,16 @@ Example:
         FilePart,
     )
 
-    # Create client (requires IAM Token)
-    client = MemoryClient(iam_token="your-token", region_name="cn-southwest-2")
+    # Create sync client
+    client = MemoryClient(api_key="your-api-key", region_name="cn-southwest-2")
+
+    # Create async client
+    async_client = AsyncMemoryClient(api_key="your-api-key", region_name="cn-southwest-2")
 
     # Create Space
     space_request = SpaceCreateRequest(
         name="my-space",
         message_ttl_hours=168,
-        api_key_id="your-api-key-id"
     )
     space = client.create_space(space_request)
 """
@@ -32,6 +36,8 @@ Example:
 # Internal classes (for advanced users)
 from agentarts.sdk.service.memory_service import MemoryHttpService
 
+from .async_client import AsyncMemoryClient
+from .async_session import AsyncMemorySession
 from .client import MemoryClient
 
 # Data types
@@ -43,7 +49,9 @@ from .inner.config import (
     ContextCompressionResponse,
     DataMessage,
     MemoryInfo,
+    MemoryListFilter,
     MemoryListResponse,
+    MemorySearchFilter,
     MemorySearchResponse,
     MessageBatchResponse,
     MessageInfo,
@@ -52,9 +60,7 @@ from .inner.config import (
     SessionCreateRequest,
     SessionInfo,
     SessionListResponse,
-    # ==================== Request types ====================
     SpaceCreateRequest,
-    # ==================== Response types ====================
     SpaceInfo,
     SpaceListResponse,
     SpaceUpdateRequest,
@@ -62,21 +68,25 @@ from .inner.config import (
     ToolCallMessage,
     ToolResultMessage,
 )
+from .session import MemorySession
 
 __all__ = [
     "AddMessagesRequest",
     "ApiKeyInfo",
     "AssetRef",
+    "AsyncMemoryClient",
+    "AsyncMemorySession",
     "ContextChainResponse",
     "ContextCompressionResponse",
     "DataMessage",
-    # ==================== Main entry point ====================
     "MemoryClient",
-    # ==================== Internal classes (for advanced users) ====================
     "MemoryHttpService",
     "MemoryInfo",
+    "MemoryListFilter",
     "MemoryListResponse",
+    "MemorySearchFilter",
     "MemorySearchResponse",
+    "MemorySession",
     "MessageBatchResponse",
     "MessageInfo",
     "MessageListResponse",
@@ -84,14 +94,11 @@ __all__ = [
     "SessionCreateRequest",
     "SessionInfo",
     "SessionListResponse",
-    # ==================== Request types ====================
     "SpaceCreateRequest",
-    # ==================== Response types ====================
     "SpaceInfo",
     "SpaceListResponse",
     "SpaceUpdateRequest",
-    # ==================== SDK-specific message types ====================
     "TextMessage",
     "ToolCallMessage",
-    "ToolResultMessage"
+    "ToolResultMessage",
 ]

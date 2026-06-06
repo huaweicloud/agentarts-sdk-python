@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.prompt import Prompt
 
 from agentarts.toolkit.operations.runtime import init as init_op
+from agentarts.toolkit.utils.common import echo_error, validate_agent_name
 from agentarts.toolkit.utils.swr_org import generate_default_agent_name
 
 console = Console()
@@ -96,10 +97,10 @@ def init(
     Initialize a new AgentArts project.
 
     Creates a complete project structure with:
-    - agent.py: Agent implementation based on selected template
-    - requirements.txt: Dependencies including SDK and framework packages
     - .agentarts_config.yaml: Configuration file for deployment
+    - agent.py: Agent implementation based on selected template
     - Dockerfile: Docker build file for containerization
+    - requirements.txt: Dependencies including SDK and framework packages
 
     After initialization, you can directly deploy using 'agentarts deploy'.
 
@@ -112,6 +113,16 @@ def init(
     """
     if name is None:
         name = prompt_for_name()
+
+    original_name = name
+    name = name.lower()
+    if name != original_name:
+        console.print(f"[yellow]Agent name converted to lowercase: [cyan]{name}[/cyan] (only lowercase letters, digits and hyphens are allowed)[/yellow]")
+
+    is_valid, error_msg = validate_agent_name(name)
+    if not is_valid:
+        echo_error(error_msg)
+        raise typer.Exit(1)
 
     if template is None:
         template = prompt_for_template()
