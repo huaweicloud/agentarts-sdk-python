@@ -436,8 +436,8 @@ class TestRuntimeClientStopSession:
         assert result["status"] == "stopped"
 
         call_args = mock_data.call_args
-        assert call_args[0][0] == "PUT"
-        assert call_args[0][1] == "/runtimes/test-agent/sessions/stop"
+        assert call_args[0][0] == "POST"
+        assert call_args[0][1] == "/runtimes/test-agent/sessions-stop"
 
     @patch("agentarts.sdk.service.runtime_client.RuntimeClient._data")
     def test_stop_session_with_bearer_token(self, mock_data):
