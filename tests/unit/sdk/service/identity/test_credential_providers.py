@@ -49,16 +49,12 @@ def test_create_api_key_credential_provider_success(
     api_key = "test-api-key"
 
     # WHEN
-    result = identity_client.create_api_key_credential_provider(
-        name=name, api_key=api_key
-    )
+    result = identity_client.create_api_key_credential_provider(name=name, api_key=api_key)
 
     # THEN
     assert result == mock_provider
     mock_sdk_client.create_api_key_credential_provider.assert_called_once()
-    request = mock_sdk_client.create_api_key_credential_provider.call_args.kwargs[
-        "request"
-    ]
+    request = mock_sdk_client.create_api_key_credential_provider.call_args.kwargs["request"]
     assert request.body.name == name
     assert request.body.api_key == api_key
 
@@ -88,9 +84,7 @@ def test_create_oauth2_credential_provider_google_success(
     # THEN
     assert result == mock_provider
     mock_sdk_client.create_oauth2_credential_provider.assert_called_once()
-    request = mock_sdk_client.create_oauth2_credential_provider.call_args.kwargs[
-        "request"
-    ]
+    request = mock_sdk_client.create_oauth2_credential_provider.call_args.kwargs["request"]
     assert request.body.name == name
     assert request.body.credential_provider_vendor == vendor
     assert (
@@ -130,9 +124,7 @@ def test_create_oauth2_credential_provider_with_tags(
     # THEN
     assert result == mock_provider
     mock_sdk_client.create_oauth2_credential_provider.assert_called_once()
-    request = mock_sdk_client.create_oauth2_credential_provider.call_args.kwargs[
-        "request"
-    ]
+    request = mock_sdk_client.create_oauth2_credential_provider.call_args.kwargs["request"]
     assert request.body.name == name
     assert request.body.credential_provider_vendor == vendor
     assert request.body.tags == tags
@@ -165,9 +157,7 @@ def test_create_oauth2_credential_provider_microsoft_success(
     # THEN
     assert result == mock_provider
     mock_sdk_client.create_oauth2_credential_provider.assert_called_once()
-    request = mock_sdk_client.create_oauth2_credential_provider.call_args.kwargs[
-        "request"
-    ]
+    request = mock_sdk_client.create_oauth2_credential_provider.call_args.kwargs["request"]
     assert request.body.name == name
     assert request.body.credential_provider_vendor == vendor
     assert (
@@ -215,9 +205,7 @@ def test_create_oauth2_credential_provider_custom_success(
     # THEN
     assert result == mock_provider
     mock_sdk_client.create_oauth2_credential_provider.assert_called_once()
-    request = mock_sdk_client.create_oauth2_credential_provider.call_args.kwargs[
-        "request"
-    ]
+    request = mock_sdk_client.create_oauth2_credential_provider.call_args.kwargs["request"]
     assert request.body.name == name
     assert request.body.credential_provider_vendor == vendor
     assert (
@@ -228,3 +216,120 @@ def test_create_oauth2_credential_provider_custom_success(
         request.body.oauth2_provider_config_input.custom_oauth2_provider_config.client_id
         == client_id
     )
+
+
+def test_get_api_key_credential_provider(
+    identity_client: IdentityClient, mock_sdk_client: MagicMock
+) -> None:
+    from huaweicloudsdkagentidentity.v1 import GetApiKeyCredentialProviderResponse
+
+    mock_provider = MagicMock(spec=ApiKeyCredentialProvider)
+    mock_response = MagicMock(spec=GetApiKeyCredentialProviderResponse)
+    mock_response.credential_provider = mock_provider
+    mock_sdk_client.get_api_key_credential_provider.return_value = mock_response
+
+    result = identity_client.get_api_key_credential_provider(name="test-provider")
+
+    assert result == mock_provider
+    mock_sdk_client.get_api_key_credential_provider.assert_called_once()
+    request = mock_sdk_client.get_api_key_credential_provider.call_args.kwargs["request"]
+    assert request.credential_provider_name == "test-provider"
+
+
+def test_list_api_key_credential_providers(
+    identity_client: IdentityClient, mock_sdk_client: MagicMock
+) -> None:
+    from huaweicloudsdkagentidentity.v1 import (
+        ApiKeyCredentialProviderSummary,
+        ListApiKeyCredentialProvidersResponse,
+    )
+
+    mock_provider = MagicMock(spec=ApiKeyCredentialProviderSummary)
+    mock_response = MagicMock(spec=ListApiKeyCredentialProvidersResponse)
+    mock_response.credential_providers = [mock_provider]
+    mock_sdk_client.list_api_key_credential_providers.return_value = mock_response
+
+    result = identity_client.list_api_key_credential_providers(limit=10, marker="token")
+
+    assert result == [mock_provider]
+    mock_sdk_client.list_api_key_credential_providers.assert_called_once()
+    request = mock_sdk_client.list_api_key_credential_providers.call_args.kwargs["request"]
+    assert request.limit == 10
+    assert request.marker == "token"
+
+
+def test_get_oauth2_credential_provider(
+    identity_client: IdentityClient, mock_sdk_client: MagicMock
+) -> None:
+    from huaweicloudsdkagentidentity.v1 import GetOauth2CredentialProviderResponse
+
+    mock_provider = MagicMock(spec=Oauth2CredentialProvider)
+    mock_response = MagicMock(spec=GetOauth2CredentialProviderResponse)
+    mock_response.credential_provider = mock_provider
+    mock_sdk_client.get_oauth2_credential_provider.return_value = mock_response
+
+    result = identity_client.get_oauth2_credential_provider(name="test-provider")
+
+    assert result == mock_provider
+    mock_sdk_client.get_oauth2_credential_provider.assert_called_once()
+    request = mock_sdk_client.get_oauth2_credential_provider.call_args.kwargs["request"]
+    assert request.credential_provider_name == "test-provider"
+
+
+def test_list_oauth2_credential_providers(
+    identity_client: IdentityClient, mock_sdk_client: MagicMock
+) -> None:
+    from huaweicloudsdkagentidentity.v1 import (
+        ListOauth2CredentialProvidersResponse,
+        Oauth2CredentialProviderSummary,
+    )
+
+    mock_provider = MagicMock(spec=Oauth2CredentialProviderSummary)
+    mock_response = MagicMock(spec=ListOauth2CredentialProvidersResponse)
+    mock_response.credential_providers = [mock_provider]
+    mock_sdk_client.list_oauth2_credential_providers.return_value = mock_response
+
+    result = identity_client.list_oauth2_credential_providers()
+
+    assert result == [mock_provider]
+    mock_sdk_client.list_oauth2_credential_providers.assert_called_once()
+
+
+def test_get_sts_credential_provider(
+    identity_client: IdentityClient, mock_sdk_client: MagicMock
+) -> None:
+    from huaweicloudsdkagentidentity.v1 import (
+        GetStsCredentialProviderResponse,
+        StsCredentialProvider,
+    )
+
+    mock_provider = MagicMock(spec=StsCredentialProvider)
+    mock_response = MagicMock(spec=GetStsCredentialProviderResponse)
+    mock_response.credential_provider = mock_provider
+    mock_sdk_client.get_sts_credential_provider.return_value = mock_response
+
+    result = identity_client.get_sts_credential_provider(name="test-provider")
+
+    assert result == mock_provider
+    mock_sdk_client.get_sts_credential_provider.assert_called_once()
+    request = mock_sdk_client.get_sts_credential_provider.call_args.kwargs["request"]
+    assert request.credential_provider_name == "test-provider"
+
+
+def test_list_sts_credential_providers(
+    identity_client: IdentityClient, mock_sdk_client: MagicMock
+) -> None:
+    from huaweicloudsdkagentidentity.v1 import (
+        ListStsCredentialProvidersResponse,
+        StsCredentialProviderSummary,
+    )
+
+    mock_provider = MagicMock(spec=StsCredentialProviderSummary)
+    mock_response = MagicMock(spec=ListStsCredentialProvidersResponse)
+    mock_response.credential_providers = [mock_provider]
+    mock_sdk_client.list_sts_credential_providers.return_value = mock_response
+
+    result = identity_client.list_sts_credential_providers()
+
+    assert result == [mock_provider]
+    mock_sdk_client.list_sts_credential_providers.assert_called_once()
