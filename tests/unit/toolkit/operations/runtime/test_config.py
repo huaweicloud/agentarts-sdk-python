@@ -1,9 +1,11 @@
 """Unit tests for config.py module"""
 
+from unittest.mock import patch
 
 from agentarts.toolkit.operations.runtime.config import (
     CONFIG_FILE_NAME,
     add_agent,
+    detect_arch,
     detect_dependency_file,
     detect_platform,
     get_agent,
@@ -19,6 +21,7 @@ from agentarts.toolkit.operations.runtime.config import (
 from agentarts.toolkit.utils.runtime.config import (
     AgentArtsConfig,
     AgentArtsConfigList,
+    ArchType,
     AuthConfig,
     BaseConfig,
     CustomJWTAuthConfig,
@@ -33,6 +36,39 @@ class TestDetectPlatform:
         """Returns a valid platform string format."""
         result = detect_platform()
         assert result in ("linux/amd64", "linux/arm64")
+
+
+class TestDetectArch:
+    """Tests for detect_arch() function."""
+
+    def test_returns_valid_arch_type(self):
+        """Returns a valid ArchType value."""
+        result = detect_arch()
+        assert result in (ArchType.X86_64, ArchType.ARM64)
+
+    @patch("platform.machine", return_value="arm64")
+    def test_detects_arm64_for_arm64_machine(self, mock_machine):
+        """Returns ARM64 when platform.machine() is arm64."""
+        result = detect_arch()
+        assert result == ArchType.ARM64
+
+    @patch("platform.machine", return_value="aarch64")
+    def test_detects_arm64_for_aarch64_machine(self, mock_machine):
+        """Returns ARM64 when platform.machine() is aarch64."""
+        result = detect_arch()
+        assert result == ArchType.ARM64
+
+    @patch("platform.machine", return_value="x86_64")
+    def test_detects_x86_64_for_x86_64_machine(self, mock_machine):
+        """Returns X86_64 when platform.machine() is x86_64."""
+        result = detect_arch()
+        assert result == ArchType.X86_64
+
+    @patch("platform.machine", return_value="AMD64")
+    def test_detects_x86_64_for_uppercase_amd64(self, mock_machine):
+        """Returns X86_64 for non-arm machine strings (case-insensitive)."""
+        result = detect_arch()
+        assert result == ArchType.X86_64
 
 
 class TestDetectDependencyFile:
@@ -212,6 +248,28 @@ class TestAddAgent:
         config = load_config()
         agent = config.get_agent("test-agent")
         assert agent.base.entrypoint == "agent:new_app"
+
+    @patch("platform.machine", return_value="arm64")
+    def test_sets_arch_from_detected_environment_arm64(self, mock_machine, tmp_path, monkeypatch):
+        """Sets arch to arm64 when running on an arm64 machine."""
+        monkeypatch.chdir(tmp_path)
+
+        add_agent(name="test-agent", entrypoint="agent:app")
+
+        config = load_config()
+        agent = config.get_agent("test-agent")
+        assert agent.base.arch == ArchType.ARM64
+
+    @patch("platform.machine", return_value="x86_64")
+    def test_sets_arch_from_detected_environment_x86_64(self, mock_machine, tmp_path, monkeypatch):
+        """Sets arch to x86_64 when running on an x86_64 machine."""
+        monkeypatch.chdir(tmp_path)
+
+        add_agent(name="test-agent", entrypoint="agent:app")
+
+        config = load_config()
+        agent = config.get_agent("test-agent")
+        assert agent.base.arch == ArchType.X86_64
 
 
 class TestRemoveAgent:
