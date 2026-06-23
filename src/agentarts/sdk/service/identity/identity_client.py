@@ -49,6 +49,8 @@ from huaweicloudsdkagentidentity.v1 import (
     GetResourceStsTokenResponse,
     GetStsCredentialProviderRequest,
     GetStsCredentialProviderResponse,
+    GetWorkloadIdentityRequest,
+    GetWorkloadIdentityResponse,
     GithubOauth2ProviderConfigInput,
     GoogleOauth2ProviderConfigInput,
     ListApiKeyCredentialProvidersRequest,
@@ -57,6 +59,8 @@ from huaweicloudsdkagentidentity.v1 import (
     ListOauth2CredentialProvidersResponse,
     ListStsCredentialProvidersRequest,
     ListStsCredentialProvidersResponse,
+    ListWorkloadIdentitiesRequest,
+    ListWorkloadIdentitiesResponse,
     MicrosoftOauth2ProviderConfigInput,
     Oauth2CredentialProvider,
     Oauth2CredentialProviderSummary,
@@ -70,6 +74,7 @@ from huaweicloudsdkagentidentity.v1 import (
     UpdateWorkloadIdentityResponse,
     UserIdentifier,
     WorkloadIdentity,
+    WorkloadIdentitySummary,
 )
 from huaweicloudsdkcore.exceptions.exceptions import (
     SdkException,
@@ -228,6 +233,43 @@ class IdentityClient:
             )
         )
         return response.workload_identity
+
+    def get_workload_identity(self, name: str) -> WorkloadIdentity:
+        """Gets a specified workload identity.
+
+        Args:
+            name: The name of the workload identity.
+
+        Returns:
+            The WorkloadIdentity object.
+        """
+        self.logger.info(f"Getting workload identity: {name}")
+
+        response: GetWorkloadIdentityResponse = self.client.get_workload_identity(
+            request=GetWorkloadIdentityRequest(workload_identity_name=name)
+        )
+        return response.workload_identity
+
+    def list_workload_identities(
+        self,
+        limit: int | None = None,
+        marker: str | None = None,
+    ) -> list[WorkloadIdentitySummary]:
+        """Lists all workload identities.
+
+        Args:
+            limit: Optional limit for pagination.
+            marker: Optional marker for pagination.
+
+        Returns:
+            A list of WorkloadIdentitySummary objects.
+        """
+        self.logger.info("Listing workload identities...")
+
+        response: ListWorkloadIdentitiesResponse = self.client.list_workload_identities(
+            request=ListWorkloadIdentitiesRequest(limit=limit, marker=marker)
+        )
+        return response.workload_identities or []
 
     def create_api_key_credential_provider(
         self,
