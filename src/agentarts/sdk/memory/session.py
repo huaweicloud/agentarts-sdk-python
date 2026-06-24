@@ -129,7 +129,7 @@ class MemorySession:
         # If session_id is not provided, call backend API to create a new session
         if session_id is None:
             session_config = SessionCreateRequest(actor_id=actor_id)
-            session_info = self._data_plane.create_memory_session(space_id, session_config.to_dict())
+            session_info = self._data_plane.create_memory_session(space_id, session_config)
             self.session_id = session_info.id
             if not self.session_id:
                 msg = f"Failed to create session: {session_info}"
@@ -333,7 +333,7 @@ class MemorySession:
             Requires HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable to be set
         """
         logger.info(f"Getting message: {message_id}")
-        return self._data_plane.get_message(self.space_id, self.session_id, message_id)
+        return self._data_plane.get_message(message_id, self.space_id, self.session_id)
 
     def search_memories(
             self,
