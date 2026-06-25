@@ -7,6 +7,7 @@ from typing import Any, Literal
 from huaweicloudsdkagentidentity.v1 import (
     AgentIdentityClient,
     ApiKeyCredentialProvider,
+    ApiKeyCredentialProviderSummary,
     AuthorizerType,
     CompleteResourceTokenAuthRequest,
     CompleteResourceTokenAuthRequestBody,
@@ -33,6 +34,10 @@ from huaweicloudsdkagentidentity.v1 import (
     CreateWorkloadIdentityRequest,
     CreateWorkloadIdentityResponse,
     CustomOauth2ProviderConfigInput,
+    GetApiKeyCredentialProviderRequest,
+    GetApiKeyCredentialProviderResponse,
+    GetOauth2CredentialProviderRequest,
+    GetOauth2CredentialProviderResponse,
     GetResourceApiKeyRequest,
     GetResourceApiKeyRequestBody,
     GetResourceApiKeyResponse,
@@ -42,12 +47,26 @@ from huaweicloudsdkagentidentity.v1 import (
     GetResourceStsTokenRequest,
     GetResourceStsTokenRequestBody,
     GetResourceStsTokenResponse,
+    GetStsCredentialProviderRequest,
+    GetStsCredentialProviderResponse,
+    GetWorkloadIdentityRequest,
+    GetWorkloadIdentityResponse,
     GithubOauth2ProviderConfigInput,
     GoogleOauth2ProviderConfigInput,
+    ListApiKeyCredentialProvidersRequest,
+    ListApiKeyCredentialProvidersResponse,
+    ListOauth2CredentialProvidersRequest,
+    ListOauth2CredentialProvidersResponse,
+    ListStsCredentialProvidersRequest,
+    ListStsCredentialProvidersResponse,
+    ListWorkloadIdentitiesRequest,
+    ListWorkloadIdentitiesResponse,
     MicrosoftOauth2ProviderConfigInput,
     Oauth2CredentialProvider,
+    Oauth2CredentialProviderSummary,
     Oauth2ProviderConfigInput,
     StsCredentialProvider,
+    StsCredentialProviderSummary,
     StsTag,
     Tag,
     UpdateWorkloadIdentityReqBody,
@@ -55,6 +74,7 @@ from huaweicloudsdkagentidentity.v1 import (
     UpdateWorkloadIdentityResponse,
     UserIdentifier,
     WorkloadIdentity,
+    WorkloadIdentitySummary,
 )
 from huaweicloudsdkcore.exceptions.exceptions import (
     SdkException,
@@ -113,6 +133,7 @@ class IdentityClient:
             self.client = client
         else:
             from agentarts.sdk.utils.metadata import create_credential
+
             credentials = create_credential()
             self.client = (
                 AgentIdentityClient.new_builder()
@@ -122,14 +143,10 @@ class IdentityClient:
                 .build()
             )
 
-        self.logger.info(
-            f"Initialized Huawei Cloud Agent Identity client for region: {region}"
-        )
+        self.logger.info(f"Initialized Huawei Cloud Agent Identity client for region: {region}")
 
     @staticmethod
-    def _should_retry(
-        resp: SdkResponse | None, exception: SdkException | None
-    ) -> bool:
+    def _should_retry(resp: SdkResponse | None, exception: SdkException | None) -> bool:
         """Determines if a request should be retried based on response or exception.
 
         Retries on:
@@ -178,8 +195,7 @@ class IdentityClient:
             request=CreateWorkloadIdentityRequest(
                 body=CreateWorkloadIdentityReqBody(
                     name=name,
-                    allowed_resource_oauth2_return_urls=allowed_resource_oauth2_return_urls
-                    or [],
+                    allowed_resource_oauth2_return_urls=allowed_resource_oauth2_return_urls or [],
                     authorizer_type=authorizer_type,
                     authorizer_configuration=authorizer_configuration,
                 )
@@ -218,6 +234,43 @@ class IdentityClient:
         )
         return response.workload_identity
 
+    def get_workload_identity(self, name: str) -> WorkloadIdentity:
+        """Gets a specified workload identity.
+
+        Args:
+            name: The name of the workload identity.
+
+        Returns:
+            The WorkloadIdentity object.
+        """
+        self.logger.info(f"Getting workload identity: {name}")
+
+        response: GetWorkloadIdentityResponse = self.client.get_workload_identity(
+            request=GetWorkloadIdentityRequest(workload_identity_name=name)
+        )
+        return response.workload_identity
+
+    def list_workload_identities(
+        self,
+        limit: int | None = None,
+        marker: str | None = None,
+    ) -> list[WorkloadIdentitySummary]:
+        """Lists all workload identities.
+
+        Args:
+            limit: Optional limit for pagination.
+            marker: Optional marker for pagination.
+
+        Returns:
+            A list of WorkloadIdentitySummary objects.
+        """
+        self.logger.info("Listing workload identities...")
+
+        response: ListWorkloadIdentitiesResponse = self.client.list_workload_identities(
+            request=ListWorkloadIdentitiesRequest(limit=limit, marker=marker)
+        )
+        return response.workload_identities or []
+
     def create_api_key_credential_provider(
         self,
         name: str,
@@ -237,9 +290,7 @@ class IdentityClient:
         response: CreateApiKeyCredentialProviderResponse = (
             self.client.create_api_key_credential_provider(
                 request=CreateApiKeyCredentialProviderRequest(
-                    body=CreateApiKeyCredentialProviderReqBody(
-                        name=name, api_key=api_key
-                    )
+                    body=CreateApiKeyCredentialProviderReqBody(name=name, api_key=api_key)
                 )
             )
         )
@@ -278,15 +329,11 @@ class IdentityClient:
 
         if vendor == OAuth2Vendor.GITHUBOAUTH2:
             config = Oauth2ProviderConfigInput(
-                github_oauth2_provider_config=GithubOauth2ProviderConfigInput(
-                    **config_kwargs
-                )
+                github_oauth2_provider_config=GithubOauth2ProviderConfigInput(**config_kwargs)
             )
         elif vendor == OAuth2Vendor.GOOGLEOAUTH2:
             config = Oauth2ProviderConfigInput(
-                google_oauth2_provider_config=GoogleOauth2ProviderConfigInput(
-                    **config_kwargs
-                )
+                google_oauth2_provider_config=GoogleOauth2ProviderConfigInput(**config_kwargs)
             )
         elif vendor == OAuth2Vendor.MICROSOFTOAUTH2:
             config = Oauth2ProviderConfigInput(
@@ -336,13 +383,9 @@ class IdentityClient:
         """
         self.logger.info(f"Creating STS credential provider: {name}")
 
-        response: CreateStsCredentialProviderResponse = (
-            self.client.create_sts_credential_provider(
-                request=CreateStsCredentialProviderRequest(
-                    body=CreateStsCredentialProviderReqBody(
-                        name=name, agency_urn=agency_urn, tags=tags
-                    )
-                )
+        response: CreateStsCredentialProviderResponse = self.client.create_sts_credential_provider(
+            request=CreateStsCredentialProviderRequest(
+                body=CreateStsCredentialProviderReqBody(name=name, agency_urn=agency_urn, tags=tags)
             )
         )
         return response.credential_provider
@@ -365,9 +408,7 @@ class IdentityClient:
         """
         if user_token:
             if user_id is not None:
-                self.logger.warning(
-                    "Both user token and user id are supplied, using user token"
-                )
+                self.logger.warning("Both user token and user id are supplied, using user token")
             self.logger.info("Getting workload access token for JWT...")
             # Create request for JWT-based token
             invoker = self.client.create_workload_access_token_for_jwt_invoker(
@@ -402,9 +443,7 @@ class IdentityClient:
             # Create basic workload access token request
             invoker = self.client.create_workload_access_token_invoker(
                 request=CreateWorkloadAccessTokenRequest(
-                    body=CreateWorkloadAccessTokenRequestBody(
-                        workload_name=workload_name
-                    )
+                    body=CreateWorkloadAccessTokenRequestBody(workload_name=workload_name)
                 )
             )
             resp: CreateWorkloadAccessTokenResponse = invoker.with_retry(
@@ -415,6 +454,121 @@ class IdentityClient:
 
         self.logger.info("Successfully retrieved workload access token")
         return resp.workload_access_token
+
+    def get_api_key_credential_provider(self, name: str) -> ApiKeyCredentialProvider:
+        """Gets a specified API key credential provider.
+
+        Args:
+            name: The name of the credential provider.
+
+        Returns:
+            The ApiKeyCredentialProvider object.
+        """
+        self.logger.info(f"Getting API key credential provider: {name}")
+
+        response: GetApiKeyCredentialProviderResponse = self.client.get_api_key_credential_provider(
+            request=GetApiKeyCredentialProviderRequest(credential_provider_name=name)
+        )
+        return response.credential_provider
+
+    def list_api_key_credential_providers(
+        self,
+        limit: int | None = None,
+        marker: str | None = None,
+    ) -> list[ApiKeyCredentialProviderSummary]:
+        """Lists all API key credential providers.
+
+        Args:
+            limit: Optional limit for pagination.
+            marker: Optional marker for pagination.
+
+        Returns:
+            A list of ApiKeyCredentialProviderSummary objects.
+        """
+        self.logger.info("Listing API key credential providers...")
+
+        response: ListApiKeyCredentialProvidersResponse = (
+            self.client.list_api_key_credential_providers(
+                request=ListApiKeyCredentialProvidersRequest(limit=limit, marker=marker)
+            )
+        )
+        return response.credential_providers or []
+
+    def get_oauth2_credential_provider(self, name: str) -> Oauth2CredentialProvider:
+        """Gets a specified OAuth2 credential provider.
+
+        Args:
+            name: The name of the credential provider.
+
+        Returns:
+            The Oauth2CredentialProvider object.
+        """
+        self.logger.info(f"Getting OAuth2 credential provider: {name}")
+
+        response: GetOauth2CredentialProviderResponse = self.client.get_oauth2_credential_provider(
+            request=GetOauth2CredentialProviderRequest(credential_provider_name=name)
+        )
+        return response.credential_provider
+
+    def list_oauth2_credential_providers(
+        self,
+        limit: int | None = None,
+        marker: str | None = None,
+    ) -> list[Oauth2CredentialProviderSummary]:
+        """Lists all OAuth2 credential providers.
+
+        Args:
+            limit: Optional limit for pagination.
+            marker: Optional marker for pagination.
+
+        Returns:
+            A list of Oauth2CredentialProviderSummary objects.
+        """
+        self.logger.info("Listing OAuth2 credential providers...")
+
+        response: ListOauth2CredentialProvidersResponse = (
+            self.client.list_oauth2_credential_providers(
+                request=ListOauth2CredentialProvidersRequest(limit=limit, marker=marker)
+            )
+        )
+        return response.credential_providers or []
+
+    def get_sts_credential_provider(self, name: str) -> StsCredentialProvider:
+        """Gets a specified STS credential provider.
+
+        Args:
+            name: The name of the credential provider.
+
+        Returns:
+            The StsCredentialProvider object.
+        """
+        self.logger.info(f"Getting STS credential provider: {name}")
+
+        response: GetStsCredentialProviderResponse = self.client.get_sts_credential_provider(
+            request=GetStsCredentialProviderRequest(credential_provider_name=name)
+        )
+        return response.credential_provider
+
+    def list_sts_credential_providers(
+        self,
+        limit: int | None = None,
+        marker: str | None = None,
+    ) -> list[StsCredentialProviderSummary]:
+        """Lists all STS credential providers.
+
+        Args:
+            limit: Optional limit for pagination.
+            marker: Optional marker for pagination.
+
+        Returns:
+            A list of StsCredentialProviderSummary objects.
+        """
+        self.logger.info("Listing STS credential providers...")
+
+        response: ListStsCredentialProvidersResponse = self.client.list_sts_credential_providers(
+            request=ListStsCredentialProvidersRequest(limit=limit, marker=marker)
+        )
+        return response.credential_providers or []
 
     async def get_resource_oauth2_token(
         self,
@@ -515,13 +669,9 @@ class IdentityClient:
             return await active_poller.poll_for_token()
 
         msg = "Identity service did not return a token or an authorization URL."
-        raise RuntimeError(
-            msg
-        )
+        raise RuntimeError(msg)
 
-    def get_resource_api_key(
-        self, *, provider_name: str, workload_access_token: str
-    ) -> str:
+    def get_resource_api_key(self, *, provider_name: str, workload_access_token: str) -> str:
         """Programmatically retrieves an API key from the Identity service.
 
         Args:
@@ -616,12 +766,10 @@ class IdentityClient:
         """
         self.logger.info("Completing 3LO OAuth2 flow...")
 
-        response: CompleteResourceTokenAuthResponse = (
-            self.client.complete_resource_token_auth(
-                request=CompleteResourceTokenAuthRequest(
-                    body=CompleteResourceTokenAuthRequestBody(
-                        user_identifier=user_identifier, session_uri=session_uri
-                    )
+        response: CompleteResourceTokenAuthResponse = self.client.complete_resource_token_auth(
+            request=CompleteResourceTokenAuthRequest(
+                body=CompleteResourceTokenAuthRequestBody(
+                    user_identifier=user_identifier, session_uri=session_uri
                 )
             )
         )
