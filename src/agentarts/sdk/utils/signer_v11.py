@@ -4,6 +4,7 @@
 
 import hashlib
 import hmac
+import logging
 from datetime import datetime, timezone
 from urllib.parse import quote, unquote
 
@@ -11,6 +12,8 @@ APIC = "apic"
 UTF8 = "utf-8"
 DATE_FORMAT = "%Y%m%dT%H%M%SZ"
 ALGORITHM = "V11-HMAC-SHA256"
+
+logger = logging.getLogger(__name__)
 
 
 class V11Signer:
@@ -85,9 +88,13 @@ class V11Signer:
             if isinstance(value, list):
                 sorted_values = sorted(str(v) for v in value)
                 for v in sorted_values:
-                    arr.append(f"{ke}={self._urlencode(v)}")
+                    # Values keep '/' unencoded: the data-plane gateway decodes
+                    # the wire query and treats '/' as safe when re-canonicalising,
+                    # so the signature must match that form (e.g. upload's `path`
+                    # value like /home/user/test.txt). Keys never contain '/'.
+                    arr.append(f"{ke}={quote(str(v), safe='~/')}")
             else:
-                arr.append(f"{ke}={self._urlencode(str(value))}")
+                arr.append(f"{ke}={quote(str(value), safe='~/')}")
         return "&".join(arr)
 
     def _canonical_headers(self, headers: dict[str, str], signed_headers: list[str]) -> str:
@@ -174,6 +181,18 @@ class V11Signer:
         real_use_secret = self._get_real_use_secret()
         signature = self._sign_string_to_sign(real_use_secret, string_to_sign)
         auth_value = self._get_auth_header_value(signed_headers, signature)
+
+        logger.debug(
+            "V11 sign: method=%s path=%s query=%s signed_headers=%s\n"
+            "canonical_request:\n%s\nstring_to_sign:\n%s\nauthorization=%s",
+            method,
+            path,
+            self._canonical_query_string(query_params),
+            ";".join(signed_headers),
+            canonical_request,
+            string_to_sign,
+            auth_value,
+        )
 
         headers["Authorization"] = auth_value
 
