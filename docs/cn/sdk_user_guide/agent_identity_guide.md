@@ -207,13 +207,13 @@ sequenceDiagram
 使用 `pip` 安装 SDK：
 
 ```bash
-pip install agent-identity-dev-sdk
+pip install agentarts-sdk
 ```
 
 或者如果你正在使用 `uv`：
 
 ```bash
-uv add agent-identity-dev-sdk
+uv add agentarts-sdk
 ```
 
 ## 快速入门
@@ -367,7 +367,7 @@ uv run jupyter lab
 ```bash
 # 克隆仓库
 git clone <repository-url>
-cd agent-identity-dev-sdk
+cd agentarts-sdk-python
 
 # 安装所有依赖（包括示例）
 uv sync --all-packages
@@ -422,8 +422,9 @@ uv run mkdocs build
 
 ## 项目结构
 
-- `src/agent_identity_dev_sdk/`: 核心库源代码。
-    - `services/`: 身份和令牌轮询实现。
-    - `runtime/`: 执行上下文和辅助工具。
+- `src/agentarts/sdk/identity/`: 身份相关 SDK 源代码。
+    - `auth.py`: 身份上下文、客户端和装饰器实现。
+    - `config.py`: 本地身份配置加载。
+    - `types.py`: 身份相关类型别名。
 - `tests/`: 完整的测试套件。
 - `examples/`: 使用示例和模板。
