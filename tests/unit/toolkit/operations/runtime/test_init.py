@@ -158,6 +158,20 @@ class TestCreateConfigFile:
         content = (tmp_path / ".agentarts_config.yaml").read_text()
         assert "cn-east-3" in content
 
+    def test_config_includes_storage_config_block(self, tmp_path):
+        """Config includes the storage_config / sfs_turbo block."""
+        create_config_file(
+            project_path=tmp_path,
+            name="test-agent",
+            template="basic",
+        )
+
+        content = (tmp_path / ".agentarts_config.yaml").read_text()
+        assert "storage_config:" in content
+        assert "sfs_turbo:" in content
+        assert "sfs_turbo_id:" in content
+        assert "mount_path:" in content
+
 
 class TestCreateAgentFile:
     """Tests for create_agent_file() function."""

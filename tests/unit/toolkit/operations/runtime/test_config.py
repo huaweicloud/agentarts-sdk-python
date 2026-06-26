@@ -26,6 +26,8 @@ from agentarts.toolkit.utils.runtime.config import (
     BaseConfig,
     CustomJWTAuthConfig,
     InboundIdentityConfig,
+    SfsTurboConfig,
+    StorageConfig,
 )
 
 
@@ -206,6 +208,19 @@ class TestAddAgent:
         agent = config.get_agent("test-agent")
         assert agent.swr_config.organization == "test-org"
         assert agent.swr_config.repository == "test-repo"
+
+    def test_adds_agent_includes_storage_config_block(self, tmp_path, monkeypatch):
+        """Config-generated YAML includes the storage_config / sfs_turbo block."""
+        monkeypatch.chdir(tmp_path)
+
+        result = add_agent(name="test-agent", entrypoint="agent:app", region="cn-north-4")
+        assert result is True
+
+        content = (tmp_path / CONFIG_FILE_NAME).read_text()
+        assert "storage_config:" in content
+        assert "sfs_turbo:" in content
+        assert "sfs_turbo_id:" in content
+        assert "mount_path:" in content
 
     def test_uses_default_swr_repo_as_agent_prefix(self, tmp_path, monkeypatch):
         """Uses agent_{name} as default SWR repository."""
@@ -493,3 +508,71 @@ class TestInboundIdentityConfigToDict:
         result = config.to_dict()
 
         assert "authorizer_configuration" in result
+
+
+class TestStorageConfig:
+    """Tests for StorageConfig / SfsTurboConfig models."""
+
+    def test_sfs_turbo_to_dict_excludes_none(self):
+        """to_dict excludes None fields but keeps read_only."""
+        cfg = SfsTurboConfig(
+            sfs_turbo_id="12345678-1234-1234-1234-123456789012",
+            mount_path="/data",
+        )
+        result = cfg.to_dict()
+
+        assert result == {
+            "sfs_turbo_id": "12345678-1234-1234-1234-123456789012",
+            "mount_path": "/data",
+            "read_only": False,
+        }
+
+    def test_sfs_turbo_empty_to_dict_keeps_read_only(self):
+        """An all-default SfsTurboConfig keeps read_only (mirrors NetworkConfig/network_mode)."""
+        assert SfsTurboConfig().to_dict() == {"read_only": False}
+
+    def test_storage_config_to_dict_nested(self):
+        """StorageConfig serializes the nested sfs_turbo block."""
+        cfg = StorageConfig(
+            sfs_turbo=SfsTurboConfig(
+                sfs_turbo_id="12345678-1234-1234-1234-123456789012",
+                sfs_path="/share/sub",
+                mount_path="/data",
+                read_only=True,
+            )
+        )
+        result = cfg.to_dict()
+
+        assert result == {
+            "sfs_turbo": {
+                "sfs_turbo_id": "12345678-1234-1234-1234-123456789012",
+                "sfs_path": "/share/sub",
+                "mount_path": "/data",
+                "read_only": True,
+            }
+        }
+
+    def test_storage_config_default_to_dict_has_read_only(self):
+        """A default StorageConfig (sfs_turbo=SfsTurboConfig()) keeps read_only."""
+        assert StorageConfig().to_dict() == {"sfs_turbo": {"read_only": False}}
+
+    def test_invalid_sfs_turbo_id_rejected(self):
+        """A non-UUID sfs_turbo_id is rejected by validation."""
+        import pytest
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            SfsTurboConfig(sfs_turbo_id="not-a-uuid", mount_path="/data")
+
+    def test_runtime_config_has_storage_config_field(self):
+        """AgentArtsRuntimeConfig exposes a storage_config field with a default
+        nested SfsTurboConfig (mirrors network_config/vpc_config), so the block
+        is present in config-generated YAML even when unset."""
+        from agentarts.toolkit.utils.runtime.config import AgentArtsRuntimeConfig
+
+        runtime = AgentArtsRuntimeConfig()
+        assert runtime.storage_config is not None
+        assert runtime.storage_config.sfs_turbo is not None
+        assert runtime.storage_config.sfs_turbo.sfs_turbo_id is None
+        assert runtime.storage_config.sfs_turbo.mount_path is None
+        assert runtime.storage_config.sfs_turbo.read_only is False
