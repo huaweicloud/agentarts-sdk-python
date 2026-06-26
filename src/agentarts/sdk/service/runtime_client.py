@@ -267,6 +267,7 @@ class RuntimeClient:
         agent_gateway_id: str | None = None,
         invoke_config: dict | None = None,
         observability_config: dict | None = None,
+        storage_config: dict | None = None,
         tags_config: list[dict] | None = None,
         **extra: Any,
     ) -> dict[str, Any]:
@@ -284,6 +285,7 @@ class RuntimeClient:
             agent_gateway_id: ID of the agent gateway to attach.
             invoke_config: Invocation-related configuration.
             observability_config: Observability (tracing, metrics) configuration.
+            storage_config: Storage (e.g. SFS Turbo) configuration.
             tags_config: Tags as list of {"key": "K", "value": "V"} dicts.
             **extra: Additional fields forwarded to the API.
 
@@ -312,6 +314,8 @@ class RuntimeClient:
             payload["invoke_config"] = invoke_config
         if observability_config is not None:
             payload["observability"] = observability_config
+        if storage_config is not None:
+            payload["storage_config"] = storage_config
         if tags_config is not None:
             payload["tags"] = tags_config
 
@@ -329,6 +333,7 @@ class RuntimeClient:
         agent_gateway_id: str | None = None,
         invoke_config: dict | None = None,
         observability_config: dict | None = None,
+        storage_config: dict | None = None,
         tags_config: list[dict] | None = None,
         **extra: Any,
     ) -> dict[str, Any]:
@@ -345,6 +350,7 @@ class RuntimeClient:
             agent_gateway_id: ID of the agent gateway to attach.
             invoke_config: Invocation-related configuration.
             observability_config: Observability (tracing, metrics) configuration.
+            storage_config: Storage (e.g. SFS Turbo) configuration.
             tags_config: Tags as list of {"key": "K", "value": "V"} dicts.
             **extra: Additional fields forwarded to the API.
 
@@ -371,6 +377,8 @@ class RuntimeClient:
             payload["invoke_config"] = invoke_config
         if observability_config is not None:
             payload["observability"] = observability_config
+        if storage_config is not None:
+            payload["storage_config"] = storage_config
         if tags_config is not None:
             payload["tags"] = tags_config
 
@@ -389,6 +397,7 @@ class RuntimeClient:
         agent_gateway_id: str | None = None,
         invoke_config: dict | None = None,
         observability_config: dict | None = None,
+        storage_config: dict | None = None,
         tags_config: list[dict] | None = None,
         **extra: Any,
     ) -> dict[str, Any]:
@@ -410,6 +419,7 @@ class RuntimeClient:
             agent_gateway_id: ID of the agent gateway to attach.
             invoke_config: Invocation-related configuration.
             observability_config: Observability (tracing, metrics) configuration.
+            storage_config: Storage (e.g. SFS Turbo) configuration.
             tags_config: Tags as list of {"key": "K", "value": "V"} dicts.
             **extra: Additional fields forwarded to the API.
 
@@ -432,6 +442,7 @@ class RuntimeClient:
                 agent_gateway_id=agent_gateway_id,
                 invoke_config=invoke_config,
                 observability_config=observability_config,
+                storage_config=storage_config,
                 tags_config=tags_config,
                 **extra,
             )
@@ -448,6 +459,7 @@ class RuntimeClient:
             agent_gateway_id=agent_gateway_id,
             invoke_config=invoke_config,
             observability_config=observability_config,
+            storage_config=storage_config,
             tags_config=tags_config,
             **extra,
         )

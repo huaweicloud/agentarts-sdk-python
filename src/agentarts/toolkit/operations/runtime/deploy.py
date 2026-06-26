@@ -74,6 +74,7 @@ def create_agentarts_runtime(
         network_config = None
         identity_config = None
         observability_config = None
+        storage_config = None
         env_vars = None
         tags_config = None
         execution_agency_name = None
@@ -111,6 +112,19 @@ def create_agentarts_runtime(
             if runtime_cfg.observability:
                 observability_config = runtime_cfg.observability.to_dict()
 
+            if runtime_cfg.storage_config:
+                sc = runtime_cfg.storage_config.to_dict()
+                st = sc.get("sfs_turbo") or {}
+                # Only enforce required fields when the user explicitly opted
+                # into SFS Turbo by providing sfs_turbo_id. An unset/all-null
+                # storage_config (e.g. from `agentarts init` / `agentarts config`)
+                # is treated as "not configured" so deploy is never blocked.
+                if st.get("sfs_turbo_id"):
+                    if not st.get("mount_path"):
+                        msg = "storage_config.sfs_turbo.mount_path is required when sfs_turbo_id is set"
+                        raise ValueError(msg)
+                    storage_config = sc
+
             if runtime_cfg.environment_variables:
                 env_vars = [{"key": kv.key, "value": kv.value} for kv in runtime_cfg.environment_variables if kv.value]
 
@@ -144,6 +158,7 @@ def create_agentarts_runtime(
             network_config=network_config,
             identity_config=identity_config,
             observability_config=observability_config,
+            storage_config=storage_config,
             env_vars=env_vars,
             tags_config=tags_config,
             execution_agency_name=execution_agency_name,

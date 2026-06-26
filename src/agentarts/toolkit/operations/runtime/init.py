@@ -230,6 +230,13 @@ agents:
         url: null  # Auto-generated during deploy from swr_config
         commands: []
 
+      storage_config:
+        sfs_turbo:
+          sfs_turbo_id: null  # UUID format, required when using SFS Turbo
+          sfs_path: null
+          mount_path: null    # required when using SFS Turbo
+          read_only: false
+
       environment_variables:{env_vars_yaml}
 
       tags: []
