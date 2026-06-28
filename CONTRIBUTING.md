@@ -141,7 +141,7 @@ We follow the [Conventional Commits](https://www.conventionalcommits.org/) speci
 | `runtime` | Agent runtime module |
 | `memory` | Memory module |
 | `identity` | Identity management |
-| `mcp` | MCP gateway |
+| `gateway` | gateway |
 | `tools` | Built-in tools |
 | `service` | Service wrapper |
 | `integration` | Framework adapters |

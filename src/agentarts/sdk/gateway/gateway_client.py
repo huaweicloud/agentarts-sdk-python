@@ -1,5 +1,5 @@
 """
-MCP Gateway HTTP Client Module
+Gateway HTTP Client Module
 
 Provides HTTP client implementation for MCP (Model Context Protocol) gateway operations.
 """
@@ -13,9 +13,9 @@ from agentarts.sdk.utils.common import generate_random_string
 from agentarts.sdk.utils.constant import get_control_plane_endpoint
 
 
-class MCPGatewayClient(BaseHTTPClient):
+class GatewayClient(BaseHTTPClient):
     """
-    MCP Gateway client for making API calls to MCP Gateway service.
+    Gateway client for making API calls to Gateway service.
 
     Inherits from BaseHTTPClient to provide service-specific API methods.
     """
@@ -27,7 +27,7 @@ class MCPGatewayClient(BaseHTTPClient):
         self.verify_ssl = verify_ssl
         super().__init__(config, open_ak_sk=True)
 
-    def create_mcp_gateway(
+    def create_gateway(
         self,
         name: str | None = None,
         description: str | None = None,
@@ -39,7 +39,7 @@ class MCPGatewayClient(BaseHTTPClient):
         outbound_network_configuration: dict[str, Any] | None = None
     ) -> RequestResult:
         """
-        Create a new MCP gateway.
+        Create a new gateway.
 
         Args:
             name: Gateway name, default is gateway-<random-string>
@@ -130,14 +130,14 @@ class MCPGatewayClient(BaseHTTPClient):
 
         return self.post("/gateways", json=payload)
 
-    def update_mcp_gateway(
+    def update_gateway(
         self,
         gateway_id: str,
         description: str | None = None,
         log_delivery_configuration: dict[str, Any] | None = None
     ) -> RequestResult:
         """
-        Update an existing MCP gateway.
+        Update an existing gateway.
 
         Args:
             gateway_id: Gateway ID
@@ -173,9 +173,9 @@ class MCPGatewayClient(BaseHTTPClient):
 
         return self.put(f"/gateways/{gateway_id}", json=payload)
 
-    def delete_mcp_gateway(self, gateway_id: str) -> RequestResult:
+    def delete_gateway(self, gateway_id: str) -> RequestResult:
         """
-        Delete an MCP gateway.
+        Delete a gateway.
 
         Args:
             gateway_id: Gateway ID
@@ -185,9 +185,9 @@ class MCPGatewayClient(BaseHTTPClient):
         """
         return self.delete(f"/gateways/{gateway_id}")
 
-    def get_mcp_gateway(self, gateway_id: str) -> RequestResult:
+    def get_gateway(self, gateway_id: str) -> RequestResult:
         """
-        Get details of an MCP gateway.
+        Get details of a gateway.
 
         Args:
             gateway_id: Gateway ID
@@ -197,7 +197,7 @@ class MCPGatewayClient(BaseHTTPClient):
         """
         return self.get(f"/gateways/{gateway_id}")
 
-    def list_mcp_gateways(
+    def list_gateways(
         self,
         name: str | None = None,
         status: str | None = None,
@@ -206,7 +206,7 @@ class MCPGatewayClient(BaseHTTPClient):
         offset: int | None = None
     ) -> RequestResult:
         """
-        List MCP gateways with optional filters.
+        List gateways with optional filters.
 
         Args:
             name: Gateway name filter
@@ -231,7 +231,7 @@ class MCPGatewayClient(BaseHTTPClient):
 
         return self.get("/gateways", params=params)
 
-    def create_mcp_gateway_target(
+    def create_gateway_target(
         self,
         gateway_id: str,
         name: str | None = None,
@@ -240,7 +240,7 @@ class MCPGatewayClient(BaseHTTPClient):
         credential_provider_configuration: dict[str, Any] | None = None
     ) -> RequestResult:
         """
-        Create a new MCP gateway target.
+        Create a new gateway target.
 
         Args:
             gateway_id: Gateway ID
@@ -272,7 +272,7 @@ class MCPGatewayClient(BaseHTTPClient):
 
         return self.post(f"/gateways/{gateway_id}/targets", json=payload)
 
-    def update_mcp_gateway_target(
+    def update_gateway_target(
         self,
         gateway_id: str,
         target_id: str,
@@ -282,7 +282,7 @@ class MCPGatewayClient(BaseHTTPClient):
         credential_provider_configuration: dict[str, Any] | None = None
     ) -> RequestResult:
         """
-        Update an existing MCP gateway target.
+        Update an existing gateway target.
 
         Args:
             gateway_id: Gateway ID
@@ -325,9 +325,9 @@ class MCPGatewayClient(BaseHTTPClient):
 
         return self.put(f"/gateways/{gateway_id}/targets/{target_id}", json=payload)
 
-    def delete_mcp_gateway_target(self, gateway_id: str, target_id: str) -> RequestResult:
+    def delete_gateway_target(self, gateway_id: str, target_id: str) -> RequestResult:
         """
-        Delete an MCP gateway target.
+        Delete a gateway target.
 
         Args:
             gateway_id: Gateway ID
@@ -338,9 +338,9 @@ class MCPGatewayClient(BaseHTTPClient):
         """
         return self.delete(f"/gateways/{gateway_id}/targets/{target_id}")
 
-    def get_mcp_gateway_target(self, gateway_id: str, target_id: str) -> RequestResult:
+    def get_gateway_target(self, gateway_id: str, target_id: str) -> RequestResult:
         """
-        Get details of an MCP gateway target.
+        Get details of a gateway target.
 
         Args:
             gateway_id: Gateway ID
@@ -351,14 +351,14 @@ class MCPGatewayClient(BaseHTTPClient):
         """
         return self.get(f"/gateways/{gateway_id}/targets/{target_id}")
 
-    def list_mcp_gateway_targets(
+    def list_gateway_targets(
         self,
         gateway_id: str,
         limit: int | None = None,
         offset: int | None = None
     ) -> RequestResult:
         """
-        List MCP gateway targets with pagination.
+        List gateway targets with pagination.
 
         Args:
             gateway_id: Gateway ID

@@ -144,7 +144,7 @@ class AgentArtsRuntimeContext:
         Set the workload access token.
 
         This token is used for authenticating calls to Huawei Cloud
-        internal services (e.g., memory, MCP gateway) on behalf of
+        internal services (e.g., memory, gateway) on behalf of
         the deployed agent workload.
         """
         cls._workload_access_token.set(value)
