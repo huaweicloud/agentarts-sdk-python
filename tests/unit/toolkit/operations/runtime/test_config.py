@@ -22,6 +22,7 @@ from agentarts.toolkit.utils.runtime.config import (
     AgentArtsConfig,
     AgentArtsConfigList,
     ArchType,
+    ArtifactSourceConfig,
     AuthConfig,
     BaseConfig,
     CustomJWTAuthConfig,
@@ -576,3 +577,47 @@ class TestStorageConfig:
         assert runtime.storage_config.sfs_turbo.sfs_turbo_id is None
         assert runtime.storage_config.sfs_turbo.mount_path is None
         assert runtime.storage_config.sfs_turbo.read_only is False
+
+
+class TestArtifactSourceSwrInstanceId:
+    """Tests for ArtifactSourceConfig.swr_instance_id."""
+
+    def test_default_excluded_from_to_dict(self):
+        """An unset swr_instance_id is excluded (not sent to the API)."""
+        cfg = ArtifactSourceConfig(url="swr/x:latest")
+        result = cfg.to_dict()
+        assert "swr_instance_id" not in result
+        assert result["url"] == "swr/x:latest"
+
+    def test_included_when_set(self):
+        """A set swr_instance_id flows into the artifact_source payload."""
+        uid = "12345678-1234-1234-1234-123456789012"
+        cfg = ArtifactSourceConfig(url="swr/x:latest", swr_instance_id=uid)
+        assert cfg.to_dict()["swr_instance_id"] == uid
+
+    def test_invalid_uuid_rejected(self):
+        """A non-UUID swr_instance_id is rejected by validation."""
+        import pytest
+        from pydantic import ValidationError
+
+        with pytest.raises(ValidationError):
+            ArtifactSourceConfig(url="swr/x:latest", swr_instance_id="not-a-uuid")
+
+    def test_init_scaffold_and_config_both_include_field(self, tmp_path, monkeypatch):
+        """Both `init` and `config` generated YAML include swr_instance_id."""
+        from agentarts.toolkit.operations.runtime.init import create_config_file
+
+        # init path
+        d = tmp_path / "init-proj"
+        d.mkdir()
+        create_config_file(project_path=d, name="a", template="basic")
+        init_txt = (d / ".agentarts_config.yaml").read_text()
+        assert "swr_instance_id:" in init_txt
+
+        # config (add_agent) path
+        cfg_dir = tmp_path / "cfg-proj"
+        cfg_dir.mkdir()
+        monkeypatch.chdir(cfg_dir)
+        add_agent(name="c", entrypoint="agent:app", region="cn-southwest-2")
+        cfg_txt = (cfg_dir / CONFIG_FILE_NAME).read_text()
+        assert "swr_instance_id:" in cfg_txt

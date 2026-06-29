@@ -228,6 +228,7 @@ agents:
 
       artifact_source:
         url: null  # Auto-generated during deploy from swr_config
+        swr_instance_id: null  # UUID format, optional
         commands: []
 
       storage_config:

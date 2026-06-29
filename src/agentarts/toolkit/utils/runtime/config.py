@@ -406,6 +406,11 @@ class ArtifactSourceConfig(BaseModel):
         default=None,
         description="URL of the artifact source",
     )
+    swr_instance_id: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+        description="SWR instance ID (UUID format, optional)",
+    )
     commands: list[str] | None = Field(
         default_factory=list,
         description="Commands to run when the artifact is deployed",
