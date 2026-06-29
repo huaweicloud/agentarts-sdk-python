@@ -7,6 +7,12 @@ from agentarts.toolkit.operations.runtime.deploy import (
     create_agentarts_runtime,
     deploy_project,
 )
+from agentarts.toolkit.utils.runtime.config import (
+    AgentArtsConfig,
+    AgentArtsRuntimeConfig,
+    SfsTurboConfig,
+    StorageConfig,
+)
 
 
 class TestDeployMode:
@@ -87,6 +93,162 @@ class TestCreateAgentartsRuntime:
 
         call_args = mock_client_instance.create_or_update_agent.call_args
         assert call_args.kwargs["description"] == "My custom description"
+
+    @patch("agentarts.toolkit.operations.runtime.deploy.RuntimeClient")
+    def test_storage_config_absent_passes_none(self, mock_client, tmp_path, monkeypatch):
+        """storage_config kwarg is None when not configured."""
+        monkeypatch.chdir(tmp_path)
+
+        mock_client_instance = MagicMock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.create_or_update_agent.return_value = {
+            "id": "agent-123",
+            "latest_version": "v1",
+        }
+
+        create_agentarts_runtime(
+            agent_name="test-agent",
+            swr_image="swr.cn-north-4.myhuaweicloud.com/org/repo:latest",
+            region="cn-north-4",
+        )
+
+        call_args = mock_client_instance.create_or_update_agent.call_args
+        assert call_args.kwargs["storage_config"] is None
+
+    @patch("agentarts.toolkit.operations.runtime.deploy.RuntimeClient")
+    def test_storage_config_null_placeholder_does_not_break_deploy(self, mock_client, tmp_path, monkeypatch):
+        """An all-null placeholder storage_config (as written by `agentarts init`)
+        is treated as unset so a freshly initialized agent still deploys."""
+        monkeypatch.chdir(tmp_path)
+
+        mock_client_instance = MagicMock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.create_or_update_agent.return_value = {
+            "id": "agent-123",
+            "latest_version": "v1",
+        }
+
+        # Mirrors the null block written by create_config_file in init.py
+        agent_config = AgentArtsConfig(
+            runtime=AgentArtsRuntimeConfig(
+                storage_config=StorageConfig(sfs_turbo=SfsTurboConfig())
+            )
+        )
+
+        result = create_agentarts_runtime(
+            agent_name="test-agent",
+            swr_image="swr.cn-north-4.myhuaweicloud.com/org/repo:latest",
+            region="cn-north-4",
+            agent_config=agent_config,
+        )
+
+        assert result is not None
+        call_args = mock_client_instance.create_or_update_agent.call_args
+        assert call_args.kwargs["storage_config"] is None
+
+    @patch("agentarts.toolkit.operations.runtime.deploy.RuntimeClient")
+    def test_storage_config_partial_without_id_not_blocked(self, mock_client, tmp_path, monkeypatch):
+        """Requirement: deploy must NOT block when the user hasn't configured
+        storage. A storage_config with only sfs_path/mount_path but no
+        sfs_turbo_id is treated as unset (no blocking, nothing sent)."""
+        monkeypatch.chdir(tmp_path)
+
+        mock_client_instance = MagicMock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.create_or_update_agent.return_value = {
+            "id": "agent-123",
+            "latest_version": "v1",
+        }
+
+        agent_config = AgentArtsConfig(
+            runtime=AgentArtsRuntimeConfig(
+                storage_config=StorageConfig(
+                    sfs_turbo=SfsTurboConfig(sfs_path="/share/sub", mount_path="/data")
+                )
+            )
+        )
+
+        result = create_agentarts_runtime(
+            agent_name="test-agent",
+            swr_image="swr.cn-north-4.myhuaweicloud.com/org/repo:latest",
+            region="cn-north-4",
+            agent_config=agent_config,
+        )
+
+        assert result is not None
+        call_args = mock_client_instance.create_or_update_agent.call_args
+        assert call_args.kwargs["storage_config"] is None
+
+    @patch("agentarts.toolkit.operations.runtime.deploy.RuntimeClient")
+    def test_storage_config_forwarded(self, mock_client, tmp_path, monkeypatch):
+        """A populated storage_config is forwarded to create_or_update_agent."""
+        monkeypatch.chdir(tmp_path)
+
+        mock_client_instance = MagicMock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.create_or_update_agent.return_value = {
+            "id": "agent-123",
+            "latest_version": "v1",
+        }
+
+        agent_config = AgentArtsConfig(
+            runtime=AgentArtsRuntimeConfig(
+                storage_config=StorageConfig(
+                    sfs_turbo=SfsTurboConfig(
+                        sfs_turbo_id="12345678-1234-1234-1234-123456789012",
+                        sfs_path="/share/sub",
+                        mount_path="/data",
+                        read_only=True,
+                    )
+                )
+            )
+        )
+
+        create_agentarts_runtime(
+            agent_name="test-agent",
+            swr_image="swr.cn-north-4.myhuaweicloud.com/org/repo:latest",
+            region="cn-north-4",
+            agent_config=agent_config,
+        )
+
+        call_args = mock_client_instance.create_or_update_agent.call_args
+        assert call_args.kwargs["storage_config"] == {
+            "sfs_turbo": {
+                "sfs_turbo_id": "12345678-1234-1234-1234-123456789012",
+                "sfs_path": "/share/sub",
+                "mount_path": "/data",
+                "read_only": True,
+            }
+        }
+
+    @patch("agentarts.toolkit.operations.runtime.deploy.RuntimeClient")
+    def test_storage_config_requires_mount_path_when_id_set(self, mock_client, tmp_path, monkeypatch):
+        """When sfs_turbo_id is set, mount_path is required (returns None)."""
+        monkeypatch.chdir(tmp_path)
+
+        mock_client_instance = MagicMock()
+        mock_client.return_value = mock_client_instance
+
+        agent_config = AgentArtsConfig(
+            runtime=AgentArtsRuntimeConfig(
+                storage_config=StorageConfig(
+                    sfs_turbo=SfsTurboConfig(
+                        sfs_turbo_id="12345678-1234-1234-1234-123456789012",
+                        sfs_path="/share/sub",
+                    )
+                )
+            )
+        )
+
+        result = create_agentarts_runtime(
+            agent_name="test-agent",
+            swr_image="swr.cn-north-4.myhuaweicloud.com/org/repo:latest",
+            region="cn-north-4",
+            agent_config=agent_config,
+        )
+
+        assert result is None
+        mock_client_instance.create_or_update_agent.assert_not_called()
 
 
 class TestDeployProject:

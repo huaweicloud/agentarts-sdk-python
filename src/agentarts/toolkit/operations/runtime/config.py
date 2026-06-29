@@ -11,6 +11,7 @@ from agentarts.toolkit.utils.runtime.config import (
     AgentArtsConfigList,
     BaseConfig,
     SWRConfig,
+    detect_arch,
 )
 from agentarts.toolkit.utils.swr_org import generate_swr_org_name
 
@@ -230,6 +231,7 @@ def add_agent(
         agent_config = AgentArtsConfig.from_dict(existing_dict)
     else:
         detected_platform = detect_platform()
+        detected_arch = detect_arch()
         agent_config = AgentArtsConfig(
             base=BaseConfig(
                 name=name,
@@ -237,6 +239,7 @@ def add_agent(
                 region=region,
                 dependency_file=dependency_file,
                 platform=detected_platform,
+                arch=detected_arch,
             ),
             swr_config=SWRConfig(
                 organization=swr_organization,

@@ -189,6 +189,55 @@ class VpcConfig(BaseModel):
         return {k: v for k, v in data.items() if v not in ([], {})}
 
 
+class SfsTurboConfig(BaseModel):
+    """SFS Turbo storage configuration."""
+
+    sfs_turbo_id: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+        description="SFS Turbo ID (UUID format, required when storage_config is set)",
+    )
+    sfs_path: str | None = Field(
+        default=None,
+        description="SFS Turbo shared path inside the file system",
+    )
+    mount_path: str | None = Field(
+        default=None,
+        description="Container mount path (required when storage_config is set)",
+    )
+    read_only: bool = Field(
+        default=False,
+        description="Whether to mount the share read-only",
+    )
+
+    model_config = {
+        "extra": "allow",
+    }
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert configuration to dictionary."""
+        data = self.model_dump(mode="json", exclude_none=True)
+        return {k: v for k, v in data.items() if v not in ([], {})}
+
+
+class StorageConfig(BaseModel):
+    """Storage configuration for the runtime."""
+
+    sfs_turbo: SfsTurboConfig | None = Field(
+        default_factory=SfsTurboConfig,
+        description="SFS Turbo storage configuration",
+    )
+
+    model_config = {
+        "extra": "allow",
+    }
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert configuration to dictionary."""
+        data = self.model_dump(mode="json", exclude_none=True)
+        return {k: v for k, v in data.items() if v not in ([], {})}
+
+
 class NetworkConfig(BaseModel):
     """Network endpoint configuration."""
 
@@ -357,6 +406,11 @@ class ArtifactSourceConfig(BaseModel):
         default=None,
         description="URL of the artifact source",
     )
+    swr_instance_id: str | None = Field(
+        default=None,
+        pattern=r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+        description="SWR instance ID (UUID format, optional)",
+    )
     commands: list[str] | None = Field(
         default_factory=list,
         description="Commands to run when the artifact is deployed",
@@ -490,6 +544,10 @@ class AgentArtsRuntimeConfig(BaseModel):
         default_factory=ArtifactSourceConfig,
         description="Artifact source configuration",
     )
+    storage_config: StorageConfig | None = Field(
+        default_factory=StorageConfig,
+        description="Storage configuration",
+    )
     environment_variables: list[KeyValuePair] | None = Field(
         default_factory=list,
         description="Environment variables configuration",
@@ -570,7 +628,7 @@ class AgentArtsConfig(BaseModel):
                 if "runtime" in ordered_agents[agent_name]:
                     ordered_agents[agent_name]["runtime"] = order_dict(
                         ordered_agents[agent_name]["runtime"],
-                        ["arch", "agent_gateway_id", "agent_id", "execution_agency_name", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "environment_variables", "tags"]
+                        ["arch", "agent_gateway_id", "agent_id", "execution_agency_name", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "storage_config", "environment_variables", "tags"]
                     )
             ordered_data["agents"] = ordered_agents
 
@@ -649,7 +707,7 @@ class AgentArtsConfigList(BaseModel):
                 if "runtime" in ordered_agents[agent_name]:
                     ordered_agents[agent_name]["runtime"] = order_dict(
                         ordered_agents[agent_name]["runtime"],
-                        ["arch", "agent_gateway_id", "agent_id", "execution_agency_name", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "environment_variables", "tags"]
+                        ["arch", "agent_gateway_id", "agent_id", "execution_agency_name", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "storage_config", "environment_variables", "tags"]
                     )
             ordered_data["agents"] = ordered_agents
 
