@@ -198,7 +198,7 @@ class MemorySession:
         Returns:
             str: Formatted session information
         """
-        return f"MemorySession(space_id='{self.space_id}', session_id='{self.session_id}', region_name='{self.region_name}')"
+        return f"MemorySession(space_id='{self.space_id}', session_id='{self.session_id}', region_name='{self._region_name}')"
 
     # ==================== Message Management ====================
 
