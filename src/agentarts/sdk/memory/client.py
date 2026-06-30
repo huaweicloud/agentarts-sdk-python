@@ -304,7 +304,7 @@ class MemoryClient:
             >>> print(f"Status: {space.status}")
             >>> print(f"Strategies: {space.memory_strategies_builtin}")
         """
-        self._ensure_control_plane_initialized(self._data_plane._region_name)
+        self._ensure_control_plane_initialized(self.region_name)
         return self._control_plane.get_space(space_id)
 
     def list_spaces(
@@ -349,7 +349,7 @@ class MemoryClient:
             ...         print(space.name)
             ...     offset += len(result.items)
         """
-        self._ensure_control_plane_initialized(self._data_plane._region_name)
+        self._ensure_control_plane_initialized(self.region_name)
         return self._control_plane.list_spaces(limit, offset)
 
     def update_space(
@@ -422,7 +422,7 @@ class MemoryClient:
             memory_strategies_builtin=memory_strategies_builtin
         )
 
-        self._ensure_control_plane_initialized(self._data_plane._region_name)
+        self._ensure_control_plane_initialized(self.region_name)
         return self._control_plane.update_space(space_id, request)
 
     def delete_space(self, space_id: str) -> None:
@@ -446,7 +446,7 @@ class MemoryClient:
             >>> # Delete Space (also deletes all Sessions, messages and memories)
             >>> client.delete_space("space-123")
         """
-        self._ensure_control_plane_initialized(self._data_plane._region_name)
+        self._ensure_control_plane_initialized(self.region_name)
         return self._control_plane.delete_space(space_id)
 
     # ==================== Data Plane - Session Management ====================
