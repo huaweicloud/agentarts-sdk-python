@@ -138,3 +138,23 @@ def test_delete_memory_if_any(memory_data_client, memory_space, seeded_messages)
         )
     target = result.items[0]
     memory_data_client.delete_memory(space_id=memory_space.id, memory_id=target.id)
+
+
+# --------------------------------------------------------------------------- #
+# MemorySession wrapper (bound space+session, auto-creates session on init)
+# --------------------------------------------------------------------------- #
+def test_memory_session_wrapper(memory_space):
+    from agentarts.sdk.memory import MemorySession
+    from agentarts.sdk.utils.constant import get_region
+
+    session = MemorySession(
+        space_id=memory_space.id,
+        actor_id="aa-it-wrap",
+        api_key=memory_space.api_key,
+        region_name=get_region(),
+    )
+    session.add_messages([TextMessage(role="user", content="wrap sync")])
+    last = session.get_last_k_messages(k=1)
+    assert len(last) == 1
+    listed = session.list_messages(limit=5)
+    assert listed.total >= 1
