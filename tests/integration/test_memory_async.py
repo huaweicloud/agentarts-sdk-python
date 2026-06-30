@@ -120,3 +120,53 @@ async def test_async_delete_memory_if_any(memory_space, async_setup):
         )
     finally:
         await client.close()
+
+
+# --------------------------------------------------------------------------- #
+# Direct async create/add (the shared async_setup above uses the sync client;
+# these close the gap by exercising AsyncMemoryClient's async writers + the
+# AsyncMemorySession wrapper directly).
+# --------------------------------------------------------------------------- #
+@pytest.mark.asyncio
+async def test_async_create_session_and_add_messages(memory_space):
+    from agentarts.sdk.utils.constant import get_region
+
+    client = AsyncMemoryClient(api_key=memory_space.api_key, region_name=get_region())
+    try:
+        session = await client.create_memory_session(
+            space_id=memory_space.id, actor_id="aa-it-async-direct"
+        )
+        assert session.id
+        batch = await client.add_messages(
+            space_id=memory_space.id,
+            session_id=session.id,
+            messages=[TextMessage(role="user", content="async direct message")],
+            is_force_extract=False,
+        )
+        assert len(batch.items) == 1
+        listed = await client.list_messages(
+            space_id=memory_space.id, session_id=session.id, limit=5
+        )
+        assert listed.total >= 1
+    finally:
+        await client.close()
+
+
+@pytest.mark.asyncio
+async def test_async_session_wrapper(memory_space):
+    """AsyncMemorySession auto-creates the session on first await, then bound
+    add/get/list ops go through the wrapper (not the raw client)."""
+    from agentarts.sdk.memory import AsyncMemorySession
+    from agentarts.sdk.utils.constant import get_region
+
+    session = AsyncMemorySession(
+        space_id=memory_space.id,
+        actor_id="aa-it-async-wrap",
+        api_key=memory_space.api_key,
+        region_name=get_region(),
+    )
+    await session.add_messages([TextMessage(role="user", content="wrap async")])
+    last = await session.get_last_k_messages(k=1)
+    assert len(last) == 1
+    listed = await session.list_messages(limit=5)
+    assert listed.total >= 1
