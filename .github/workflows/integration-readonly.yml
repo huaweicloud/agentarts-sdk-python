@@ -1,0 +1,44 @@
+name: Integration (read-only)
+
+# Runs the read-only integration tier on every push/PR. Credentials come from
+# repo secrets; when they are absent the cloud tests skip automatically (the
+# local AgentArtsRuntimeApp tests still run), so this job is always green
+# without secrets. Create/delete lifecycle and billable tiers are intentionally
+# NOT enabled here.
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  readonly:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run read-only integration tests
+        run: uv run pytest tests/integration -m integration
+        env:
+          # Empty (unset secret) → cloud tests skip; local RuntimeApp tests run.
+          HUAWEICLOUD_SDK_AK: ${{ secrets.HUAWEICLOUD_SDK_AK }}
+          HUAWEICLOUD_SDK_SK: ${{ secrets.HUAWEICLOUD_SDK_SK }}
+          HUAWEICLOUD_SDK_REGION: ${{ secrets.HUAWEICLOUD_SDK_REGION }}
