@@ -78,12 +78,7 @@ class GatewayClient(BaseHTTPClient):
                 "Version": "5.0",
                 "Statement": [
                     {
-                        "Action": [
-                            "csms:secret:getVersion",
-                            "agentIdentity::getResourceApiKey",
-                            "agentIdentity::getResourceOauth2Token",
-                            "agentIdentity::getResourceStsToken",
-                        ],
+                        "Action": ["sts:agencies:assume"],
                         "Effect": "Allow",
                         "Principal": {
                             "Service": [service_principal]
@@ -96,21 +91,23 @@ class GatewayClient(BaseHTTPClient):
             trust_policy_str = json.dumps(trust_policy)
 
             try:
-                # Try to create the agency
-                iam_client.create_agency(
+                # Try to create the agency with policy
+                iam_client.create_agency_with_policy(
                     agency_name=agency_name,
-                    trust_policy=trust_policy_str
+                    trust_policy=trust_policy_str,
+                    policy_name="AgentArtsCoreGatewayIdentityAgencyPolicy"
                 )
             except Exception as e:
                 # Check if the error is a 409 Conflict (agency already exists)
                 if "409" not in str(e):
                     msg = (
-                        f"Failed to create agency. Please provide a valid agency_name parameter. "
+                        f"Failed to create agency with policy. Please provide a valid agency_name parameter. "
                         f"Error: {e!s}"
                     )
                     raise ValueError(
                         msg
                     )
+                # If agency already exists (409), assume it has the correct policy and continue
 
         if log_delivery_configuration is None:
             log_delivery_configuration = { "enabled": False }
