@@ -51,7 +51,7 @@ def _handle_error(operation: str, result):
 # Gateway commands
 
 
-@gateway.command("create-gateway")
+@gateway.command("create")
 def create_gateway(
     name: Annotated[str | None, typer.Option("--name", "-n", help="Gateway name")] = None,
     description: Annotated[str | None, typer.Option("--description", "-d", help="Gateway description")] = None,
@@ -69,7 +69,7 @@ def create_gateway(
     Create a new gateway
 
     Examples:
-        agentarts gateway create-gateway --name my-gateway --description "My Gateway"
+        agentarts gateway create --name my-gateway --description "My Gateway"
     """
     try:
         authorizer_config = _parse_json(authorizer_configuration)
@@ -103,7 +103,7 @@ def create_gateway(
         echo_error(f"Unexpected error: {e}")
 
 
-@gateway.command("update-gateway")
+@gateway.command("update")
 def update_gateway(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     description: Annotated[str | None, typer.Option("--description", "-d", help="Gateway description")] = None,
@@ -116,7 +116,7 @@ def update_gateway(
     Update an existing gateway
 
     Examples:
-        agentarts gateway update-gateway 123 --description "Updated description"
+        agentarts gateway update 123 --description "Updated description"
     """
     try:
         protocol_config = _parse_json(protocol_configuration)
@@ -143,7 +143,7 @@ def update_gateway(
         echo_error(f"Unexpected error: {e}")
 
 
-@gateway.command("delete-gateway")
+@gateway.command("delete")
 def delete_gateway(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
@@ -152,7 +152,7 @@ def delete_gateway(
     Delete a gateway
 
     Examples:
-        agentarts gateway delete-gateway 123
+        agentarts gateway delete 123
     """
     try:
         echo_warning(f"Are you sure you want to delete gateway {gateway_id}? This action cannot be undone.")
@@ -171,7 +171,7 @@ def delete_gateway(
         echo_error(f"Unexpected error: {e}")
 
 
-@gateway.command("get-gateway")
+@gateway.command("get")
 def get_gateway(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
@@ -180,7 +180,7 @@ def get_gateway(
     Get details of a gateway
 
     Examples:
-        agentarts gateway get-gateway 123
+        agentarts gateway get 123
     """
     try:
         client = _get_gateway_client(verify_ssl=not skip_ssl_verification)
@@ -195,7 +195,7 @@ def get_gateway(
         echo_error(f"Unexpected error: {e}")
 
 
-@gateway.command("list-gateways")
+@gateway.command("list")
 def list_gateways(
     name: Annotated[str | None, typer.Option("--name", help="Gateway name")] = None,
     status: Annotated[str | None, typer.Option("--status", help="Gateway status")] = None,
@@ -212,7 +212,7 @@ def list_gateways(
     List gateways
 
     Examples:
-        agentarts gateway list-gateways --limit 10
+        agentarts gateway list --limit 10
     """
     try:
         if offset is None:
@@ -261,7 +261,7 @@ def list_gateways(
 
 
 # Target commands
-@gateway.command("create-gateway-target")
+@gateway.command("create-target")
 def create_gateway_target(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     target_configuration: Annotated[str, typer.Option("--target-configuration", help="Target configuration (JSON format)")],
@@ -274,7 +274,7 @@ def create_gateway_target(
     Create a new gateway target
 
     Examples:
-        agentarts gateway create-gateway-target 123 --name my-target
+        agentarts gateway create-target 123 --name my-target
     """
     try:
         target_config = _parse_json(target_configuration)
@@ -300,7 +300,7 @@ def create_gateway_target(
         echo_error(f"Unexpected error: {e}")
 
 
-@gateway.command("update-gateway-target")
+@gateway.command("update-target")
 def update_gateway_target(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     target_id: Annotated[str, typer.Argument(help="Target ID")],
@@ -314,7 +314,7 @@ def update_gateway_target(
     Update an existing gateway target
 
     Examples:
-        agentarts gateway update-gateway-target 123 456 --name updated-target
+        agentarts gateway update-target 123 456 --name updated-target
     """
     try:
         target_config = _parse_json(target_configuration)
@@ -341,7 +341,7 @@ def update_gateway_target(
         echo_error(f"Unexpected error: {e}")
 
 
-@gateway.command("delete-gateway-target")
+@gateway.command("delete-target")
 def delete_gateway_target(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     target_id: Annotated[str, typer.Argument(help="Target ID")],
@@ -351,7 +351,7 @@ def delete_gateway_target(
     Delete a gateway target
 
     Examples:
-        agentarts gateway delete-gateway-target 123 456
+        agentarts gateway delete-target 123 456
     """
     try:
         echo_warning(f"Are you sure you want to delete target {target_id} from gateway {gateway_id}? This action cannot be undone.")
@@ -373,7 +373,7 @@ def delete_gateway_target(
         echo_error(f"Unexpected error: {e}")
 
 
-@gateway.command("get-gateway-target")
+@gateway.command("get-target")
 def get_gateway_target(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     target_id: Annotated[str, typer.Argument(help="Target ID")],
@@ -383,7 +383,7 @@ def get_gateway_target(
     Get details of a gateway target
 
     Examples:
-        agentarts gateway get-gateway-target 123 456
+        agentarts gateway get-target 123 456
     """
     try:
         client = _get_gateway_client(verify_ssl=not skip_ssl_verification)
@@ -401,7 +401,7 @@ def get_gateway_target(
         echo_error(f"Unexpected error: {e}")
 
 
-@gateway.command("list-gateway-targets")
+@gateway.command("list-targets")
 def list_gateway_targets(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     limit: Annotated[int | None, typer.Option("--limit", help="Limit for pagination (default: 50, min: 1, max: 100)")] = None,
@@ -412,7 +412,7 @@ def list_gateway_targets(
     List gateway targets
 
     Examples:
-        agentarts gateway list-gateway-targets 123 --limit 10
+        agentarts gateway list-targets 123 --limit 10
     """
     try:
         if offset is None:
