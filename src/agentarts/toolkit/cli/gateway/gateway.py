@@ -59,8 +59,10 @@ def create_gateway(
     authorizer_type: Annotated[str, typer.Option("--authorizer-type", help="Authorizer type (default: iam)")] = "iam",
     agency_name: Annotated[str | None, typer.Option("--agency-name", help="Agency name")] = None,
     authorizer_configuration: Annotated[str | None, typer.Option("--authorizer-configuration", help="Authorizer configuration (JSON format)")] = None,
+    protocol_configuration: Annotated[str | None, typer.Option("--protocol-configuration", help="Protocol configuration (JSON format)")] = None,
     log_delivery_configuration: Annotated[str | None, typer.Option("--log-delivery-configuration", help="Log delivery configuration (JSON format)")] = None,
     outbound_network_configuration: Annotated[str | None, typer.Option("--outbound-network-configuration", help="Outbound network configuration (JSON format)")] = None,
+    tags: Annotated[str | None, typer.Option("--tags", help="Resource tags (JSON format)")] = None,
     skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
 ):
     """
@@ -71,8 +73,10 @@ def create_gateway(
     """
     try:
         authorizer_config = _parse_json(authorizer_configuration)
+        protocol_config = _parse_json(protocol_configuration)
         log_delivery_config = _parse_json(log_delivery_configuration)
         outbound_network_config = _parse_json(outbound_network_configuration)
+        tags_config = _parse_json(tags)
 
         client = _get_gateway_client(verify_ssl=not skip_ssl_verification)
         result = client.create_gateway(
@@ -82,8 +86,10 @@ def create_gateway(
             authorizer_type=authorizer_type,
             agency_name=agency_name,
             authorizer_configuration=authorizer_config,
+            protocol_configuration=protocol_config,
             log_delivery_configuration=log_delivery_config,
-            outbound_network_configuration=outbound_network_config
+            outbound_network_configuration=outbound_network_config,
+            tags=tags_config
         )
 
         if result.success:
@@ -101,7 +107,9 @@ def create_gateway(
 def update_gateway(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
     description: Annotated[str | None, typer.Option("--description", "-d", help="Gateway description")] = None,
+    protocol_configuration: Annotated[str | None, typer.Option("--protocol-configuration", help="Protocol configuration (JSON format)")] = None,
     log_delivery_configuration: Annotated[str | None, typer.Option("--log-delivery-configuration", help="Log delivery configuration (JSON format)")] = None,
+    tags: Annotated[str | None, typer.Option("--tags", help="Resource tags (JSON format)")] = None,
     skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
 ):
     """
@@ -111,13 +119,17 @@ def update_gateway(
         agentarts gateway update-gateway 123 --description "Updated description"
     """
     try:
+        protocol_config = _parse_json(protocol_configuration)
         log_delivery_config = _parse_json(log_delivery_configuration)
+        tags_config = _parse_json(tags)
 
         client = _get_gateway_client(verify_ssl=not skip_ssl_verification)
         result = client.update_gateway(
             gateway_id=gateway_id,
             description=description,
+            protocol_configuration=protocol_config,
             log_delivery_configuration=log_delivery_config,
+            tags=tags_config,
         )
 
         if result.success:
@@ -188,8 +200,12 @@ def list_gateways(
     name: Annotated[str | None, typer.Option("--name", help="Gateway name")] = None,
     status: Annotated[str | None, typer.Option("--status", help="Gateway status")] = None,
     gateway_id: Annotated[str | None, typer.Option("--gateway-id", help="Gateway ID")] = None,
-    limit: Annotated[int | None, typer.Option("--limit", help="Limit for pagination (default: 50, min: 1, max: 50)")] = None,
-    offset: Annotated[int | None, typer.Option("--offset", help="Offset for pagination (default: 0, min: 0, max: 1000000)")] = None,
+    tag_key_exists: Annotated[str | None, typer.Option("--tag-key-exists", help="Tag key exists filter (comma-separated)")] = None,
+    tag_key_matches: Annotated[str | None, typer.Option("--tag-key-matches", help="Tag key matches filter (comma-separated)")] = None,
+    tag_value_matches: Annotated[str | None, typer.Option("--tag-value-matches", help="Tag value matches filter (comma-separated)")] = None,
+    tag_match_policy: Annotated[str | None, typer.Option("--tag-match-policy", help="Tag match policy (ALL/ANY)")] = None,
+    limit: Annotated[int | None, typer.Option("--limit", help="Limit for pagination (default: 50, min: 1, max: 100)")] = None,
+    offset: Annotated[int | None, typer.Option("--offset", help="Offset for pagination (default: 0, min: 0, max: 100000)")] = None,
     skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
 ):
     """
@@ -204,8 +220,8 @@ def list_gateways(
         elif offset < 0:
             msg = "Offset must be greater than or equal to 0"
             raise ValueError(msg)
-        elif offset > 1000000:
-            msg = "Offset must be less than or equal to 1000000"
+        elif offset > 100000:
+            msg = "Offset must be less than or equal to 100000"
             raise ValueError(msg)
 
         if limit is None:
@@ -213,15 +229,23 @@ def list_gateways(
         elif limit < 1:
             msg = "Limit must be greater than 0"
             raise ValueError(msg)
-        elif limit > 50:
-            msg = "Limit must be less than or equal to 50"
+        elif limit > 100:
+            msg = "Limit must be less than or equal to 100"
             raise ValueError(msg)
+
+        tag_key_exists_list = tag_key_exists.split(",") if tag_key_exists else None
+        tag_key_matches_list = tag_key_matches.split(",") if tag_key_matches else None
+        tag_value_matches_list = tag_value_matches.split(",") if tag_value_matches else None
 
         client = _get_gateway_client(verify_ssl=not skip_ssl_verification)
         result = client.list_gateways(
             name=name,
             status=status,
             gateway_id=gateway_id,
+            tag_key_exists=tag_key_exists_list,
+            tag_key_matches=tag_key_matches_list,
+            tag_value_matches=tag_value_matches_list,
+            tag_match_policy=tag_match_policy,
             limit=limit,
             offset=offset,
         )
@@ -380,8 +404,8 @@ def get_gateway_target(
 @gateway.command("list-gateway-targets")
 def list_gateway_targets(
     gateway_id: Annotated[str, typer.Argument(help="Gateway ID")],
-    limit: Annotated[int | None, typer.Option("--limit", help="Limit for pagination (default: 50, min: 1, max: 50)")] = None,
-    offset: Annotated[int | None, typer.Option("--offset", help="Offset for pagination (default: 0, min: 0, max: 1000000)")] = None,
+    limit: Annotated[int | None, typer.Option("--limit", help="Limit for pagination (default: 50, min: 1, max: 100)")] = None,
+    offset: Annotated[int | None, typer.Option("--offset", help="Offset for pagination (default: 0, min: 0, max: 100000)")] = None,
     skip_ssl_verification: Annotated[bool, typer.Option("--skip-ssl-verification", "-k", help="Skip SSL certificate verification")] = False,
 ):
     """
@@ -396,8 +420,8 @@ def list_gateway_targets(
         elif offset < 0:
             msg = "Offset must be greater than or equal to 0"
             raise ValueError(msg)
-        elif offset > 1000000:
-            msg = "Offset must be less than or equal to 1000000"
+        elif offset > 100000:
+            msg = "Offset must be less than or equal to 100000"
             raise ValueError(msg)
 
         if limit is None:
@@ -405,8 +429,8 @@ def list_gateway_targets(
         elif limit < 1:
             msg = "Limit must be greater than 0"
             raise ValueError(msg)
-        elif limit > 50:
-            msg = "Limit must be less than or equal to 50"
+        elif limit > 100:
+            msg = "Limit must be less than or equal to 100"
             raise ValueError(msg)
 
         client = _get_gateway_client(verify_ssl=not skip_ssl_verification)

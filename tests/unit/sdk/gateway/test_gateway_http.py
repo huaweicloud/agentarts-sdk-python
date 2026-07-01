@@ -59,16 +59,18 @@ class TestGatewayClient:
         assert result.success
         mock_put.assert_called_once()
 
-    @pytest.mark.parametrize(("description", "log_config"), [
-        (None, None),
+    @pytest.mark.parametrize(("description", "protocol_configuration", "log_config", "tags"), [
+        (None, None, None, None),
     ])
-    def test_update_gateway_no_params(self, description, log_config):
+    def test_update_gateway_no_params(self, description, protocol_configuration, log_config, tags):
         """Test update_gateway with no parameters"""
         with pytest.raises(ValueError):
             self.client.update_gateway(
                 gateway_id="123",
                 description=description,
-                log_delivery_configuration=log_config
+                protocol_configuration=protocol_configuration,
+                log_delivery_configuration=log_config,
+                tags=tags
             )
 
     @patch("agentarts.sdk.gateway.gateway_client.GatewayClient.delete")

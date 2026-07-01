@@ -52,8 +52,10 @@ agentarts gateway create-gateway [options]
 | --authorizer-type | 无 | 否 | iam | 授权器类型（custom_jwt/iam/api_key） |
 | --agency-name | 无 | 否 | None | 代理名称 |
 | --authorizer-configuration | 无 | 否 | None | 授权器配置（JSON 格式） |
+| --protocol-configuration | 无 | 否 | None | 协议配置（JSON 格式） |
 | --log-delivery-configuration | 无 | 否 | None | 日志投递配置（JSON 格式） |
 | --outbound-network-configuration | 无 | 否 | None | 出站网络配置（JSON 格式） |
+| --tags | 无 | 否 | None | 资源标签（JSON 格式） |
 **使用示例**：
 ```bash
 # 基本创建
@@ -74,8 +76,9 @@ agentarts gateway update-gateway <gateway_id> [options]
 |------|------|------|--------|------|
 | gateway_id | 无 | 是 | - | 网关 ID（位置参数） |
 | --description | -d | 否 | None | 网关描述 |
-| --authorizer-configuration | 无 | 否 | None | 授权器配置（JSON 格式） |
+| --protocol-configuration | 无 | 否 | None | 协议配置（JSON 格式） |
 | --log-delivery-configuration | 无 | 否 | None | 日志投递配置（JSON 格式） |
+| --tags | 无 | 否 | None | 资源标签（JSON 格式） |
 **使用示例**：
 ```bash
 # 更新描述
@@ -122,7 +125,11 @@ agentarts gateway list-gateways [options]
 | --name | 无 | 否 | None | 网关名称过滤器 |
 | --status | 无 | 否 | None | 网关状态过滤器 |
 | --gateway-id | 无 | 否 | None | 网关 ID 过滤器 |
-| --limit | 无 | 否 | 50 | 分页限制（1-50） |
+| --tag-key-exists | 无 | 否 | None | 按标签键存在过滤（逗号分隔） |
+| --tag-key-matches | 无 | 否 | None | 按标签键值对过滤-键（逗号分隔） |
+| --tag-value-matches | 无 | 否 | None | 按标签键值对过滤-值（逗号分隔） |
+| --tag-match-policy | 无 | 否 | None | 标签匹配模式（ALL/ANY） |
+| --limit | 无 | 否 | 50 | 分页限制（1-100） |
 | --offset | 无 | 否 | 0 | 分页偏移量 |
 **使用示例**：
 ```bash
@@ -217,7 +224,7 @@ agentarts gateway list-gateway-targets <gateway_id> [options]
 | 参数 | 简写 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | gateway_id | 无 | 是 | - | 网关 ID（位置参数） |
-| --limit | 无 | 否 | 50 | 分页限制（1-50） |
+| --limit | 无 | 否 | 50 | 分页限制（1-100） |
 | --offset | 无 | 否 | 0 | 分页偏移量 |
 **使用示例**：
 ```bash

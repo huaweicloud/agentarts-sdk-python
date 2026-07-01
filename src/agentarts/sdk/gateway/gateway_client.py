@@ -35,8 +35,10 @@ class GatewayClient(BaseHTTPClient):
         authorizer_type: str | None = "iam",
         agency_name: str | None = None,
         authorizer_configuration: dict[str, Any] | None = None,
+        protocol_configuration: dict[str, Any] | None = None,
         log_delivery_configuration: dict[str, Any] | None = None,
-        outbound_network_configuration: dict[str, Any] | None = None
+        outbound_network_configuration: dict[str, Any] | None = None,
+        tags: list[dict[str, str]] | None = None
     ) -> RequestResult:
         """
         Create a new gateway.
@@ -48,8 +50,10 @@ class GatewayClient(BaseHTTPClient):
             authorizer_type: Authorizer type, can be "custom_jwt", "iam", or "api_key", default is "iam"
             agency_name: Agency name
             authorizer_configuration: Authorizer configuration
+            protocol_configuration: Protocol configuration, e.g. {"mcp": {"search_configuration": {...}}}
             log_delivery_configuration: Log delivery configuration
             outbound_network_configuration: Outbound network configuration
+            tags: Resource tags list
 
         Returns:
             RequestResult: Result of the API call
@@ -121,8 +125,10 @@ class GatewayClient(BaseHTTPClient):
             "authorizer_type": authorizer_type,
             "agency_name": agency_name,
             "authorizer_configuration": authorizer_configuration,
+            "protocol_configuration": protocol_configuration,
             "log_delivery_configuration": log_delivery_configuration,
-            "outbound_network_configuration": outbound_network_configuration
+            "outbound_network_configuration": outbound_network_configuration,
+            "tags": tags
         }
 
         # Remove None values
@@ -134,7 +140,9 @@ class GatewayClient(BaseHTTPClient):
         self,
         gateway_id: str,
         description: str | None = None,
-        log_delivery_configuration: dict[str, Any] | None = None
+        protocol_configuration: dict[str, Any] | None = None,
+        log_delivery_configuration: dict[str, Any] | None = None,
+        tags: list[dict[str, str]] | None = None
     ) -> RequestResult:
         """
         Update an existing gateway.
@@ -142,7 +150,9 @@ class GatewayClient(BaseHTTPClient):
         Args:
             gateway_id: Gateway ID
             description: Gateway description
+            protocol_configuration: Protocol configuration
             log_delivery_configuration: Log delivery configuration
+            tags: Resource tags list
 
         Returns:
             RequestResult: Result of the API call
@@ -154,18 +164,24 @@ class GatewayClient(BaseHTTPClient):
         # Validate that not all optional parameters are None
         if all(param is None for param in [
             description,
-            log_delivery_configuration
+            protocol_configuration,
+            log_delivery_configuration,
+            tags
         ]):
             updateable_fields = [
                 "description",
-                "log_delivery_configuration"
+                "protocol_configuration",
+                "log_delivery_configuration",
+                "tags"
             ]
             msg = f"At least one parameter must be provided for update. Available fields: {', '.join(updateable_fields)}"
             raise ValueError(msg)
 
         payload = {
             "description": description,
-            "log_delivery_configuration": log_delivery_configuration
+            "protocol_configuration": protocol_configuration,
+            "log_delivery_configuration": log_delivery_configuration,
+            "tags": tags
         }
 
         # Remove None values
@@ -202,6 +218,10 @@ class GatewayClient(BaseHTTPClient):
         name: str | None = None,
         status: str | None = None,
         gateway_id: str | None = None,
+        tag_key_exists: list[str] | None = None,
+        tag_key_matches: list[str] | None = None,
+        tag_value_matches: list[str] | None = None,
+        tag_match_policy: str | None = None,
         limit: int | None = None,
         offset: int | None = None
     ) -> RequestResult:
@@ -212,6 +232,10 @@ class GatewayClient(BaseHTTPClient):
             name: Gateway name filter
             status: Gateway status filter
             gateway_id: Gateway ID filter
+            tag_key_exists: Filter by tag key existence
+            tag_key_matches: Filter by tag key-value pairs (keys)
+            tag_value_matches: Filter by tag key-value pairs (values)
+            tag_match_policy: Tag match policy, "ALL" or "ANY"
             limit: Maximum number of results
             offset: Offset for pagination
 
@@ -222,6 +246,10 @@ class GatewayClient(BaseHTTPClient):
             "name": name,
             "status": status,
             "gateway_id": gateway_id,
+            "tag_key_exists": tag_key_exists,
+            "tag_key_matches": tag_key_matches,
+            "tag_value_matches": tag_value_matches,
+            "tag_match_policy": tag_match_policy,
             "limit": limit,
             "offset": offset
         }

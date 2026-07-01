@@ -116,8 +116,10 @@ create_gateway(
     authorizer_type: Optional[str] = "iam",
     agency_name: Optional[str] = None,
     authorizer_configuration: Optional[Dict[str, Any]] = None,
+    protocol_configuration: Optional[Dict[str, Any]] = None,
     log_delivery_configuration: Optional[Dict[str, Any]] = None,
-    outbound_network_configuration: Optional[Dict[str, Any]] = None
+    outbound_network_configuration: Optional[Dict[str, Any]] = None,
+    tags: Optional[List[Dict[str, str]]] = None
 ) -> RequestResult
 ```
 
@@ -131,8 +133,10 @@ create_gateway(
 | authorizer_type | str | 否 | iam | 授权器类型（custom_jwt/iam/api_key） |
 | agency_name | str | 否 | None | 代理名称。未提供时自动创建名为 AgentArtsCoreGateway 的代理 |
 | authorizer_configuration | Dict | 否 | None | 授权器配置 |
+| protocol_configuration | Dict | 否 | None | 协议配置，如 {"mcp": {"search_configuration": {...}}} |
 | log_delivery_configuration | Dict | 否 | {"enabled": False} | 日志投递配置 |
 | outbound_network_configuration | Dict | 否 | {"network_mode": "public"} | 出站网络配置 |
+| tags | List[Dict] | 否 | None | 资源标签列表 |
 
 **返回值**：`RequestResult` 对象
 
@@ -146,7 +150,9 @@ create_gateway(
 update_gateway(
     gateway_id: str,
     description: Optional[str] = None,
-    log_delivery_configuration: Optional[Dict[str, Any]] = None
+    protocol_configuration: Optional[Dict[str, Any]] = None,
+    log_delivery_configuration: Optional[Dict[str, Any]] = None,
+    tags: Optional[List[Dict[str, str]]] = None
 ) -> RequestResult
 ```
 
@@ -156,7 +162,9 @@ update_gateway(
 |------|------|------|--------|------|
 | gateway_id | str | 是 | - | 网关 ID |
 | description | str | 否 | None | 网关描述 |
+| protocol_configuration | Dict | 否 | None | 协议配置 |
 | log_delivery_configuration | Dict | 否 | None | 日志投递配置 |
+| tags | List[Dict] | 否 | None | 资源标签列表 |
 
 **返回值**：`RequestResult` 对象
 
@@ -203,6 +211,10 @@ list_gateways(
     name: Optional[str] = None,
     status: Optional[str] = None,
     gateway_id: Optional[str] = None,
+    tag_key_exists: Optional[List[str]] = None,
+    tag_key_matches: Optional[List[str]] = None,
+    tag_value_matches: Optional[List[str]] = None,
+    tag_match_policy: Optional[str] = None,
     limit: Optional[int] = None,
     offset: Optional[int] = None
 ) -> RequestResult
@@ -215,7 +227,11 @@ list_gateways(
 | name | str | 否 | None | 网关名称过滤器 |
 | status | str | 否 | None | 网关状态过滤器 |
 | gateway_id | str | 否 | None | 网关 ID 过滤器 |
-| limit | int | 否 | None | 结果的最大数量 |
+| tag_key_exists | List[str] | 否 | None | 按标签键存在过滤 |
+| tag_key_matches | List[str] | 否 | None | 按标签键值对过滤（键） |
+| tag_value_matches | List[str] | 否 | None | 按标签键值对过滤（值） |
+| tag_match_policy | str | 否 | None | 标签匹配模式（ALL/ANY） |
+| limit | int | 否 | None | 结果的最大数量（1-100） |
 | offset | int | 否 | None | 分页偏移量 |
 
 **返回值**：`RequestResult` 对象
