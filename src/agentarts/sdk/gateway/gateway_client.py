@@ -1,5 +1,5 @@
 """
-MCP Gateway HTTP Client Module
+Gateway HTTP Client Module
 
 Provides HTTP client implementation for MCP (Model Context Protocol) gateway operations.
 """
@@ -13,9 +13,9 @@ from agentarts.sdk.utils.common import generate_random_string
 from agentarts.sdk.utils.constant import get_control_plane_endpoint
 
 
-class MCPGatewayClient(BaseHTTPClient):
+class GatewayClient(BaseHTTPClient):
     """
-    MCP Gateway client for making API calls to MCP Gateway service.
+    Gateway client for making API calls to Gateway service.
 
     Inherits from BaseHTTPClient to provide service-specific API methods.
     """
@@ -27,7 +27,7 @@ class MCPGatewayClient(BaseHTTPClient):
         self.verify_ssl = verify_ssl
         super().__init__(config, open_ak_sk=True)
 
-    def create_mcp_gateway(
+    def create_gateway(
         self,
         name: str | None = None,
         description: str | None = None,
@@ -35,11 +35,13 @@ class MCPGatewayClient(BaseHTTPClient):
         authorizer_type: str | None = "iam",
         agency_name: str | None = None,
         authorizer_configuration: dict[str, Any] | None = None,
+        protocol_configuration: dict[str, Any] | None = None,
         log_delivery_configuration: dict[str, Any] | None = None,
-        outbound_network_configuration: dict[str, Any] | None = None
+        outbound_network_configuration: dict[str, Any] | None = None,
+        tags: list[dict[str, str]] | None = None
     ) -> RequestResult:
         """
-        Create a new MCP gateway.
+        Create a new gateway.
 
         Args:
             name: Gateway name, default is gateway-<random-string>
@@ -48,8 +50,10 @@ class MCPGatewayClient(BaseHTTPClient):
             authorizer_type: Authorizer type, can be "custom_jwt", "iam", or "api_key", default is "iam"
             agency_name: Agency name
             authorizer_configuration: Authorizer configuration
+            protocol_configuration: Protocol configuration, e.g. {"mcp": {"search_configuration": {...}}}
             log_delivery_configuration: Log delivery configuration
             outbound_network_configuration: Outbound network configuration
+            tags: Resource tags list
 
         Returns:
             RequestResult: Result of the API call
@@ -74,12 +78,7 @@ class MCPGatewayClient(BaseHTTPClient):
                 "Version": "5.0",
                 "Statement": [
                     {
-                        "Action": [
-                            "csms:secret:getVersion",
-                            "agentIdentity::getResourceApiKey",
-                            "agentIdentity::getResourceOauth2Token",
-                            "agentIdentity::getResourceStsToken",
-                        ],
+                        "Action": ["sts:agencies:assume"],
                         "Effect": "Allow",
                         "Principal": {
                             "Service": [service_principal]
@@ -92,21 +91,23 @@ class MCPGatewayClient(BaseHTTPClient):
             trust_policy_str = json.dumps(trust_policy)
 
             try:
-                # Try to create the agency
-                iam_client.create_agency(
+                # Try to create the agency with policy
+                iam_client.create_agency_with_policy(
                     agency_name=agency_name,
-                    trust_policy=trust_policy_str
+                    trust_policy=trust_policy_str,
+                    policy_name="AgentArtsCoreGatewayIdentityAgencyPolicy"
                 )
             except Exception as e:
                 # Check if the error is a 409 Conflict (agency already exists)
                 if "409" not in str(e):
                     msg = (
-                        f"Failed to create agency. Please provide a valid agency_name parameter. "
+                        f"Failed to create agency with policy. Please provide a valid agency_name parameter. "
                         f"Error: {e!s}"
                     )
                     raise ValueError(
                         msg
                     )
+                # If agency already exists (409), assume it has the correct policy and continue
 
         if log_delivery_configuration is None:
             log_delivery_configuration = { "enabled": False }
@@ -121,8 +122,10 @@ class MCPGatewayClient(BaseHTTPClient):
             "authorizer_type": authorizer_type,
             "agency_name": agency_name,
             "authorizer_configuration": authorizer_configuration,
+            "protocol_configuration": protocol_configuration,
             "log_delivery_configuration": log_delivery_configuration,
-            "outbound_network_configuration": outbound_network_configuration
+            "outbound_network_configuration": outbound_network_configuration,
+            "tags": tags
         }
 
         # Remove None values
@@ -130,19 +133,23 @@ class MCPGatewayClient(BaseHTTPClient):
 
         return self.post("/gateways", json=payload)
 
-    def update_mcp_gateway(
+    def update_gateway(
         self,
         gateway_id: str,
         description: str | None = None,
-        log_delivery_configuration: dict[str, Any] | None = None
+        protocol_configuration: dict[str, Any] | None = None,
+        log_delivery_configuration: dict[str, Any] | None = None,
+        tags: list[dict[str, str]] | None = None
     ) -> RequestResult:
         """
-        Update an existing MCP gateway.
+        Update an existing gateway.
 
         Args:
             gateway_id: Gateway ID
             description: Gateway description
+            protocol_configuration: Protocol configuration
             log_delivery_configuration: Log delivery configuration
+            tags: Resource tags list
 
         Returns:
             RequestResult: Result of the API call
@@ -154,18 +161,24 @@ class MCPGatewayClient(BaseHTTPClient):
         # Validate that not all optional parameters are None
         if all(param is None for param in [
             description,
-            log_delivery_configuration
+            protocol_configuration,
+            log_delivery_configuration,
+            tags
         ]):
             updateable_fields = [
                 "description",
-                "log_delivery_configuration"
+                "protocol_configuration",
+                "log_delivery_configuration",
+                "tags"
             ]
             msg = f"At least one parameter must be provided for update. Available fields: {', '.join(updateable_fields)}"
             raise ValueError(msg)
 
         payload = {
             "description": description,
-            "log_delivery_configuration": log_delivery_configuration
+            "protocol_configuration": protocol_configuration,
+            "log_delivery_configuration": log_delivery_configuration,
+            "tags": tags
         }
 
         # Remove None values
@@ -173,9 +186,9 @@ class MCPGatewayClient(BaseHTTPClient):
 
         return self.put(f"/gateways/{gateway_id}", json=payload)
 
-    def delete_mcp_gateway(self, gateway_id: str) -> RequestResult:
+    def delete_gateway(self, gateway_id: str) -> RequestResult:
         """
-        Delete an MCP gateway.
+        Delete a gateway.
 
         Args:
             gateway_id: Gateway ID
@@ -185,9 +198,9 @@ class MCPGatewayClient(BaseHTTPClient):
         """
         return self.delete(f"/gateways/{gateway_id}")
 
-    def get_mcp_gateway(self, gateway_id: str) -> RequestResult:
+    def get_gateway(self, gateway_id: str) -> RequestResult:
         """
-        Get details of an MCP gateway.
+        Get details of a gateway.
 
         Args:
             gateway_id: Gateway ID
@@ -197,21 +210,29 @@ class MCPGatewayClient(BaseHTTPClient):
         """
         return self.get(f"/gateways/{gateway_id}")
 
-    def list_mcp_gateways(
+    def list_gateways(
         self,
         name: str | None = None,
         status: str | None = None,
         gateway_id: str | None = None,
+        tag_key_exists: list[str] | None = None,
+        tag_key_matches: list[str] | None = None,
+        tag_value_matches: list[str] | None = None,
+        tag_match_policy: str | None = None,
         limit: int | None = None,
         offset: int | None = None
     ) -> RequestResult:
         """
-        List MCP gateways with optional filters.
+        List gateways with optional filters.
 
         Args:
             name: Gateway name filter
             status: Gateway status filter
             gateway_id: Gateway ID filter
+            tag_key_exists: Filter by tag key existence
+            tag_key_matches: Filter by tag key-value pairs (keys)
+            tag_value_matches: Filter by tag key-value pairs (values)
+            tag_match_policy: Tag match policy, "ALL" or "ANY"
             limit: Maximum number of results
             offset: Offset for pagination
 
@@ -222,6 +243,10 @@ class MCPGatewayClient(BaseHTTPClient):
             "name": name,
             "status": status,
             "gateway_id": gateway_id,
+            "tag_key_exists": tag_key_exists,
+            "tag_key_matches": tag_key_matches,
+            "tag_value_matches": tag_value_matches,
+            "tag_match_policy": tag_match_policy,
             "limit": limit,
             "offset": offset
         }
@@ -231,7 +256,7 @@ class MCPGatewayClient(BaseHTTPClient):
 
         return self.get("/gateways", params=params)
 
-    def create_mcp_gateway_target(
+    def create_gateway_target(
         self,
         gateway_id: str,
         name: str | None = None,
@@ -240,7 +265,7 @@ class MCPGatewayClient(BaseHTTPClient):
         credential_provider_configuration: dict[str, Any] | None = None
     ) -> RequestResult:
         """
-        Create a new MCP gateway target.
+        Create a new gateway target.
 
         Args:
             gateway_id: Gateway ID
@@ -272,7 +297,7 @@ class MCPGatewayClient(BaseHTTPClient):
 
         return self.post(f"/gateways/{gateway_id}/targets", json=payload)
 
-    def update_mcp_gateway_target(
+    def update_gateway_target(
         self,
         gateway_id: str,
         target_id: str,
@@ -282,7 +307,7 @@ class MCPGatewayClient(BaseHTTPClient):
         credential_provider_configuration: dict[str, Any] | None = None
     ) -> RequestResult:
         """
-        Update an existing MCP gateway target.
+        Update an existing gateway target.
 
         Args:
             gateway_id: Gateway ID
@@ -325,9 +350,9 @@ class MCPGatewayClient(BaseHTTPClient):
 
         return self.put(f"/gateways/{gateway_id}/targets/{target_id}", json=payload)
 
-    def delete_mcp_gateway_target(self, gateway_id: str, target_id: str) -> RequestResult:
+    def delete_gateway_target(self, gateway_id: str, target_id: str) -> RequestResult:
         """
-        Delete an MCP gateway target.
+        Delete a gateway target.
 
         Args:
             gateway_id: Gateway ID
@@ -338,9 +363,9 @@ class MCPGatewayClient(BaseHTTPClient):
         """
         return self.delete(f"/gateways/{gateway_id}/targets/{target_id}")
 
-    def get_mcp_gateway_target(self, gateway_id: str, target_id: str) -> RequestResult:
+    def get_gateway_target(self, gateway_id: str, target_id: str) -> RequestResult:
         """
-        Get details of an MCP gateway target.
+        Get details of a gateway target.
 
         Args:
             gateway_id: Gateway ID
@@ -351,14 +376,14 @@ class MCPGatewayClient(BaseHTTPClient):
         """
         return self.get(f"/gateways/{gateway_id}/targets/{target_id}")
 
-    def list_mcp_gateway_targets(
+    def list_gateway_targets(
         self,
         gateway_id: str,
         limit: int | None = None,
         offset: int | None = None
     ) -> RequestResult:
         """
-        List MCP gateway targets with pagination.
+        List gateway targets with pagination.
 
         Args:
             gateway_id: Gateway ID

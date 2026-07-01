@@ -14,7 +14,7 @@ Huawei Cloud AgentArts SDK is a comprehensive toolkit for developing, deploying,
 
 - **Framework Agnostic** - Compatible with LangChain, LangGraph, AutoGen, CrewAI, Google ADK, and any custom agent framework
 - **One-Click Deployment** - Deploy agents to Huawei Cloud with a single command
-- **Built-in Tools** - Code interpreter sandbox, memory management, MCP gateway support
+- **Built-in Tools** - Code interpreter sandbox, memory management, gateway support
 - **Cloud Integration** - Seamless integration with Huawei Cloud authentication, monitoring, and logging
 - **CLI Toolkit** - Complete command-line tools for project initialization, local development, and cloud deployment
 
@@ -27,7 +27,7 @@ agentarts-sdk-python/
 │   │   ├── runtime/            # HTTP server runtime (AgentArtsRuntimeApp)
 │   │   ├── memory/             # Conversation memory management
 │   │   ├── tools/              # Built-in tools (Code Interpreter)
-│   │   ├── mcpgateway/         # MCP Gateway client
+│   │   ├── gateway/            # Gateway client
 │   │   ├── identity/           # Authentication & authorization
 │   │   ├── integration/        # Framework adapters (LangGraph, etc.)
 │   │   └── service/            # HTTP clients for cloud services
@@ -322,7 +322,7 @@ agentarts destroy
 | `agentarts deploy`      | Deploy agent to Huawei Cloud (alias: `launch`) |
 | `agentarts invoke`      | Invoke deployed agent                          |
 | `agentarts destroy`     | Remove deployed agent                          |
-| `agentarts mcp-gateway` | Manage MCP gateways                            |
+| `agentarts gateway`     | Manage gateways                                |
 
 ## Limitations & Requirements
 
@@ -360,7 +360,7 @@ Refer to [Huawei Cloud AgentArts Documentation](https://docs.huaweicloud.com/age
 
 ## Documentation
 
-- [SDK User Guides](docs/cn/sdk_user_guide/) - Memory, Code Interpreter, MCP Gateway
+- [SDK User Guides](docs/cn/sdk_user_guide/) - Memory, Code Interpreter, Gateway
 - [CLI User Guides](docs/cn/toolkit_user_guide/) - init, config, deploy, invoke, destroy
 - [Contributing Guide](CONTRIBUTING.md) - Development setup and guidelines
 - [Architecture](ARCHITECTURE.md) - System architecture overview

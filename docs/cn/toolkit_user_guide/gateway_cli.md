@@ -1,8 +1,8 @@
-# MCP Gateway CLI 使用指南
+# Gateway CLI 使用指南
 
 ## 概述
 
-MCP Gateway CLI 提供命令行工具，用于管理 MCP（Model Context Protocol）网关及其目标。本文档介绍如何使用 CLI 命令进行网关和目标的创建、配置和管理。
+Gateway CLI 提供命令行工具，用于管理 MCP（Model Context Protocol）网关及其目标。本文档介绍如何使用 CLI 命令进行网关和目标的创建、配置和管理。
 
 ## 环境要求
 
@@ -13,7 +13,7 @@ MCP Gateway CLI 提供命令行工具，用于管理 MCP（Model Context Protoco
 
 ### 华为云 AK/SK 认证
 
-MCP Gateway CLI 使用华为云 AK/SK 进行身份认证。请通过以下方式配置：
+Gateway CLI 使用华为云 AK/SK 进行身份认证。请通过以下方式配置：
 
 **方式一：环境变量配置（推荐）**
 
@@ -31,17 +31,17 @@ export HUAWEICLOUD_SDK_SK="your-secret-key"
 
 ## 命令结构
 
-所有 MCP Gateway 命令都通过 `agentarts mcp-gateway` 命名空间访问：
+所有 Gateway 命令都通过 `agentarts gateway` 命名空间访问：
 
 ```bash
-agentarts mcp-gateway [command] [options]
+agentarts gateway [command] [options]
 ```
 
 ## 网关命令
-### create-mcp-gateway
-创建新的 MCP 网关。
+### create-gateway
+创建新的网关。
 ```bash
-agentarts mcp-gateway create-mcp-gateway [options]
+agentarts gateway create-gateway [options]
 ```
 **参数说明**：
 | 参数 | 简写 | 必填 | 默认值 | 说明 |
@@ -52,43 +52,46 @@ agentarts mcp-gateway create-mcp-gateway [options]
 | --authorizer-type | 无 | 否 | iam | 授权器类型（custom_jwt/iam/api_key） |
 | --agency-name | 无 | 否 | None | 代理名称 |
 | --authorizer-configuration | 无 | 否 | None | 授权器配置（JSON 格式） |
+| --protocol-configuration | 无 | 否 | None | 协议配置（JSON 格式） |
 | --log-delivery-configuration | 无 | 否 | None | 日志投递配置（JSON 格式） |
 | --outbound-network-configuration | 无 | 否 | None | 出站网络配置（JSON 格式） |
+| --tags | 无 | 否 | None | 资源标签（JSON 格式） |
 **使用示例**：
 ```bash
 # 基本创建
-agentarts mcp-gateway create-mcp-gateway --name my-gateway --description "我的 MCP 网关"
+agentarts gateway create-gateway --name my-gateway --description "我的网关"
 # 完整配置
-agentarts mcp-gateway create-mcp-gateway \
+agentarts gateway create-gateway \
   --name my-gateway \
   --description "生产环境网关" \
   --authorizer-type iam
 ```
-### update-mcp-gateway
-更新现有的 MCP 网关。
+### update-gateway
+更新现有的网关。
 ```bash
-agentarts mcp-gateway update-mcp-gateway <gateway_id> [options]
+agentarts gateway update-gateway <gateway_id> [options]
 ```
 **参数说明**：
 | 参数 | 简写 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | gateway_id | 无 | 是 | - | 网关 ID（位置参数） |
 | --description | -d | 否 | None | 网关描述 |
-| --authorizer-configuration | 无 | 否 | None | 授权器配置（JSON 格式） |
+| --protocol-configuration | 无 | 否 | None | 协议配置（JSON 格式） |
 | --log-delivery-configuration | 无 | 否 | None | 日志投递配置（JSON 格式） |
+| --tags | 无 | 否 | None | 资源标签（JSON 格式） |
 **使用示例**：
 ```bash
 # 更新描述
-agentarts mcp-gateway update-mcp-gateway 123 --description "更新后的描述"
+agentarts gateway update-gateway 123 --description "更新后的描述"
 # 更新多个配置
-agentarts mcp-gateway update-mcp-gateway 123 \
+agentarts gateway update-gateway 123 \
   --description "新描述" \
   --log-delivery-configuration '{"enabled": true}'
 ```
-### delete-mcp-gateway
-删除 MCP 网关。
+### delete-gateway
+删除网关。
 ```bash
-agentarts mcp-gateway delete-mcp-gateway <gateway_id>
+agentarts gateway delete-gateway <gateway_id>
 ```
 **参数说明**：
 | 参数 | 简写 | 必填 | 默认值 | 说明 |
@@ -96,12 +99,12 @@ agentarts mcp-gateway delete-mcp-gateway <gateway_id>
 | gateway_id | 无 | 是 | - | 网关 ID（位置参数） |
 **使用示例**：
 ```bash
-agentarts mcp-gateway delete-mcp-gateway 123
+agentarts gateway delete-gateway 123
 ```
-### get-mcp-gateway
-获取 MCP 网关的详细信息。
+### get-gateway
+获取网关的详细信息。
 ```bash
-agentarts mcp-gateway get-mcp-gateway <gateway_id>
+agentarts gateway get-gateway <gateway_id>
 ```
 **参数说明**：
 | 参数 | 简写 | 必填 | 默认值 | 说明 |
@@ -109,12 +112,12 @@ agentarts mcp-gateway get-mcp-gateway <gateway_id>
 | gateway_id | 无 | 是 | - | 网关 ID（位置参数） |
 **使用示例**：
 ```bash
-agentarts mcp-gateway get-mcp-gateway 123
+agentarts gateway get-gateway 123
 ```
-### list-mcp-gateways
-列出 MCP 网关，可选择过滤条件。
+### list-gateways
+列出网关，可选择过滤条件。
 ```bash
-agentarts mcp-gateway list-mcp-gateways [options]
+agentarts gateway list-gateways [options]
 ```
 **参数说明**：
 | 参数 | 简写 | 必填 | 默认值 | 说明 |
@@ -122,22 +125,26 @@ agentarts mcp-gateway list-mcp-gateways [options]
 | --name | 无 | 否 | None | 网关名称过滤器 |
 | --status | 无 | 否 | None | 网关状态过滤器 |
 | --gateway-id | 无 | 否 | None | 网关 ID 过滤器 |
-| --limit | 无 | 否 | 50 | 分页限制（1-50） |
+| --tag-key-exists | 无 | 否 | None | 按标签键存在过滤（逗号分隔） |
+| --tag-key-matches | 无 | 否 | None | 按标签键值对过滤-键（逗号分隔） |
+| --tag-value-matches | 无 | 否 | None | 按标签键值对过滤-值（逗号分隔） |
+| --tag-match-policy | 无 | 否 | None | 标签匹配模式（ALL/ANY） |
+| --limit | 无 | 否 | 50 | 分页限制（1-100） |
 | --offset | 无 | 否 | 0 | 分页偏移量 |
 **使用示例**：
 ```bash
 # 列出所有网关
-agentarts mcp-gateway list-mcp-gateways
+agentarts gateway list-gateways
 # 按名称过滤
-agentarts mcp-gateway list-mcp-gateways --name my-gateway
+agentarts gateway list-gateways --name my-gateway
 # 分页查询
-agentarts mcp-gateway list-mcp-gateways --limit 10 --offset 0
+agentarts gateway list-gateways --limit 10 --offset 0
 ```
 ## 目标命令
-### create-mcp-gateway-target
-创建新的 MCP 网关目标。
+### create-gateway-target
+创建新的网关目标。
 ```bash
-agentarts mcp-gateway create-mcp-gateway-target <gateway_id> [options]
+agentarts gateway create-gateway-target <gateway_id> [options]
 ```
 **参数说明**：
 | 参数 | 简写 | 必填 | 默认值 | 说明 |
@@ -150,17 +157,17 @@ agentarts mcp-gateway create-mcp-gateway-target <gateway_id> [options]
 **使用示例**：
 ```bash
 # 基本创建
-agentarts mcp-gateway create-mcp-gateway-target 123 --name my-target
+agentarts gateway create-gateway-target 123 --name my-target
 # 完整配置
-agentarts mcp-gateway create-mcp-gateway-target 123 \
+agentarts gateway create-gateway-target 123 \
   --name my-target \
   --description "API 目标" \
   --target-configuration '{"endpoint": "https://api.example.com", "timeout": 30}'
 ```
-### update-mcp-gateway-target
-更新现有的 MCP 网关目标。
+### update-gateway-target
+更新现有的网关目标。
 ```bash
-agentarts mcp-gateway update-mcp-gateway-target <gateway_id> <target_id> [options]
+agentarts gateway update-gateway-target <gateway_id> <target_id> [options]
 ```
 **参数说明**：
 | 参数 | 简写 | 必填 | 默认值 | 说明 |
@@ -174,16 +181,16 @@ agentarts mcp-gateway update-mcp-gateway-target <gateway_id> <target_id> [option
 **使用示例**：
 ```bash
 # 更新名称
-agentarts mcp-gateway update-mcp-gateway-target 123 456 --name updated-target
+agentarts gateway update-gateway-target 123 456 --name updated-target
 # 更新配置
-agentarts mcp-gateway update-mcp-gateway-target 123 456 \
+agentarts gateway update-gateway-target 123 456 \
   --name updated-target \
   --description "更新后的目标"
 ```
-### delete-mcp-gateway-target
-删除 MCP 网关目标。
+### delete-gateway-target
+删除网关目标。
 ```bash
-agentarts mcp-gateway delete-mcp-gateway-target <gateway_id> <target_id>
+agentarts gateway delete-gateway-target <gateway_id> <target_id>
 ```
 **参数说明**：
 | 参数 | 简写 | 必填 | 默认值 | 说明 |
@@ -192,12 +199,12 @@ agentarts mcp-gateway delete-mcp-gateway-target <gateway_id> <target_id>
 | target_id | 无 | 是 | - | 目标 ID（位置参数） |
 **使用示例**：
 ```bash
-agentarts mcp-gateway delete-mcp-gateway-target 123 456
+agentarts gateway delete-gateway-target 123 456
 ```
-### get-mcp-gateway-target
-获取 MCP 网关目标的详细信息。
+### get-gateway-target
+获取网关目标的详细信息。
 ```bash
-agentarts mcp-gateway get-mcp-gateway-target <gateway_id> <target_id>
+agentarts gateway get-gateway-target <gateway_id> <target_id>
 ```
 **参数说明**：
 | 参数 | 简写 | 必填 | 默认值 | 说明 |
@@ -206,25 +213,25 @@ agentarts mcp-gateway get-mcp-gateway-target <gateway_id> <target_id>
 | target_id | 无 | 是 | - | 目标 ID（位置参数） |
 **使用示例**：
 ```bash
-agentarts mcp-gateway get-mcp-gateway-target 123 456
+agentarts gateway get-gateway-target 123 456
 ```
-### list-mcp-gateway-targets
-列出 MCP 网关目标，支持分页。
+### list-gateway-targets
+列出网关目标，支持分页。
 ```bash
-agentarts mcp-gateway list-mcp-gateway-targets <gateway_id> [options]
+agentarts gateway list-gateway-targets <gateway_id> [options]
 ```
 **参数说明**：
 | 参数 | 简写 | 必填 | 默认值 | 说明 |
 |------|------|------|--------|------|
 | gateway_id | 无 | 是 | - | 网关 ID（位置参数） |
-| --limit | 无 | 否 | 50 | 分页限制（1-50） |
+| --limit | 无 | 否 | 50 | 分页限制（1-100） |
 | --offset | 无 | 否 | 0 | 分页偏移量 |
 **使用示例**：
 ```bash
 # 列出所有目标
-agentarts mcp-gateway list-mcp-gateway-targets 123
+agentarts gateway list-gateway-targets 123
 # 分页查询
-agentarts mcp-gateway list-mcp-gateway-targets 123 --limit 10 --offset 0
+agentarts gateway list-gateway-targets 123 --limit 10 --offset 0
 ```
 ## 最佳实践
 ### 1. 网关命名规范

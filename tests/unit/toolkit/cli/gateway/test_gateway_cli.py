@@ -1,15 +1,15 @@
 """
-Unit tests for MCP Gateway CLI commands
+Unit tests for Gateway CLI commands
 """
 
 
 import pytest
 
-from agentarts.toolkit.cli.mcp_gateway.mcp_gateway import _format_output, _parse_json
+from agentarts.toolkit.cli.gateway.gateway import _format_output, _parse_json
 
 
-class TestMCPGatewayCLI:
-    """Test MCP Gateway CLI commands"""
+class TestGatewayCLI:
+    """Test Gateway CLI commands"""
 
     def test_parse_json_valid(self):
         """Test _parse_json with valid JSON"""
