@@ -129,7 +129,7 @@ class MemorySession:
         # If session_id is not provided, call backend API to create a new session
         if session_id is None:
             session_config = SessionCreateRequest(actor_id=actor_id)
-            session_info = self._data_plane.create_memory_session(space_id, session_config.to_dict())
+            session_info = self._data_plane.create_memory_session(space_id, session_config)
             self.session_id = session_info.id
             if not self.session_id:
                 msg = f"Failed to create session: {session_info}"
@@ -198,7 +198,7 @@ class MemorySession:
         Returns:
             str: Formatted session information
         """
-        return f"MemorySession(space_id='{self.space_id}', session_id='{self.session_id}', region_name='{self.region_name}')"
+        return f"MemorySession(space_id='{self.space_id}', session_id='{self.session_id}', region_name='{self._region_name}')"
 
     # ==================== Message Management ====================
 
