@@ -163,7 +163,7 @@ def require_sts_token(
     arguments. The injected value is of type :class:`StsCredentials` (aliased from
     ``GetResourceStsTokenResponseBodyCredentials``).
 
-    **Injected Type:** :class:`~agent_identity_dev_sdk.types.StsCredentials`
+    **Injected Type:** :class:`~agentarts.sdk.identity.types.StsCredentials`
 
     **Injected Type Attributes:**
         - ``access_key_id`` (str): The access key ID for authentication

@@ -1,6 +1,6 @@
 # Basic SDK Usage Examples
 
-This directory contains interactive Jupyter Notebook examples demonstrating how to use the `agent-identity-dev-sdk` in various scenarios.
+This directory contains interactive Jupyter Notebook examples demonstrating how to use the `agentarts-sdk` identity features in various scenarios.
 
 ## Examples
 

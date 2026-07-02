@@ -7,7 +7,7 @@ MCP Gateway CLI 提供命令行工具，用于管理 MCP（Model Context Protoco
 ## 环境要求
 
 - Python 3.10+
-- 已安装 AgentArts SDK：`pip install agentarts`
+- 已安装 AgentArts SDK：`pip install agentarts-sdk`
 
 ## 认证配置
 

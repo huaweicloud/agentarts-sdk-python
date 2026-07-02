@@ -7,7 +7,7 @@ MCP Gateway SDK 提供网关管理功能，支持创建、配置和管理 MCP（
 ## 环境要求
 
 - Python 3.10+
-- 已安装 AgentArts SDK：`pip install agentarts`
+- 已安装 AgentArts SDK：`pip install agentarts-sdk`
 
 ## 认证配置
 
