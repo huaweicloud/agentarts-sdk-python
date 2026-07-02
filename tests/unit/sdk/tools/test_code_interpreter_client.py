@@ -233,6 +233,151 @@ class TestCodeInterpreterClient(unittest.TestCase):
             }
         )
 
+    @patch.object(ControlToolsHttpClient, "list_code_interpreters")
+    def test_list_code_interpreters_with_tag_params(self, mock_list_code_interpreters):
+        """测试list_code_interpreters方法，提供tag查询参数的情况"""
+        # Arrange
+        mock_list_code_interpreters.return_value = {
+            "total_count": 1,
+            "items": [{"name": "test-code-interpreter-name", "api_key_name": "test-api-key-name"}],
+        }
+
+        # Act
+        result = self.code_interpreter_client.list_code_interpreters(
+            name="test-name",
+            limit=20,
+            offset=10,
+            sort_key="created_at",
+            sort_dir="asc",
+            tag_key_exists=["env", "project"],
+            tag_key_matches=["env", "project"],
+            tag_value_matches=["production", "alpha"],
+            tag_match_policy="ALL",
+        )
+
+        # Assert
+        assert result == mock_list_code_interpreters.return_value
+        mock_list_code_interpreters.assert_called_once_with(
+            request_params={
+                "name": "test-name",
+                "limit": 20,
+                "offset": 10,
+                "sort_key": "created_at",
+                "sort_dir": "asc",
+                "tag_key_exists": ["env", "project"],
+                "tag_key_matches": ["env", "project"],
+                "tag_value_matches": ["production", "alpha"],
+                "tag_match_policy": "ALL",
+            }
+        )
+
+    def test_list_code_interpreters_tag_key_exists_exceeds_10(self):
+        """tag_key_exists超过10个时抛ValueError"""
+        with pytest.raises(ValueError, match="tag_key_exists supports up to 10 items"):
+            self.code_interpreter_client.list_code_interpreters(
+                tag_key_exists=[f"key{i}" for i in range(11)]
+            )
+
+    def test_list_code_interpreters_tag_key_exists_has_duplicates(self):
+        """tag_key_exists有重复时抛ValueError"""
+        with pytest.raises(ValueError, match="tag_key_exists must not contain duplicate items"):
+            self.code_interpreter_client.list_code_interpreters(
+                tag_key_exists=["env", "project", "env"]
+            )
+
+    def test_list_code_interpreters_tag_key_exceeds_128_chars(self):
+        """tag_key超过128字符时抛ValueError"""
+        with pytest.raises(ValueError, match="tag_key must not exceed 128 characters"):
+            self.code_interpreter_client.list_code_interpreters(
+                tag_key_exists=["a" * 129]
+            )
+
+    def test_list_code_interpreters_tag_matches_missing_partner(self):
+        """只传tag_key_matches不传tag_value_matches时抛ValueError"""
+        with pytest.raises(
+            ValueError,
+            match="tag_key_matches and tag_value_matches must be used together",
+        ):
+            self.code_interpreter_client.list_code_interpreters(
+                tag_key_matches=["env"]
+            )
+
+    def test_list_code_interpreters_tag_value_matches_missing_partner(self):
+        """只传tag_value_matches不传tag_key_matches时抛ValueError"""
+        with pytest.raises(
+            ValueError,
+            match="tag_key_matches and tag_value_matches must be used together",
+        ):
+            self.code_interpreter_client.list_code_interpreters(
+                tag_value_matches=["production"]
+            )
+
+    def test_list_code_interpreters_tag_matches_length_mismatch(self):
+        """tag_key_matches和tag_value_matches长度不一致时抛ValueError"""
+        with pytest.raises(
+            ValueError,
+            match="tag_key_matches and tag_value_matches must have the same length",
+        ):
+            self.code_interpreter_client.list_code_interpreters(
+                tag_key_matches=["env", "project"],
+                tag_value_matches=["production"],
+            )
+
+    def test_list_code_interpreters_tag_matches_exceeds_10(self):
+        """tag_key_matches超过10个时抛ValueError"""
+        with pytest.raises(ValueError, match="tag_key_matches supports up to 10 items"):
+            self.code_interpreter_client.list_code_interpreters(
+                tag_key_matches=[f"key{i}" for i in range(11)],
+                tag_value_matches=[f"value{i}" for i in range(11)],
+            )
+
+    def test_list_code_interpreters_tag_matches_duplicate_key(self):
+        """tag_key_matches有重复时抛ValueError"""
+        with pytest.raises(
+            ValueError, match="tag_key_matches must not contain duplicate items"
+        ):
+            self.code_interpreter_client.list_code_interpreters(
+                tag_key_matches=["env", "project", "env"],
+                tag_value_matches=["production", "alpha", "beta"],
+            )
+
+    def test_list_code_interpreters_tag_matches_duplicate_value(self):
+        """tag_value_matches有重复时抛ValueError"""
+        with pytest.raises(
+            ValueError, match="tag_value_matches must not contain duplicate items"
+        ):
+            self.code_interpreter_client.list_code_interpreters(
+                tag_key_matches=["env", "project"],
+                tag_value_matches=["production", "production"],
+            )
+
+    def test_list_code_interpreters_tag_matches_empty_string(self):
+        """tag_key_matches含空字符串时抛ValueError"""
+        with pytest.raises(
+            ValueError, match="tag_key_matches does not support empty strings"
+        ):
+            self.code_interpreter_client.list_code_interpreters(
+                tag_key_matches=["env", ""],
+                tag_value_matches=["production", "alpha"],
+            )
+
+    def test_list_code_interpreters_tag_value_exceeds_255_chars(self):
+        """tag_value超过255字符时抛ValueError"""
+        with pytest.raises(ValueError, match="tag_value must not exceed 255 characters"):
+            self.code_interpreter_client.list_code_interpreters(
+                tag_key_matches=["env"],
+                tag_value_matches=["a" * 256],
+            )
+
+    def test_list_code_interpreters_tag_match_policy_invalid(self):
+        """tag_match_policy不是ALL或ANY时抛ValueError"""
+        with pytest.raises(
+            ValueError, match="tag_match_policy must be either 'ALL' or 'ANY'"
+        ):
+            self.code_interpreter_client.list_code_interpreters(
+                tag_match_policy="INVALID"
+            )
+
     @patch.object(ControlToolsHttpClient, "update_code_interpreter")
     def test_update_code_interpreter(self, mock_update_code_interpreter):
         """测试update_code_interpreter方法"""
