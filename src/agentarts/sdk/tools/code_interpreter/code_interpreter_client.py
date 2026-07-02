@@ -66,7 +66,9 @@ class CodeInterpreter:
 
         # Control plane client for managing code interpreters
         self.control_plane_client = ControlToolsHttpClient(
-            region_name=region, endpoint_url=get_control_plane_endpoint(region=region), verify_ssl=verify_ssl
+            region_name=region,
+            endpoint_url=get_control_plane_endpoint(region=region),
+            verify_ssl=verify_ssl,
         )
 
         # Data plane client for managing code interpreter sessions
@@ -207,6 +209,10 @@ class CodeInterpreter:
         offset: int = 0,
         sort_key: str | None = None,
         sort_dir: str | None = None,
+        tag_key_exists: list[str] | None = None,
+        tag_key_matches: list[str] | None = None,
+        tag_value_matches: list[str] | None = None,
+        tag_match_policy: str | None = None,
     ) -> dict:
         """List code interpreters.
 
@@ -216,6 +222,10 @@ class CodeInterpreter:
             offset (int): Pagination offset, default 0
             sort_key (str): Sort field, must be 'created_at' or 'updated_at'
             sort_dir (str): Sort direction, must be 'asc' or 'desc'
+            tag_key_exists (List[str]): Filter by tag keys, max 10 items
+            tag_key_matches (List[str]): Tag keys to match, must pair with tag_value_matches
+            tag_value_matches (List[str]): Tag values to match, must pair with tag_key_matches
+            tag_match_policy (str): Tag matching policy, 'ALL' or 'ANY', default 'ALL'
 
         Returns:
             Dict: Dictionary containing code interpreter list and pagination info
@@ -225,24 +235,94 @@ class CodeInterpreter:
         Example:
             >>> result = client.list_code_interpreters(
             ...     name="my-code-interpreter",
+            ...     limit=20,
+            ...     offset=0,
             ...     sort_key="created_at",
-            ...     sort_dir="asc"
+            ...     sort_dir="asc",
+            ...     tag_key_exists=["env", "project"],
+            ...     tag_key_matches=["env", "project"],
+            ...     tag_value_matches=["production", "alpha"],
+            ...     tag_match_policy="ALL"
             >>> )
 
         """
         logging.info("Listing code interpreters")
+
+        # Convert empty lists to None for consistent handling
+        tag_key_exists = tag_key_exists if tag_key_exists else None
+        tag_key_matches = tag_key_matches if tag_key_matches else None
+        tag_value_matches = tag_value_matches if tag_value_matches else None
+
+        # Parameter validation
+        if name is not None and (len(name) < 2 or len(name) > 40):
+            msg = "name must be between 2 and 40 characters"
+            raise ValueError(msg)
+
         if sort_key and sort_key not in ["created_at", "updated_at"]:
             msg = "sort_key must be either 'created_at' or 'updated_at'"
             raise ValueError(msg)
         if sort_dir and sort_dir not in ["asc", "desc"]:
             msg = "sort_dir must be either 'asc' or 'desc'"
             raise ValueError(msg)
+        if tag_match_policy and tag_match_policy not in ["ALL", "ANY"]:
+            msg = "tag_match_policy must be either 'ALL' or 'ANY'"
+            raise ValueError(msg)
+
+        if tag_key_exists:
+            if len(tag_key_exists) > 10:
+                msg = "tag_key_exists supports up to 10 items"
+                raise ValueError(msg)
+            if len(tag_key_exists) != len(set(tag_key_exists)):
+                msg = "tag_key_exists must not contain duplicate items"
+                raise ValueError(msg)
+            for key in tag_key_exists:
+                if len(key) > 128:
+                    msg = "tag_key must not exceed 128 characters"
+                    raise ValueError(msg)
+
+        if tag_key_matches or tag_value_matches:
+            if not tag_key_matches or not tag_value_matches:
+                msg = "tag_key_matches and tag_value_matches must be used together"
+                raise ValueError(msg)
+            if len(tag_key_matches) != len(tag_value_matches):
+                msg = "tag_key_matches and tag_value_matches must have the same length"
+                raise ValueError(msg)
+            if len(tag_key_matches) > 10:
+                msg = "tag_key_matches supports up to 10 items"
+                raise ValueError(msg)
+            if len(tag_key_matches) != len(set(tag_key_matches)):
+                msg = "tag_key_matches must not contain duplicate items"
+                raise ValueError(msg)
+            if len(tag_value_matches) != len(set(tag_value_matches)):
+                msg = "tag_value_matches must not contain duplicate items"
+                raise ValueError(msg)
+            if "" in tag_key_matches:
+                msg = "tag_key_matches does not support empty strings"
+                raise ValueError(msg)
+            seen_pairs = set(zip(tag_key_matches, tag_value_matches))
+            if len(seen_pairs) != len(tag_key_matches):
+                msg = "tag_key_matches and tag_value_matches must have unique key-value pairs"
+                raise ValueError(msg)
+            for key in tag_key_matches:
+                if len(key) > 128:
+                    msg = "tag_key must not exceed 128 characters"
+                    raise ValueError(msg)
+            for value in tag_value_matches:
+                if len(value) > 255:
+                    msg = "tag_value must not exceed 255 characters"
+                    raise ValueError(msg)
+
+        # Build parameter dictionary
         request_params = {
             "name": name,
             "limit": limit,
             "offset": offset,
             "sort_key": sort_key,
             "sort_dir": sort_dir,
+            "tag_key_exists": tag_key_exists,
+            "tag_key_matches": tag_key_matches,
+            "tag_value_matches": tag_value_matches,
+            "tag_match_policy": tag_match_policy,
         }
 
         # Remove None values
