@@ -207,7 +207,10 @@ class IAMClient:
 
         Reference: https://support.huaweicloud.com/api-iam5/AttachAgencyPolicyV5.html
         """
-        from huaweicloudsdkiam.v5.model import AttachAgencyPolicyV5Request, AttachAgencyPolicyReqBody
+        from huaweicloudsdkiam.v5.model import (
+            AttachAgencyPolicyReqBody,
+            AttachAgencyPolicyV5Request,
+        )
 
         iam_client = self._get_iam_client()
 
@@ -252,7 +255,7 @@ class IAMClient:
             Exception: If any API call fails (except 409 Conflict for agency already exists)
         """
         agency_id = None
-        
+
         try:
             create_response = self.create_agency(
                 agency_name=agency_name,
@@ -267,25 +270,25 @@ class IAMClient:
                 raise
             # Agency already exists, need to get its ID from list_agencies
             list_response = self.list_agencies(name=agency_name)
-            
+
             agencies = list_response.agencies or []
             matching_agency = None
             for agency in agencies:
                 if agency.agency_name == agency_name:
                     matching_agency = agency
                     break
-            
+
             if not matching_agency:
                 raise ValueError(f"Agency '{agency_name}' already exists but cannot be found in list")
-            
+
             agency_id = matching_agency.agency_id
-        
+
         if not agency_id:
             raise ValueError("Failed to get agency_id")
 
         matching_policy = None
         marker = None
-        
+
         while True:
             list_response = self.list_policies(
                 policy_type="system",
@@ -293,19 +296,19 @@ class IAMClient:
                 marker=marker
             )
             policies = list_response.policies or []
-            
+
             for policy in policies:
                 if policy.policy_name == policy_name:
                     matching_policy = policy
                     break
-            
+
             if matching_policy:
                 break
-            
+
             page_info = list_response.page_info
             if not page_info or not page_info.next_marker:
                 break
-            
+
             marker = page_info.next_marker
 
         if not matching_policy:
@@ -321,4 +324,4 @@ class IAMClient:
             if "409" not in str(e):
                 raise
 
-        return create_response if 'create_response' in locals() else None
+        return create_response if "create_response" in locals() else None
