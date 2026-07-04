@@ -13,6 +13,8 @@ order, swallowing errors so a failing cleanup never masks a real failure.
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
 import uuid
 from types import SimpleNamespace
 
@@ -320,3 +322,77 @@ def isolated_identity_config(tmp_path, monkeypatch):
     """chdir into a temp dir so `.agent_identity.json` never pollutes the repo."""
     monkeypatch.chdir(tmp_path)
     return tmp_path
+
+
+# --------------------------------------------------------------------------- #
+# CLI subprocess driver + shared Docker-deployed runtime agent.
+# Used by both toolkit CLI tests and SDK tests (e.g. runtime-agent CRUD) that
+# need a live agent. Lives in the parent conftest so SDK tests under
+# tests/integration/ (not just tests/integration/toolkit/) can reuse it.
+# --------------------------------------------------------------------------- #
+@pytest.fixture(scope="session")
+def agentarts_cmd():
+    """Subprocess prefix invoking the real agentarts CLI (true e2e)."""
+    return [sys.executable, "-c", "from agentarts.toolkit.main import app; app()"]
+
+
+@pytest.fixture(scope="session")
+def docker_available():
+    """Skip tests that need `agentarts deploy` when Docker is unavailable."""
+    try:
+        r = subprocess.run(["docker", "info"], capture_output=True, text=True, timeout=20)
+    except (FileNotFoundError, subprocess.SubprocessError):
+        pytest.skip("Docker not installed / not on PATH — required for `agentarts deploy`")
+    if r.returncode != 0:
+        pytest.skip("Docker daemon not available — required for `agentarts deploy`")
+    return True
+
+
+@pytest.fixture(scope="session")
+def deployed_runtime_agent(
+    agentarts_cmd,
+    docker_available,
+    cloud_credentials,
+    allow_create,
+    allow_billable,
+    run_id,
+    resource_registry,
+    tmp_path_factory,
+):
+    """Session-scoped: ONE `agentarts init → config → deploy` (Docker build + SWR
+    push + cloud runtime create). Shared by all tests that need a live agent.
+    `destroy` is registered with `resource_registry` (session-end safety net).
+    SWR org/repo/image persist (documented residue)."""
+    from tests.integration._helpers import unique_name
+
+    region = cloud_credentials["region"]
+    name = unique_name("agent", run_id)
+    work = tmp_path_factory.mktemp("deploy")
+    proj_dir = work / name
+
+    home = tmp_path_factory.mktemp("home")
+    (home / ".agentarts").mkdir(parents=True, exist_ok=True)
+    (home / ".agentarts" / ".completion_shown").touch()
+    env = dict(os.environ)
+    env["HOME"] = str(home)
+
+    def _run(args, timeout=900, cwd=None):
+        return subprocess.run(
+            agentarts_cmd + args,
+            capture_output=True, text=True, env=env, cwd=cwd, timeout=timeout,
+        )
+
+    assert _run(["init", "-n", name, "-t", "basic", "-r", region], cwd=str(work)).returncode == 0
+    assert _run(
+        ["config", "-n", name, "-e", "agent:app", "-r", region, "-d", "requirements.txt",
+         "--swr-org", unique_name("swrorg", run_id), "--swr-repo", unique_name("swrrepo", run_id)],
+        cwd=str(proj_dir),
+    ).returncode == 0
+    deploy = _run(["deploy", "--agent", name, "--mode", "cloud"], cwd=str(proj_dir), timeout=900)
+    assert deploy.returncode == 0, deploy.stderr or deploy.stdout
+    resource_registry.register(
+        lambda: _run(["destroy", "--agent", name, "--region", region, "--yes"],
+                     cwd=str(proj_dir), timeout=120),
+        f"deployed-agent:{name}",
+    )
+    return {"name": name, "project_dir": str(proj_dir), "region": region, "run": _run}

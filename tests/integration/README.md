@@ -201,14 +201,21 @@ IAM agency `AgentArtsCoreGateway` is auto-created and intentionally not deleted
 
 ### RuntimeClient
 
-Control plane (🚫 skip — backend requires `artifact_source_config` + `identity_configuration`; read-only `get_agents` ✅):
+Control plane — dual-mode (no Docker needed in standalone mode):
 
 | Method | Status |
 |---|---|
-| `create_agent` / `update_agent` / `create_or_update_agent` | 🚫 skip |
-| `find_agent_by_name` / `find_agent_by_id` / `delete_agent_by_name` | 🚫 skip |
-| `create/update/delete/find_agent_endpoint` | 🚫 skip |
-| `get_agents(limit=10)` read-only | ✅ (test_readonly_lists) |
+| `find_agent_by_name` / `find_agent_by_id` | ✅ (standalone env var OR reuse deploy) |
+| `get_agents(limit=10)` | ✅ (read-only + lifecycle) |
+| `update_agent` | ✅ (mutates the target agent; ALLOW_CREATE) |
+| `create/update/delete/find_agent_endpoint` | ✅ (endpoint created + cleaned up; ALLOW_CREATE) |
+| `create_agent` / `create_or_update_agent` / `delete_agent_by_name` | covered transitively by the `deployed_runtime_agent` fixture's `deploy`/`destroy` (create needs `artifact_source_config`, only deploy provides) |
+
+The target agent is supplied two ways (either suffices, so Docker unavailability
+doesn't block): **standalone** — `AGENTARTS_TEST_RUNTIME_AGENT_NAME` points at a
+pre-provisioned agent (no Docker, no billable); **reuse** — fall back to the
+shared `deployed_runtime_agent` fixture (Docker + RUN_BILLABLE). The agent is
+not created/deleted by these tests (only the endpoint is, with teardown).
 
 Data plane (💰 `RUN_BILLABLE`):
 
@@ -267,7 +274,7 @@ Not covered: `upload_files` / `download_files` (multi-file), `install_packages`,
 | AsyncMemoryClient | — | ✅ 8 | — |
 | MemorySession / Async | — | ✅ 4 + 4 | — |
 | GatewayClient | ✅ list | ✅ lifecycle | — |
-| RuntimeClient control | ✅ get_agents | 🚫 skip | — |
+| RuntimeClient control | ✅ get_agents | ✅ CRUD (standalone env var OR reuse deploy) | — |
 | RuntimeClient data | — | — | 💰 5 |
 | CodeInterpreter control | ✅ list | ✅ full (5) | — |
 | CodeInterpreter data | — | — | 💰 8 |
@@ -291,7 +298,7 @@ Not covered: `upload_files` / `download_files` (multi-file), `install_packages`,
 3. `AsyncMemoryClient` control-plane methods (transitive coverage only).
 4. `MemorySession` / `AsyncMemorySession`: `get_message` / `search_memories` / `list_memories` / `get_memory` / `delete_memory`, `of()` factory.
 5. ~~MCP gateway full lifecycle (pending `trust_policy` fix)~~ — resolved on main + the `agency_id` fix; gateway lifecycle now passes.
-6. Runtime agent control-plane CRUD (pending deployable artifact); `create_or_update_agent`, `update_agent`.
+6. ~~Runtime agent control-plane CRUD (pending deployable artifact)~~ — now dual-mode: `AGENTARTS_TEST_RUNTIME_AGENT_NAME` (standalone, no Docker) or reuse `deployed_runtime_agent`; `create_agent`/`delete_agent_by_name` covered transitively via deploy/destroy.
 7. Runtime data-plane `invoke_agent`.
 8. CodeInterpreter: `upload_files` / `download_files` (multi-file), `install_packages`, `invoke` (raw).
 9. `IAMClient.create_agency` (only touched indirectly via MCP, broken by the policy bug).

@@ -1,99 +1,110 @@
-"""Runtime control-plane lifecycle tests (ALLOW_CREATE tier).
+"""Runtime control-plane CRUD tests.
 
-Creates an agent + an endpoint on the AgentArts control plane, exercises
-find/get/update, then deletes the endpoint and the agent. Data-plane invoke /
-session lifecycle is in ``test_runtime_session_lifecycle.py`` (RUN_BILLABLE).
+Two ways to supply the target agent — either is enough, so environment issues
+(Docker unavailable) don't block this module:
 
-Note: the backend may require ``artifact_source_config`` (a built image) for a
-fully-functional agent; this suite only verifies the SDK wrapper's CRUD path
-with a minimal payload — set additional fields via the SDK if your backend
-rejects a bare create.
+  * **standalone**: set ``AGENTARTS_TEST_RUNTIME_AGENT_NAME`` to a
+    pre-provisioned agent — no Docker, no deploy, no billable.
+  * **reuse**: with no env var, fall back to the shared
+    ``deployed_runtime_agent`` fixture (Docker + ALLOW_CREATE + RUN_BILLABLE),
+    which `agentarts deploy`s one.
+
+The agent itself is NOT created/deleted here — `create_agent` needs an
+`artifact_source_config` (a built image), which only `deploy` provides; that
+path is covered transitively by the deploy fixture. These tests exercise
+find/get/update + endpoint CRUD against an existing agent. The endpoint is
+created and cleaned up via `resource_registry`; the agent is left intact
+(owned by the env var, or by the deploy fixture's session-end teardown).
+
+Requires ALLOW_CREATE (writes: update_agent + endpoint CRUD) in both modes.
 """
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
-from tests.integration._helpers import unique_name
+from tests.integration._helpers import ENV_RUN_BILLABLE, ENV_RUNTIME_AGENT_NAME, env_truthy, unique_name
 
-pytestmark = [
-    pytest.mark.integration,
-    pytest.mark.skip(
-        reason=(
-            "Backend rejects create_agent without artifact_source_config (a built "
-            "image) and identity_configuration — 'artifactSource cannot be null' / "
-            "'identityConfiguration.notnull'. Supply a deployable artifact to "
-            "exercise this CRUD path; remove this skip when one is available."
-        )
-    ),
-]
+pytestmark = pytest.mark.integration
 
 
-# --------------------------------------------------------------------------- #
-# Shared resources
-# --------------------------------------------------------------------------- #
 @pytest.fixture(scope="module")
-def created_agent(runtime_client, allow_create, run_id, resource_registry):
-    name = unique_name("agent", run_id)
-    agent = runtime_client.create_agent(name=name, description="aa-it agent")
-    agent_id = agent["id"]
-    resource_registry.register(
-        lambda: runtime_client.delete_agent_by_name(name), f"agent:{name}"
+def runtime_agent(request, runtime_client, cloud_credentials, allow_create, resource_registry):
+    name = os.getenv(ENV_RUNTIME_AGENT_NAME)
+    if name:
+        mode = "standalone"
+    else:
+        if not env_truthy(ENV_RUN_BILLABLE):
+            pytest.skip(
+                "Set AGENTARTS_TEST_RUNTIME_AGENT_NAME (standalone, no Docker) or "
+                "AGENTARTS_TEST_RUN_BILLABLE=1 + Docker (reuse deploy) to run "
+                "runtime-agent CRUD"
+            )
+        deployed = request.getfixturevalue("deployed_runtime_agent")
+        name = deployed["name"]
+        mode = "reuse"
+
+    agent = runtime_client.find_agent_by_name(name)
+    assert agent, (
+        f"agent {name!r} not found in region {cloud_credentials['region']} "
+        f"(mode={mode})"
     )
-    return {"id": agent_id, "name": name}
+    return {"name": name, "id": agent["id"], "mode": mode}
 
 
 @pytest.fixture(scope="module")
-def created_endpoint(runtime_client, created_agent, run_id, resource_registry):
+def created_endpoint(runtime_client, runtime_agent, run_id, resource_registry):
     ep_name = unique_name("ep", run_id)
     runtime_client.create_agent_endpoint(
-        agent_id=created_agent["id"], endpoint_name=ep_name
+        agent_id=runtime_agent["id"], endpoint_name=ep_name
     )
     resource_registry.register(
-        lambda: runtime_client.delete_agent_endpoint(created_agent["id"], ep_name),
+        lambda: runtime_client.delete_agent_endpoint(runtime_agent["id"], ep_name),
         f"endpoint:{ep_name}",
     )
     return ep_name
 
 
 # --------------------------------------------------------------------------- #
-# Agent
+# Agent read / update
 # --------------------------------------------------------------------------- #
-def test_find_agent_by_name(runtime_client, created_agent):
-    found = runtime_client.find_agent_by_name(created_agent["name"])
+def test_find_agent_by_name(runtime_client, runtime_agent):
+    found = runtime_client.find_agent_by_name(runtime_agent["name"])
     assert found is not None
-    assert found["id"] == created_agent["id"]
+    assert found["id"] == runtime_agent["id"]
 
 
-def test_find_agent_by_id(runtime_client, created_agent):
-    found = runtime_client.find_agent_by_id(created_agent["id"])
+def test_find_agent_by_id(runtime_client, runtime_agent):
+    found = runtime_client.find_agent_by_id(runtime_agent["id"])
     assert found is not None
-    assert found["id"] == created_agent["id"]
+    assert found["id"] == runtime_agent["id"]
 
 
-def test_get_agents(runtime_client, created_agent):
+def test_get_agents(runtime_client, runtime_agent):
     agents = runtime_client.get_agents(limit=1)
     assert isinstance(agents, list)
 
 
-def test_update_agent(runtime_client, created_agent):
+def test_update_agent(runtime_client, runtime_agent):
     updated = runtime_client.update_agent(
-        created_agent["id"], description="updated by aa-it"
+        runtime_agent["id"], description="updated by aa-it"
     )
-    assert updated["id"] == created_agent["id"]
+    assert updated["id"] == runtime_agent["id"]
 
 
 # --------------------------------------------------------------------------- #
-# Endpoint
+# Endpoint CRUD
 # --------------------------------------------------------------------------- #
-def test_find_agent_endpoint(runtime_client, created_agent, created_endpoint):
-    ep = runtime_client.find_agent_endpoint(created_agent["id"], created_endpoint)
+def test_find_agent_endpoint(runtime_client, runtime_agent, created_endpoint):
+    ep = runtime_client.find_agent_endpoint(runtime_agent["id"], created_endpoint)
     assert isinstance(ep, dict)
 
 
-def test_update_agent_endpoint(runtime_client, created_agent, created_endpoint):
+def test_update_agent_endpoint(runtime_client, runtime_agent, created_endpoint):
     ep = runtime_client.update_agent_endpoint(
-        agent_id=created_agent["id"],
+        agent_id=runtime_agent["id"],
         endpoint_name=created_endpoint,
         config={"note": "updated by aa-it"},
     )
