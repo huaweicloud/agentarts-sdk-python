@@ -348,14 +348,17 @@ Status: ✅ real-cloud/local pass · ⏭ conditional skip · ⚠️ xfail (SDK b
 | `mcp-gateway create-mcp-gateway …` | subprocess | test_cli_mcp_gateway_lifecycle | ⚠️ xfail (SDK trust_policy) |
 | `invoke --mode cloud` | subprocess | test_cli_invoke_cloud | 💰 |
 | `runtime start/exec/upload/download/stop-session` | subprocess | test_cli_runtime_session_lifecycle | 💰 |
+| `init → config → deploy → invoke → destroy` (full journey) | mixed | test_cli_full_lifecycle | 💰 (Docker + ALLOW_CREATE + RUN_BILLABLE) |
 
 ### Toolkit not covered
 
-- `deploy` / `launch` — needs Docker daemon + SWR push + cloud runtime create;
-  too heavy and residue-prone for the suite (the underlying `RuntimeClient`
-  control-plane path is itself skipped pending an artifact).
-- `destroy` — destructive cloud op; covered transitively as the teardown tool
-  for `deploy`, not exercised standalone.
+- `deploy`/`launch` local mode (`--mode local`) — needs Docker daemon to run a
+  local container; the cloud-mode full journey IS covered (gated) in
+  `test_cli_full_lifecycle`. Cloud `deploy` auto-creates an SWR org/repo and
+  pushes an image — the operations layer exposes no SWR cleanup, so those are
+  accepted, documented residue (the cloud agent itself is destroyed).
+- `destroy` standalone — destructive; covered as the teardown step of the full
+  lifecycle test (and registered with `resource_registry` as a safety net).
 - `mcp-gateway` target subcommands and full gateway lifecycle — xfailed pending
   the SDK `trust_policy` fix.
 - `runtime`/`memory`/`mcp-gateway` subcommands beyond the ones listed above
