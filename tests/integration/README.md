@@ -2,7 +2,7 @@
 
 Non-mock tests that hit **real Huawei Cloud APIs** (no HTTP mocking). They
 verify the SDK wrapper layers end-to-end: `IdentityClient`, `RuntimeClient`,
-`MemoryClient` / `AsyncMemoryClient`, `MCPGatewayClient`, `CodeInterpreter`,
+`MemoryClient` / `AsyncMemoryClient`, `GatewayClient`, `CodeInterpreter`,
 `AgentArtsRuntimeApp`, and the `require_*` auth decorators.
 
 ## Three-tier safety model
@@ -76,7 +76,7 @@ If a run is interrupted before teardown, find leftovers by the run prefix:
 # MemoryClient.list_spaces() → delete spaces whose name starts with "aa-it-"
 
 # MCP gateways
-# MCPGatewayClient.list_mcp_gateways() → delete gateways whose name starts with "aa-it-"
+# GatewayClient.list_gateways() → delete gateways whose name starts with "aa-it-"
 
 # Runtime agents
 # RuntimeClient.get_agents() → delete agents whose name starts with "aa-it-"
@@ -85,7 +85,7 @@ If a run is interrupted before teardown, find leftovers by the run prefix:
 # CodeInterpreter.list_code_interpreters() → delete those whose name starts with "aa-it-"
 ```
 
-> **Note:** `MCPGatewayClient.create_mcp_gateway` auto-creates a shared IAM
+> **Note:** `GatewayClient.create_gateway` auto-creates a shared IAM
 > agency `AgentArtsCoreGateway` (409-ignored if it already exists) which the
 > SDK intentionally does **not** delete. This single shared agency is expected
 > residue.
@@ -100,7 +100,7 @@ If a run is interrupted before teardown, find leftovers by the run prefix:
 ## Method coverage
 
 **Overview**: 69 tests across 12 files. Real-cloud run (`ALLOW_CREATE=1`, no
-`RUN_BILLABLE`): **48 passed / 13 skipped / 6 xfailed / 2 deselected**.
+`RUN_BILLABLE`): **54 passed / 13 skipped / 0 xfailed / 2 deselected**.
 
 Status legend: ✅ real-cloud pass · 🟦 local pass · ⏭ conditional skip ·
 ⚠️ xfail (SDK bug) · 🚫 skip (backend prereq) · 💰 requires `RUN_BILLABLE=1`
@@ -182,17 +182,22 @@ Not covered: AsyncMemoryClient's control-plane methods (`create_space`/`get_spac
 
 Not covered: wrapper `get_message` / `search_memories` / `list_memories` / `get_memory` / `delete_memory`, `of()` factory.
 
-### MCPGatewayClient (⚠️ xfail — SDK `trust_policy` bug)
+### GatewayClient (renamed from MCPGatewayClient on main)
 
 | Method | HTTP | Status |
 |---|---|---|
-| `create_mcp_gateway` (+ auto IAM agency) | POST /v1/core/gateways | ⚠️ xfail |
-| `get_/list_/update_mcp_gateway` | GET/GET/PUT …/gateways | ⚠️ xfail |
-| `create/get/list/update/delete_mcp_gateway_target` | …/targets | ⚠️ xfail |
-| `delete_mcp_gateway` | DELETE …/gateways/{id} | ⚠️ xfail |
-| `list_mcp_gateways(limit=1)` read-only | GET …/gateways | ✅ (test_readonly_lists) |
+| `create_gateway` (+ auto IAM agency via `create_agency_with_policy`) | POST /v1/core/gateways | ✅ |
+| `get_/list_/update_gateway` | GET/GET/PUT …/gateways | ✅ |
+| `create/get/list/update/delete_gateway_target` | …/targets | ✅ |
+| `delete_gateway` | DELETE …/gateways/{id} | ✅ (teardown) |
+| `list_gateways(limit=1)` read-only | GET …/gateways | ✅ (test_readonly_lists) |
 
-The bug only manifests on accounts where the shared agency `AgentArtsCoreGateway` does **not** already exist (the malformed `trust_policy` is rejected, PAP5.0011). On accounts where it exists, `create_agency` returns 409 and the SDK swallows it, masking the bug. Fix the `trust_policy` in `src/agentarts/sdk/mcpgateway/mcp_gateway_client.py` (an agency trust policy `Action` should grant `sts:agencies:assumeRole` to the service principal, not resource actions); remove this marker once fixed.
+The earlier `trust_policy` rejection (PAP5.0011) was fixed upstream on main via
+`create_agency_with_policy` (auto policy attachment). A follow-on bug —
+`CreateAgencyV5Response` has no `agency_id` (it's nested under `.agency`) — was
+found by this suite and fixed in `iam_client.py` (see bugs table). The shared
+IAM agency `AgentArtsCoreGateway` is auto-created and intentionally not deleted
+(accepted residue).
 
 ### RuntimeClient
 
@@ -261,7 +266,7 @@ Not covered: `upload_files` / `download_files` (multi-file), `install_packages`,
 | MemoryClient (sync) | — | ✅ full (13) | — |
 | AsyncMemoryClient | — | ✅ 8 | — |
 | MemorySession / Async | — | ✅ 4 + 4 | — |
-| MCPGatewayClient | ✅ list | ⚠️ xfail | — |
+| GatewayClient | ✅ list | ✅ lifecycle | — |
 | RuntimeClient control | ✅ get_agents | 🚫 skip | — |
 | RuntimeClient data | — | — | 💰 5 |
 | CodeInterpreter control | ✅ list | ✅ full (5) | — |
@@ -276,7 +281,8 @@ Not covered: `upload_files` / `download_files` (multi-file), `install_packages`,
 | 1 | `MemoryClient` control-plane methods referenced `self._data_plane._region_name` (non-existent) → AttributeError | `f82c936` | ✅ fixed + cloud-verified |
 | 2 | `MemorySession.__repr__` referenced `self.region_name` (no property) → AttributeError | `f82c936` | ✅ fixed + local-verified |
 | 3 | `MemorySession` / `AsyncMemorySession` passed `session_config.to_dict()` (dict) to data-plane `create_memory_session`, which expects a `SessionCreateRequest` object → AttributeError | `e5a330d` | ✅ fixed + cloud-verified |
-| 4 | `MCPGatewayClient` auto-agency `trust_policy` rejected by IAM (PAP5.0011) | — | ⚠️ xfail, pending fix |
+| 4 | `GatewayClient` (then `MCPGatewayClient`) auto-agency `trust_policy` rejected by IAM (PAP5.0011) | upstream (main) | ✅ fixed upstream via `create_agency_with_policy` |
+| 5 | `IAMClient.create_agency_with_policy` read `create_response.agency_id` but `CreateAgencyV5Response` nests it under `.agency` → AttributeError after the agency was already created | `feat/i...` (this branch) | ✅ fixed + cloud-verified |
 
 ### Remaining coverage gaps
 
@@ -284,7 +290,7 @@ Not covered: `upload_files` / `download_files` (multi-file), `install_packages`,
 2. `IdentityClient`: `get_resource_oauth2_token` (3LO), `get_resource_sts_token`, `complete_resource_token_auth`, `update_*_credential_provider`.
 3. `AsyncMemoryClient` control-plane methods (transitive coverage only).
 4. `MemorySession` / `AsyncMemorySession`: `get_message` / `search_memories` / `list_memories` / `get_memory` / `delete_memory`, `of()` factory.
-5. MCP gateway full lifecycle (pending `trust_policy` fix).
+5. ~~MCP gateway full lifecycle (pending `trust_policy` fix)~~ — resolved on main + the `agency_id` fix; gateway lifecycle now passes.
 6. Runtime agent control-plane CRUD (pending deployable artifact); `create_or_update_agent`, `update_agent`.
 7. Runtime data-plane `invoke_agent`.
 8. CodeInterpreter: `upload_files` / `download_files` (multi-file), `install_packages`, `invoke` (raw).
@@ -344,8 +350,8 @@ Status: ✅ real-cloud/local pass · ⏭ conditional skip · ⚠️ xfail (SDK b
 | `dev` (uvicorn server) | subprocess | test_dev_server_serves_ping_and_invocations | ✅ |
 | `memory list` | subprocess | test_cli_memory_list_readonly | ✅ |
 | `memory create/list/get/update/delete` | subprocess | test_cli_memory_lifecycle | ✅ (ALLOW_CREATE) |
-| `mcp-gateway list-mcp-gateways` | subprocess | test_cli_mcp_gateway_list_readonly | ✅ |
-| `mcp-gateway create-mcp-gateway …` | subprocess | test_cli_mcp_gateway_lifecycle | ⚠️ xfail (SDK trust_policy) |
+| `gateway list` | subprocess | test_cli_gateway_list_readonly | ✅ |
+| `gateway create` | subprocess | test_cli_gateway_create | ✅ (ALLOW_CREATE) |
 | `invoke --mode cloud` | subprocess | test_cli_invoke_cloud | 💰 |
 | `runtime start/exec/upload/download/stop-session` | subprocess | test_cli_runtime_session_lifecycle | 💰 |
 | `init → config → deploy → invoke → destroy` (full journey) | mixed | test_cli_full_lifecycle | 💰 (Docker + ALLOW_CREATE + RUN_BILLABLE) |
@@ -359,14 +365,14 @@ Status: ✅ real-cloud/local pass · ⏭ conditional skip · ⚠️ xfail (SDK b
   accepted, documented residue (the cloud agent itself is destroyed).
 - `destroy` standalone — destructive; covered as the teardown step of the full
   lifecycle test (and registered with `resource_registry` as a safety net).
-- `mcp-gateway` target subcommands and full gateway lifecycle — xfailed pending
-  the SDK `trust_policy` fix.
-- `runtime`/`memory`/`mcp-gateway` subcommands beyond the ones listed above
-  (e.g. `memory status`, `mcp-gateway *-target` CRUD) — not yet added.
+- `gateway` target subcommands beyond `create` (update/delete/get/list-targets)
+  — not yet added (the SDK target CRUD is covered in test_gateway_lifecycle).
+- `runtime`/`memory`/`gateway` subcommands beyond the ones listed above
+  (e.g. `memory status`, `gateway *-target` via CLI) — not yet added.
 
 ### Toolkit test results
 
-Real-cloud run (`ALLOW_CREATE=1`, no `RUN_BILLABLE`): **16 passed / 2 skipped
-(runtime billable) / 1 xfailed (mcp-gateway)**. Combined with the SDK suite the
-whole `tests/integration` tree is **64 passed / 15 skipped / 7 xfailed / 2
+Real-cloud run (`ALLOW_CREATE=1`, no `RUN_BILLABLE`): **17 passed / 3 skipped
+(runtime billable) / 0 xfailed**. Combined with the SDK suite the
+whole `tests/integration` tree is **71 passed / 16 skipped / 0 xfailed / 2
 deselected** (counts vary slightly with conditional skips).

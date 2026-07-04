@@ -16,8 +16,8 @@ def test_list_spaces(memory_control_client):
     assert isinstance(result.items, list)
 
 
-def test_list_mcp_gateways(mcp_gateway_client):
-    result = mcp_gateway_client.list_mcp_gateways(limit=1)
+def test_list_gateways(gateway_client):
+    result = gateway_client.list_gateways(limit=1)
     assert result.success, result.error
 
 

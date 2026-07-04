@@ -184,10 +184,10 @@ def runtime_client(cloud_credentials):
 
 
 @pytest.fixture(scope="session")
-def mcp_gateway_client(cloud_credentials):
-    from agentarts.sdk import MCPGatewayClient
+def gateway_client(cloud_credentials):
+    from agentarts.sdk import GatewayClient
 
-    return MCPGatewayClient()
+    return GatewayClient()
 
 
 @pytest.fixture(scope="session")
