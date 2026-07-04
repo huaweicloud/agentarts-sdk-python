@@ -289,3 +289,81 @@ Not covered: `upload_files` / `download_files` (multi-file), `install_packages`,
 7. Runtime data-plane `invoke_agent`.
 8. CodeInterpreter: `upload_files` / `download_files` (multi-file), `install_packages`, `invoke` (raw).
 9. `IAMClient.create_agency` (only touched indirectly via MCP, broken by the policy bug).
+
+## Toolkit (CLI) tests
+
+Tests under `tests/integration/toolkit/` exercise the real `agentarts` CLI
+(Typer app) end-to-end — no mocking of operations or SDK clients. They cover the
+`toolkit` layer that the SDK-only tests above do not.
+
+### Invocation styles
+
+Two ways the CLI is driven, chosen per test:
+
+- **`cli_runner` (in-process `typer.testing.CliRunner`)** — fast; used for local
+  commands (`init`, `config`) where assertions are on generated files, not stdout
+  (rich output capture is unreliable under CliRunner).
+- **`agentarts_cmd` + `cli_env` (subprocess)** — invokes the real console entry
+  (`python -c "from agentarts.toolkit.main import app; app()" …`). Reliable
+  stdout capture (no TTY → rich emits plain text); used for cloud commands whose
+  output must be parsed (`memory create --output json`) and for the blocking
+  `dev` server.
+
+### Completion handling
+
+The CLI's `_auto_install_completion` touches `~/.agentarts` on first run, and
+setting `_AGENTARTS_COMPLETE` (the obvious skip) instead trips click's
+completion protocol ("Invalid completion instruction"). So:
+
+- in-process (`cli_runner`): `monkeypatch.setattr` `_auto_install_completion` to
+  a no-op;
+- subprocess (`cli_env`): `HOME` is redirected to a temp dir with the
+  `.agentarts/.completion_shown` marker pre-created, so the install is skipped
+  and no tip text pollutes stdout (important for `--output json` parsing).
+
+For `config`/`init`, every flag the callback would otherwise `Prompt.ask` for is
+passed explicitly (CliRunner has no stdin → an unhandled prompt aborts with
+exit 1). For `dev` (blocking uvicorn), the test scaffolds a basic project via
+`init`, launches `agentarts dev` in a subprocess on a free port, polls `/ping`,
+POSTs `/invocations`, then terminates the process.
+
+### Toolkit command coverage
+
+Status: ✅ real-cloud/local pass · ⏭ conditional skip · ⚠️ xfail (SDK bug) ·
+💰 requires `RUN_BILLABLE=1` · 🚫 skip (prereq).
+
+| CLI command | Style | Test | Status |
+|---|---|---|---|
+| `--version` / `--help` | CliRunner | test_cli_version / test_cli_help | ✅ |
+| `init -n … -t {basic,langgraph,langchain,google-adk}` | CliRunner | test_init_creates_project_files (×4) | ✅ |
+| `init -p` / invalid name | CliRunner | test_init_path_option / test_init_invalid_name_fails | ✅ |
+| `config` (add agent) | CliRunner | test_config_add_writes_yaml_and_lists | ✅ |
+| `config set` / `config get` | CliRunner | test_config_set_get_roundtrip | ✅ |
+| `config set-env` / `list-env` / `remove-env` | CliRunner | test_config_env_lifecycle | ✅ |
+| `config set-default` / `remove` | CliRunner | test_config_set_default_and_remove | ✅ |
+| `dev` (uvicorn server) | subprocess | test_dev_server_serves_ping_and_invocations | ✅ |
+| `memory list` | subprocess | test_cli_memory_list_readonly | ✅ |
+| `memory create/list/get/update/delete` | subprocess | test_cli_memory_lifecycle | ✅ (ALLOW_CREATE) |
+| `mcp-gateway list-mcp-gateways` | subprocess | test_cli_mcp_gateway_list_readonly | ✅ |
+| `mcp-gateway create-mcp-gateway …` | subprocess | test_cli_mcp_gateway_lifecycle | ⚠️ xfail (SDK trust_policy) |
+| `invoke --mode cloud` | subprocess | test_cli_invoke_cloud | 💰 |
+| `runtime start/exec/upload/download/stop-session` | subprocess | test_cli_runtime_session_lifecycle | 💰 |
+
+### Toolkit not covered
+
+- `deploy` / `launch` — needs Docker daemon + SWR push + cloud runtime create;
+  too heavy and residue-prone for the suite (the underlying `RuntimeClient`
+  control-plane path is itself skipped pending an artifact).
+- `destroy` — destructive cloud op; covered transitively as the teardown tool
+  for `deploy`, not exercised standalone.
+- `mcp-gateway` target subcommands and full gateway lifecycle — xfailed pending
+  the SDK `trust_policy` fix.
+- `runtime`/`memory`/`mcp-gateway` subcommands beyond the ones listed above
+  (e.g. `memory status`, `mcp-gateway *-target` CRUD) — not yet added.
+
+### Toolkit test results
+
+Real-cloud run (`ALLOW_CREATE=1`, no `RUN_BILLABLE`): **16 passed / 2 skipped
+(runtime billable) / 1 xfailed (mcp-gateway)**. Combined with the SDK suite the
+whole `tests/integration` tree is **64 passed / 15 skipped / 7 xfailed / 2
+deselected** (counts vary slightly with conditional skips).
