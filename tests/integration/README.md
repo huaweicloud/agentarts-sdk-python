@@ -352,19 +352,27 @@ Status: ✅ real-cloud/local pass · ⏭ conditional skip · ⚠️ xfail (SDK b
 | `memory create/list/get/update/delete` | subprocess | test_cli_memory_lifecycle | ✅ (ALLOW_CREATE) |
 | `gateway list` | subprocess | test_cli_gateway_list_readonly | ✅ |
 | `gateway create` | subprocess | test_cli_gateway_create | ✅ (ALLOW_CREATE) |
-| `invoke --mode cloud` | subprocess | test_cli_invoke_cloud | 💰 |
-| `runtime start/exec/upload/download/stop-session` | subprocess | test_cli_runtime_session_lifecycle | 💰 |
-| `init → config → deploy → invoke → destroy` (full journey) | mixed | test_cli_full_lifecycle | 💰 (Docker + ALLOW_CREATE + RUN_BILLABLE) |
+| `init → config → deploy` (shared `deployed_runtime_agent` fixture) | subprocess | test_deploy_succeeds | 💰 (Docker + ALLOW_CREATE + RUN_BILLABLE) |
+| `invoke --mode cloud` (on the deployed agent) | subprocess | test_invoke_deployed_agent | 💰 (shares the deploy) |
+| `runtime start/exec/upload/download/stop-session` (on the deployed agent) | subprocess | test_runtime_session_on_deployed_agent | 💰 (shares the deploy) |
+| `destroy` | subprocess | `deployed_runtime_agent` session-end teardown | 💰 (safety-net) |
+
+> The billable runtime tests no longer require a separately pre-provisioned
+> agent — a single session-scoped `deployed_runtime_agent` fixture runs
+> `init→config→deploy` (one Docker build) and the invoke / runtime-session
+> tests reuse that live agent; `destroy` runs as the fixture's session-end
+> teardown. SWR org/repo/image persist (documented residue).
 
 ### Toolkit not covered
 
 - `deploy`/`launch` local mode (`--mode local`) — needs Docker daemon to run a
-  local container; the cloud-mode full journey IS covered (gated) in
-  `test_cli_full_lifecycle`. Cloud `deploy` auto-creates an SWR org/repo and
-  pushes an image — the operations layer exposes no SWR cleanup, so those are
-  accepted, documented residue (the cloud agent itself is destroyed).
-- `destroy` standalone — destructive; covered as the teardown step of the full
-  lifecycle test (and registered with `resource_registry` as a safety net).
+  local container; cloud-mode `deploy` IS covered (gated) via the shared
+  `deployed_runtime_agent` fixture. Cloud `deploy` auto-creates an SWR org/repo
+  and pushes an image — the operations layer exposes no SWR cleanup, so those
+  are accepted, documented residue (the cloud agent itself is destroyed by the
+  fixture teardown).
+- `destroy` standalone — destructive; covered as the `deployed_runtime_agent`
+  fixture's session-end teardown (registered with `resource_registry`).
 - `gateway` target subcommands beyond `create` (update/delete/get/list-targets)
   — not yet added (the SDK target CRUD is covered in test_gateway_lifecycle).
 - `runtime`/`memory`/`gateway` subcommands beyond the ones listed above
