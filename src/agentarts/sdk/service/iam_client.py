@@ -264,7 +264,7 @@ class IAMClient:
                 max_session_duration=max_session_duration,
                 description=description
             )
-            agency_id = create_response.agency_id
+            agency_id = create_response.agency.agency_id
         except Exception as e:
             if "409" not in str(e):
                 raise
