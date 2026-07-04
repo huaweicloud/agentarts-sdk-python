@@ -18,13 +18,16 @@ pytestmark = [
         run=False,
         strict=False,
         reason=(
-            "SDK bug: MCPGatewayClient.create_mcp_gateway auto-creates the IAM "
-            "agency 'AgentArtsCoreGateway' with a trust_policy the IAM API rejects "
+            "SDK bug (on accounts where the shared agency does not yet exist): "
+            "MCPGatewayClient.create_mcp_gateway auto-creates the IAM agency "
+            "'AgentArtsCoreGateway' with a trust_policy the IAM API rejects "
             "(PAP5.0011 'malformed policy document'); with the agency absent, the "
-            "gateway create then fails 'agency is invalid'. Fix the trust_policy in "
-            "src/agentarts/sdk/mcpgateway/mcp_gateway_client.py — an agency trust "
-            "policy should grant sts:agencies:assumeRole to the service principal, "
-            "not resource actions. Remove this marker once fixed."
+            "gateway create then fails 'agency is invalid'. On accounts where the "
+            "agency already exists, create_agency returns 409 and the SDK swallows "
+            "it, so the path works — which masks the bug. Fix the trust_policy in "
+            "src/agentarts/sdk/mcpgateway/mcp_gateway_client.py (an agency trust "
+            "policy Action should grant sts:agencies:assumeRole to the service "
+            "principal, not resource actions). Remove this marker once fixed."
         ),
     ),
 ]
