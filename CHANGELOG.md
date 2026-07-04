@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - SWR organization name auto-generation with random string
-- `skip_ssl_verification` parameter for MCP Gateway
+- `skip_ssl_verification` parameter for Gateway
 
 ### Changed
 - Adapt invoke URL format

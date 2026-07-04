@@ -1,8 +1,8 @@
-# MCP Gateway SDK 使用指南
+# Gateway SDK 使用指南
 
 ## 概述
 
-MCP Gateway SDK 提供网关管理功能，支持创建、配置和管理 MCP（Model Context Protocol）网关及其目标。本文档介绍如何使用 MCP Gateway SDK 进行网关的创建、配置和目标管理。
+Gateway SDK 提供网关管理功能，支持创建、配置和管理 MCP（Model Context Protocol）网关及其目标。本文档介绍如何使用 Gateway SDK 进行网关的创建、配置和目标管理。
 
 ## 环境要求
 
@@ -13,7 +13,7 @@ MCP Gateway SDK 提供网关管理功能，支持创建、配置和管理 MCP（
 
 ### 华为云 AK/SK 认证
 
-MCP Gateway SDK 使用华为云 AK/SK 进行身份认证。请通过以下方式配置：
+Gateway SDK 使用华为云 AK/SK 进行身份认证。请通过以下方式配置：
 
 **方式一：环境变量配置（推荐）**
 
@@ -34,15 +34,15 @@ export HUAWEICLOUD_SDK_SK="your-secret-key"
 ### 基本用法示例
 
 ```python
-from agentarts.sdk.mcpgateway import MCPGatewayClient
+from agentarts.sdk.gateway import GatewayClient
 
 # 初始化客户端
-client = MCPGatewayClient()
+client = GatewayClient()
 
 # 创建网关
-result = client.create_mcp_gateway(
+result = client.create_gateway(
     name="my-gateway",
-    description="我的 MCP 网关",
+    description="我的网关",
     protocol_type="mcp",
     authorizer_type="iam"
 )
@@ -56,10 +56,10 @@ else:
 
 # 创建目标
 if gateway_id is not None:
-    target_result = client.create_mcp_gateway_target(
+    target_result = client.create_gateway_target(
         gateway_id=gateway_id,
         name="my-target",
-        description="我的 MCP 目标",
+        description="我的目标",
         target_configuration={
             "mcp_server": {
                 "endpoint": "https://example.com/mcp",
@@ -76,7 +76,7 @@ if gateway_id is not None:
         print(f"创建目标失败: {target_result.error}")
 
 # 列出网关
-list_result = client.list_mcp_gateways()
+list_result = client.list_gateways()
 if list_result.success:
     print(f"总网关数: {list_result.data.get('total', 0)}")
     for gateway in list_result.data.get('gateways', []):
@@ -85,12 +85,12 @@ if list_result.success:
 
 ## API 参考
 
-### MCPGatewayClient 类
+### GatewayClient 类
 
 #### 初始化
 
 ```python
-MCPGatewayClient(verify_ssl: bool = True)
+GatewayClient(verify_ssl: bool = True)
 ```
 
 **参数说明**：
@@ -104,20 +104,22 @@ MCPGatewayClient(verify_ssl: bool = True)
 
 ### 网关管理方法
 
-#### create_mcp_gateway
+#### create_gateway
 
-创建新的 MCP 网关。
+创建新的网关。
 
 ```python
-create_mcp_gateway(
+create_gateway(
     name: Optional[str] = None,
     description: Optional[str] = None,
     protocol_type: Optional[str] = "mcp",
     authorizer_type: Optional[str] = "iam",
     agency_name: Optional[str] = None,
     authorizer_configuration: Optional[Dict[str, Any]] = None,
+    protocol_configuration: Optional[Dict[str, Any]] = None,
     log_delivery_configuration: Optional[Dict[str, Any]] = None,
-    outbound_network_configuration: Optional[Dict[str, Any]] = None
+    outbound_network_configuration: Optional[Dict[str, Any]] = None,
+    tags: Optional[List[Dict[str, str]]] = None
 ) -> RequestResult
 ```
 
@@ -131,22 +133,26 @@ create_mcp_gateway(
 | authorizer_type | str | 否 | iam | 授权器类型（custom_jwt/iam/api_key） |
 | agency_name | str | 否 | None | 代理名称。未提供时自动创建名为 AgentArtsCoreGateway 的代理 |
 | authorizer_configuration | Dict | 否 | None | 授权器配置 |
+| protocol_configuration | Dict | 否 | None | 协议配置，如 {"mcp": {"search_configuration": {...}}} |
 | log_delivery_configuration | Dict | 否 | {"enabled": False} | 日志投递配置 |
 | outbound_network_configuration | Dict | 否 | {"network_mode": "public"} | 出站网络配置 |
+| tags | List[Dict] | 否 | None | 资源标签列表 |
 
 **返回值**：`RequestResult` 对象
 
 **异常**：`ValueError` - 如果代理创建失败且未提供 agency_name
 
-#### update_mcp_gateway
+#### update_gateway
 
-更新现有的 MCP 网关。
+更新现有的网关。
 
 ```python
-update_mcp_gateway(
+update_gateway(
     gateway_id: str,
     description: Optional[str] = None,
-    log_delivery_configuration: Optional[Dict[str, Any]] = None
+    protocol_configuration: Optional[Dict[str, Any]] = None,
+    log_delivery_configuration: Optional[Dict[str, Any]] = None,
+    tags: Optional[List[Dict[str, str]]] = None
 ) -> RequestResult
 ```
 
@@ -156,18 +162,20 @@ update_mcp_gateway(
 |------|------|------|--------|------|
 | gateway_id | str | 是 | - | 网关 ID |
 | description | str | 否 | None | 网关描述 |
+| protocol_configuration | Dict | 否 | None | 协议配置 |
 | log_delivery_configuration | Dict | 否 | None | 日志投递配置 |
+| tags | List[Dict] | 否 | None | 资源标签列表 |
 
 **返回值**：`RequestResult` 对象
 
 **异常**：`ValueError` - 如果所有可选参数均为 None
 
-#### delete_mcp_gateway
+#### delete_gateway
 
-删除 MCP 网关。
+删除网关。
 
 ```python
-delete_mcp_gateway(gateway_id: str) -> RequestResult
+delete_gateway(gateway_id: str) -> RequestResult
 ```
 
 **参数说明**：
@@ -178,12 +186,12 @@ delete_mcp_gateway(gateway_id: str) -> RequestResult
 
 **返回值**：`RequestResult` 对象
 
-#### get_mcp_gateway
+#### get_gateway
 
-获取 MCP 网关的详细信息。
+获取网关的详细信息。
 
 ```python
-get_mcp_gateway(gateway_id: str) -> RequestResult
+get_gateway(gateway_id: str) -> RequestResult
 ```
 
 **参数说明**：
@@ -194,15 +202,19 @@ get_mcp_gateway(gateway_id: str) -> RequestResult
 
 **返回值**：`RequestResult` 对象
 
-#### list_mcp_gateways
+#### list_gateways
 
-列出 MCP 网关，可选择过滤条件。
+列出网关，可选择过滤条件。
 
 ```python
-list_mcp_gateways(
+list_gateways(
     name: Optional[str] = None,
     status: Optional[str] = None,
     gateway_id: Optional[str] = None,
+    tag_key_exists: Optional[List[str]] = None,
+    tag_key_matches: Optional[List[str]] = None,
+    tag_value_matches: Optional[List[str]] = None,
+    tag_match_policy: Optional[str] = None,
     limit: Optional[int] = None,
     offset: Optional[int] = None
 ) -> RequestResult
@@ -215,19 +227,23 @@ list_mcp_gateways(
 | name | str | 否 | None | 网关名称过滤器 |
 | status | str | 否 | None | 网关状态过滤器 |
 | gateway_id | str | 否 | None | 网关 ID 过滤器 |
-| limit | int | 否 | None | 结果的最大数量 |
+| tag_key_exists | List[str] | 否 | None | 按标签键存在过滤 |
+| tag_key_matches | List[str] | 否 | None | 按标签键值对过滤（键） |
+| tag_value_matches | List[str] | 否 | None | 按标签键值对过滤（值） |
+| tag_match_policy | str | 否 | None | 标签匹配模式（ALL/ANY） |
+| limit | int | 否 | None | 结果的最大数量（1-100） |
 | offset | int | 否 | None | 分页偏移量 |
 
 **返回值**：`RequestResult` 对象
 
 ### 目标管理方法
 
-#### create_mcp_gateway_target
+#### create_gateway_target
 
-创建新的 MCP 网关目标。
+创建新的网关目标。
 
 ```python
-create_mcp_gateway_target(
+create_gateway_target(
     gateway_id: str,
     name: Optional[str] = None,
     description: Optional[str] = None,
@@ -248,12 +264,12 @@ create_mcp_gateway_target(
 
 **返回值**：`RequestResult` 对象
 
-#### update_mcp_gateway_target
+#### update_gateway_target
 
-更新现有的 MCP 网关目标。
+更新现有的网关目标。
 
 ```python
-update_mcp_gateway_target(
+update_gateway_target(
     gateway_id: str,
     target_id: str,
     name: Optional[str] = None,
@@ -278,12 +294,12 @@ update_mcp_gateway_target(
 
 **异常**：`ValueError` - 如果所有可选参数均为 None
 
-#### delete_mcp_gateway_target
+#### delete_gateway_target
 
-删除 MCP 网关目标。
+删除网关目标。
 
 ```python
-delete_mcp_gateway_target(gateway_id: str, target_id: str) -> RequestResult
+delete_gateway_target(gateway_id: str, target_id: str) -> RequestResult
 ```
 
 **参数说明**：
@@ -295,12 +311,12 @@ delete_mcp_gateway_target(gateway_id: str, target_id: str) -> RequestResult
 
 **返回值**：`RequestResult` 对象
 
-#### get_mcp_gateway_target
+#### get_gateway_target
 
-获取 MCP 网关目标的详细信息。
+获取网关目标的详细信息。
 
 ```python
-get_mcp_gateway_target(gateway_id: str, target_id: str) -> RequestResult
+get_gateway_target(gateway_id: str, target_id: str) -> RequestResult
 ```
 
 **参数说明**：
@@ -312,12 +328,12 @@ get_mcp_gateway_target(gateway_id: str, target_id: str) -> RequestResult
 
 **返回值**：`RequestResult` 对象
 
-#### list_mcp_gateway_targets
+#### list_gateway_targets
 
-列出 MCP 网关目标，支持分页。
+列出网关目标，支持分页。
 
 ```python
-list_mcp_gateway_targets(
+list_gateway_targets(
     gateway_id: str,
     limit: Optional[int] = None,
     offset: Optional[int] = None
@@ -351,11 +367,11 @@ list_mcp_gateway_targets(
 
 ```python
 import logging
-from agentarts.sdk.mcpgateway import MCPGatewayClient
+from agentarts.sdk.gateway import GatewayClient
 
 try:
-    client = MCPGatewayClient()
-    result = client.create_mcp_gateway(name="my-gateway")
+    client = GatewayClient()
+    result = client.create_gateway(name="my-gateway")
     
     if not result.success:
         logging.error(f"创建网关失败: {result.error}")
@@ -437,4 +453,4 @@ except Exception as e:
 删除网关前确保：
 1. 网关下没有正在运行的任务
 2. 先删除所有关联的目标
-3. 使用 `delete_mcp_gateway` 方法删除
+3. 使用 `delete_gateway` 方法删除
