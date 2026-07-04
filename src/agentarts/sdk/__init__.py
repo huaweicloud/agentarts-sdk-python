@@ -17,8 +17,8 @@ Quick Start:
     # Memory (async)
     from agentarts.sdk import AsyncMemoryClient
 
-    # MCP Gateway
-    from agentarts.sdk import MCPGatewayClient
+    # Gateway
+    from agentarts.sdk import GatewayClient
 
     # Identity
     from agentarts.sdk import require_access_token, require_api_key, IdentityClient
@@ -36,13 +36,13 @@ from agentarts.sdk.utils.logging import setup_logging
 setup_logging()
 
 from agentarts import __author__, __version__
+from agentarts.sdk.gateway import GatewayClient
 from agentarts.sdk.identity import (
     IdentityClient,
     require_access_token,
     require_api_key,
     require_sts_token,
 )
-from agentarts.sdk.mcpgateway import MCPGatewayClient
 from agentarts.sdk.memory import AsyncMemoryClient, MemoryClient
 from agentarts.sdk.runtime.app import AgentArtsRuntimeApp
 from agentarts.sdk.runtime.context import AgentArtsRuntimeContext, RequestContext
@@ -55,7 +55,7 @@ __all__ = [
     "AsyncMemoryClient",
     "CodeInterpreter",
     "IdentityClient",
-    "MCPGatewayClient",
+    "GatewayClient",
     "MemoryClient",
     "PingStatus",
     "RequestContext",

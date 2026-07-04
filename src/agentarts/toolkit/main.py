@@ -15,7 +15,7 @@ import typer
 from rich.console import Console
 from rich.logging import RichHandler
 
-from agentarts.toolkit.cli.mcp_gateway import mcp_gateway
+from agentarts.toolkit.cli.gateway import gateway
 from agentarts.toolkit.cli.memory.commands import memory_app
 from agentarts.toolkit.cli.runtime import deploy, dev, init
 from agentarts.toolkit.cli.runtime.commands import runtime_app
@@ -33,7 +33,7 @@ _COMMAND_ORDER = [
     "invoke",
     "runtime",
     "destroy",
-    "mcp-gateway",
+    "gateway",
     "memory",
     "deploy",
     "configure",
@@ -164,7 +164,7 @@ app.command(name="deploy", hidden=True)(deploy)
 app.command(name="launch", help="Deploy agent to Huawei Cloud or run locally. (alias: deploy)")(deploy)
 app.command(name="invoke", help="Invoke agent with JSON payload.")(invoke)
 app.command(name="destroy", help="Destroy agent from Huawei Cloud.")(destroy)
-app.add_typer(mcp_gateway, name="mcp-gateway")
+app.add_typer(gateway, name="gateway")
 app.add_typer(memory_app, name="memory")
 app.add_typer(runtime_app, name="runtime")
 
