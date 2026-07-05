@@ -214,11 +214,13 @@ def memory_space(memory_control_client, allow_create, run_id, resource_registry)
     space = memory_control_client.create_space(
         name=name,
         message_ttl_hours=168,
-        # backend rejects a space with no strategy ("at least one built-in or
-        # custom memory strategy is required"); pick the cheapest one. We keep
-        # is_force_extract=False on add_messages so no extra LLM extraction cost
-        # is forced during the test.
+        # Configure extraction triggers (the backend has extraction ON by
+        # default; these tune WHEN/HOW it fires so memories appear within the
+        # test window): extract after 10s idle, cap at 4096 tokens / 100 msgs.
         memory_strategies_builtin=["semantic"],
+        memory_extract_idle_seconds=10,
+        memory_extract_max_tokens=4096,
+        memory_extract_max_messages=100,
     )
     resource_registry.register(
         lambda: memory_control_client.delete_space(space.id), f"space:{name}"

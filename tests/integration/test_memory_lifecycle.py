@@ -43,8 +43,8 @@ def seeded_messages(memory_data_client, memory_space, memory_session):
         space_id=memory_space.id,
         session_id=memory_session.id,
         messages=[
-            TextMessage(role="user", content="hello from the integration suite"),
-            TextMessage(role="assistant", content="echo: hello from the integration suite"),
+            TextMessage(role="user", content="My name is Alice and I live in Beijing."),
+            TextMessage(role="assistant", content="Nice to meet you, Alice from Beijing."),
         ],
         is_force_extract=True,  # force extraction so delete_memory can be exercised
     )
