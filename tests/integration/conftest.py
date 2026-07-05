@@ -373,8 +373,33 @@ def deployed_runtime_agent(
     home = tmp_path_factory.mktemp("home")
     (home / ".agentarts").mkdir(parents=True, exist_ok=True)
     (home / ".agentarts" / ".completion_shown").touch()
+    # Docker credential workaround (macOS / OrbStack): when
+    # docker-credential-osxkeychain is on PATH, `docker login` invokes it and
+    # hangs (keychain GUI auth never completes in a subprocess) — regardless of
+    # credsStore in config.json. Shield the helper from the subprocess PATH
+    # (symlink only `docker` into a temp bin dir, drop the helper's dir) so
+    # docker falls back to plaintext auths. Also point DOCKER_CONFIG at a clean
+    # auths-only config. Only affects this subprocess; the user's real
+    # ~/.docker is untouched.
+    import shutil
+
+    docker_bin = shutil.which("docker")
+    helper_bin = shutil.which("docker-credential-osxkeychain")
+    docker_cfg_dir = home / ".docker"
+    docker_cfg_dir.mkdir(parents=True, exist_ok=True)
+    (docker_cfg_dir / "config.json").write_text('{"auths": {}}')
     env = dict(os.environ)
     env["HOME"] = str(home)
+    env["DOCKER_CONFIG"] = str(docker_cfg_dir)
+    if docker_bin and helper_bin:
+        bin_dir = tmp_path_factory.mktemp("bin")
+        (bin_dir / "docker").symlink_to(docker_bin)
+        helper_dir = os.path.dirname(helper_bin)
+        filtered_path = os.pathsep.join(
+            p for p in os.environ.get("PATH", "").split(os.pathsep)
+            if p and p != helper_dir
+        )
+        env["PATH"] = f"{bin_dir}{os.pathsep}{filtered_path}"
 
     def _run(args, timeout=900, cwd=None):
         return subprocess.run(
@@ -382,12 +407,25 @@ def deployed_runtime_agent(
             capture_output=True, text=True, env=env, cwd=cwd, timeout=timeout,
         )
 
+    # 1. init (basic template) — writes a deploy-ready .agentarts_config.yaml
+    #    (entrypoint=agent:app, region, swr_config with organization_auto_create
+    #    = true). NOTE: do NOT run `agentarts config --swr-org ...` here — passing
+    #    --swr-org explicitly flips organization_auto_create to false, which makes
+    #    deploy fail with 404 on the (non-existent) SWR org.
     assert _run(["init", "-n", name, "-t", "basic", "-r", region], cwd=str(work)).returncode == 0
-    assert _run(
-        ["config", "-n", name, "-e", "agent:app", "-r", region, "-d", "requirements.txt",
-         "--swr-org", unique_name("swrorg", run_id), "--swr-repo", unique_name("swrrepo", run_id)],
-        cwd=str(proj_dir),
-    ).returncode == 0
+
+    # Enable file transfer in the config before deploy — init writes
+    # file_transfer_config.enabled=false, and the backend rejects enabling it
+    # after the agent is created (so upload/download tests would fail otherwise).
+    cfg_path = proj_dir / ".agentarts_config.yaml"
+    cfg_text = cfg_path.read_text()
+    cfg_text = cfg_text.replace(
+        "file_transfer_config:\n          enabled: false",
+        "file_transfer_config:\n          enabled: true",
+    )
+    cfg_path.write_text(cfg_text)
+
+    # 2. deploy (Docker build + SWR push + create cloud runtime)
     deploy = _run(["deploy", "--agent", name, "--mode", "cloud"], cwd=str(proj_dir), timeout=900)
     assert deploy.returncode == 0, deploy.stderr or deploy.stdout
     resource_registry.register(
