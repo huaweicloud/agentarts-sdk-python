@@ -8,6 +8,8 @@ then only read — cheap and isolated.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from agentarts.sdk import AsyncMemoryClient, MemoryClient
@@ -30,8 +32,21 @@ def async_setup(memory_space):
             TextMessage(role="user", content="async hello"),
             TextMessage(role="assistant", content="async echo: hello"),
         ],
-        is_force_extract=False,
+        is_force_extract=True,  # force extraction so delete_memory can be exercised
     )
+    # Memory extraction is async — wait (~90s) for memories to appear so the
+    # retrieval/delete tests can actually exercise them. Best-effort.
+    from tests.integration._helpers import wait_for
+
+    try:
+        wait_for(
+            lambda: sync.list_memories(space_id=memory_space.id, limit=10).items,
+            timeout=int(os.getenv("AGENTARTS_TEST_MEMORY_WAIT","90")),
+            interval=10,
+            desc="memory extraction (async module)",
+        )
+    except TimeoutError:
+        pass
     return {
         "space_id": memory_space.id,
         "session_id": session.id,
@@ -141,7 +156,7 @@ async def test_async_create_session_and_add_messages(memory_space):
             space_id=memory_space.id,
             session_id=session.id,
             messages=[TextMessage(role="user", content="async direct message")],
-            is_force_extract=False,
+            is_force_extract=True,  # force extraction so delete_memory can be exercised
         )
         assert len(batch.items) == 1
         listed = await client.list_messages(
