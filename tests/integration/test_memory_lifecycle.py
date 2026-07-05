@@ -8,6 +8,8 @@ required; only AK/SK for the control-plane Space CRUD.
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from agentarts.sdk import MemoryClient
@@ -44,8 +46,22 @@ def seeded_messages(memory_data_client, memory_space, memory_session):
             TextMessage(role="user", content="hello from the integration suite"),
             TextMessage(role="assistant", content="echo: hello from the integration suite"),
         ],
-        is_force_extract=False,
+        is_force_extract=True,  # force extraction so delete_memory can be exercised
     )
+    # Memory extraction is async on the backend — wait (~90s) for extracted
+    # memories to appear before the retrieval/delete tests run. Best-effort:
+    # if extraction doesn't fire in time, delete_memory soft-skips.
+    from tests.integration._helpers import wait_for
+
+    try:
+        wait_for(
+            lambda: memory_data_client.list_memories(space_id=memory_space.id, limit=10).items,
+            timeout=int(os.getenv("AGENTARTS_TEST_MEMORY_WAIT","90")),
+            interval=10,
+            desc="memory extraction",
+        )
+    except TimeoutError:
+        pass
     return batch
 
 
