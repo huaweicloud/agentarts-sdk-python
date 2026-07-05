@@ -388,6 +388,31 @@ Status: ✅ real-cloud/local pass · ⏭ conditional skip · ⚠️ xfail (SDK b
 ### Toolkit test results
 
 Real-cloud run (`ALLOW_CREATE=1`, no `RUN_BILLABLE`): **17 passed / 3 skipped
-(runtime billable) / 0 xfailed**. Combined with the SDK suite the
-whole `tests/integration` tree is **71 passed / 16 skipped / 0 xfailed / 2
-deselected** (counts vary slightly with conditional skips).
+(runtime billable) / 0 xfailed**. With Docker + `RUN_BILLABLE=1` the deploy
+fixture runs for real: full suite **78 passed / 10 skipped / 0 failed**.
+
+### Build acceleration & local-image cleanup (deploy fixture)
+
+The deploy's slow step is the Docker build's `pip install agentarts-sdk` (~20
+transitive deps). Measured cold install in `python:3.10-slim`:
+
+| PyPI source | cold `pip install agentarts-sdk` |
+|---|---|
+| official PyPI (from CN) | ~160 s |
+| tsinghua mirror | ~30 s |
+
+The fixture edits the generated `Dockerfile` to use a fast index
+(`AGENTARTS_TEST_PIP_INDEX`, default tsinghua) — a 5× speedup. Docker layer
+caching then makes subsequent builds (same `requirements.txt`) near-instant.
+
+The fixture also cleans up the local Docker image at session end: it inspects
+the built image's **all** `RepoTags` (the local `<name>:latest` **and** the
+`<swr-registry>/<org>/<repo>:latest` tag created for push) and force-removes
+them, so 355 MB images don't pile up across runs. (The pushed SWR image itself
+is remote residue — no SDK cleanup — and is documented.)
+
+> Other acceleration options (not implemented, for heavier repeated-deploy
+> scenarios): a pre-built base image with the SDK pre-installed (one-time
+> `pip install`, then agent builds skip it); BuildKit `--mount=type=cache` for
+> pip downloads; pinning/slimming the SDK's heavy deps (e.g. `pymongo`).
+
