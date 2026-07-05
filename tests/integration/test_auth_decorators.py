@@ -40,13 +40,14 @@ def test_require_api_key_injects_key(
     captured: dict = {}
 
     @require_api_key(provider_name=created_api_key_provider, into="api_key")
-    def handler(payload, api_key=None):  # noqa: ANN001
+    def handler(payload, api_key=None):
         captured["api_key"] = api_key
         return {"ok": True}
 
     result = handler({"x": 1})
     assert result == {"ok": True}
-    assert isinstance(captured["api_key"], str) and captured["api_key"]
+    assert isinstance(captured["api_key"], str)
+    assert captured["api_key"]
 
 
 @pytest.fixture
@@ -71,7 +72,7 @@ def test_require_sts_token_injects_credentials(
         provider_name=sts_provider_for_auth,
         agency_session_name="aa-it-session",
     )
-    def handler(sts_credentials=None):  # noqa: ANN001
+    def handler(sts_credentials=None):
         return sts_credentials
 
     creds = handler()

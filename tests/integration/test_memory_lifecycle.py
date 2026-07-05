@@ -114,7 +114,8 @@ def test_get_last_k_messages(memory_data_client, memory_space, memory_session, s
     assert isinstance(msgs, list)
     assert len(msgs) == 2
     roles = [m.role for m in msgs]
-    assert "user" in roles and "assistant" in roles
+    assert "user" in roles
+    assert "assistant" in roles
 
 
 def test_get_message(memory_data_client, memory_space, memory_session, seeded_messages):

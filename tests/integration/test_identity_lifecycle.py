@@ -76,7 +76,8 @@ def test_create_workload_access_token(identity_client, created_workload_identity
     token = identity_client.create_workload_access_token(
         created_workload_identity["name"], user_id="aa-it-token-user"
     )
-    assert isinstance(token, str) and token
+    assert isinstance(token, str)
+    assert token
 
 
 def test_get_resource_api_key(
@@ -89,7 +90,8 @@ def test_get_resource_api_key(
         provider_name=created_api_key_provider,
         workload_access_token=access_token,
     )
-    assert isinstance(api_key, str) and api_key
+    assert isinstance(api_key, str)
+    assert api_key
 
 
 # --------------------------------------------------------------------------- #

@@ -44,4 +44,5 @@ def test_get_and_token_for_preprovisioned_workload_identity(
     token = identity_client.create_workload_access_token(
         pre_workload_identity, user_id="aa-it-reader"
     )
-    assert isinstance(token, str) and token
+    assert isinstance(token, str)
+    assert token

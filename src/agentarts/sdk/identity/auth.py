@@ -5,12 +5,6 @@ from collections.abc import Callable
 from functools import wraps
 from typing import Any, Literal
 
-from huaweicloudsdkagentidentity.v1 import (
-    GetResourceStsTokenResponseBodyCredentials,
-    StsTag,
-    WorkloadIdentity,
-)
-
 from agentarts.sdk.identity.config import Config
 from agentarts.sdk.runtime.context import (
     AgentArtsRuntimeContext,
@@ -19,6 +13,11 @@ from agentarts.sdk.runtime.context import (
 from agentarts.sdk.service.identity.identity_client import IdentityClient
 from agentarts.sdk.service.identity.polling.token_poller import TokenPoller
 from agentarts.sdk.utils.constant import get_region
+from huaweicloudsdkagentidentity.v1 import (
+    GetResourceStsTokenResponseBodyCredentials,
+    StsTag,
+    WorkloadIdentity,
+)
 
 logger = logging.getLogger(__name__)
 
