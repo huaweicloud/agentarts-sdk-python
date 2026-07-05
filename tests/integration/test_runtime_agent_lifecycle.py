@@ -57,9 +57,17 @@ def runtime_agent(request, runtime_client, cloud_credentials, allow_create, reso
 @pytest.fixture(scope="module")
 def created_endpoint(runtime_client, runtime_agent, run_id, resource_registry):
     ep_name = unique_name("ep", run_id)
-    runtime_client.create_agent_endpoint(
-        agent_id=runtime_agent["id"], endpoint_name=ep_name
-    )
+    try:
+        runtime_client.create_agent_endpoint(
+            agent_id=runtime_agent["id"], endpoint_name=ep_name
+        )
+    except RuntimeError as exc:
+        # Newer backends require a targetVersionName for endpoint creation, which
+        # needs a published agent version we don't have here. Skip rather than
+        # error — the agent read/update paths are still exercised.
+        if "targetVersionName" in str(exc):
+            pytest.skip(f"create_agent_endpoint requires targetVersionName: {exc}")
+        raise
     resource_registry.register(
         lambda: runtime_client.delete_agent_endpoint(runtime_agent["id"], ep_name),
         f"endpoint:{ep_name}",
@@ -83,7 +91,8 @@ def test_find_agent_by_id(runtime_client, runtime_agent):
 
 
 def test_get_agents(runtime_client, runtime_agent):
-    agents = runtime_client.get_agents(limit=1)
+    # backend rejects limit<10 ("limit too small")
+    agents = runtime_client.get_agents(limit=10)
     assert isinstance(agents, list)
 
 
