@@ -425,6 +425,21 @@ def deployed_runtime_agent(
     )
     cfg_path.write_text(cfg_text)
 
+    # Speed up the build's `pip install`: agentarts-sdk pulls ~20 deps; official
+    # PyPI is ~160s from CN networks, a mirror ~30s. Edit the generated Dockerfile
+    # to use a fast index (configurable via AGENTARTS_TEST_PIP_INDEX, default
+    # tsinghua). Only affects this temp project's Dockerfile.
+    pip_index = os.environ.get(
+        "AGENTARTS_TEST_PIP_INDEX", "https://pypi.tuna.tsinghua.edu.cn/simple/"
+    )
+    dockerfile_path = proj_dir / "Dockerfile"
+    dockerfile = dockerfile_path.read_text()
+    dockerfile = dockerfile.replace(
+        "pip install --no-cache-dir -r requirements.txt",
+        f"pip install --no-cache-dir -i {pip_index} -r requirements.txt",
+    )
+    dockerfile_path.write_text(dockerfile)
+
     # 2. deploy (Docker build + SWR push + create cloud runtime)
     deploy = _run(["deploy", "--agent", name, "--mode", "cloud"], cwd=str(proj_dir), timeout=900)
     assert deploy.returncode == 0, deploy.stderr or deploy.stdout
@@ -433,4 +448,25 @@ def deployed_runtime_agent(
                      cwd=str(proj_dir), timeout=120),
         f"deployed-agent:{name}",
     )
+    # also clean up the local docker image built by `docker build` (each run uses
+    # a new agent name → a new image, ~355MB each, would pile up). The deploy also
+    # tags the image as <swr-registry>/<org>/<repo>:latest for push, so remove ALL
+    # RepoTags of the built image (local + swr), not just the local tag.
+    image_ref = f"{name}:latest"
+    if docker_bin:
+        def _rmi():
+            import json as _json
+
+            insp = subprocess.run(
+                [docker_bin, "inspect", "--format", "{{json .RepoTags}}", image_ref],
+                capture_output=True, text=True, timeout=30,
+            )
+            try:
+                tags = [t for t in _json.loads(insp.stdout.strip()) if t]
+            except (ValueError, _json.JSONDecodeError):
+                tags = [image_ref]
+            if tags:
+                subprocess.run([docker_bin, "rmi", "-f", *tags],
+                               capture_output=True, text=True, timeout=60)
+        resource_registry.register(_rmi, f"docker-image:{image_ref}")
     return {"name": name, "project_dir": str(proj_dir), "region": region, "run": _run}
