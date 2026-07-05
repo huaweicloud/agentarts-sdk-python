@@ -29,8 +29,8 @@ def async_setup(memory_space):
         space_id=memory_space.id,
         session_id=session.id,
         messages=[
-            TextMessage(role="user", content="async hello"),
-            TextMessage(role="assistant", content="async echo: hello"),
+            TextMessage(role="user", content="My name is Bob and I work in Shanghai."),
+            TextMessage(role="assistant", content="Got it, Bob from Shanghai."),
         ],
         is_force_extract=True,  # force extraction so delete_memory can be exercised
     )
