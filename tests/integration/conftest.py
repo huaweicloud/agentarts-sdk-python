@@ -470,5 +470,10 @@ def deployed_runtime_agent(
             if tags:
                 subprocess.run([docker_bin, "rmi", "-f", *tags],
                                capture_output=True, text=True, timeout=60)
+            # `docker rmi` only removes the tagged final image; the build's
+            # intermediate layers become dangling <none> images and pile up.
+            # Prune dangling images so disk doesn't fill up across runs.
+            subprocess.run([docker_bin, "image", "prune", "-f"],
+                           capture_output=True, text=True, timeout=120)
         resource_registry.register(_rmi, f"docker-image:{image_ref}")
     return {"name": name, "project_dir": str(proj_dir), "region": region, "run": _run}
