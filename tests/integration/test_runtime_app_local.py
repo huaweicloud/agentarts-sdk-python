@@ -115,7 +115,8 @@ def test_invocation_sync_generator_streams_sse():
     body = resp.text
     # each yielded item is serialised into an SSE `data:` line
     assert body.count("data:") >= 3
-    assert "a" in body and "c" in body
+    assert "a" in body
+    assert "c" in body
 
 
 def test_invocation_async_generator_streams_sse():
@@ -148,13 +149,13 @@ def test_websocket_echo_handler():
     app = AgentArtsRuntimeApp()
 
     @app.websocket
-    async def ws_handler(websocket, request_context):  # noqa: ANN001
+    async def ws_handler(websocket, request_context):
         await websocket.accept()
         try:
             while True:
                 data = await websocket.receive_json()
                 await websocket.send_json({"echo": data})
-        except Exception:  # noqa: BLE001
+        except Exception:
             pass
 
     with TestClient(app) as client:

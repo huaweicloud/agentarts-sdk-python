@@ -18,7 +18,6 @@ the data-plane endpoint from `.agentarts_config.yaml` + a control-plane lookup
 from __future__ import annotations
 
 import json
-import os
 import re
 import tempfile
 from pathlib import Path
@@ -90,7 +89,7 @@ def test_runtime_file_transfer_on_deployed_agent(deployed_runtime_agent):
     with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as f:
         f.write("hello-aa-it")
         local = f.name
-    remote_file = f"/home/user/{os.path.basename(local)}"
+    remote_file = f"/home/user/{Path(local).name}"
     try:
         up = run(["runtime", "upload-files", *sess, "--files", local, "--path", "/home/user/"],
                  cwd=cwd, timeout=120)

@@ -16,13 +16,14 @@ import os
 import subprocess
 import sys
 import uuid
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
 from tests.integration._helpers import (
-    ENV_ALLOW_CREATE,
     ENV_AK,
+    ENV_ALLOW_CREATE,
     ENV_CODE_INTERPRETER_API_KEY,
     ENV_PRE_WORKLOAD_IDENTITY,
     ENV_REGION,
@@ -37,7 +38,7 @@ from tests.integration._helpers import (
 # --------------------------------------------------------------------------- #
 # Auto-mark every test under tests/integration with `integration`.
 # --------------------------------------------------------------------------- #
-def pytest_collection_modifyitems(config, items) -> None:  # noqa: ANN001
+def pytest_collection_modifyitems(config, items) -> None:
     marker = pytest.mark.integration
     for item in items:
         path = str(item.fspath).replace("\\", "/")
@@ -396,7 +397,7 @@ def deployed_runtime_agent(
     if docker_bin and helper_bin:
         bin_dir = tmp_path_factory.mktemp("bin")
         (bin_dir / "docker").symlink_to(docker_bin)
-        helper_dir = os.path.dirname(helper_bin)
+        helper_dir = str(Path(helper_bin).parent)
         filtered_path = os.pathsep.join(
             p for p in os.environ.get("PATH", "").split(os.pathsep)
             if p and p != helper_dir

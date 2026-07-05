@@ -21,7 +21,6 @@ triggers click's completion protocol ("Invalid completion instruction"). So we
 from __future__ import annotations
 
 import os
-import sys
 
 import pytest
 from typer.testing import CliRunner

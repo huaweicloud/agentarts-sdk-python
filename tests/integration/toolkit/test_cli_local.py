@@ -12,7 +12,6 @@ import socket
 import subprocess
 import time
 import urllib.request
-from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
@@ -117,7 +116,8 @@ def test_config_env_lifecycle(cli_runner, tmp_project):
         app, ["config", "set-env", "MY_VAR", "val", "-a", "myagent"]
     ).exit_code == 0
     cfg = (tmp_project / ".agentarts_config.yaml").read_text()
-    assert "MY_VAR" in cfg and "val" in cfg
+    assert "MY_VAR" in cfg
+    assert "val" in cfg
     assert cli_runner.invoke(app, ["config", "list-env", "-a", "myagent"]).exit_code == 0
     assert cli_runner.invoke(
         app, ["config", "remove-env", "MY_VAR", "-a", "myagent"]
@@ -131,7 +131,8 @@ def test_config_set_default_and_remove(cli_runner, tmp_project):
     assert cli_runner.invoke(app, ["config", "set-default", "a2"]).exit_code == 0
     assert cli_runner.invoke(app, ["config", "remove", "a1"]).exit_code == 0
     remaining = (tmp_project / ".agentarts_config.yaml").read_text()
-    assert "a2" in remaining and "a1" not in remaining
+    assert "a2" in remaining
+    assert "a1" not in remaining
 
 
 # --------------------------------------------------------------------------- #

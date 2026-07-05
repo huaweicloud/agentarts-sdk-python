@@ -76,7 +76,7 @@ def wait_for(
     while time.monotonic() < deadline:
         try:
             last = predicate()
-        except Exception:  # noqa: BLE001 - transient cloud errors are expected
+        except Exception:
             last = None
         if last:
             return last
@@ -93,7 +93,7 @@ def safe_delete(deleter: Callable[[], Any], desc: str) -> None:
     """
     try:
         deleter()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         import logging
 
         logging.getLogger("agentarts.integration").warning(

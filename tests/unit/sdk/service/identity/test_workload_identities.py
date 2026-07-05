@@ -1,5 +1,6 @@
 from unittest.mock import MagicMock, patch
 
+from agentarts.sdk.service.identity.identity_client import IdentityClient
 from huaweicloudsdkagentidentity.v1 import (
     AgentIdentityClient,
     GetWorkloadIdentityResponse,
@@ -7,8 +8,6 @@ from huaweicloudsdkagentidentity.v1 import (
     WorkloadIdentity,
     WorkloadIdentitySummary,
 )
-
-from agentarts.sdk.service.identity.identity_client import IdentityClient
 
 
 def _build_identity_client(mock_sdk_client: MagicMock) -> IdentityClient:
