@@ -13,7 +13,7 @@ from agentarts.toolkit.utils.common import echo_error, echo_info, echo_success
 console = Console()
 
 DEFAULT_TIMEOUT = 60
-MAX_TIMEOUT = 300
+MAX_TIMEOUT = 1000
 
 
 def validate_timeout(timeout: int) -> int:

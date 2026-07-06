@@ -158,9 +158,9 @@ agents:
             exec_runtime_command(command="ls", timeout=-10)
 
     def test_exec_command_timeout_exceeds_max_raises_error(self):
-        """Test that timeout exceeding max (300) raises ValueError."""
+        """Test that timeout exceeding max (1000) raises ValueError."""
         with pytest.raises(ValueError, match="Timeout exceeds maximum allowed value"):
-            exec_runtime_command(command="ls", timeout=500)
+            exec_runtime_command(command="ls", timeout=1500)
 
     def test_exec_command_timeout_valid_passes(self, tmp_path, monkeypatch):
         """Test that valid timeout passes validation."""
