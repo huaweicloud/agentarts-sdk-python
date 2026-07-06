@@ -754,7 +754,8 @@ class RuntimeClient:
             bearer_token: Optional bearer token for authentication.
             endpoint: Optional endpoint name.
             user_id: Optional user ID for OAuth2 outbound credentials.
-            timeout: Request timeout in seconds.
+            timeout: Command execution timeout in seconds (sent in the request body).
+                The HTTP client timeout is set to timeout + 60s to allow for overhead.
 
         Returns:
             dict for normal mode, Iterator[str] for chunked mode (ndjson lines).
@@ -777,14 +778,14 @@ class RuntimeClient:
         if endpoint:
             params["endpoint"] = endpoint
 
-        payload = {"command": command}
+        payload = {"command": command, "timeout": timeout}
         result = self._data(
             "POST",
             path,
             json=payload,
             params=params if params else None,
             headers=headers,
-            timeout=timeout,
+            timeout=timeout + 60,
         )
 
         if not result.success:
