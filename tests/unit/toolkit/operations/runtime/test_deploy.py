@@ -213,12 +213,12 @@ class TestCreateAgentartsRuntime:
 
         call_args = mock_client_instance.create_or_update_agent.call_args
         assert call_args.kwargs["storage_config"] == {
-            "sfs_turbo": {
+            "sfs_turbo": [{
                 "sfs_turbo_id": "12345678-1234-1234-1234-123456789012",
                 "sfs_path": "/share/sub",
                 "mount_path": "/data",
                 "read_only": True,
-            }
+            }]
         }
 
     @patch("agentarts.toolkit.operations.runtime.deploy.RuntimeClient")

@@ -515,7 +515,7 @@ class TestStorageConfig:
     """Tests for StorageConfig / SfsTurboConfig models."""
 
     def test_sfs_turbo_to_dict_excludes_none(self):
-        """to_dict excludes None fields but keeps read_only."""
+        """to_dict excludes None fields (read_only only when explicitly set)."""
         cfg = SfsTurboConfig(
             sfs_turbo_id="12345678-1234-1234-1234-123456789012",
             mount_path="/data",
@@ -525,15 +525,14 @@ class TestStorageConfig:
         assert result == {
             "sfs_turbo_id": "12345678-1234-1234-1234-123456789012",
             "mount_path": "/data",
-            "read_only": False,
         }
 
-    def test_sfs_turbo_empty_to_dict_keeps_read_only(self):
-        """An all-default SfsTurboConfig keeps read_only (mirrors NetworkConfig/network_mode)."""
-        assert SfsTurboConfig().to_dict() == {"read_only": False}
+    def test_sfs_turbo_empty_to_dict_is_empty(self):
+        """An all-default SfsTurboConfig (no sfs_turbo_id) serializes to {}."""
+        assert SfsTurboConfig().to_dict() == {}
 
     def test_storage_config_to_dict_nested(self):
-        """StorageConfig serializes the nested sfs_turbo block."""
+        """StorageConfig serializes sfs_turbo as a list (API expects array)."""
         cfg = StorageConfig(
             sfs_turbo=SfsTurboConfig(
                 sfs_turbo_id="12345678-1234-1234-1234-123456789012",
@@ -545,17 +544,17 @@ class TestStorageConfig:
         result = cfg.to_dict()
 
         assert result == {
-            "sfs_turbo": {
+            "sfs_turbo": [{
                 "sfs_turbo_id": "12345678-1234-1234-1234-123456789012",
                 "sfs_path": "/share/sub",
                 "mount_path": "/data",
                 "read_only": True,
-            }
+            }]
         }
 
-    def test_storage_config_default_to_dict_has_read_only(self):
-        """A default StorageConfig (sfs_turbo=SfsTurboConfig()) keeps read_only."""
-        assert StorageConfig().to_dict() == {"sfs_turbo": {"read_only": False}}
+    def test_storage_config_default_to_dict_is_empty(self):
+        """A default StorageConfig (no sfs_turbo_id) serializes to {}."""
+        assert StorageConfig().to_dict() == {}
 
     def test_invalid_sfs_turbo_id_rejected(self):
         """A non-UUID sfs_turbo_id is rejected by validation."""
@@ -576,7 +575,7 @@ class TestStorageConfig:
         assert runtime.storage_config.sfs_turbo is not None
         assert runtime.storage_config.sfs_turbo.sfs_turbo_id is None
         assert runtime.storage_config.sfs_turbo.mount_path is None
-        assert runtime.storage_config.sfs_turbo.read_only is False
+        assert runtime.storage_config.sfs_turbo.read_only is None
 
 
 class TestArtifactSourceSwrInstanceId:

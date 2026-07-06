@@ -205,8 +205,8 @@ class SfsTurboConfig(BaseModel):
         default=None,
         description="Container mount path (required when storage_config is set)",
     )
-    read_only: bool = Field(
-        default=False,
+    read_only: bool | None = Field(
+        default=None,
         description="Whether to mount the share read-only",
     )
 
@@ -233,9 +233,19 @@ class StorageConfig(BaseModel):
     }
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert configuration to dictionary."""
-        data = self.model_dump(mode="json", exclude_none=True)
-        return {k: v for k, v in data.items() if v not in ([], {})}
+        """Convert configuration to dictionary.
+
+        The API expects ``sfs_turbo`` as an **array** of config objects
+        (not a single object). This method wraps the single config object
+        in a list. Returns ``{}`` when SFS is not configured (no sfs_turbo_id).
+        """
+        st = self.sfs_turbo
+        if st is None or not st.sfs_turbo_id:
+            return {}
+        item = st.to_dict()
+        if not item:
+            return {}
+        return {"sfs_turbo": [item]}
 
 
 class NetworkConfig(BaseModel):
