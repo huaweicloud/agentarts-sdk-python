@@ -62,7 +62,7 @@ def exec_runtime_command(
         raise ValueError("Agent name is required")
 
     verify_ssl = not skip_ssl_verification
-    data_endpoint = _get_data_endpoint(agent_name, region or "", agent_id, verify_ssl, timeout=timeout)
+    data_endpoint = _get_data_endpoint(agent_name, region or "", agent_id, verify_ssl)
 
     if not data_endpoint:
         raise ValueError(f"No data endpoint for agent {agent_name}")

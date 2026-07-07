@@ -62,9 +62,9 @@ def download_runtime_files(
 
     verify_ssl = not skip_ssl_verification
 
-    _check_file_transfer_enabled(agent_name, region or "", agent_id, verify_ssl, timeout=timeout)
+    _check_file_transfer_enabled(agent_name, region or "", agent_id, verify_ssl)
 
-    data_endpoint = _get_data_endpoint(agent_name, region or "", agent_id, verify_ssl, timeout=timeout)
+    data_endpoint = _get_data_endpoint(agent_name, region or "", agent_id, verify_ssl)
 
     if not data_endpoint:
         raise ValueError(f"No data endpoint for agent {agent_name}")
