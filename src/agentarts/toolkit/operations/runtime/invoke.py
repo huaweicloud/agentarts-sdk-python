@@ -131,6 +131,7 @@ def _check_file_transfer_enabled(
     region: str,
     agent_id: str | None = None,
     verify_ssl: bool = True,
+    timeout: float = 30.0,
 ) -> None:
     """
     Check if file transfer is enabled for the agent.
@@ -140,12 +141,13 @@ def _check_file_transfer_enabled(
         region: Huawei Cloud region
         agent_id: Optional agent ID from config file
         verify_ssl: SSL verification setting
+        timeout: HTTP timeout for control plane calls (default 30s)
 
     Raises:
         ValueError: If file transfer is not enabled for the agent
     """
     control_endpoint = get_control_plane_endpoint(region)
-    control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=verify_ssl)
+    control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=verify_ssl, timeout=timeout)
 
     agent_detail = None
     if agent_id:
@@ -179,6 +181,7 @@ def _get_data_endpoint(
     region: str,
     agent_id: str | None = None,
     verify_ssl: bool | str = True,
+    timeout: float = 30.0,
 ) -> str | None:
     """
     Get data plane endpoint for the agent.
@@ -190,6 +193,8 @@ def _get_data_endpoint(
         agent_name: Agent name
         region: Huawei Cloud region
         agent_id: Optional agent ID from config file
+        verify_ssl: SSL verification setting
+        timeout: HTTP timeout for control plane calls (default 30s)
 
     Returns:
         Data plane endpoint URL, or None if not available
@@ -198,7 +203,7 @@ def _get_data_endpoint(
 
     if not data_endpoint:
         control_endpoint = get_control_plane_endpoint(region)
-        control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=verify_ssl)
+        control_client = RuntimeClient(control_endpoint=control_endpoint, verify_ssl=verify_ssl, timeout=timeout)
 
         if agent_id:
             agent_detail = control_client.find_agent_by_id(agent_id)
@@ -394,7 +399,7 @@ def invoke_agent(
             actual_session_id = session_id or str(uuid.uuid4())
             verify_ssl = not skip_ssl_verification
 
-            data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id, verify_ssl)
+            data_endpoint = _get_data_endpoint(agent_name, actual_region, agent_id, verify_ssl, timeout=timeout)
 
             if not data_endpoint:
                 echo_error(f"No data plane endpoint configured and could not get access_endpoint from agent [yellow]{agent_name} {actual_region}[/yellow]")
