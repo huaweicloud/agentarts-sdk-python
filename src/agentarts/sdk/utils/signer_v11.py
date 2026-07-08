@@ -73,7 +73,16 @@ class V11Signer:
         return url_path
 
     def _canonical_query_string(self, query_params: dict | None) -> str:
-        """Build canonical query string."""
+        """Build canonical query string.
+
+        .. warning::
+
+            The data-plane gateway does **not** include the query string in
+            the V11 canonical request (it may inject/rewrite query params en
+            route).  ``sign()`` therefore signs an *empty* canonical query
+            line; this method is kept only as the standard-V11 reference
+            implementation and is **not** used to build the signature.
+        """
         if not query_params:
             return ""
 
@@ -161,10 +170,20 @@ class V11Signer:
 
         signed_headers = self._signed_headers(headers)
 
+        # The data-plane gateway does NOT include the query string in the V11
+        # canonical request (it may inject/rewrite query params en route, the
+        # same way it can rewrite Content-Type/Content-Length). Signing the
+        # query therefore makes the gateway's recomputation diverge and fails
+        # verification (HTTP 401) for *any* request carrying query params —
+        # e.g. upload's `path=/home/user/...` — while query-less requests
+        # (e.g. invoke) succeed.  Verified against the real data-plane gateway:
+        # query signed -> 401; empty canonical query -> 200/4xx (auth passes).
+        # The query is still sent on the wire (by the HTTP client); only its
+        # participation in the signature is dropped.
         canonical_request = (
             f"{method.upper()}\n"
             f"{self._canonical_uri(path)}\n"
-            f"{self._canonical_query_string(query_params)}\n"
+            f"\n"
             f"{self._canonical_headers(headers, signed_headers)}\n"
             f"{';'.join(signed_headers)}\n"
             f"UNSIGNED-PAYLOAD"
