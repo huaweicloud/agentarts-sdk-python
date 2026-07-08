@@ -8,6 +8,12 @@ Safety model (three tiers, see README.md):
 Every resource created by a test is registered with the session-scoped
 ``resource_registry``; at session end the registry calls each deleter in reverse
 order, swallowing errors so a failing cleanup never masks a real failure.
+
+Credential auto-loading: ``tests/integration/.env`` is loaded into ``os.environ``
+at collection time via python-dotenv (already a dev dependency). Existing
+environment variables always win (``override=False``), so real shell exports
+take precedence over the file. This lets you keep AK/SK / region / tier flags
+in ``.env`` (gitignored) instead of having to ``source`` it before every run.
 """
 
 from __future__ import annotations
@@ -20,6 +26,12 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from dotenv import load_dotenv
+
+# Auto-load .env so credentials / endpoints / tier flags configured there are
+# visible to the cloud_credentials / allow_* fixtures below. No-op if the file
+# is absent; never overrides already-set env vars.
+load_dotenv(Path(__file__).resolve().parent / ".env", override=False)
 
 from tests.integration._helpers import (
     ENV_AK,
