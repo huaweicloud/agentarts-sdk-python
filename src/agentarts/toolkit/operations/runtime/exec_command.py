@@ -10,7 +10,7 @@ from agentarts.toolkit.operations.runtime.invoke import _get_data_endpoint, _res
 from agentarts.toolkit.utils.common import echo_error
 
 DEFAULT_TIMEOUT = 60
-MAX_TIMEOUT = 300
+MAX_TIMEOUT = 3600
 
 
 def exec_runtime_command(
@@ -38,7 +38,7 @@ def exec_runtime_command(
         endpoint: Optional endpoint name
         skip_ssl_verification: Skip SSL certificate verification
         user_id: Optional user ID for OAuth2 outbound credentials
-        timeout: Request timeout in seconds (default: 60, max: 300)
+        timeout: Request timeout in seconds (default: 60, max: 3600)
 
     Returns:
         dict for normal mode, Iterator[str] for chunked mode

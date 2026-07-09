@@ -12,6 +12,7 @@ response ``Content-Type`` header:
   ``iter_lines()`` or ``iter_bytes()`` to consume the body incrementally.
 """
 
+import logging
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from enum import Enum
@@ -23,6 +24,8 @@ from typing_extensions import Self
 
 from agentarts.sdk.utils.signer import SDKSigner
 from agentarts.sdk.utils.signer_v11 import V11Signer
+
+logger = logging.getLogger(__name__)
 
 _STREAM_CONTENT_TYPES = {"text/event-stream", "application/x-ndjson"}
 
@@ -260,6 +263,14 @@ class BaseHTTPClient:
             path=path,
             query_params=query_params,
             headers=headers
+        )
+
+        logger.debug(
+            "V11 request: %s %s params=%s content-type=%s",
+            method,
+            full_url,
+            query_params,
+            headers.get("Content-Type"),
         )
 
         if "headers" not in kwargs or kwargs["headers"] is None:

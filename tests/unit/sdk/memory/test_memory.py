@@ -212,3 +212,49 @@ class TestCloseMethodChaining:
             mock_control_plane.close.assert_called_once()
 
             mock_session_close.assert_called_once()
+
+
+class TestMemorySession:
+    """Tests for MemorySession (sync)."""
+
+    def test_session_auto_create_passes_request_object(self):
+        """Regression: __init__ must pass a SessionCreateRequest object to the data
+        plane, not a pre-converted dict (the data plane calls .to_dict() internally)."""
+        from agentarts.sdk.memory import MemorySession, SessionCreateRequest, SessionInfo
+
+        with patch(
+            "agentarts.sdk.memory.session._DataPlane.create_memory_session",
+            return_value=SessionInfo(id="new-session-123", space_id="space-123", actor_id="user-1"),
+        ) as mock_create:
+            session = MemorySession(
+                space_id="space-123",
+                actor_id="user-1",
+                api_key="test-key",
+            )
+
+        assert session.session_id == "new-session-123"
+        mock_create.assert_called_once()
+        call_args = mock_create.call_args.args
+        assert call_args[0] == "space-123"
+        assert isinstance(call_args[1], SessionCreateRequest)
+        assert call_args[1].actor_id == "user-1"
+
+    def test_session_get_message_arg_order(self):
+        """Regression: get_message must forward args as (message_id, space_id,
+        session_id) to match the data plane signature."""
+        from agentarts.sdk.memory import MemorySession, MessageInfo
+
+        session = MemorySession(
+            space_id="space-123",
+            actor_id="user-1",
+            session_id="session-456",
+            api_key="test-key",
+        )
+
+        mock_data_plane = MagicMock()
+        mock_data_plane.get_message.return_value = MessageInfo(id="msg-1", session_id="session-456", seq=1)
+        session._data_plane = mock_data_plane
+
+        session.get_message("msg-1")
+
+        mock_data_plane.get_message.assert_called_once_with("msg-1", "space-123", "session-456")
