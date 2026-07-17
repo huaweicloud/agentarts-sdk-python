@@ -12,6 +12,7 @@ from agentarts.sdk.memory import (
     MessageBatchResponse,
     MessageInfo,
     MessageListResponse,
+    SessionCreateRequest,
     SessionInfo,
     TextMessage,
 )
@@ -249,6 +250,12 @@ class TestAsyncMemorySession:
 
         assert session.session_id == "new-session-123"
         mock_data_plane.create_memory_session.assert_called_once()
+        # Regression: session layer must pass a SessionCreateRequest object, not a
+        # pre-converted dict (the data plane calls .to_dict() internally).
+        call_args = mock_data_plane.create_memory_session.call_args.args
+        assert call_args[0] == "space-123"
+        assert isinstance(call_args[1], SessionCreateRequest)
+        assert call_args[1].actor_id == "user-1"
 
     @pytest.mark.asyncio
     async def test_session_add_messages(self):
@@ -301,6 +308,29 @@ class TestAsyncMemorySession:
 
         assert session.space_id == "space-123"
         assert session.actor_id == "user-1"
+
+    @pytest.mark.asyncio
+    async def test_session_get_message_arg_order(self):
+        # Regression: get_message must forward args as (message_id, space_id, session_id)
+        # to match the data plane signature, not (space_id, session_id, message_id).
+        mock_data_plane = MagicMock()
+        mock_data_plane.create_memory_session = AsyncMock(
+            return_value=SessionInfo(id="session-456", space_id="space-123", actor_id="user-1")
+        )
+        mock_data_plane.get_message = AsyncMock(return_value=MessageInfo(id="msg-1", session_id="session-456", seq=1))
+        mock_data_plane.close = AsyncMock()
+
+        session = AsyncMemorySession(
+            space_id="space-123",
+            actor_id="user-1",
+            session_id="session-456",
+            api_key="test-key",
+        )
+        session._async_data_plane = mock_data_plane
+
+        await session.get_message("msg-1")
+
+        mock_data_plane.get_message.assert_called_once_with("msg-1", "space-123", "session-456")
 
 
 class TestAsyncDataPlaneValidation:

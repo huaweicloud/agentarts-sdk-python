@@ -65,10 +65,7 @@ class DefaultApiTokenPoller(TokenPoller):
         """
         self.auth_url = auth_url
         self.polling_func = func
-        self.logger = logging.getLogger("agent_identity.default_token_poller")
-        self.logger.setLevel("INFO")
-        if not self.logger.handlers:
-            self.logger.addHandler(logging.StreamHandler())
+        self.logger = logging.getLogger("agentarts.token_poller")
 
     async def poll_for_token(self) -> str:
         """Poll for a token until it becomes available, fails, or times out.

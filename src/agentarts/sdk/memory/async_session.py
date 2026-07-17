@@ -92,7 +92,7 @@ class AsyncMemorySession:
 
         if self._pending_session_id is None:
             session_config = SessionCreateRequest(actor_id=self.actor_id)
-            session_info = await self._async_data_plane.create_memory_session(self.space_id, session_config.to_dict())
+            session_info = await self._async_data_plane.create_memory_session(self.space_id, session_config)
             self.session_id = session_info.id
             if not self.session_id:
                 msg = f"Failed to create session: {session_info}"
@@ -191,7 +191,7 @@ class AsyncMemorySession:
         """Get a specific message - identical to sync version."""
         await self._ensure_initialized()
         logger.info(f"Getting message: {message_id}")
-        return await self._async_data_plane.get_message(self.space_id, self.session_id, message_id)
+        return await self._async_data_plane.get_message(message_id, self.space_id, self.session_id)
 
     async def search_memories(
             self,
