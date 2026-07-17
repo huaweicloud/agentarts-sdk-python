@@ -299,7 +299,7 @@ class CodeInterpreter:
             if "" in tag_key_matches:
                 msg = "tag_key_matches does not support empty strings"
                 raise ValueError(msg)
-            seen_pairs = set(zip(tag_key_matches, tag_value_matches))
+            seen_pairs = set(zip(tag_key_matches, tag_value_matches, strict=True))
             if len(seen_pairs) != len(tag_key_matches):
                 msg = "tag_key_matches and tag_value_matches must have unique key-value pairs"
                 raise ValueError(msg)
