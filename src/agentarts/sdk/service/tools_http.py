@@ -192,3 +192,271 @@ class DataToolsHttpClient(BaseHTTPClient):
         if not response.success:
             raise ToolsAPIError(response.status_code, response.error)
         return response.data
+
+
+class ControlBrowserHttpClient(BaseHTTPClient):
+    """Browser control plane HTTP client.
+
+    Manages browser resources and browser profiles through the control plane API.
+    Uses AK/SK signing for authentication.
+    """
+
+    def __init__(self, region_name: str, endpoint_url: str, verify_ssl: bool | str = True):
+        request_config = RequestConfig(base_url=endpoint_url, verify_ssl=verify_ssl)
+        super().__init__(request_config, open_ak_sk=True)
+        self.region_name = region_name
+
+    # ── Browser resource CRUD ──────────────────────────────────────────
+
+    def create_browser(self, request_params: dict) -> dict[Any, Any]:
+        """POST /v1/core/browsers
+
+        Create a browser resource.
+        """
+        endpoint = "/v1/core/browsers"
+        response = self.post(url=endpoint, json=request_params)
+        if not response.success:
+            raise ToolsAPIError(response.status_code, response.error)
+        return response.data
+
+    def list_browsers(self, request_params: dict) -> dict[Any, Any]:
+        """GET /v1/core/browsers
+
+        List browser resources.
+        """
+        endpoint = "/v1/core/browsers"
+        response = self.get(url=endpoint, params=request_params)
+        if not response.success:
+            raise ToolsAPIError(response.status_code, response.error)
+        return response.data
+
+    def update_browser(
+        self, browser_id: str, request_params: dict
+    ) -> dict[Any, Any]:
+        """PUT /v1/core/browsers/{browser_id}
+
+        Update a browser resource.
+        """
+        endpoint = f"/v1/core/browsers/{browser_id}"
+        response = self.put(url=endpoint, json=request_params)
+        if not response.success:
+            raise ToolsAPIError(response.status_code, response.error)
+        return response.data
+
+    def get_browser(self, browser_id: str) -> dict[Any, Any]:
+        """GET /v1/core/browsers/{browser_id}
+
+        Get browser resource details.
+        """
+        endpoint = f"/v1/core/browsers/{browser_id}"
+        response = self.get(url=endpoint)
+        if not response.success:
+            raise ToolsAPIError(response.status_code, response.error)
+        return response.data
+
+    def delete_browser(self, browser_id: str):
+        """DELETE /v1/core/browsers/{browser_id}
+
+        Delete a browser resource.
+        """
+        endpoint = f"/v1/core/browsers/{browser_id}"
+        response = self.delete(url=endpoint)
+        if not response.success:
+            raise ToolsAPIError(response.status_code, response.error)
+
+    # ── Browser profile CRUD ───────────────────────────────────────────
+
+    def create_browser_profile(self, request_params: dict) -> dict[Any, Any]:
+        """POST /v1/core/browser-profiles
+
+        Create a browser profile.
+        """
+        endpoint = "/v1/core/browser-profiles"
+        response = self.post(url=endpoint, json=request_params)
+        if not response.success:
+            raise ToolsAPIError(response.status_code, response.error)
+        return response.data
+
+    def list_browser_profiles(self, request_params: dict) -> dict[Any, Any]:
+        """GET /v1/core/browser-profiles
+
+        List browser profiles.
+        """
+        endpoint = "/v1/core/browser-profiles"
+        response = self.get(url=endpoint, params=request_params)
+        if not response.success:
+            raise ToolsAPIError(response.status_code, response.error)
+        return response.data
+
+    def get_browser_profile(self, profile_id: str) -> dict[Any, Any]:
+        """GET /v1/core/browser-profiles/{profile_id}
+
+        Get browser profile details.
+        """
+        endpoint = f"/v1/core/browser-profiles/{profile_id}"
+        response = self.get(url=endpoint)
+        if not response.success:
+            raise ToolsAPIError(response.status_code, response.error)
+        return response.data
+
+    def delete_browser_profile(self, profile_id: str):
+        """DELETE /v1/core/browser-profiles/{profile_id}
+
+        Delete a browser profile.
+        """
+        endpoint = f"/v1/core/browser-profiles/{profile_id}"
+        response = self.delete(url=endpoint)
+        if not response.success:
+            raise ToolsAPIError(response.status_code, response.error)
+
+
+class DataBrowserHttpClient(BaseHTTPClient):
+    """Browser data plane HTTP client.
+
+    Manages browser sessions and operation execution through the data plane API.
+    Supports IAM (V11-HMAC-SHA256 signing) and API_KEY (Bearer token) authentication.
+    """
+
+    def __init__(
+        self,
+        region_name: str,
+        endpoint_url: str,
+        auth_type: str = "API_KEY",
+        verify_ssl: bool | str = True,
+    ):
+        """Initialize the data browser HTTP client.
+
+        Args:
+            region_name: The region name.
+            endpoint_url: The endpoint URL for data plane API.
+            auth_type: Authentication type, "API_KEY" or "IAM". Defaults to "API_KEY".
+            verify_ssl: SSL verification. True to verify, False to skip,
+                or a string path to a CA bundle. Defaults to True.
+        """
+        if auth_type == "IAM":
+            super().__init__(
+                RequestConfig(base_url=endpoint_url, verify_ssl=verify_ssl),
+                open_ak_sk=True,
+                sign_mode=SignMode.V11_HMAC_SHA256,
+                region_id=region_name,
+            )
+        else:
+            super().__init__(RequestConfig(base_url=endpoint_url, verify_ssl=verify_ssl))
+        self.region_name = region_name
+
+    @property
+    def open_ak_sk(self) -> bool:
+        return self._open_ak_sk
+
+    @open_ak_sk.setter
+    def open_ak_sk(self, open_ak_sk: bool):
+        self._open_ak_sk = open_ak_sk
+
+    def start_session(
+        self,
+        browser_name: str,
+        session_id: str,
+        request_params: dict,
+        api_key: str | None = None,
+    ) -> dict[Any, Any]:
+        """PUT /v1/browsers/{browser_name}/sessions-start
+
+        Start a browser session.
+        """
+        endpoint = f"/v1/browsers/{browser_name}/sessions-start"
+        headers = {"x-HW-Agentarts-Browser-Session-Id": session_id}
+        if api_key is not None:
+            headers["Authorization"] = f"Bearer {api_key}"
+        response = self.put(url=endpoint, json=request_params, headers=headers)
+        if not response.success:
+            raise ToolsAPIError(response.status_code, response.error)
+        return response.data
+
+    def stop_session(
+        self,
+        browser_name: str,
+        session_id: str,
+        api_key: str | None = None,
+    ) -> dict[Any, Any]:
+        """PUT /v1/browsers/{browser_name}/sessions-stop
+
+        Stop a browser session.
+        """
+        endpoint = f"/v1/browsers/{browser_name}/sessions-stop"
+        headers = {"x-HW-Agentarts-Browser-Session-Id": session_id}
+        if api_key is not None:
+            headers["Authorization"] = f"Bearer {api_key}"
+        response = self.put(url=endpoint, headers=headers)
+        if not response.success:
+            raise ToolsAPIError(response.status_code, response.error)
+        return response.data
+
+    def get_session(
+        self,
+        browser_name: str,
+        session_id: str,
+        api_key: str | None = None,
+    ) -> dict[Any, Any]:
+        """GET /v1/browsers/{browser_name}/sessions-get
+
+        Get browser session details.
+        """
+        endpoint = f"/v1/browsers/{browser_name}/sessions-get"
+        headers = {"x-HW-Agentarts-Browser-Session-Id": session_id}
+        if api_key is not None:
+            headers["Authorization"] = f"Bearer {api_key}"
+        response = self.get(url=endpoint, headers=headers)
+        if not response.success:
+            raise ToolsAPIError(response.status_code, response.error)
+        return response.data
+
+    def invoke(
+        self,
+        browser_name: str,
+        session_id: str,
+        action: dict,
+        api_key: str | None = None,
+    ) -> dict[Any, Any]:
+        """POST /v1/browsers/{browser_name}/invoke
+
+        Invoke a browser session operation.
+        """
+        endpoint = f"/v1/browsers/{browser_name}/invoke"
+        headers = {"x-HW-Agentarts-Browser-Session-Id": session_id}
+        if api_key is not None:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        request_params = {"action": action}
+
+        response = self.post(url=endpoint, headers=headers, json=request_params)
+        if not response.success:
+            raise ToolsAPIError(response.status_code, response.error)
+        return response.data
+
+    def update_stream(
+        self,
+        browser_name: str,
+        session_id: str,
+        stream_status: str,
+        client_token: str | None = None,
+        api_key: str | None = None,
+    ) -> dict[Any, Any]:
+        """PUT /v1/browsers/{browser_name}/sessions-update
+
+        Update a browser session stream (e.g. enable/disable human handoff).
+        """
+        endpoint = f"/v1/browsers/{browser_name}/sessions-update"
+        headers = {"x-HW-Agentarts-Browser-Session-Id": session_id}
+        if api_key is not None:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        request_params: dict[str, Any] = {
+            "stream_update": {"automation_stream_update": {"stream_status": stream_status}},
+        }
+        if client_token is not None:
+            request_params["client_token"] = client_token
+
+        response = self.put(url=endpoint, headers=headers, json=request_params)
+        if not response.success:
+            raise ToolsAPIError(response.status_code, response.error)
+        return response.data
