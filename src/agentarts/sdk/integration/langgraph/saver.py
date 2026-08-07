@@ -75,6 +75,7 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         - Each checkpoint is tagged with metadata for retrieval
         - Thread ID is used directly as session ID
         - Sync methods use MemoryClient, async methods use AsyncMemoryClient
+        - Delta tracking: put/aput only send new messages since last persisted count to avoid duplicates, tracked per session_id in memory (self._persisted_count). The count is (re)initialized from backend state on every get_tuple()/aget_tuple() call, so it stays in sync with backend state. Reuse a single AgentArtsMemorySessionSaver instance for the application lifetime to maintain the persisted count across multiple get/put calls; do not create multiple saver instances for the same session_id, as each instance maintains its own persisted count.
 
     Usage:
         >>> from agentarts.sdk.integration.langgraph import AgentArtsMemorySessionSaver
@@ -140,6 +141,11 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         self._api_key = api_key
         self._max_messages = max_messages
         self._verify_ssl = verify_ssl
+
+        # Trace how many messages have been persisted for each session (thread_id)
+        # so put() only sends the delta (new messages since last put)
+        # Initialized by get_tuple()/aget_tuple() from backend state, updated by put()/aput()
+        self._persisted_count: dict[str, int] = {}
 
         self._client = MemoryClient(
             region_name=self._region,
@@ -256,6 +262,11 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             parents={},
         )
 
+        # Initialize persisted count from backend state.
+        # This runs on every get_tuple() call (including session resume after process restart),
+        # so the count stays in sync with backend state. put()/aput() will update the count after persisting new messages.
+        self._persisted_count[session_id] = len(langgraph_messages)
+
         return CheckpointTuple(
             config=runtime_config.to_runnable_config(),
             checkpoint=checkpoint,
@@ -294,6 +305,18 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         if not messages:
             return config
 
+        # Delta tracking: Only send new messages since last persisted count
+        # Langgraph calls put() on every step with the full message history, so we need to avoid sending duplicates.
+        last_count = self._persisted_count.get(session_id, 0)
+        # Defensive: if count is somehow ahead of current messages
+        # (e.g., if messages were deleted from backend), reset to 0 to avoid skipping new messages
+        if last_count > len(messages):
+            last_count = 0
+        new_messages = messages[last_count:]
+        if not new_messages:
+            # if no new messages to persist, skip sending to backend
+            return config
+
         step = metadata.get("step", 0)
         source = metadata.get("source", "loop")
         checkpoint_id = checkpoint.get("id", str(uuid.uuid4()))
@@ -305,7 +328,7 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             "checkpoint_ts": checkpoint_ts,
         }, ensure_ascii=False)
         cloud_messages = langgraph_messages_to_memory(
-            messages,
+            new_messages,
             runtime_config.actor_id,
             runtime_config.assistant_id,
             meta=checkpoint_meta
@@ -317,6 +340,10 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                 session_id=session_id,
                 messages=cloud_messages
             )
+
+            # Only update persisted count after successful put to backend.
+            # If the call failed (exception), the count remains at the last successful persisted count, so next put() will retry sending the delta.
+            self._persisted_count[session_id] = len(messages)
 
         except Exception as e:
             logger.exception(f"Failed to put checkpoint for session {session_id} with: {e}")
@@ -557,6 +584,9 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             parents={},
         )
 
+        # Initialize persisted count from backend state (async version).
+        self._persisted_count[session_id] = len(langgraph_messages)
+
         return CheckpointTuple(
             config=runtime_config.to_runnable_config(),
             checkpoint=checkpoint,
@@ -593,6 +623,15 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         if not messages:
             return config
 
+        # Delta tracking (async version) - see put() for explanation
+        last_count = self._persisted_count.get(session_id, 0)
+        if last_count > len(messages):
+            last_count = 0
+        new_messages = messages[last_count:]
+        if not new_messages:
+            # if no new messages to persist, skip sending to backend
+            return config
+
         step = metadata.get("step", 0)
         source = metadata.get("source", "loop")
         checkpoint_id = checkpoint.get("id", str(uuid.uuid4()))
@@ -604,7 +643,7 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             "checkpoint_ts": checkpoint_ts,
         }, ensure_ascii=False)
         cloud_messages = langgraph_messages_to_memory(
-            messages,
+            new_messages,
             runtime_config.actor_id,
             runtime_config.assistant_id,
             meta=checkpoint_meta
@@ -616,6 +655,9 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                 session_id=session_id,
                 messages=cloud_messages
             )
+
+            # Only update persisted count after successful aput to backend.
+            self._persisted_count[session_id] = len(messages)
 
         except Exception as e:
             logger.exception(f"Failed to put checkpoint for session {session_id} with: {e}")

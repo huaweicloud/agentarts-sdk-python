@@ -174,7 +174,7 @@ class _DataPlane:
             message_id: str,
             space_id: str,
             session_id: str
-    ) -> dict[str, Any]:
+    ) -> MessageInfo:
         """
         Get single message.
 
