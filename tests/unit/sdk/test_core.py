@@ -24,6 +24,13 @@ def test_import_code_interpreter():
     assert CodeInterpreter is not None
 
 
+def test_import_browser():
+    """Test that Browser can be imported"""
+    from agentarts.sdk import Browser
+
+    assert Browser is not None
+
+
 def test_import_identity_client():
     """Test that IdentityClient can be imported"""
     from agentarts.sdk import IdentityClient

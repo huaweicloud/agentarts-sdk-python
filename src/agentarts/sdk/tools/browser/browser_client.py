@@ -16,7 +16,6 @@ Data Plane:
     (create, stop, get, invoke, update_stream)
 """
 
-import base64
 import logging
 import os
 import re
@@ -29,6 +28,7 @@ from agentarts.sdk.service.tools_http import (
     DataBrowserHttpClient,
 )
 from agentarts.sdk.utils.constant import (
+    get_browser_data_plane_endpoint,
     get_control_plane_endpoint,
     get_region,
 )
@@ -85,12 +85,8 @@ class Browser:
         )
 
         # Data plane client for managing browser sessions.
-        # Priority: constructor parameter > AGENTARTS_BROWSER_DATA_ENDPOINT
-        # environment variable. Falls back to empty string if neither is
-        # configured (the request will fail at call time, not construction).
-        endpoint_url = data_endpoint or os.getenv(
-            "AGENTARTS_BROWSER_DATA_ENDPOINT"
-        ) or ""
+        # Priority: env var > constructor parameter > AGENTARTS_RUNTIME_DATA_ENDPOINT
+        endpoint_url = get_browser_data_plane_endpoint(endpoint=data_endpoint)
 
         if auth_type == "IAM":
             self._data_plane_client = DataBrowserHttpClient(
@@ -798,8 +794,13 @@ class Browser:
         self,
         browser_name: str,
         session_id: str,
-        session_name: str = "default-session-name",
-        profile_id: str | None = None,
+        session_name: str,
+        browser_id: str | None = None,
+        view_point: dict | None = None,
+        profile_configuration: dict | None = None,
+        allowed_domains: list[str] | None = None,
+        blocked_domains: list[str] | None = None,
+        proxy_configuration: dict | None = None,
         session_timeout: int = DEFAULT_SESSION_TIMEOUT,
         api_key: str | None = None,
     ) -> dict[str, Any]:
@@ -808,8 +809,13 @@ class Browser:
         Args:
             browser_name: Name of the browser resource.
             session_id: Session ID specified by the client.
-            session_name: Session name, defaults to "default-session-name".
-            profile_id: Optional browser profile ID to load saved state.
+            session_name: Session name specified by the client.
+            browser_id: Optional browser ID.
+            view_point: Optional view point configuration dict.
+            profile_configuration: Optional profile configuration dict.
+            allowed_domains: Optional list of allowed domain patterns.
+            blocked_domains: Optional list of blocked domain patterns.
+            proxy_configuration: Optional proxy configuration dict.
             session_timeout: Session timeout in seconds, default 900 (15 min).
             api_key: API Key for authentication. When None and auth_type is
                 "API_KEY", the key is read from environment variable
@@ -819,58 +825,118 @@ class Browser:
             Dict containing session metadata (automation_endpoint,
             live_view_endpoint, etc.). The Browser instance caches these values
             internally so subsequent calls do not need to repeat them.
+
+        Example:
+            >>> client.start_session(
+            ...     browser_name="my-browser",
+            ...     session_id="session-123",
+            ...     session_name="my-session",
+            ... )
         """
         logger.info("Starting session %s for browser: %s", session_id, browser_name)
 
+        # Validate session_name
+        session_name_pattern = r"^[a-zA-Z0-9_-]{1,128}$"
+        if not bool(re.match(session_name_pattern, session_name)):
+            msg = (
+                "session_name must contain only letters, digits, underscores, and "
+                "hyphens, and be 1-128 characters long."
+            )
+            raise ValueError(msg)
+
+        # allowed_domains and blocked_domains are mutually exclusive
+        if allowed_domains and blocked_domains:
+            msg = "allowed_domains and blocked_domains cannot be set at the same time."
+            raise ValueError(msg)
+
         request_params: dict[str, Any] = {
-            "session_name": session_name,
+            "name": session_name,
             "session_timeout": session_timeout,
         }
-        if profile_id:
-            request_params["profile_id"] = profile_id
+        if browser_id:
+            request_params["browser_id"] = browser_id
+        if view_point:
+            request_params["view_point"] = view_point
+        if profile_configuration:
+            request_params["profile_configuration"] = profile_configuration
+        if allowed_domains:
+            request_params["allowed_domains"] = allowed_domains
+        if blocked_domains:
+            request_params["blocked_domains"] = blocked_domains
+        if proxy_configuration:
+            request_params["proxy_configuration"] = proxy_configuration
 
-        result = self._data_plane_client.start_session(
-            browser_name=browser_name,
-            session_id=session_id,
-            request_params=request_params,
-            api_key=api_key,
-        )
+        if self._data_plane_client.open_ak_sk:
+            result = self._data_plane_client.start_session(
+                browser_name=browser_name,
+                session_id=session_id,
+                request_params=request_params,
+            )
+        else:
+            api_key = api_key or os.getenv("HUAWEICLOUD_SDK_BROWSER_API_KEY")
+            if api_key is None:
+                msg = "API Key is not provided and not found in environment variable."
+                raise ValueError(msg)
+            result = self._data_plane_client.start_session(
+                browser_name=browser_name,
+                session_id=session_id,
+                request_params=request_params,
+                api_key=api_key,
+            )
 
-        self._browser_name = browser_name
-        self._session_id = session_id
-        self._automation_endpoint = result.get("automation_endpoint")
-        self._live_view_endpoint = result.get("live_view_endpoint")
+        self._browser_name = result.get("browser_name")
+        self._session_id = result.get("session_id")
+
+        streams = result.get("streams") or {}
+        self._automation_endpoint = (
+            streams.get("automation_stream") or {}
+        ).get("stream_endpoint")
+        self._live_view_endpoint = (
+            streams.get("live_view_stream") or {}
+        ).get("stream_endpoint")
 
         return result
 
-    def stop_session(self, api_key: str | None = None) -> dict[str, Any]:
+    def stop_session(self, api_key: str | None = None) -> bool:
         """Stop the current browser session.
 
-        Requires a session to have been started (session_id must be set).
+        If no active session exists, returns ``True`` immediately (no-op).
 
         Args:
             api_key: API Key for authentication.
 
         Returns:
-            Dict containing the stop response.
+            True when no active session or after successfully stopping.
+
+        Example:
+            >>> client.stop_session()
         """
         if not self._session_id or not self._browser_name:
-            msg = "No active session. Call start_session first."
-            raise ValueError(msg)
+            return True
 
-        logger.info("Stopping session %s", self._session_id)
-        result = self._data_plane_client.stop_session(
-            browser_name=self._browser_name,
-            session_id=self._session_id,
-            api_key=api_key,
-        )
+        logger.info("Stopping browser session...")
+        if self._data_plane_client.open_ak_sk:
+            result = self._data_plane_client.stop_session(
+                browser_name=self._browser_name,
+                session_id=self._session_id,
+            )
+        else:
+            api_key = api_key or os.getenv("HUAWEICLOUD_SDK_BROWSER_API_KEY")
+            if api_key is None:
+                msg = "API Key is not provided and not found in environment variable."
+                raise ValueError(msg)
+            result = self._data_plane_client.stop_session(
+                browser_name=self._browser_name,
+                session_id=self._session_id,
+                api_key=api_key,
+            )
 
         self._session_id = None
         self._browser_name = None
         self._automation_endpoint = None
         self._live_view_endpoint = None
 
-        return result
+        return True
 
     def get_session(self, api_key: str | None = None) -> dict[str, Any]:
         """Get the current browser session details.
@@ -882,54 +948,75 @@ class Browser:
 
         Returns:
             Dict containing session details.
+
+        Example:
+            >>> client.get_session()
         """
+        logger.info("Getting browser session...")
+
         if not self._session_id or not self._browser_name:
             msg = "No active session. Call start_session first."
             raise ValueError(msg)
-
-        logger.info("Getting session %s", self._session_id)
-        return self._data_plane_client.get_session(
-            browser_name=self._browser_name,
-            session_id=self._session_id,
-            api_key=api_key,
-        )
+        if self._data_plane_client.open_ak_sk:
+            return self._data_plane_client.get_session(
+                browser_name=self._browser_name,
+                session_id=self._session_id,
+            )
+        else:
+            api_key = api_key or os.getenv("HUAWEICLOUD_SDK_BROWSER_API_KEY")
+            if api_key is None:
+                msg = "API Key is not provided and not found in environment variable."
+                raise ValueError(msg)
+            return self._data_plane_client.get_session(
+                browser_name=self._browser_name,
+                session_id=self._session_id,
+                api_key=api_key,
+            )
 
     # ------------------------------------------------------------------
     # Data plane: browser operations
     # ------------------------------------------------------------------
 
-    def invoke(
+    def save_profile(
         self,
-        action: dict,
+        profile_id: str,
         api_key: str | None = None,
     ) -> dict[str, Any]:
-        """Invoke a browser operation.
-
-        All browser operations (navigate, click, screenshot, etc.) are
-        dispatched through this single entry point.
+        """Save current browser session state to a profile.
 
         Args:
-            action: Operation action dict (e.g. {"operate_type": "navigate",
-                "arguments": {"url": "https://example.com"}}).
+            profile_id: Profile ID to save state to.
             api_key: API Key for authentication.
 
         Returns:
-            Dict containing the operation result.
+            Dict containing the save result.
 
-        Raises:
-            ValueError: If no active session.
+        Example:
+            >>> client.save_profile("profile-123")
         """
+        logger.info("Saving browser profile...")
+
         if not self._session_id or not self._browser_name:
             msg = "No active session. Call start_session first."
             raise ValueError(msg)
 
-        logger.info("Invoking on session %s", self._session_id)
-        return self._data_plane_client.invoke(
-            browser_name=self._browser_name,
-            session_id=self._session_id,
-            action=action,
-            api_key=api_key,
-        )
+        if self._data_plane_client.open_ak_sk:
+            return self._data_plane_client.save_profile(
+                browser_name=self._browser_name,
+                session_id=self._session_id,
+                profile_id=profile_id,
+            )
+        else:
+            api_key = api_key or os.getenv("HUAWEICLOUD_SDK_BROWSER_API_KEY")
+            if api_key is None:
+                msg = "API Key is not provided and not found in environment variable."
+                raise ValueError(msg)
+            return self._data_plane_client.save_profile(
+                browser_name=self._browser_name,
+                session_id=self._session_id,
+                profile_id=profile_id,
+                api_key=api_key,
+            )
 
     # ------------------------------------------------------------------
     # Data plane: stream management
@@ -951,10 +1038,11 @@ class Browser:
         Returns:
             Dict containing the update result.
 
-        Raises:
-            ValueError: If stream_status is not "disabled" or "enabled",
-                or if no active session.
+        Example:
+            >>> client.update_stream("enabled")
         """
+        logger.info("Updating stream status to '%s'...", stream_status)
+
         if not self._session_id or not self._browser_name:
             msg = "No active session. Call start_session first."
             raise ValueError(msg)
@@ -962,13 +1050,600 @@ class Browser:
         if stream_status not in ("disabled", "enabled"):
             msg = 'stream_status must be "disabled" or "enabled".'
             raise ValueError(msg)
+        if self._data_plane_client.open_ak_sk:
+            return self._data_plane_client.update_stream(
+                browser_name=self._browser_name,
+                session_id=self._session_id,
+                stream_status=stream_status,
+                client_token=client_token,
+            )
+        else:
+            api_key = api_key or os.getenv("HUAWEICLOUD_SDK_BROWSER_API_KEY")
+            if api_key is None:
+                msg = "API Key is not provided and not found in environment variable."
+                raise ValueError(msg)
+            return self._data_plane_client.update_stream(
+                browser_name=self._browser_name,
+                session_id=self._session_id,
+                stream_status=stream_status,
+                client_token=client_token,
+                api_key=api_key,
+            )
 
-        logger.info("Updating stream status to '%s' for session %s", stream_status, self._session_id)
-        return self._data_plane_client.update_stream(
-            browser_name=self._browser_name,
+    def take_control(
+        self,
+        client_token: str | None = None,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Take human control of the browser (disable automation).
+
+        Convenience wrapper for ``update_stream("disabled")``.
+
+        Args:
+            client_token: Optional client token for idempotency.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the update result.
+
+        Example:
+            >>> client.take_control()
+        """
+        return self.update_stream("disabled", client_token=client_token, api_key=api_key)
+
+    def release_control(
+        self,
+        client_token: str | None = None,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Release human control of the browser (enable automation).
+
+        Convenience wrapper for ``update_stream("enabled")``.
+
+        Args:
+            client_token: Optional client token for idempotency.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the update result.
+
+        Example:
+            >>> client.release_control()
+        """
+        return self.update_stream("enabled", client_token=client_token, api_key=api_key)
+
+    def generate_automation_url(
+        self,
+        api_key: str | None = None,
+    ) -> tuple[str, dict]:
+        """Generate the WebSocket URL and headers for the automation stream.
+
+        The automation stream allows programmatic control of the browser
+        (navigation, clicks, screenshots, etc.) over a WebSocket connection.
+
+        Does not send an HTTP request — the URL is the ``stream_endpoint``
+        cached from :meth:`start_session`'s ``streams.automation_stream``.
+
+        Args:
+            api_key: API Key for API_KEY auth mode.
+
+        Returns:
+            Tuple of ``(ws_url, ws_headers)``.
+
+        Example:
+            >>> ws_url, ws_headers = client.generate_automation_url()
+        """
+        if not self._session_id or not self._automation_endpoint:
+            msg = "No active session. Call start_session first."
+            raise ValueError(msg)
+
+        automation_ws_url = self._automation_endpoint
+        automation_ws_headers = self._data_plane_client.build_ws_headers(
             session_id=self._session_id,
-            stream_status=stream_status,
-            client_token=client_token,
+            ws_url=automation_ws_url,
+            api_key=api_key,
+        )
+        return automation_ws_url, automation_ws_headers
+
+    def generate_live_view_url(
+        self,
+        api_key: str | None = None,
+    ) -> tuple[str, dict]:
+        """Generate the WebSocket URL and headers for the live-view stream.
+
+        The live-view stream provides a real-time visual feed of the browser
+        so a human operator can watch what the browser is doing.
+
+        Does not send an HTTP request — the URL is the ``stream_endpoint``
+        cached from :meth:`start_session`'s ``streams.live_view_stream``.
+
+        Args:
+            api_key: API Key for API_KEY auth mode.
+
+        Returns:
+            Tuple of ``(ws_url, ws_headers)``.
+
+        Example:
+            >>> ws_url, ws_headers = client.generate_live_view_url()
+        """
+        if not self._session_id or not self._live_view_endpoint:
+            msg = "No active session. Call start_session first."
+            raise ValueError(msg)
+
+        live_view_ws_url = self._live_view_endpoint
+        live_view_ws_headers = self._data_plane_client.build_ws_headers(
+            session_id=self._session_id,
+            ws_url=live_view_ws_url,
+            api_key=api_key,
+        )
+        return live_view_ws_url, live_view_ws_headers
+
+    # ------------------------------------------------------------------
+    # Data plane: browser operations
+    # ------------------------------------------------------------------
+
+    def invoke(
+        self,
+        action: dict,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Invoke a browser operation.
+
+        All browser operations (navigate, click, screenshot, etc.) are
+        dispatched through this single entry point.
+
+        Args:
+            action: Operation action dict (e.g. {"navigate":
+                {"url": "https://example.com"}}).
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.invoke({"mouse_click": {"x": 312, "y": 482}})
+        """
+        logger.info("Invoking browser operation...")
+
+        if len(action) != 1:
+            msg = "action must contain exactly one operation."
+            raise ValueError(msg)
+
+        if not self._session_id or not self._browser_name:
+            msg = "No active session. Call start_session first."
+            raise ValueError(msg)
+        if self._data_plane_client.open_ak_sk:
+            return self._data_plane_client.invoke(
+                browser_name=self._browser_name,
+                session_id=self._session_id,
+                action=action,
+            )
+        else:
+            api_key = api_key or os.getenv("HUAWEICLOUD_SDK_BROWSER_API_KEY")
+            if api_key is None:
+                msg = "API Key is not provided and not found in environment variable."
+                raise ValueError(msg)
+            return self._data_plane_client.invoke(
+                browser_name=self._browser_name,
+                session_id=self._session_id,
+                action=action,
+                api_key=api_key,
+            )
+
+    # ------------------------------------------------------------------
+    # Convenience methods — each maps to an invoke action
+    # ------------------------------------------------------------------
+
+    def left_mouse_click(
+        self,
+        x: int,
+        y: int,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Left mouse click at the specified position.
+
+        Args:
+            x: X coordinate.
+            y: Y coordinate.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.left_mouse_click(312, 482)
+        """
+        return self.invoke(
+            {"mouse_click": {"x": x, "y": y, "button": "left", "click_count": 1}},
+            api_key=api_key,
+        )
+
+    def right_mouse_click(
+        self,
+        x: int,
+        y: int,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Right mouse click at the specified position.
+
+        Args:
+            x: X coordinate.
+            y: Y coordinate.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.right_mouse_click(312, 482)
+        """
+        return self.invoke(
+            {"mouse_click": {"x": x, "y": y, "button": "right", "click_count": 1}},
+            api_key=api_key,
+        )
+
+    def double_mouse_click(
+        self,
+        x: int,
+        y: int,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Double mouse click at the specified position.
+
+        Args:
+            x: X coordinate.
+            y: Y coordinate.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.double_mouse_click(312, 482)
+        """
+        return self.invoke(
+            {"mouse_click": {"x": x, "y": y, "button": "left", "click_count": 2}},
+            api_key=api_key,
+        )
+
+    def mouse_move(
+        self,
+        x: int,
+        y: int,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Move the mouse to the specified position.
+
+        Args:
+            x: Target X coordinate.
+            y: Target Y coordinate.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.mouse_move(312, 482)
+        """
+        return self.invoke(
+            {"mouse_move": {"x": x, "y": y}},
+            api_key=api_key,
+        )
+
+    def mouse_drag(
+        self,
+        start_x: int,
+        start_y: int,
+        end_x: int,
+        end_y: int,
+        button: str = "left",
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Drag the mouse from one position to another.
+
+        Args:
+            start_x: Start X coordinate.
+            start_y: Start Y coordinate.
+            end_x: End X coordinate.
+            end_y: End Y coordinate.
+            button: Mouse button, "left", "right", or "middle".
+                Defaults to "left".
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.mouse_drag(100, 100, 200, 200)
+        """
+        if button not in ("left", "right", "middle"):
+            msg = 'button must be "left", "right", or "middle".'
+            raise ValueError(msg)
+
+        return self.invoke(
+            {"mouse_drag": {
+                "start_x": start_x,
+                "start_y": start_y,
+                "end_x": end_x,
+                "end_y": end_y,
+                "button": button,
+            }},
+            api_key=api_key,
+        )
+
+    def scroll(
+        self,
+        x: int,
+        y: int,
+        delta_x: int,
+        delta_y: int,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Scroll at the specified position.
+
+        Args:
+            x: X coordinate of the scroll position.
+            y: Y coordinate of the scroll position.
+            delta_x: Horizontal scroll amount in pixels.
+            delta_y: Vertical scroll amount in pixels.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.scroll(500, 300, 0, -100)
+        """
+        return self.invoke(
+            {"scroll": {"x": x, "y": y, "delta_x": delta_x, "delta_y": delta_y}},
+            api_key=api_key,
+        )
+
+    def key_press(
+        self,
+        key: str,
+        presses: int = 1,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Press a key.
+
+        Args:
+            key: Key name (e.g. "Enter", "Tab", "a").
+            presses: Number of times to press the key, 1-100.
+                Defaults to 1.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.key_press("Enter")
+            >>> client.key_press("Tab", presses=3)
+        """
+        if not 1 <= presses <= 100:
+            msg = "presses must be between 1 and 100."
+            raise ValueError(msg)
+
+        return self.invoke(
+            {"key_press": {"key": key, "presses": presses}},
+            api_key=api_key,
+        )
+
+    def key_type(
+        self,
+        text: str,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Type text into the focused element.
+
+        Args:
+            text: The text string to type.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.key_type("Hello, World!")
+        """
+        return self.invoke(
+            {"key_type": {"text": text}},
+            api_key=api_key,
+        )
+
+    def key_shortcut(
+        self,
+        keys: list[str],
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Press a key combination (multiple keys simultaneously).
+
+        Args:
+            keys: List of key names, max 5 keys (e.g. ["Control", "c"]).
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.key_shortcut(["Control", "c"])
+            >>> client.key_shortcut(["Control", "Shift", "T"])
+        """
+        if not keys or len(keys) > 5:
+            msg = "keys must contain 1 to 5 items."
+            raise ValueError(msg)
+
+        return self.invoke(
+            {"key_shortcut": {"keys": keys}},
+            api_key=api_key,
+        )
+
+    def navigate(
+        self,
+        url: str,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Navigate to a URL.
+
+        Args:
+            url: Target URL.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.navigate("https://example.com")
+        """
+        return self.invoke(
+            {"navigate": {"url": url}},
+            api_key=api_key,
+        )
+
+    def go_back(self, api_key: str | None = None) -> dict[str, Any]:
+        """Go back to the previous page."""
+        return self.invoke({"go_back": {}}, api_key=api_key)
+
+    def go_forward(self, api_key: str | None = None) -> dict[str, Any]:
+        """Go forward to the next page."""
+        return self.invoke({"go_forward": {}}, api_key=api_key)
+
+    def refresh(self, api_key: str | None = None) -> dict[str, Any]:
+        """Refresh the current page."""
+        return self.invoke({"refresh": {}}, api_key=api_key)
+
+    def get_page_info(self, api_key: str | None = None) -> dict[str, Any]:
+        """Get information about the current page."""
+        return self.invoke({"get_page_info": {}}, api_key=api_key)
+
+    def screenshot(
+        self,
+        format: str = "jpeg",
+        quality: int = 80,
+        full_page: bool = False,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Take a screenshot of the current page.
+
+        Args:
+            format: Image format, "png" or "jpeg". Defaults to "jpeg".
+            quality: JPEG compression quality, 1-100. Only effective when
+                format is "jpeg". Defaults to 80.
+            full_page: Whether to capture the full page. Defaults to False.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.screenshot()
+            >>> client.screenshot(format="png", full_page=True)
+        """
+        if format not in ("png", "jpeg"):
+            msg = 'format must be "png" or "jpeg".'
+            raise ValueError(msg)
+        if not 1 <= quality <= 100:
+            msg = "quality must be between 1 and 100."
+            raise ValueError(msg)
+
+        return self.invoke(
+            {"screenshot": {"format": format, "quality": quality, "full_page": full_page}},
+            api_key=api_key,
+        )
+
+    def wait(
+        self,
+        duration: float,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Wait for a specified duration.
+
+        Args:
+            duration: Wait duration in seconds, 0.1 to 30.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.wait(2.5)
+        """
+        if not 0.1 <= duration <= 30:
+            msg = "duration must be between 0.1 and 30."
+            raise ValueError(msg)
+
+        return self.invoke(
+            {"wait": {"duration": duration}},
+            api_key=api_key,
+        )
+
+    def list_tabs(self, api_key: str | None = None) -> dict[str, Any]:
+        """List all open tabs."""
+        return self.invoke({"list_tabs": {}}, api_key=api_key)
+
+    def switch_tab(
+        self,
+        tab_id: str,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Switch to a specific tab.
+
+        Args:
+            tab_id: Target tab ID.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.switch_tab("tab-123")
+        """
+        return self.invoke(
+            {"switch_tab": {"tab_id": tab_id}},
+            api_key=api_key,
+        )
+
+    def close_tab(
+        self,
+        tab_id: str,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Close a specific tab.
+
+        Args:
+            tab_id: Target tab ID.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.close_tab("tab-123")
+        """
+        return self.invoke(
+            {"close_tab": {"tab_id": tab_id}},
+            api_key=api_key,
+        )
+
+    def new_tab(
+        self,
+        url: str,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Open a new tab.
+
+        Args:
+            url: URL to open in the new tab.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.new_tab("https://example.com")
+        """
+        return self.invoke(
+            {"new_tab": {"url": url}},
             api_key=api_key,
         )
 
@@ -978,6 +1653,7 @@ def browser_session(
     region: str,
     browser_name: str,
     session_id: str,
+    session_name: str,
     auth_type: str = "API_KEY",
     api_key: str | None = None,
     verify_ssl: bool | str = True,
@@ -990,6 +1666,7 @@ def browser_session(
         region: Region name, e.g., "cn-southwest-2".
         browser_name: Browser resource name.
         session_id: Session ID specified by the client.
+        session_name: Session name specified by the client.
         auth_type: Authentication type, "API_KEY" or "IAM". Defaults to "API_KEY".
         api_key: API Key for authentication (API_KEY mode).
         verify_ssl: SSL verification. True to verify, False to skip,
@@ -999,12 +1676,11 @@ def browser_session(
         Browser: Browser instance with an active session.
 
     Example:
-        >>> with browser_session("cn-southwest-2", "my-browser", "session-123") as b:
+        >>> with browser_session("cn-southwest-2", "my-browser", "session-123", "my-session") as b:
         >>>     b.invoke("navigate", {"url": "https://example.com"})
-        >>>     content = b.invoke("get_content", {})
     """
     client = Browser(region=region, auth_type=auth_type, verify_ssl=verify_ssl)
-    client.start_session(browser_name=browser_name, session_id=session_id, api_key=api_key)
+    client.start_session(browser_name=browser_name, session_id=session_id, session_name=session_name, api_key=api_key)
     try:
         yield client
     finally:

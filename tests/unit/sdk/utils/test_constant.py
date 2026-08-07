@@ -355,6 +355,31 @@ class TestGetCodeInterpreterDataPlaneEndpointWithHttps:
 
 
 # ============================================================
+# get_browser_data_plane_endpoint Tests (with _ensure_https)
+# ============================================================
+
+class TestGetBrowserDataPlaneEndpointWithHttps:
+    """Tests for get_browser_data_plane_endpoint() with https protection."""
+
+    def test_adds_https_to_browser_endpoint(self, monkeypatch):
+        """Adds https:// to browser endpoint."""
+        from agentarts.sdk.utils.constant import get_browser_data_plane_endpoint
+
+        monkeypatch.setenv("AGENTARTS_BROWSER_DATA_ENDPOINT", "browser.example.com")
+        result = get_browser_data_plane_endpoint()
+        assert result == "https://browser.example.com"
+
+    def test_adds_https_to_runtime_fallback(self, monkeypatch):
+        """Adds https:// to runtime endpoint fallback."""
+        from agentarts.sdk.utils.constant import get_browser_data_plane_endpoint
+
+        monkeypatch.delenv("AGENTARTS_BROWSER_DATA_ENDPOINT", raising=False)
+        monkeypatch.setenv("AGENTARTS_RUNTIME_DATA_ENDPOINT", "runtime.example.com")
+        result = get_browser_data_plane_endpoint()
+        assert result == "https://runtime.example.com"
+
+
+# ============================================================
 # get_iam_endpoint Tests (with _ensure_https)
 # ============================================================
 

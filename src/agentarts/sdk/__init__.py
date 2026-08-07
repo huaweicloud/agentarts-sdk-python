@@ -47,12 +47,13 @@ from agentarts.sdk.memory import AsyncMemoryClient, MemoryClient
 from agentarts.sdk.runtime.app import AgentArtsRuntimeApp
 from agentarts.sdk.runtime.context import AgentArtsRuntimeContext, RequestContext
 from agentarts.sdk.runtime.model import PingStatus
-from agentarts.sdk.tools import CodeInterpreter, code_session
+from agentarts.sdk.tools import Browser, CodeInterpreter, browser_session, code_session
 
 __all__ = [
     "AgentArtsRuntimeApp",
     "AgentArtsRuntimeContext",
     "AsyncMemoryClient",
+    "Browser",
     "CodeInterpreter",
     "IdentityClient",
     "GatewayClient",
@@ -61,6 +62,7 @@ __all__ = [
     "RequestContext",
     "__author__",
     "__version__",
+    "browser_session",
     "code_session",
     "require_access_token",
     "require_api_key",
