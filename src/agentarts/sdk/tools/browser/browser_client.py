@@ -1395,7 +1395,7 @@ class Browser:
             >>> client.scroll(500, 300, 0, -100)
         """
         return self.invoke(
-            {"scroll": {"x": x, "y": y, "delta_x": delta_x, "delta_y": delta_y}},
+            {"mouse_scroll": {"x": x, "y": y, "delta_x": delta_x, "delta_y": delta_y}},
             api_key=api_key,
         )
 
