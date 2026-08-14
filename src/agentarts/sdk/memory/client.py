@@ -497,6 +497,22 @@ class MemoryClient:
 
         return self._data_plane.create_memory_session(space_id, session_request)
 
+    def delete_session(self, space_id: str, session_id: str) -> None:
+        """
+        Delete a session (soft delete).
+
+        Soft-deletes the specified session. Associated messages and memories are
+        cleaned up asynchronously by the backend (90-365 days per space config).
+
+        Args:
+            space_id: Space ID
+            session_id: Session ID to delete
+
+        Examples:
+            >>> client.delete_session("space-123", "session-456")
+        """
+        self._data_plane.delete_session(space_id, session_id)
+
     # ==================== Data Plane - Message Management ====================
 
     def get_last_k_messages(

@@ -165,6 +165,9 @@ test-results/
 # Docker
 *.dockerignore
 
+# Demo local data
+examples/navigation_langgraph_memory/sessions.json
+
 # Temporary files
 *.tmp
 *.temp

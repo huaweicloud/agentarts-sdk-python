@@ -192,6 +192,10 @@ class AsyncMemoryClient:
 
         return await self._async_data_plane.create_memory_session(space_id, session_request)
 
+    async def delete_session(self, space_id: str, session_id: str) -> None:
+        """Delete a session (soft delete) - identical to sync version."""
+        await self._async_data_plane.delete_session(space_id, session_id)
+
     # ==================== Data Plane - Message Management (Async) ====================
 
     async def get_last_k_messages(

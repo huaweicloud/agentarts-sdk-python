@@ -359,6 +359,14 @@ class AsyncMemoryHttpService:
             space_id=space_id
         )
 
+    async def delete_session(self, space_id: str, session_id: str) -> None:
+        """Delete a session (soft delete) - identical to sync version."""
+        await self._make_request(
+            method="DELETE",
+            path=f"/v1/core/spaces/{space_id}/sessions/{session_id}",
+            space_id=space_id
+        )
+
     async def add_messages(
             self,
             space_id: str,

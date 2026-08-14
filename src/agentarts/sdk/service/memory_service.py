@@ -461,6 +461,19 @@ class MemoryHttpService:
             space_id=space_id
         )
 
+    def delete_session(self, space_id: str, session_id: str) -> None:
+        """Delete a session (soft delete).
+
+        Args:
+            space_id: Space ID
+            session_id: Session ID
+        """
+        self._make_request(
+            method="DELETE",
+            path=f"/v1/core/spaces/{space_id}/sessions/{session_id}",
+            space_id=space_id
+        )
+
     def add_messages(
             self,
             space_id: str,

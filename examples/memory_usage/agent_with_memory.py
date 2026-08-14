@@ -52,9 +52,8 @@ def handler(payload: dict):
         }
 
     if not session_id:
-        session_req = SessionCreateRequest(space_id=space_id)
-        session = memory_client.create_memory_session(session_req)
-        session_id = session.session_id
+        session = memory_client.create_memory_session(space_id=space_id)
+        session_id = session.id
 
     user_message = TextMessage(
         role="user",
@@ -86,8 +85,8 @@ def handler(payload: dict):
     )
 
     history_dicts = [
-        {"role": msg.role, "content": msg.content}
-        for msg in history.messages
+        {"role": msg.role, "content": [message.get('text') for message in msg.parts]}
+        for msg in history
     ]
 
     return {

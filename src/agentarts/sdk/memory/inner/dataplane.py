@@ -96,6 +96,25 @@ class _DataPlane:
         logger.info(f"Memory session created: {result.get('id')}")
         return SessionInfo.from_dict(result)
 
+    def delete_session(self, space_id: str, session_id: str) -> None:
+        """
+        Delete a session (soft delete).
+
+        Args:
+            space_id: Space ID
+            session_id: Session ID to delete
+        """
+        if not space_id:
+            msg = "space_id is required for data plane operations"
+            raise ValueError(msg)
+
+        if not session_id:
+            msg = "session_id is required for delete operation"
+            raise ValueError(msg)
+
+        self.client.delete_session(space_id, session_id)
+        logger.info(f"Session deleted: {session_id} in space: {space_id}")
+
     def add_messages(
             self,
             space_id: str,

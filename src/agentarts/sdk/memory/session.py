@@ -200,6 +200,21 @@ class MemorySession:
         """
         return f"MemorySession(space_id='{self.space_id}', session_id='{self.session_id}', region_name='{self._region_name}')"
 
+    def delete(self) -> None:
+        """
+        Delete this session (soft delete).
+
+        Soft-deletes the current session. Associated messages and memories are
+        cleaned up asynchronously by the backend (90-365 days per space config).
+        After deletion, this session object should not be used for further operations.
+
+        Examples:
+            >>> session = MemorySession(space_id="space-123", actor_id="user-456")
+            >>> session.delete()
+        """
+        self._data_plane.delete_session(self.space_id, self.session_id)
+        logger.info(f"Session deleted: {self.session_id} in space: {self.space_id}")
+
     # ==================== Message Management ====================
 
     def get_last_k_messages(

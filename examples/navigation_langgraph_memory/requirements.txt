@@ -1,0 +1,19 @@
+# Navigation Agent Demo - Dependencies
+# Install with: pip install -r requirements.txt
+# Or with uv: uv sync --extra langgraph --extra tui
+
+# AgentArts SDK (install from project root first)
+# uv sync  OR  pip install -e .
+
+# LangGraph + LangChain
+langgraph>=1.0.0
+langchain>=0.1.0
+langchain-core>=0.1.0
+langchain-openai>=0.1.0
+
+# TUI
+textual>=0.86.0
+
+# Utilities
+requests>=2.31.0
+python-dotenv>=1.0.0

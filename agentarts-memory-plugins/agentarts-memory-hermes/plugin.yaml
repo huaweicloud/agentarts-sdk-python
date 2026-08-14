@@ -1,0 +1,13 @@
+name: agentarts_memory
+version: 1.0.0
+description: "Huawei Cloud's AgentArts Memory is a long-term memory provider, offering cross-session memory persistence and retrieval."
+pip_dependencies:
+  - "agentarts-sdk>=0.1.4"
+hooks:
+  - system_prompt_block
+  - prefetch
+  - sync_turn
+  - on_pre_compress
+  - on_memory_write
+  - on_session_end
+  - shutdown
