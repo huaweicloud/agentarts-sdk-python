@@ -10,7 +10,7 @@ from agentarts.sdk.service.tools_http import (
     ControlBrowserHttpClient,
     DataBrowserHttpClient,
 )
-from agentarts.sdk.tools.browser import Browser
+from agentarts.sdk.tools.browser import Browser, browser_session
 
 UUID = "9ca9f2a6-18e4-4777-b23b-8c21e978a1ad"
 
@@ -301,3 +301,204 @@ class TestBrowserClient(unittest.TestCase):
         self._start_session()
         with self.assertRaises(ValueError):
             self.client.wait(0.01)
+
+    def test_mouse_click(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.mouse_click(100, 200)
+            assert m.call_args.kwargs["type"] == "mouse_click"
+            assert m.call_args.kwargs["action"] == {
+                "x": 100, "y": 200, "button": "left", "click_count": 1,
+            }
+
+    def test_mouse_click_custom(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.mouse_click(100, 200, button="right", click_count=2)
+            assert m.call_args.kwargs["type"] == "mouse_click"
+            assert m.call_args.kwargs["action"] == {
+                "x": 100, "y": 200, "button": "right", "click_count": 2,
+            }
+
+    def test_right_mouse_click(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.right_mouse_click(100, 200)
+            assert m.call_args.kwargs["type"] == "mouse_click"
+            assert m.call_args.kwargs["action"] == {
+                "x": 100, "y": 200, "button": "right", "click_count": 1,
+            }
+
+    def test_double_mouse_click(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.double_mouse_click(100, 200)
+            assert m.call_args.kwargs["type"] == "mouse_click"
+            assert m.call_args.kwargs["action"] == {
+                "x": 100, "y": 200, "button": "left", "click_count": 2,
+            }
+
+    def test_mouse_move(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.mouse_move(100, 200)
+            assert m.call_args.kwargs["type"] == "mouse_move"
+            assert m.call_args.kwargs["action"] == {"x": 100, "y": 200}
+
+    def test_mouse_drag(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.mouse_drag(0, 0, 100, 200)
+            assert m.call_args.kwargs["type"] == "mouse_drag"
+            assert m.call_args.kwargs["action"] == {
+                "start_x": 0, "start_y": 0, "end_x": 100, "end_y": 200, "button": "left",
+            }
+
+    def test_mouse_scroll(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.mouse_scroll(500, 300, 0, -100)
+            assert m.call_args.kwargs["type"] == "mouse_scroll"
+            assert m.call_args.kwargs["action"] == {
+                "x": 500, "y": 300, "delta_x": 0, "delta_y": -100,
+            }
+
+    def test_mouse_scroll_no_delta(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.mouse_scroll(500, 300)
+            assert m.call_args.kwargs["type"] == "mouse_scroll"
+            assert m.call_args.kwargs["action"] == {"x": 500, "y": 300}
+
+    def test_key_press(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.key_press("Enter")
+            assert m.call_args.kwargs["type"] == "key_press"
+            assert m.call_args.kwargs["action"] == {"key": "Enter", "presses": 1}
+
+    def test_key_type(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.key_type("Hello")
+            assert m.call_args.kwargs["type"] == "key_type"
+            assert m.call_args.kwargs["action"] == {"text": "Hello"}
+
+    def test_key_shortcut(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.key_shortcut(["Control", "c"])
+            assert m.call_args.kwargs["type"] == "key_shortcut"
+            assert m.call_args.kwargs["action"] == {"keys": ["Control", "c"]}
+
+    def test_go_back(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.go_back()
+            assert m.call_args.kwargs["type"] == "go_back"
+            assert m.call_args.kwargs["action"] == {}
+
+    def test_go_forward(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.go_forward()
+            assert m.call_args.kwargs["type"] == "go_forward"
+            assert m.call_args.kwargs["action"] == {}
+
+    def test_refresh(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.refresh()
+            assert m.call_args.kwargs["type"] == "refresh"
+            assert m.call_args.kwargs["action"] == {}
+
+    def test_get_page_info(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.get_page_info()
+            assert m.call_args.kwargs["type"] == "get_page_info"
+            assert m.call_args.kwargs["action"] == {}
+
+    def test_wait(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.wait(2.5)
+            assert m.call_args.kwargs["type"] == "wait"
+            assert m.call_args.kwargs["action"] == {"duration": 2.5}
+
+    def test_list_tabs(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.list_tabs()
+            assert m.call_args.kwargs["type"] == "list_tabs"
+            assert m.call_args.kwargs["action"] == {}
+
+    def test_switch_tab(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.switch_tab("tab-1")
+            assert m.call_args.kwargs["type"] == "switch_tab"
+            assert m.call_args.kwargs["action"] == {"tab_id": "tab-1"}
+
+    def test_close_tab(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.close_tab("tab-1")
+            assert m.call_args.kwargs["type"] == "close_tab"
+            assert m.call_args.kwargs["action"] == {"tab_id": "tab-1"}
+
+    def test_close_tab_no_id(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.close_tab()
+            assert m.call_args.kwargs["type"] == "close_tab"
+            assert m.call_args.kwargs["action"] == {}
+
+    def test_new_tab(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.new_tab("https://example.com")
+            assert m.call_args.kwargs["type"] == "new_tab"
+            assert m.call_args.kwargs["action"] == {"url": "https://example.com"}
+
+    def test_new_tab_no_url(self):
+        self._start_session()
+        with patch.object(DataBrowserHttpClient, "invoke") as m:
+            m.return_value = {"ok": True}
+            self.client.new_tab()
+            assert m.call_args.kwargs["type"] == "new_tab"
+            assert m.call_args.kwargs["action"] == {}
+
+    def test_browser_session(self):
+        with patch("agentarts.sdk.tools.browser.browser_client.Browser") as MockBrowser:
+            mock_client = MockBrowser.return_value
+            with browser_session("cn-southwest-2", "my-browser", "my-session") as b:
+                assert b is mock_client
+                mock_client.start_session.assert_called_once_with(
+                    browser_name="my-browser",
+                    session_name="my-session",
+                    session_id=None,
+                    api_key=None,
+                )
+            mock_client.stop_session.assert_called_once_with(api_key=None)
