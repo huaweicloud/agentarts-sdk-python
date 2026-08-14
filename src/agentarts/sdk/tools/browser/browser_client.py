@@ -814,10 +814,9 @@ class Browser:
     def start_session(
         self,
         browser_name: str,
-        session_id: str,
         session_name: str,
-        browser_id: str | None = None,
-        view_point: dict | None = None,
+        session_id: str | None = None,
+        viewport: dict | None = None,
         profile_configuration: dict | None = None,
         allowed_domains: list[str] | None = None,
         blocked_domains: list[str] | None = None,
@@ -829,10 +828,10 @@ class Browser:
 
         Args:
             browser_name: Name of the browser resource.
-            session_id: Session ID specified by the client.
             session_name: Session name specified by the client.
-            browser_id: Optional browser ID.
-            view_point: Optional view point configuration dict.
+            session_id: Optional session ID specified by the client. When None,
+                the server generates one.
+            viewport: Optional viewport configuration dict.
             profile_configuration: Optional profile configuration dict.
             allowed_domains: Optional list of allowed domain patterns.
             blocked_domains: Optional list of blocked domain patterns.
@@ -850,11 +849,10 @@ class Browser:
         Example:
             >>> client.start_session(
             ...     browser_name="my-browser",
-            ...     session_id="session-123",
             ...     session_name="my-session",
             ... )
         """
-        logger.info("Starting session %s for browser: %s", session_id, browser_name)
+        logger.info("Starting session for browser: %s", browser_name)
 
         # Validate session_name
         session_name_pattern = r"^[a-zA-Z0-9_-]{1,128}$"
@@ -874,10 +872,8 @@ class Browser:
             "name": session_name,
             "session_timeout": session_timeout,
         }
-        if browser_id:
-            request_params["browser_id"] = browser_id
-        if view_point:
-            request_params["view_point"] = view_point
+        if viewport:
+            request_params["viewport"] = viewport
         if profile_configuration:
             request_params["profile_configuration"] = profile_configuration
         if allowed_domains:
@@ -890,8 +886,8 @@ class Browser:
         if self._data_plane_client.open_ak_sk:
             result = self._data_plane_client.start_session(
                 browser_name=browser_name,
-                session_id=session_id,
                 request_params=request_params,
+                session_id=session_id,
             )
         else:
             api_key = api_key or os.getenv("HUAWEICLOUD_SDK_BROWSER_API_KEY")
@@ -900,8 +896,8 @@ class Browser:
                 raise ValueError(msg)
             result = self._data_plane_client.start_session(
                 browser_name=browser_name,
-                session_id=session_id,
                 request_params=request_params,
+                session_id=session_id,
                 api_key=api_key,
             )
 
@@ -1664,13 +1660,13 @@ class Browser:
 
     def close_tab(
         self,
-        tab_id: str,
+        tab_id: str | None = None,
         api_key: str | None = None,
     ) -> dict[str, Any]:
-        """Close a specific tab.
+        """Close a tab.
 
         Args:
-            tab_id: Target tab ID.
+            tab_id: Target tab ID. If not provided, closes the current tab.
             api_key: API Key for authentication.
 
         Returns:
@@ -1678,22 +1674,27 @@ class Browser:
 
         Example:
             >>> client.close_tab("tab-123")
+            >>> client.close_tab()
         """
+        action = {}
+        if tab_id is not None:
+            action["tab_id"] = tab_id
         return self.invoke(
             type="close_tab",
-            action={"tab_id": tab_id},
+            action=action,
             api_key=api_key,
         )
 
     def new_tab(
         self,
-        url: str,
+        url: str | None = None,
         api_key: str | None = None,
     ) -> dict[str, Any]:
         """Open a new tab.
 
         Args:
-            url: URL to open in the new tab.
+            url: URL to open in the new tab. If not provided, opens a
+                blank page.
             api_key: API Key for authentication.
 
         Returns:
@@ -1701,10 +1702,14 @@ class Browser:
 
         Example:
             >>> client.new_tab("https://example.com")
+            >>> client.new_tab()
         """
+        action = {}
+        if url is not None:
+            action["url"] = url
         return self.invoke(
             type="new_tab",
-            action={"url": url},
+            action=action,
             api_key=api_key,
         )
 
@@ -1713,8 +1718,8 @@ class Browser:
 def browser_session(
     region: str,
     browser_name: str,
-    session_id: str,
     session_name: str,
+    session_id: str | None = None,
     auth_type: str = "API_KEY",
     api_key: str | None = None,
     verify_ssl: bool | str = True,
@@ -1726,8 +1731,8 @@ def browser_session(
     Args:
         region: Region name, e.g., "cn-southwest-2".
         browser_name: Browser resource name.
-        session_id: Session ID specified by the client.
         session_name: Session name specified by the client.
+        session_id: Optional session ID specified by the client.
         auth_type: Authentication type, "API_KEY" or "IAM". Defaults to "API_KEY".
         api_key: API Key for authentication (API_KEY mode).
         verify_ssl: SSL verification. True to verify, False to skip,
@@ -1737,11 +1742,11 @@ def browser_session(
         Browser: Browser instance with an active session.
 
     Example:
-        >>> with browser_session("cn-southwest-2", "my-browser", "session-123", "my-session") as b:
+        >>> with browser_session("cn-southwest-2", "my-browser", "my-session") as b:
         >>>     b.invoke("navigate", {"url": "https://example.com"})
     """
     client = Browser(region=region, auth_type=auth_type, verify_ssl=verify_ssl)
-    client.start_session(browser_name=browser_name, session_id=session_id, session_name=session_name, api_key=api_key)
+    client.start_session(browser_name=browser_name, session_name=session_name, session_id=session_id, api_key=api_key)
     try:
         yield client
     finally:

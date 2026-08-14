@@ -440,7 +440,7 @@ class TestBrowserHttpClient(unittest.TestCase):
         mock_put.assert_called_once_with(
             url="/v1/browsers/test-browser/sessions-start",
             json={"name": "my-session", "session_timeout": 900},
-            headers={"x-HW-Agentarts-Browser-Session-Id": "s-1"},
+            headers={"X-hw-Agentarts-Browser-Session-Id": "s-1"},
         )
 
     @patch.object(DataBrowserHttpClient, "post")
@@ -457,6 +457,6 @@ class TestBrowserHttpClient(unittest.TestCase):
         assert result == {"result": "ok"}
         mock_post.assert_called_once_with(
             url="/v1/browsers/test-browser/invoke",
-            headers={"x-HW-Agentarts-Browser-Session-Id": "s-1"},
+            headers={"X-hw-Agentarts-Browser-Session-Id": "s-1"},
             json={"type": "navigate", "action": {"url": "https://example.com"}},
         )

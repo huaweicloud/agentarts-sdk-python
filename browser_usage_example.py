@@ -124,10 +124,9 @@ print(f"[OK] 删除 Profile: {profile_id}")
 
 session = client.start_session(
     browser_name="my-browser",              # 必填
-    session_id="my-session-001",            # 必填, 客户端指定
     session_name="my-session",              # 必填, ^[a-zA-Z0-9_-]{1,128}$
-    browser_id=None,                        # 可选
-    view_point=None,                        # 可选, {"width": 1920, "height": 1080}
+    session_id="my-session-001",            # 可选, 客户端指定；不传则服务端生成
+    viewport=None,                          # 可选, {"width": 1920, "height": 1080}
     profile_configuration=None,             # 可选
     allowed_domains=None,                   # 可选, 与 blocked_domains 互斥
     blocked_domains=None,                   # 可选

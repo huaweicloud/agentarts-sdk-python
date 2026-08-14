@@ -357,8 +357,8 @@ class DataBrowserHttpClient(BaseHTTPClient):
     def start_session(
         self,
         browser_name: str,
-        session_id: str,
         request_params: dict,
+        session_id: str | None = None,
         api_key: str | None = None,
     ) -> dict[Any, Any]:
         """PUT /v1/browsers/{browser_name}/sessions-start
@@ -366,7 +366,9 @@ class DataBrowserHttpClient(BaseHTTPClient):
         Start a browser session.
         """
         endpoint = f"/v1/browsers/{browser_name}/sessions-start"
-        headers = {"x-HW-Agentarts-Browser-Session-Id": session_id}
+        headers = {}
+        if session_id is not None:
+            headers["X-hw-Agentarts-Browser-Session-Id"] = session_id
         if api_key is not None:
             headers["Authorization"] = f"Bearer {api_key}"
         response = self.put(url=endpoint, json=request_params, headers=headers)
@@ -385,7 +387,7 @@ class DataBrowserHttpClient(BaseHTTPClient):
         Stop a browser session.
         """
         endpoint = f"/v1/browsers/{browser_name}/sessions-stop"
-        headers = {"x-HW-Agentarts-Browser-Session-Id": session_id}
+        headers = {"X-hw-Agentarts-Browser-Session-Id": session_id}
         if api_key is not None:
             headers["Authorization"] = f"Bearer {api_key}"
         response = self.put(url=endpoint, headers=headers)
@@ -404,7 +406,7 @@ class DataBrowserHttpClient(BaseHTTPClient):
         Get browser session details.
         """
         endpoint = f"/v1/browsers/{browser_name}/sessions-get"
-        headers = {"x-HW-Agentarts-Browser-Session-Id": session_id}
+        headers = {"X-hw-Agentarts-Browser-Session-Id": session_id}
         if api_key is not None:
             headers["Authorization"] = f"Bearer {api_key}"
         response = self.get(url=endpoint, headers=headers)
@@ -425,7 +427,7 @@ class DataBrowserHttpClient(BaseHTTPClient):
         Invoke a browser session operation.
         """
         endpoint = f"/v1/browsers/{browser_name}/invoke"
-        headers = {"x-HW-Agentarts-Browser-Session-Id": session_id}
+        headers = {"X-hw-Agentarts-Browser-Session-Id": session_id}
         if api_key is not None:
             headers["Authorization"] = f"Bearer {api_key}"
 
@@ -449,7 +451,7 @@ class DataBrowserHttpClient(BaseHTTPClient):
         Update a browser session stream (e.g. enable/disable human handoff).
         """
         endpoint = f"/v1/browsers/{browser_name}/streams_update"
-        headers = {"x-HW-Agentarts-Browser-Session-Id": session_id}
+        headers = {"X-hw-Agentarts-Browser-Session-Id": session_id}
         if api_key is not None:
             headers["Authorization"] = f"Bearer {api_key}"
 
@@ -476,7 +478,7 @@ class DataBrowserHttpClient(BaseHTTPClient):
         Save current browser session state to a profile.
         """
         endpoint = f"/v1/browsers/{browser_name}/save_profile"
-        headers = {"x-HW-Agentarts-Browser-Session-Id": session_id}
+        headers = {"X-hw-Agentarts-Browser-Session-Id": session_id}
         if api_key is not None:
             headers["Authorization"] = f"Bearer {api_key}"
 
@@ -512,7 +514,7 @@ class DataBrowserHttpClient(BaseHTTPClient):
         ws_key = base64.b64encode(os.urandom(16)).decode()
 
         headers = {
-            "x-HW-Agentarts-Browser-Session-Id": session_id,
+            "X-hw-Agentarts-Browser-Session-Id": session_id,
             "Upgrade": "websocket",
             "Connection": "Upgrade",
             "Sec-WebSocket-Version": "13",
