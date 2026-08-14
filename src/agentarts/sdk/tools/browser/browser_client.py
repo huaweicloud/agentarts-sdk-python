@@ -37,6 +37,27 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_SESSION_TIMEOUT = 900  # 15 minutes
 
+ACTION_TYPES = (
+    "mouse_click",
+    "mouse_move",
+    "mouse_drag",
+    "mouse_scroll",
+    "key_press",
+    "key_type",
+    "key_shortcut",
+    "navigate",
+    "go_back",
+    "go_forward",
+    "refresh",
+    "get_page_info",
+    "screenshot",
+    "wait",
+    "list_tabs",
+    "switch_tab",
+    "close_tab",
+    "new_tab",
+)
+
 
 class Browser:
     """Client for interacting with the Browser sandbox service.
@@ -1184,6 +1205,7 @@ class Browser:
 
     def invoke(
         self,
+        type: str,
         action: dict,
         api_key: str | None = None,
     ) -> dict[str, Any]:
@@ -1193,29 +1215,32 @@ class Browser:
         dispatched through this single entry point.
 
         Args:
-            action: Operation action dict (e.g. {"navigate":
-                {"url": "https://example.com"}}).
+            type: Action type, one of the supported operation types
+                (e.g. "mouse_click", "navigate", "screenshot").
+            action: Action parameters dict (e.g. {"x": 312, "y": 482}).
             api_key: API Key for authentication.
 
         Returns:
             Dict containing the operation result.
 
         Example:
-            >>> client.invoke({"mouse_click": {"x": 312, "y": 482}})
+            >>> client.invoke("mouse_click", {"x": 312, "y": 482})
         """
         logger.info("Invoking browser operation...")
 
-        if len(action) != 1:
-            msg = "action must contain exactly one operation."
+        if type not in ACTION_TYPES:
+            msg = f"Unsupported action type: {type}."
             raise ValueError(msg)
 
         if not self._session_id or not self._browser_name:
             msg = "No active session. Call start_session first."
             raise ValueError(msg)
+
         if self._data_plane_client.open_ak_sk:
             return self._data_plane_client.invoke(
                 browser_name=self._browser_name,
                 session_id=self._session_id,
+                type=type,
                 action=action,
             )
         else:
@@ -1226,6 +1251,7 @@ class Browser:
             return self._data_plane_client.invoke(
                 browser_name=self._browser_name,
                 session_id=self._session_id,
+                type=type,
                 action=action,
                 api_key=api_key,
             )
@@ -1233,6 +1259,38 @@ class Browser:
     # ------------------------------------------------------------------
     # Convenience methods — each maps to an invoke action
     # ------------------------------------------------------------------
+
+    def mouse_click(
+        self,
+        x: int,
+        y: int,
+        button: str = "left",
+        click_count: int = 1,
+        api_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Click the mouse at the specified position.
+
+        Args:
+            x: X coordinate.
+            y: Y coordinate.
+            button: Mouse button, "left", "right", or "middle".
+                Defaults to "left".
+            click_count: Number of clicks. Defaults to 1.
+            api_key: API Key for authentication.
+
+        Returns:
+            Dict containing the operation result.
+
+        Example:
+            >>> client.mouse_click(312, 482)
+            >>> client.mouse_click(312, 482, button="right")
+            >>> client.mouse_click(312, 482, click_count=2)
+        """
+        return self.invoke(
+            type="mouse_click",
+            action={"x": x, "y": y, "button": button, "click_count": click_count},
+            api_key=api_key,
+        )
 
     def left_mouse_click(
         self,
@@ -1253,10 +1311,7 @@ class Browser:
         Example:
             >>> client.left_mouse_click(312, 482)
         """
-        return self.invoke(
-            {"mouse_click": {"x": x, "y": y, "button": "left", "click_count": 1}},
-            api_key=api_key,
-        )
+        return self.mouse_click(x, y, button="left", click_count=1, api_key=api_key)
 
     def right_mouse_click(
         self,
@@ -1277,10 +1332,7 @@ class Browser:
         Example:
             >>> client.right_mouse_click(312, 482)
         """
-        return self.invoke(
-            {"mouse_click": {"x": x, "y": y, "button": "right", "click_count": 1}},
-            api_key=api_key,
-        )
+        return self.mouse_click(x, y, button="right", click_count=1, api_key=api_key)
 
     def double_mouse_click(
         self,
@@ -1301,10 +1353,7 @@ class Browser:
         Example:
             >>> client.double_mouse_click(312, 482)
         """
-        return self.invoke(
-            {"mouse_click": {"x": x, "y": y, "button": "left", "click_count": 2}},
-            api_key=api_key,
-        )
+        return self.mouse_click(x, y, button="left", click_count=2, api_key=api_key)
 
     def mouse_move(
         self,
@@ -1326,7 +1375,8 @@ class Browser:
             >>> client.mouse_move(312, 482)
         """
         return self.invoke(
-            {"mouse_move": {"x": x, "y": y}},
+            type="mouse_move",
+            action={"x": x, "y": y},
             api_key=api_key,
         )
 
@@ -1361,17 +1411,18 @@ class Browser:
             raise ValueError(msg)
 
         return self.invoke(
-            {"mouse_drag": {
+            type="mouse_drag",
+            action={
                 "start_x": start_x,
                 "start_y": start_y,
                 "end_x": end_x,
                 "end_y": end_y,
                 "button": button,
-            }},
+            },
             api_key=api_key,
         )
 
-    def scroll(
+    def mouse_scroll(
         self,
         x: int,
         y: int,
@@ -1392,10 +1443,11 @@ class Browser:
             Dict containing the operation result.
 
         Example:
-            >>> client.scroll(500, 300, 0, -100)
+            >>> client.mouse_scroll(500, 300, 0, -100)
         """
         return self.invoke(
-            {"mouse_scroll": {"x": x, "y": y, "delta_x": delta_x, "delta_y": delta_y}},
+            type="mouse_scroll",
+            action={"x": x, "y": y, "delta_x": delta_x, "delta_y": delta_y},
             api_key=api_key,
         )
 
@@ -1425,7 +1477,8 @@ class Browser:
             raise ValueError(msg)
 
         return self.invoke(
-            {"key_press": {"key": key, "presses": presses}},
+            type="key_press",
+            action={"key": key, "presses": presses},
             api_key=api_key,
         )
 
@@ -1447,7 +1500,8 @@ class Browser:
             >>> client.key_type("Hello, World!")
         """
         return self.invoke(
-            {"key_type": {"text": text}},
+            type="key_type",
+            action={"text": text},
             api_key=api_key,
         )
 
@@ -1474,7 +1528,8 @@ class Browser:
             raise ValueError(msg)
 
         return self.invoke(
-            {"key_shortcut": {"keys": keys}},
+            type="key_shortcut",
+            action={"keys": keys},
             api_key=api_key,
         )
 
@@ -1496,25 +1551,26 @@ class Browser:
             >>> client.navigate("https://example.com")
         """
         return self.invoke(
-            {"navigate": {"url": url}},
+            type="navigate",
+            action={"url": url},
             api_key=api_key,
         )
 
     def go_back(self, api_key: str | None = None) -> dict[str, Any]:
         """Go back to the previous page."""
-        return self.invoke({"go_back": {}}, api_key=api_key)
+        return self.invoke(type="go_back", action={}, api_key=api_key)
 
     def go_forward(self, api_key: str | None = None) -> dict[str, Any]:
         """Go forward to the next page."""
-        return self.invoke({"go_forward": {}}, api_key=api_key)
+        return self.invoke(type="go_forward", action={}, api_key=api_key)
 
     def refresh(self, api_key: str | None = None) -> dict[str, Any]:
         """Refresh the current page."""
-        return self.invoke({"refresh": {}}, api_key=api_key)
+        return self.invoke(type="refresh", action={}, api_key=api_key)
 
     def get_page_info(self, api_key: str | None = None) -> dict[str, Any]:
         """Get information about the current page."""
-        return self.invoke({"get_page_info": {}}, api_key=api_key)
+        return self.invoke(type="get_page_info", action={}, api_key=api_key)
 
     def screenshot(
         self,
@@ -1547,7 +1603,8 @@ class Browser:
             raise ValueError(msg)
 
         return self.invoke(
-            {"screenshot": {"format": format, "quality": quality, "full_page": full_page}},
+            type="screenshot",
+            action={"format": format, "quality": quality, "full_page": full_page},
             api_key=api_key,
         )
 
@@ -1573,13 +1630,14 @@ class Browser:
             raise ValueError(msg)
 
         return self.invoke(
-            {"wait": {"duration": duration}},
+            type="wait",
+            action={"duration": duration},
             api_key=api_key,
         )
 
     def list_tabs(self, api_key: str | None = None) -> dict[str, Any]:
         """List all open tabs."""
-        return self.invoke({"list_tabs": {}}, api_key=api_key)
+        return self.invoke(type="list_tabs", action={}, api_key=api_key)
 
     def switch_tab(
         self,
@@ -1599,7 +1657,8 @@ class Browser:
             >>> client.switch_tab("tab-123")
         """
         return self.invoke(
-            {"switch_tab": {"tab_id": tab_id}},
+            type="switch_tab",
+            action={"tab_id": tab_id},
             api_key=api_key,
         )
 
@@ -1621,7 +1680,8 @@ class Browser:
             >>> client.close_tab("tab-123")
         """
         return self.invoke(
-            {"close_tab": {"tab_id": tab_id}},
+            type="close_tab",
+            action={"tab_id": tab_id},
             api_key=api_key,
         )
 
@@ -1643,7 +1703,8 @@ class Browser:
             >>> client.new_tab("https://example.com")
         """
         return self.invoke(
-            {"new_tab": {"url": url}},
+            type="new_tab",
+            action={"url": url},
             api_key=api_key,
         )
 

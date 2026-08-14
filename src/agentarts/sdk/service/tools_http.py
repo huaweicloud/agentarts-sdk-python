@@ -416,6 +416,7 @@ class DataBrowserHttpClient(BaseHTTPClient):
         self,
         browser_name: str,
         session_id: str,
+        type: str,
         action: dict,
         api_key: str | None = None,
     ) -> dict[Any, Any]:
@@ -428,7 +429,7 @@ class DataBrowserHttpClient(BaseHTTPClient):
         if api_key is not None:
             headers["Authorization"] = f"Bearer {api_key}"
 
-        request_params = {"action": action}
+        request_params = {"type": type, "action": action}
 
         response = self.post(url=endpoint, headers=headers, json=request_params)
         if not response.success:

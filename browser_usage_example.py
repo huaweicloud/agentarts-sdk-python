@@ -154,7 +154,7 @@ client.mouse_drag(
 )
 
 # 滚动
-client.scroll(x=500, y=300, delta_x=0, delta_y=-100, api_key=None)
+client.mouse_scroll(x=500, y=300, delta_x=0, delta_y=-100, api_key=None)
 
 # 键盘
 client.key_press(key="Enter", presses=1, api_key=None)

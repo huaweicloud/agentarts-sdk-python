@@ -176,17 +176,17 @@ class TestBrowserClient(unittest.TestCase):
         self._start_session()
         with patch.object(DataBrowserHttpClient, "invoke") as m:
             m.return_value = {"ok": True}
-            assert self.client.invoke({"navigate": {"url": "https://x.com"}})["ok"] is True
+            assert self.client.invoke(type="navigate", action={"url": "https://x.com"})["ok"] is True
 
-    def test_invoke_multi_action(self):
+    def test_invoke_bad_type(self):
         self.client._session_id = "s-1"
         self.client._browser_name = "b"
         with self.assertRaises(ValueError):
-            self.client.invoke({"a": {}, "b": {}})
+            self.client.invoke(type="unknown_action", action={})
 
     def test_invoke_no_session(self):
         with self.assertRaises(ValueError):
-            self.client.invoke({"a": {}})
+            self.client.invoke(type="navigate", action={})
 
     def test_save_profile(self):
         self._start_session()
@@ -243,8 +243,9 @@ class TestBrowserClient(unittest.TestCase):
         with patch.object(DataBrowserHttpClient, "invoke") as m:
             m.return_value = {"ok": True}
             self.client.left_mouse_click(100, 200)
+            assert m.call_args.kwargs["type"] == "mouse_click"
             assert m.call_args.kwargs["action"] == {
-                "mouse_click": {"x": 100, "y": 200, "button": "left", "click_count": 1},
+                "x": 100, "y": 200, "button": "left", "click_count": 1,
             }
 
     def test_navigate(self):
@@ -252,14 +253,16 @@ class TestBrowserClient(unittest.TestCase):
         with patch.object(DataBrowserHttpClient, "invoke") as m:
             m.return_value = {"ok": True}
             self.client.navigate("https://example.com")
-            assert m.call_args.kwargs["action"]["navigate"]["url"] == "https://example.com"
+            assert m.call_args.kwargs["type"] == "navigate"
+            assert m.call_args.kwargs["action"]["url"] == "https://example.com"
 
     def test_screenshot_defaults(self):
         self._start_session()
         with patch.object(DataBrowserHttpClient, "invoke") as m:
             m.return_value = {"ok": True}
             self.client.screenshot()
-            a = m.call_args.kwargs["action"]["screenshot"]
+            assert m.call_args.kwargs["type"] == "screenshot"
+            a = m.call_args.kwargs["action"]
             assert a["format"] == "jpeg"
             assert a["quality"] == 80
             assert a["full_page"] is False

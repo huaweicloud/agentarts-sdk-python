@@ -451,11 +451,12 @@ class TestBrowserHttpClient(unittest.TestCase):
         result = self.data_client.invoke(
             browser_name="test-browser",
             session_id="s-1",
-            action={"navigate": {"url": "https://example.com"}},
+            type="navigate",
+            action={"url": "https://example.com"},
         )
         assert result == {"result": "ok"}
         mock_post.assert_called_once_with(
             url="/v1/browsers/test-browser/invoke",
             headers={"x-HW-Agentarts-Browser-Session-Id": "s-1"},
-            json={"action": {"navigate": {"url": "https://example.com"}}},
+            json={"type": "navigate", "action": {"url": "https://example.com"}},
         )
