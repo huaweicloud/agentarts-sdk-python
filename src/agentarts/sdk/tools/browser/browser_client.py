@@ -1422,8 +1422,8 @@ class Browser:
         self,
         x: int,
         y: int,
-        delta_x: int,
-        delta_y: int,
+        delta_x: int | None = None,
+        delta_y: int | None = None,
         api_key: str | None = None,
     ) -> dict[str, Any]:
         """Scroll at the specified position.
@@ -1431,8 +1431,8 @@ class Browser:
         Args:
             x: X coordinate of the scroll position.
             y: Y coordinate of the scroll position.
-            delta_x: Horizontal scroll amount in pixels.
-            delta_y: Vertical scroll amount in pixels.
+            delta_x: Optional horizontal scroll amount in pixels.
+            delta_y: Optional vertical scroll amount in pixels.
             api_key: API Key for authentication.
 
         Returns:
@@ -1441,9 +1441,14 @@ class Browser:
         Example:
             >>> client.mouse_scroll(500, 300, 0, -100)
         """
+        action = {"x": x, "y": y}
+        if delta_x is not None:
+            action["delta_x"] = delta_x
+        if delta_y is not None:
+            action["delta_y"] = delta_y
         return self.invoke(
             type="mouse_scroll",
-            action={"x": x, "y": y, "delta_x": delta_x, "delta_y": delta_y},
+            action=action,
             api_key=api_key,
         )
 
