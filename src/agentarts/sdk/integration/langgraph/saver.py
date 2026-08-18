@@ -11,6 +11,7 @@ Supports both synchronous and asynchronous operations:
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import uuid
@@ -24,7 +25,8 @@ from agentarts.sdk.integration.langgraph.converter import (
     langgraph_messages_to_memory,
     memory_to_langgraph_message,
 )
-from agentarts.sdk.memory import AsyncMemoryClient, MemoryClient
+from agentarts.sdk.memory import AsyncMemoryClient, MemoryClient, TextMessage
+from agentarts.sdk.service import APIException
 from agentarts.sdk.utils.constant import get_region
 
 if TYPE_CHECKING:
@@ -33,9 +35,13 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Namespace UUID for generating deterministic writes session IDs
+WRITES_SESSION_NAMESPACE = uuid.UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+
 try:
     from langchain_core.runnables import RunnableConfig
     from langgraph.checkpoint.base import (
+        WRITES_IDX_MAP,
         BaseCheckpointSaver,
         Checkpoint,
         CheckpointMetadata,
@@ -52,6 +58,7 @@ except ImportError:
     CheckpointTuple = Any
     JsonPlusSerializer = object
     RunnableConfig = dict[str, Any]
+    WRITES_IDX_MAP = {}
 
 
 class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
@@ -177,6 +184,63 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         """Extract runtime configuration from RunnableConfig."""
         return CheckpointerConfig.from_runnable_config(config)
 
+    @staticmethod
+    def _writes_session_id(session_id: str) -> str:
+        """Get the session ID used for storing pending writes.
+
+        Uses UUID5 to generate a deterministic UUID from the session_id,
+        ensuring the writes session ID is a valid UUID (required by backend).
+        """
+        return str(uuid.uuid5(WRITES_SESSION_NAMESPACE, session_id))
+
+    def _extract_pending_writes(
+        self,
+        messages: list,  # list[MessageInfo] from writes session
+        checkpoint_id: str,
+    ) -> list[tuple[str, str, Any]]:
+        """
+        Extract and deduplicate pending writes from write messages.
+
+        Matches InMemorySaver semantics:
+        - Regular writes (write_idx >= 0): first occurrence wins (idempotent skip)
+        - Special writes (write_idx < 0): last occurrence wins (always overwrite)
+        """
+        # Messages are ordered oldest to newest; dedupe by (task_id, write_idx)
+        seen: dict[tuple[str, int], dict] = {}
+
+        for msg in messages:
+            if not (hasattr(msg, "meta") and msg.meta):
+                continue
+            try:
+                meta = json.loads(msg.meta)
+            except (json.JSONDecodeError, TypeError):
+                continue
+
+            if meta.get("type") != "pending_writes":
+                continue
+            if meta.get("checkpoint_id") != checkpoint_id:
+                continue
+
+            for w in meta.get("writes", []):
+                key = (w["task_id"], w["write_idx"])
+                if w["write_idx"] >= 0:
+                    # Regular write: first occurrence wins (matches InMemorySaver skip)
+                    if key not in seen:
+                        seen[key] = w
+                else:
+                    # Special write (ERROR/INTERRUPT/RESUME/SCHEDULED): last wins
+                    seen[key] = w
+
+        # Reconstruct PendingWrite tuples: (task_id, channel, value)
+        pending_writes: list[tuple[str, str, Any]] = []
+        for w in seen.values():
+            value_type = w["value_type"]
+            value_bytes = base64.b64decode(w["value_data"])
+            value = self.serde.loads_typed((value_type, value_bytes))
+            pending_writes.append((w["task_id"], w["channel"], value))
+
+        return pending_writes
+
     def get_tuple(self, config: RunnableConfig) -> CheckpointTuple | None:
         """
         Get a checkpoint tuple from the memory service.
@@ -267,11 +331,27 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         # so the count stays in sync with backend state. put()/aput() will update the count after persisting new messages.
         self._persisted_count[session_id] = len(langgraph_messages)
 
+        # Pending writes live in a dedicated session (see _writes_session_id)
+        pending_writes: list[tuple[str, str, Any]] = []
+        try:
+            writes_messages = self._client.get_last_k_messages(
+                session_id=self._writes_session_id(session_id),
+                k=self._max_messages,
+                space_id=self._space_id,
+            )
+            if writes_messages:
+                pending_writes = self._extract_pending_writes(
+                    writes_messages, checkpoint_id
+                )
+        except Exception as e:
+            logger.debug(f"Failed to retrieve pending writes: {e}")
+
         return CheckpointTuple(
             config=runtime_config.to_runnable_config(),
             checkpoint=checkpoint,
             metadata=metadata,
             parent_config=None,
+            pending_writes=pending_writes if pending_writes else None,
         )
     def get(self, config: RunnableConfig) -> Checkpoint | None:
         if value := self.get_tuple(config):
@@ -360,19 +440,91 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         """
         Store intermediate writes linked to a checkpoint.
 
-        Note: This method is not fully supported with Memory service backend.
-        Writes are typically handled through the normal message flow.
+        Writes are stored as messages in a dedicated writes session
+        (UUID5-derived from {session_id}), separate from conversation messages.
+
+        Each put_writes call produces one message containing all writes
+        serialized via serde. Idempotency is handled on read side:
+        regular writes (idx >= 0) keep first occurrence; special writes
+        (ERROR/INTERRUPT/RESUME/SCHEDULED, idx < 0) keep last.
+
+        If the writes session does not exist (HTTP 404), it is automatically
+        created and the write is retried.
 
         Args:
-            config: Runnable config containing thread_id
+            config: Runnable config containing thread_id and checkpoint_id
             writes: List of writes to store (channel, value) pairs
             task_id: Task identifier
             task_path: Task path (optional)
         """
-        logger.warning(
-            "AgentArtsMemorySessionSaver.put_writes() is not fully implemented. "
-            "Writes are handled through normal message flow."
+        if not writes:
+            return
+
+        runtime_config = self._get_runtime_config(config)
+        session_id = runtime_config.session_id
+        writes_session_id = self._writes_session_id(session_id)
+        checkpoint_id = config.get("configurable", {}).get("checkpoint_id", "")
+
+        writes_data = []
+        for idx, (channel, value) in enumerate(writes):
+            write_idx = WRITES_IDX_MAP.get(channel, idx)
+            value_type, value_bytes = self.serde.dumps_typed(value)
+            writes_data.append({
+                "task_id": task_id,
+                "task_path": task_path,
+                "channel": channel,
+                "write_idx": write_idx,
+                "value_type": value_type,
+                "value_data": base64.b64encode(value_bytes).decode("ascii"),
+            })
+
+        write_meta = json.dumps({
+            "type": "pending_writes",
+            "checkpoint_id": checkpoint_id,
+            "writes": writes_data,
+        }, ensure_ascii=False)
+
+        cloud_message = TextMessage(
+            role="system",
+            content="pending_writes",
+            meta=write_meta,
         )
+
+        try:
+            self._client.add_messages(
+                space_id=self._space_id,
+                session_id=writes_session_id,
+                messages=[cloud_message],
+            )
+        except APIException as e:
+            if e.status_code == 404:
+                logger.info(
+                    f"Writes session {writes_session_id} not found, creating it"
+                )
+                try:
+                    self._client.create_memory_session(
+                        space_id=self._space_id,
+                        id=writes_session_id,
+                    )
+                except Exception:
+                    pass
+                try:
+                    self._client.add_messages(
+                        space_id=self._space_id,
+                        session_id=writes_session_id,
+                        messages=[cloud_message],
+                    )
+                except Exception as e2:
+                    logger.exception(
+                        f"Failed to put_writes for session {session_id} "
+                        f"after retry: {e2}"
+                    )
+            else:
+                logger.exception(
+                    f"Failed to put_writes for session {session_id}: {e}"
+                )
+        except Exception as e:
+            logger.exception(f"Failed to put_writes for session {session_id}: {e}")
 
     def list(
             self,
@@ -462,29 +614,63 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             parents={},
         )
 
+        # Pending writes live in a dedicated session (see _writes_session_id)
+        pending_writes: list[tuple[str, str, Any]] = []
+        try:
+            writes_messages = self._client.get_last_k_messages(
+                session_id=self._writes_session_id(session_id),
+                k=self._max_messages,
+                space_id=self._space_id,
+            )
+            if writes_messages:
+                pending_writes = self._extract_pending_writes(
+                    writes_messages, checkpoint_id
+                )
+        except Exception as e:
+            logger.debug(f"Failed to retrieve pending writes: {e}")
+
         return [
             CheckpointTuple(
                 config=runtime_config.to_runnable_config(),
                 checkpoint=checkpoint,
                 metadata=metadata,
                 parent_config=None,
+                pending_writes=pending_writes if pending_writes else None,
             )
         ]
 
-    def delete(self, config: RunnableConfig) -> None:
+    def delete_thread(self, thread_id: str) -> None:
         """
-        Delete session for a given thread.
+        Delete all checkpoints and writes for a thread.
 
-        Note: Memory service does not support direct session deletion.
-        Sessions will be cleaned up based on TTL configuration.
+        Deletes both the main session (conversation messages) and the
+        writes session (pending writes). Deletion is soft; the backend
+        cleans up associated data asynchronously.
 
         Args:
-            config: Runnable config containing thread_id
+            thread_id: Thread ID (= session ID) to delete
         """
-        logger.warning(
-            "AgentArtsMemorySessionSaver.delete() is not supported. "
-            "Sessions are cleaned up automatically based on TTL."
-        )
+        try:
+            self._client.delete_session(
+                space_id=self._space_id,
+                session_id=thread_id,
+            )
+        except Exception as e:
+            logger.exception(f"Failed to delete session for thread {thread_id}: {e}")
+
+        # Also delete the writes session
+        writes_sid = self._writes_session_id(thread_id)
+        try:
+            self._client.delete_session(
+                space_id=self._space_id,
+                session_id=writes_sid,
+            )
+        except Exception as e:
+            # Writes session may not exist — log at debug level
+            logger.debug(f"Failed to delete writes session for thread {thread_id}: {e}")
+
+        # Clean up persisted count tracking
+        self._persisted_count.pop(thread_id, None)
 
     def close(self) -> None:
         """
@@ -499,6 +685,17 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         self.close()
+
+    async def aclose(self) -> None:
+        """Close both sync and async client connections."""
+        self.close()
+        await self._async_client.close()
+
+    async def __aenter__(self) -> Self:
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.aclose()
 
     async def aget_tuple(self, config: RunnableConfig) -> CheckpointTuple | None:
         """
@@ -587,11 +784,27 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         # Initialize persisted count from backend state (async version).
         self._persisted_count[session_id] = len(langgraph_messages)
 
+        # Pending writes live in a dedicated session (see _writes_session_id)
+        pending_writes: list[tuple[str, str, Any]] = []
+        try:
+            writes_messages = await self._async_client.get_last_k_messages(
+                session_id=self._writes_session_id(session_id),
+                k=self._max_messages,
+                space_id=self._space_id,
+            )
+            if writes_messages:
+                pending_writes = self._extract_pending_writes(
+                    writes_messages, checkpoint_id
+                )
+        except Exception as e:
+            logger.debug(f"Failed to retrieve pending writes: {e}")
+
         return CheckpointTuple(
             config=runtime_config.to_runnable_config(),
             checkpoint=checkpoint,
             metadata=metadata,
             parent_config=None,
+            pending_writes=pending_writes if pending_writes else None,
         )
 
     async def aput(
@@ -671,22 +884,75 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             task_id: str,
             task_path: str = "",
     ) -> None:
-        """
-        Asynchronously store intermediate writes linked to a checkpoint.
+        """Async version of put_writes. See put_writes for details."""
+        if not writes:
+            return
 
-        Note: This method is not fully supported with Memory service backend.
-        Writes are typically handled through the normal message flow.
+        runtime_config = self._get_runtime_config(config)
+        session_id = runtime_config.session_id
+        writes_session_id = self._writes_session_id(session_id)
+        checkpoint_id = config.get("configurable", {}).get("checkpoint_id", "")
 
-        Args:
-            config: Runnable config containing thread_id
-            writes: List of writes to store (channel, value) pairs
-            task_id: Task identifier
-            task_path: Task path (optional)
-        """
-        logger.warning(
-            "AgentArtsMemorySessionSaver.aput_writes() is not fully implemented. "
-            "Writes are handled through normal message flow."
+        writes_data = []
+        for idx, (channel, value) in enumerate(writes):
+            write_idx = WRITES_IDX_MAP.get(channel, idx)
+            value_type, value_bytes = self.serde.dumps_typed(value)
+            writes_data.append({
+                "task_id": task_id,
+                "task_path": task_path,
+                "channel": channel,
+                "write_idx": write_idx,
+                "value_type": value_type,
+                "value_data": base64.b64encode(value_bytes).decode("ascii"),
+            })
+
+        write_meta = json.dumps({
+            "type": "pending_writes",
+            "checkpoint_id": checkpoint_id,
+            "writes": writes_data,
+        }, ensure_ascii=False)
+
+        cloud_message = TextMessage(
+            role="system",
+            content="pending_writes",
+            meta=write_meta,
         )
+
+        try:
+            await self._async_client.add_messages(
+                space_id=self._space_id,
+                session_id=writes_session_id,
+                messages=[cloud_message],
+            )
+        except APIException as e:
+            if e.status_code == 404:
+                logger.info(
+                    f"Writes session {writes_session_id} not found, creating it"
+                )
+                try:
+                    await self._async_client.create_memory_session(
+                        space_id=self._space_id,
+                        id=writes_session_id,
+                    )
+                except Exception:
+                    pass
+                try:
+                    await self._async_client.add_messages(
+                        space_id=self._space_id,
+                        session_id=writes_session_id,
+                        messages=[cloud_message],
+                    )
+                except Exception as e2:
+                    logger.exception(
+                        f"Failed to aput_writes for session {session_id} "
+                        f"after retry: {e2}"
+                    )
+            else:
+                logger.exception(
+                    f"Failed to aput_writes for session {session_id}: {e}"
+                )
+        except Exception as e:
+            logger.exception(f"Failed to aput_writes for session {session_id}: {e}")
 
     async def alist(
             self,
@@ -778,26 +1044,53 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             parents={},
         )
 
+        # Pending writes live in a dedicated session (see _writes_session_id)
+        pending_writes: list[tuple[str, str, Any]] = []
+        try:
+            writes_messages = await self._async_client.get_last_k_messages(
+                session_id=self._writes_session_id(session_id),
+                k=self._max_messages,
+                space_id=self._space_id,
+            )
+            if writes_messages:
+                pending_writes = self._extract_pending_writes(
+                    writes_messages, checkpoint_id
+                )
+        except Exception as e:
+            logger.debug(f"Failed to retrieve pending writes: {e}")
+
         return [
             CheckpointTuple(
                 config=runtime_config.to_runnable_config(),
                 checkpoint=checkpoint,
                 metadata=metadata,
                 parent_config=None,
+                pending_writes=pending_writes if pending_writes else None,
             )
         ]
 
-    async def adelete(self, config: RunnableConfig) -> None:
+    async def adelete_thread(self, thread_id: str) -> None:
         """
-        Asynchronously delete session for a given thread.
-
-        Note: Memory service does not support direct session deletion.
-        Sessions are cleaned up based on TTL configuration.
+        Asynchronously delete all checkpoints and writes for a thread.
 
         Args:
-            config: Runnable config containing thread_id
+            thread_id: Thread ID (= session ID) to delete
         """
-        logger.warning(
-            "AgentArtsMemorySessionSaver.adelete() is not supported. "
-            "Sessions are cleaned up automatically based on TTL."
-        )
+        try:
+            await self._async_client.delete_session(
+                space_id=self._space_id,
+                session_id=thread_id,
+            )
+        except Exception as e:
+            logger.exception(f"Failed to delete session for thread {thread_id}: {e}")
+
+        writes_sid = self._writes_session_id(thread_id)
+        try:
+            await self._async_client.delete_session(
+                space_id=self._space_id,
+                session_id=writes_sid,
+            )
+        except Exception as e:
+            logger.debug(f"Failed to delete writes session for thread {thread_id}: {e}")
+
+        self._persisted_count.pop(thread_id, None)
