@@ -40,6 +40,8 @@ export function createMcpClientConfig(config: ResolvedConfig): McpClient.Config 
       HUAWEICLOUD_SDK_MEMORY_API_KEY: config.apiKey,
       HUAWEICLOUD_SDK_REGION: config.region,
       AGENTARTS_MEMORY_SPACE_ID: config.spaceId,
+      AGENTARTS_MEMORY_ACTOR_ID: config.actorId,
+      AGENTARTS_MEMORY_ASSISTANT_ID: config.assistantId,
       AGENTARTS_MEMORY_DATA_ENDPOINT: config.dataEndpoint,
     },
     cwd: config.mcpCwd,
