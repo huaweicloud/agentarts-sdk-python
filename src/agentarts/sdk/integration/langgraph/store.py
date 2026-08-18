@@ -72,7 +72,7 @@ class AgentArtsMemoryStore(BaseStore):
         - Put: add messages -> backend extracts memories automatically
         - Search: semantic search with query + filter
         - Get: retrieve specific memory by key (memory_id)
-        - Delete: not supported (backend manages memory lifecycle)
+        - Delete: deletes memory by memory_id (via PutOp with value=None)
 
     Example:
         >>> from agentarts.sdk.integration.langgraph import AgentArtsMemoryStore
@@ -231,26 +231,40 @@ class AgentArtsMemoryStore(BaseStore):
         Handle PutOp by adding messages to trigger backend memory extraction.
 
         Design:
-            - value=None: delete operation (not supported, warning only)
+            - value=None: delete operation (calls delete_memory with key as memory_id)
             - value contains content and actor_id/session_id metadata
             - Calls add_messages -> backend extracts memories automatically
         """
         if op.value is None:
-            logger.warning(
-                "Delete operation (PutOp with value=None) is not supported "
-                "in AgentArtsMemoryStore. Memories are managed by backend."
-            )
+            # Delete operation: delete memory by memory_id
+            try:
+                self._client.delete_memory(
+                    space_id=self._space_id,
+                    memory_id=op.key,
+                )
+                logger.debug(f"Deleted memory {op.key}")
+            except Exception as e:
+                error_str = str(e).lower()
+                if "not found" in error_str or "404" in error_str:
+                    logger.debug(f"Memory {op.key} not found for deletion")
+                else:
+                    logger.exception(f"Failed to delete memory {op.key}: {e}")
             return
 
         session_id = op.value.get("session_id")
         if not session_id:
-            msg = "value must contain 'session_id' for Put operation"
+            msg = (
+                "value must contain 'session_id' for Put operation. "
+                "AgentArts Memory service requires a session to add messages. "
+                "Example: store.put(ns, key, {'content': '...', 'session_id': 'session-xxx'})"
+            )
             raise ValueError(msg)
 
         content = op.value.get("content")
         if not content:
-            msg = "value must contain 'content' for Put operation"
-            raise ValueError(msg)
+            # Serialize entire value (minus session_id) as content
+            value_copy = {k: v for k, v in op.value.items() if k != "session_id"}
+            content = json.dumps(value_copy, ensure_ascii=False, default=str)
 
         actor_id = op.value.get("actor_id")
         assistant_id = op.value.get("assistant_id")
@@ -282,21 +296,35 @@ class AgentArtsMemoryStore(BaseStore):
     async def _async_handle_put(self, op: PutOp) -> None:
         """Async version of _handle_put."""
         if op.value is None:
-            logger.warning(
-                "Delete operation (PutOp with value=None) is not supported "
-                "in AgentArtsMemoryStore. Memories are managed by backend."
-            )
+            # Delete operation: delete memory by memory_id
+            try:
+                await self._async_client.delete_memory(
+                    space_id=self._space_id,
+                    memory_id=op.key,
+                )
+                logger.debug(f"Deleted memory {op.key}")
+            except Exception as e:
+                error_str = str(e).lower()
+                if "not found" in error_str or "404" in error_str:
+                    logger.debug(f"Memory {op.key} not found for deletion")
+                else:
+                    logger.exception(f"Failed to delete memory {op.key}: {e}")
             return
 
         session_id = op.value.get("session_id")
         if not session_id:
-            msg = "value must contain 'session_id' for Put operation"
+            msg = (
+                "value must contain 'session_id' for Put operation. "
+                "AgentArts Memory service requires a session to add messages. "
+                "Example: store.put(ns, key, {'content': '...', 'session_id': 'session-xxx'})"
+            )
             raise ValueError(msg)
 
         content = op.value.get("content")
         if not content:
-            msg = "value must contain 'content' for Put operation"
-            raise ValueError(msg)
+            # Serialize entire value (minus session_id) as content
+            value_copy = {k: v for k, v in op.value.items() if k != "session_id"}
+            content = json.dumps(value_copy, ensure_ascii=False, default=str)
 
         actor_id = op.value.get("actor_id")
         assistant_id = op.value.get("assistant_id")
@@ -472,6 +500,9 @@ class AgentArtsMemoryStore(BaseStore):
             if "strategy_type" in op.filter:
                 list_filter.strategy_type = op.filter["strategy_type"]
 
+        # memory_type post-filter (MemoryListFilter has no memory_type field)
+        target_memory_type = op.filter.get("memory_type") if op.filter else None
+
         try:
             response = self._client.list_memories(
                 space_id=self._space_id,
@@ -490,12 +521,14 @@ class AgentArtsMemoryStore(BaseStore):
                         "actor_id": mem.actor_id,
                         "assistant_id": mem.assistant_id,
                         "session_id": mem.session_id,
+                        "memory_type": mem.memory_type,
                     },
                     created_at=self._parse_datetime(mem.created_at),
                     updated_at=self._parse_datetime(mem.updated_at),
                     score=None,
                 )
                 for mem in response.items
+                if target_memory_type is None or mem.memory_type == target_memory_type
             ]
 
         except Exception as e:
@@ -517,6 +550,9 @@ class AgentArtsMemoryStore(BaseStore):
             if "strategy_type" in op.filter:
                 list_filter.strategy_type = op.filter["strategy_type"]
 
+        # memory_type post-filter (MemoryListFilter has no memory_type field)
+        target_memory_type = op.filter.get("memory_type") if op.filter else None
+
         try:
             response = await self._async_client.list_memories(
                 space_id=self._space_id,
@@ -535,12 +571,14 @@ class AgentArtsMemoryStore(BaseStore):
                         "actor_id": mem.actor_id,
                         "assistant_id": mem.assistant_id,
                         "session_id": mem.session_id,
+                        "memory_type": mem.memory_type,
                     },
                     created_at=self._parse_datetime(mem.created_at),
                     updated_at=self._parse_datetime(mem.updated_at),
                     score=None,
                 )
                 for mem in response.items
+                if target_memory_type is None or mem.memory_type == target_memory_type
             ]
 
         except Exception as e:
@@ -713,10 +751,12 @@ class AgentArtsMemoryStore(BaseStore):
         except (json.JSONDecodeError, TypeError, AttributeError):
             return None
 
+    _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
     def _parse_datetime(self, dt: str | datetime | None) -> datetime:
-        """Parse datetime string or return current time."""
+        """Parse datetime string or return epoch (1970-01-01) as fallback."""
         if dt is None:
-            return datetime.now(timezone.utc)
+            return self._EPOCH
 
         if isinstance(dt, datetime):
             return dt
@@ -727,12 +767,13 @@ class AgentArtsMemoryStore(BaseStore):
                     dt = dt[:-1] + "+00:00"
                 return datetime.fromisoformat(dt)
             except ValueError:
-                return datetime.now(timezone.utc)
+                logger.debug(f"Failed to parse datetime: {dt}")
+                return self._EPOCH
 
-        return datetime.now(timezone.utc)
+        return self._EPOCH
 
     def _matches_condition(self, namespace: tuple[str, ...], condition: Any) -> bool:
-        """Check if namespace matches a match condition."""
+        """Check if namespace matches a match condition with wildcard support."""
         match_type = getattr(condition, "match_type", None)
         path = getattr(condition, "path", None)
 
@@ -740,8 +781,26 @@ class AgentArtsMemoryStore(BaseStore):
             return True
 
         if match_type == "prefix":
-            return namespace[:len(path)] == path if len(namespace) >= len(path) else False
+            if len(namespace) < len(path):
+                return False
+            return self._match_path_with_wildcards(namespace[:len(path)], path)
         if match_type == "suffix":
-            return namespace[-len(path):] == path if len(namespace) >= len(path) else False
+            if len(namespace) < len(path):
+                return False
+            return self._match_path_with_wildcards(namespace[-len(path):], path)
 
+        return True
+
+    def _match_path_with_wildcards(
+        self, namespace: tuple[str, ...], path: tuple[str, ...]
+    ) -> bool:
+        """Match namespace path against pattern with '*' wildcards.
+
+        '*' matches any single namespace segment.
+        """
+        if len(namespace) != len(path):
+            return False
+        for ns_part, path_part in zip(namespace, path, strict=True):
+            if path_part not in ("*", ns_part):
+                return False
         return True
