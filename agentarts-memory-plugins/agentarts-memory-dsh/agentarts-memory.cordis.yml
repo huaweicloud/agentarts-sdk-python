@@ -7,5 +7,6 @@
         apiKey: !!js process.env.HUAWEICLOUD_SDK_MEMORY_API_KEY
         spaceId: !!js process.env.AGENTARTS_MEMORY_SPACE_ID
         actorId: !!js process.env.AGENTARTS_MEMORY_ACTOR_ID
+        assistantId: !!js process.env.AGENTARTS_MEMORY_ASSISTANT_ID || 'deepseek-harness'
         region: !!js process.env.HUAWEICLOUD_SDK_REGION || 'cn-southwest-2'
         dataEndpoint: !!js process.env.AGENTARTS_MEMORY_DATA_ENDPOINT
