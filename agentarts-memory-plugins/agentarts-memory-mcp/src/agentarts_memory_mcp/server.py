@@ -91,6 +91,11 @@ def create_server(
     client_factory: MemoryClientFactory = AsyncMemoryClient,
 ) -> MCPServer[ServerRuntime]:
     """Create a configured MCP server without starting a transport."""
+    if settings.actor_id is None:
+        logger.warning(
+            "AGENTARTS_MEMORY_ACTOR_ID is not set; searches will include all actors "
+            "in the configured Memory Space"
+        )
 
     @asynccontextmanager
     async def lifespan(_server: MCPServer[ServerRuntime]) -> AsyncIterator[ServerRuntime]:
@@ -136,7 +141,12 @@ def create_server(
         try:
             response = await runtime.client.search_memories(
                 space_id=runtime.settings.space_id,
-                filters=MemorySearchFilter(query=normalized_query, top_k=top_k),
+                filters=MemorySearchFilter(
+                    query=normalized_query,
+                    actor_id=runtime.settings.actor_id,
+                    assistant_id=runtime.settings.assistant_id,
+                    top_k=top_k,
+                ),
             )
         except Exception as error:
             logger.exception("AgentArts Memory search failed")

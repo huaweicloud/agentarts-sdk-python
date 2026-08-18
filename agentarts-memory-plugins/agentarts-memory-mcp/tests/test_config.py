@@ -3,7 +3,9 @@
 import pytest
 
 from agentarts_memory_mcp.config import (
+    ENV_ACTOR_ID,
     ENV_API_KEY,
+    ENV_ASSISTANT_ID,
     ENV_REGION,
     ENV_SPACE_ID,
     ConfigurationError,
@@ -16,6 +18,8 @@ def test_from_env_reads_required_and_optional_values() -> None:
         {
             ENV_API_KEY: " api-key ",
             ENV_SPACE_ID: " space-id ",
+            ENV_ACTOR_ID: " actor-id ",
+            ENV_ASSISTANT_ID: " assistant-id ",
             ENV_REGION: " cn-north-4 ",
         }
     )
@@ -24,6 +28,8 @@ def test_from_env_reads_required_and_optional_values() -> None:
         api_key="api-key",
         space_id="space-id",
         region="cn-north-4",
+        actor_id="actor-id",
+        assistant_id="assistant-id",
     )
 
 
@@ -36,6 +42,8 @@ def test_from_env_uses_sdk_region_default_when_region_is_absent() -> None:
     )
 
     assert settings.region is None
+    assert settings.actor_id is None
+    assert settings.assistant_id is None
 
 
 @pytest.mark.parametrize(

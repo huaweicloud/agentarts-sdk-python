@@ -8,6 +8,8 @@ from dataclasses import dataclass
 
 ENV_API_KEY = "HUAWEICLOUD_SDK_MEMORY_API_KEY"
 ENV_SPACE_ID = "AGENTARTS_MEMORY_SPACE_ID"
+ENV_ACTOR_ID = "AGENTARTS_MEMORY_ACTOR_ID"
+ENV_ASSISTANT_ID = "AGENTARTS_MEMORY_ASSISTANT_ID"
 ENV_REGION = "HUAWEICLOUD_SDK_REGION"
 
 
@@ -22,6 +24,8 @@ class ServerSettings:
     api_key: str
     space_id: str
     region: str | None = None
+    actor_id: str | None = None
+    assistant_id: str | None = None
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None) -> ServerSettings:
@@ -39,4 +43,12 @@ class ServerSettings:
             raise ConfigurationError(message)
 
         region = values.get(ENV_REGION, "").strip() or None
-        return cls(api_key=api_key, space_id=space_id, region=region)
+        actor_id = values.get(ENV_ACTOR_ID, "").strip() or None
+        assistant_id = values.get(ENV_ASSISTANT_ID, "").strip() or None
+        return cls(
+            api_key=api_key,
+            space_id=space_id,
+            region=region,
+            actor_id=actor_id,
+            assistant_id=assistant_id,
+        )

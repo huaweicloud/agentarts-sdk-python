@@ -1,5 +1,6 @@
 """In-process tests for the MCP server and ltm_search tool."""
 
+import logging
 from types import SimpleNamespace
 from typing import Any
 
@@ -34,6 +35,9 @@ class FakeMemoryClient:
 
 def server_with_fake(
     fake: FakeMemoryClient,
+    *,
+    actor_id: str | None = "actor-123",
+    assistant_id: str | None = "assistant-123",
 ) -> tuple[Any, dict[str, object]]:
     factory_arguments: dict[str, object] = {}
 
@@ -45,6 +49,8 @@ def server_with_fake(
         api_key="secret-api-key",
         space_id="space-123",
         region="cn-north-4",
+        actor_id=actor_id,
+        assistant_id=assistant_id,
     )
     return create_server(settings, client_factory=factory), factory_arguments
 
@@ -114,6 +120,8 @@ async def test_ltm_search_delegates_to_bound_space_and_normalizes_results() -> N
     assert space_id == "space-123"
     assert filters is not None
     assert filters.query == "travel preferences"
+    assert filters.actor_id == "actor-123"
+    assert filters.assistant_id == "assistant-123"
     assert filters.top_k == 2
     assert fake.closed is True
 
@@ -129,6 +137,28 @@ async def test_ltm_search_uses_default_top_k() -> None:
     _, filters = fake.calls[0]
     assert filters is not None
     assert filters.top_k == DEFAULT_TOP_K
+
+
+@pytest.mark.asyncio
+async def test_ltm_search_does_not_filter_by_optional_ids_when_absent() -> None:
+    fake = FakeMemoryClient()
+    server, _ = server_with_fake(fake, actor_id=None, assistant_id=None)
+
+    async with Client(server) as client:
+        await client.call_tool("ltm_search", {"query": "preferences"})
+
+    _, filters = fake.calls[0]
+    assert filters is not None
+    assert filters.actor_id is None
+    assert filters.assistant_id is None
+
+
+def test_server_warns_when_actor_id_is_absent(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.WARNING, logger="agentarts_memory_mcp.server"):
+        server_with_fake(FakeMemoryClient(), actor_id=None)
+
+    assert "AGENTARTS_MEMORY_ACTOR_ID is not set" in caplog.text
+    assert "searches will include all actors" in caplog.text
 
 
 @pytest.mark.asyncio

@@ -7,6 +7,7 @@
 - 使用官方 MCP Python SDK v2 的高层 `MCPServer` API。
 - 通过 stdin/stdout 与本地 MCP Host 通信。
 - 进程启动时绑定一个 AgentArts Memory Space，调用者不能切换 Space。
+- 可选绑定一个 Actor 和 Assistant，并将相应 ID 应用于每次检索。
 - 只暴露只读工具 `ltm_search`，不开放空间管理、写入或删除操作。
 - 每个服务进程复用一个异步 Memory Client，并在服务退出时关闭连接。
 - 返回结构化结果；服务端异常记录到 stderr，工具调用仅收到脱敏错误。
@@ -50,11 +51,16 @@ uvx agentarts-memory-mcp
 |---|---:|---|---|
 | `HUAWEICLOUD_SDK_MEMORY_API_KEY` | 是 | — | 绑定 Space 的 Data Plane API Key |
 | `AGENTARTS_MEMORY_SPACE_ID` | 是 | — | 服务进程绑定的 Memory Space ID |
+| `AGENTARTS_MEMORY_ACTOR_ID` | 否 | — | 检索限定的 Actor ID；未设置时在整个 Space 内检索 |
+| `AGENTARTS_MEMORY_ASSISTANT_ID` | 否 | — | 检索限定的 Assistant ID；未设置时不按 Assistant 过滤 |
 | `HUAWEICLOUD_SDK_REGION` | 否 | `cn-southwest-2` | 华为云区域；未设置时使用 SDK 默认值 |
 | `AGENTARTS_MEMORY_DATA_ENDPOINT` | 否 | 按区域生成 | SDK 已支持的 Data Plane Endpoint 覆盖项 |
 
 缺少必填变量时，进程在启动阶段以退出码 2 失败。错误只列出缺失变量名，不会
 输出凭据值。
+
+未设置 `AGENTARTS_MEMORY_ACTOR_ID` 时，服务会在启动阶段记录 warning，提示检索
+范围包含该 Space 内的所有 Actor。
 
 ## MCP Host 配置
 
@@ -69,6 +75,8 @@ uvx agentarts-memory-mcp
       "env": {
         "HUAWEICLOUD_SDK_MEMORY_API_KEY": "<memory-api-key>",
         "AGENTARTS_MEMORY_SPACE_ID": "<space-id>",
+        "AGENTARTS_MEMORY_ACTOR_ID": "<actor-id>",
+        "AGENTARTS_MEMORY_ASSISTANT_ID": "<assistant-id>",
         "HUAWEICLOUD_SDK_REGION": "cn-southwest-2"
       }
     }
@@ -86,7 +94,10 @@ uvx agentarts-memory-mcp
 
 ### `ltm_search`
 
-对绑定 Space 内的长期记忆执行语义检索。工具契约与
+对绑定 Space 内的长期记忆执行语义检索。设置
+`AGENTARTS_MEMORY_ACTOR_ID` 后，每次检索都会附带该 Actor 过滤条件，且 MCP
+调用者不能覆盖。可选的 `AGENTARTS_MEMORY_ASSISTANT_ID` 以相同方式限定
+Assistant。工具契约与
 `agentarts-memory-hermes` 中的同名工具保持兼容。
 
 | 参数 | 类型 | 必填 | 默认值 | 约束 | 说明 |
@@ -119,9 +130,10 @@ stdio 的 stdout 专用于 MCP JSON-RPC 消息。诊断日志写入 stderr。
 如果工具返回 `AgentArts Memory search failed; check the server logs`，检查：
 
 1. API Key 与 Space ID 是否匹配。
-2. Region 是否正确。
-3. Space 是否处于可用状态。
-4. 网络是否能访问 Memory Data Plane Endpoint。
+2. Actor ID 是否与目标记忆一致。
+3. Region 是否正确。
+4. Space 是否处于可用状态。
+5. 网络是否能访问 Memory Data Plane Endpoint。
 
 ## 开发验证
 
