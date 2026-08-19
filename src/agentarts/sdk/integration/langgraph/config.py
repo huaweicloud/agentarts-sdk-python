@@ -44,8 +44,8 @@ class CheckpointerConfig(BaseModel):
     """
 
     thread_id: str
-    actor_id: str = ""
-    assistant_id: str = ""
+    actor_id: str | None = None
+    assistant_id: str | None = None
     checkpoint_ns: str | None = None
     checkpoint_id: str | None = None
 
@@ -75,8 +75,8 @@ class CheckpointerConfig(BaseModel):
 
         return cls(
             thread_id=thread_id,
-            actor_id=configurable.get("actor_id", ""),
-            assistant_id=configurable.get("assistant_id", ""),
+            actor_id=configurable.get("actor_id"),
+            assistant_id=configurable.get("assistant_id"),
             checkpoint_ns=configurable.get("checkpoint_ns"),
             checkpoint_id=configurable.get("checkpoint_id"),
         )
