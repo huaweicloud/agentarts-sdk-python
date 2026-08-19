@@ -1,0 +1,63 @@
+[build-system]
+requires = ["uv_build>=0.11.0,<0.12.0"]
+build-backend = "uv_build"
+
+[project]
+name = "agentarts-memory-mcp"
+version = "0.1.0a1"
+description = "stdio MCP server for Huawei Cloud AgentArts Memory"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [
+    {name = "Huawei Cloud AgentArts Team", email = "hwagentartssdk@huawei.com"},
+]
+keywords = ["agentarts", "memory", "mcp", "stdio"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Typing :: Typed",
+]
+dependencies = [
+    "agentarts-sdk>=0.1.5,<0.2",
+    "mcp>=2,<3",
+    "pydantic>=2,<3",
+]
+
+[project.scripts]
+agentarts-memory-mcp = "agentarts_memory_mcp.__main__:main"
+
+[dependency-groups]
+dev = [
+    "mypy>=1.17.0",
+    "pytest>=8.4.0",
+    "pytest-asyncio>=1.1.0",
+    "ruff>=0.12.0",
+]
+
+[tool.uv.build-backend]
+module-name = "agentarts_memory_mcp"
+module-root = "src"
+
+[tool.pytest.ini_options]
+addopts = ["-ra", "-q", "--strict-config", "--strict-markers"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["B", "C4", "E", "EM", "F", "I", "N", "PIE", "PT", "Q", "UP", "W"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+pretty = true
+show_error_codes = true
