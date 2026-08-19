@@ -446,11 +446,11 @@ class DataBrowserHttpClient(BaseHTTPClient):
         client_token: str | None = None,
         api_key: str | None = None,
     ) -> dict[Any, Any]:
-        """PUT /v1/browsers/{browser_name}/streams_update
+        """PUT /v1/browsers/{browser_name}/streams-update
 
         Update a browser session stream (e.g. enable/disable human handoff).
         """
-        endpoint = f"/v1/browsers/{browser_name}/streams_update"
+        endpoint = f"/v1/browsers/{browser_name}/streams-update"
         headers = {"X-hw-Agentarts-Browser-Session-Id": session_id}
         if api_key is not None:
             headers["Authorization"] = f"Bearer {api_key}"
@@ -473,11 +473,11 @@ class DataBrowserHttpClient(BaseHTTPClient):
         profile_id: str,
         api_key: str | None = None,
     ) -> dict[Any, Any]:
-        """PUT /v1/browsers/{browser_name}/save_profile
+        """PUT /v1/browsers/{browser_name}/save-profile
 
         Save current browser session state to a profile.
         """
-        endpoint = f"/v1/browsers/{browser_name}/save_profile"
+        endpoint = f"/v1/browsers/{browser_name}/save-profile"
         headers = {"X-hw-Agentarts-Browser-Session-Id": session_id}
         if api_key is not None:
             headers["Authorization"] = f"Bearer {api_key}"

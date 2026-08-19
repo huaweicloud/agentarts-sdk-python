@@ -549,7 +549,7 @@ class TestBrowserHttpClient(unittest.TestCase):
         )
         assert result == {"ok": True}
         mock_put.assert_called_once_with(
-            url="/v1/browsers/test-browser/streams_update",
+            url="/v1/browsers/test-browser/streams-update",
             headers={"X-hw-Agentarts-Browser-Session-Id": "s-1"},
             json={"stream_update": {"automation_stream_update": {"stream_status": "enabled"}}},
         )
@@ -564,7 +564,7 @@ class TestBrowserHttpClient(unittest.TestCase):
         )
         assert result == {"ok": True}
         mock_put.assert_called_once_with(
-            url="/v1/browsers/test-browser/save_profile",
+            url="/v1/browsers/test-browser/save-profile",
             headers={"X-hw-Agentarts-Browser-Session-Id": "s-1"},
             json={"profile_id": "p-1"},
         )
