@@ -1728,6 +1728,12 @@ def browser_session(
     auth_type: str = "API_KEY",
     api_key: str | None = None,
     verify_ssl: bool | str = True,
+    viewport: dict | None = None,
+    profile_configuration: dict | None = None,
+    allowed_domains: list[str] | None = None,
+    blocked_domains: list[str] | None = None,
+    proxy_configuration: dict | None = None,
+    session_timeout: int = DEFAULT_SESSION_TIMEOUT,
 ) -> Generator[Browser, None, None]:
     """Browser session context manager.
 
@@ -1742,6 +1748,13 @@ def browser_session(
         api_key: API Key for authentication (API_KEY mode).
         verify_ssl: SSL verification. True to verify, False to skip,
             or a string path to a CA bundle. Defaults to True.
+        viewport: Optional viewport configuration dict.
+        profile_configuration: Optional browser profile configuration dict.
+        allowed_domains: Optional list of allowed domain patterns.
+        blocked_domains: Optional list of blocked domain patterns. Mutually
+            exclusive with allowed_domains.
+        proxy_configuration: Optional proxy configuration dict.
+        session_timeout: Session timeout in seconds. Defaults to 900.
 
     Yields:
         Browser: Browser instance with an active session.
@@ -1751,7 +1764,18 @@ def browser_session(
         >>>     b.invoke("navigate", {"url": "https://example.com"})
     """
     client = Browser(region=region, auth_type=auth_type, verify_ssl=verify_ssl)
-    client.start_session(browser_name=browser_name, session_name=session_name, session_id=session_id, api_key=api_key)
+    client.start_session(
+        browser_name=browser_name,
+        session_name=session_name,
+        session_id=session_id,
+        viewport=viewport,
+        profile_configuration=profile_configuration,
+        allowed_domains=allowed_domains,
+        blocked_domains=blocked_domains,
+        proxy_configuration=proxy_configuration,
+        session_timeout=session_timeout,
+        api_key=api_key,
+    )
     try:
         yield client
     finally:

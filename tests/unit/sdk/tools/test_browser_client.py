@@ -11,6 +11,7 @@ from agentarts.sdk.service.tools_http import (
     DataBrowserHttpClient,
 )
 from agentarts.sdk.tools.browser import Browser, browser_session
+from agentarts.sdk.tools.browser.browser_client import DEFAULT_SESSION_TIMEOUT
 
 UUID = "9ca9f2a6-18e4-4777-b23b-8c21e978a1ad"
 
@@ -499,6 +500,54 @@ class TestBrowserClient(unittest.TestCase):
                     browser_name="my-browser",
                     session_name="my-session",
                     session_id=None,
+                    viewport=None,
+                    profile_configuration=None,
+                    allowed_domains=None,
+                    blocked_domains=None,
+                    proxy_configuration=None,
+                    session_timeout=DEFAULT_SESSION_TIMEOUT,
                     api_key=None,
                 )
             mock_client.stop_session.assert_called_once_with(api_key=None)
+
+    def test_browser_session_forwards_start_session_options(self):
+        with patch("agentarts.sdk.tools.browser.browser_client.Browser") as MockBrowser:
+            mock_client = MockBrowser.return_value
+            viewport = {"width": 1440, "height": 900}
+            profile_configuration = {"profile_id": "profile-1"}
+            proxy_configuration = {"server": "http://proxy.example.com:8080"}
+
+            with browser_session(
+                "cn-southwest-2",
+                "my-browser",
+                "my-session",
+                session_id="session-1",
+                auth_type="API_KEY",
+                api_key="test-key",
+                verify_ssl=False,
+                viewport=viewport,
+                profile_configuration=profile_configuration,
+                allowed_domains=["example.com"],
+                proxy_configuration=proxy_configuration,
+                session_timeout=1800,
+            ) as browser:
+                assert browser is mock_client
+
+            MockBrowser.assert_called_once_with(
+                region="cn-southwest-2",
+                auth_type="API_KEY",
+                verify_ssl=False,
+            )
+            mock_client.start_session.assert_called_once_with(
+                browser_name="my-browser",
+                session_name="my-session",
+                session_id="session-1",
+                viewport=viewport,
+                profile_configuration=profile_configuration,
+                allowed_domains=["example.com"],
+                blocked_domains=None,
+                proxy_configuration=proxy_configuration,
+                session_timeout=1800,
+                api_key="test-key",
+            )
+            mock_client.stop_session.assert_called_once_with(api_key="test-key")
