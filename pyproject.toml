@@ -45,6 +45,7 @@ dependencies = [
     "huaweicloudsdkswr>=3.1.0",
     "starlette>=0.46.2",
     "uvicorn[standard]>=0.24.0",
+    "fastapi>=0.104.0",
     "pydantic>=2.0.0,<3.0.0",
     "pydantic-settings>=2.0.0,<3.0.0",
     "python-dotenv>=1.0.0",
@@ -57,6 +58,7 @@ dependencies = [
     "pyjwt>=2.8.0",
     "cryptography>=41.0.0",
     "docker>=7.0.0",
+    "mcp>=2.0.0",
 ]
 
 [dependency-groups]

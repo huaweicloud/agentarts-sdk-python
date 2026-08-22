@@ -1,0 +1,35 @@
+{
+  "name": "agentarts_memory",
+  "version": "1.0.0",
+  "description": "Huawei Cloud AgentArts Memory as cloud memory backend for Codex. 6 hooks.",
+  "author": {
+    "name": "AgentArts",
+    "url": "https://github.com/huaweicloud/agentarts-sdk-python"
+  },
+  "homepage": "https://github.com/huaweicloud/agentarts-sdk-python",
+  "repository": "https://github.com/huaweicloud/agentarts-sdk-python",
+  "license": "Apache-2.0",
+  "keywords": [
+    "memory",
+    "agentarts",
+    "huaweicloud",
+    "persistence"
+  ],
+  "interface": {
+    "displayName": "AgentArts Memory",
+    "shortDescription": "Huawei Cloud AgentArts memory for Codex",
+    "longDescription": "AgentArts Memory adds cross-session memory to Codex via Huawei Cloud AgentArts Memory. Conversation prompts are recorded and relevant memories are injected before each turn.",
+    "developerName": "AgentArts",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/huaweicloud/agentarts-sdk-python",
+    "defaultPrompt": [
+      "Search my memories for recent project decisions",
+      "Remember that I prefer TypeScript over JavaScript",
+      "What do you know about my coding preferences?"
+    ]
+  }
+}

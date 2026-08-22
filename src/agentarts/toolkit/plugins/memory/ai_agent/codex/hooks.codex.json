@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "AGENTARTS_MEMORY_PLATFORM=codex node \"${CODEX_PLUGIN_ROOT}/scripts/prompt-submit.mjs\"",
+            "statusMessage": "agentarts-memory: recording prompt + searching memories"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "AGENTARTS_MEMORY_PLATFORM=codex node \"${CODEX_PLUGIN_ROOT}/scripts/pre-compact.mjs\"",
+            "statusMessage": "agentarts-memory: injecting context before compaction"
+          }
+        ]
+      }
+    ]
+  }
+}

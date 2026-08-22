@@ -34,12 +34,16 @@ agentarts-sdk-python/
 │   └── toolkit/                # CLI toolkit
 │       ├── cli/                # Command-line interface
 │       ├── operations/         # CLI operation handlers
+│       ├── plugins/memory/     # Memory plugins (ai_agent, server, installer)
 │       └── utils/templates/    # Project templates
 ├── docs/                       # Documentation
 │   └── cn/                     # Chinese documentation
 │       ├── sdk_user_guide/     # SDK usage guides
 │       └── toolkit_user_guide/ # CLI usage guides
 └── tests/                      # Test suites
+    ├── unit/                   # Unit tests mirroring src/ tree
+    │   └── toolkit/plugins/memory/  # Memory plugin tests
+    └── integration/            # Integration tests
 ```
 
 ## Wrapping Your Agent as HTTP Server
@@ -323,6 +327,32 @@ agentarts destroy
 | `agentarts invoke`      | Invoke deployed agent                          |
 | `agentarts destroy`     | Remove deployed agent                          |
 | `agentarts gateway`     | Manage gateways                                |
+| `agentarts memory`      | Manage Memory Spaces and memory plugins         |
+
+### Memory Commands
+
+The `agentarts memory` command provides two groups of subcommands.
+
+**Space Management** (requires AK/SK authentication):
+
+| Command                     | Description                                    |
+| --------------------------- | ---------------------------------------------- |
+| `agentarts memory create`   | Create a Memory Space                          |
+| `agentarts memory get`      | Get Space details                              |
+| `agentarts memory list`     | List Spaces                                    |
+| `agentarts memory update`   | Update a Space                                 |
+| `agentarts memory delete`   | Delete a Space                                 |
+| `agentarts memory status`   | Check Space status and health                  |
+
+**Plugin Installation & Local Server:**
+
+| Command                          | Description                                                           |
+| -------------------------------- | --------------------------------------------------------------------- |
+| `agentarts memory install`       | Install memory plugin into an AI agent (codex, claude, opencode, hermes, openclaw) |
+| `agentarts memory uninstall`     | Uninstall memory plugin from an AI agent                              |
+| `agentarts memory server start`  | Start the local memory adapter server (127.0.0.1:8719)                |
+| `agentarts memory server stop`   | Stop the local memory adapter server                                  |
+| `agentarts memory server status` | Check the local adapter server status                                 |
 
 ## Limitations & Requirements
 
@@ -397,4 +427,3 @@ Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for det
 - **Issues:** [GitHub Issues](https://github.com/huaweicloud/agentarts-sdk-python/issues)
 - **Documentation:** <https://support.huaweicloud.com/productdesc-agentarts/agentarts_03_0002.html>
 - **Email:** <hwagentartssdk@huawei.com>
-

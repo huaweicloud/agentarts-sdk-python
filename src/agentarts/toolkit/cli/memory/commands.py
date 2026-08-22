@@ -15,6 +15,10 @@ from agentarts.toolkit.operations.memory import (
     update_space,
 )
 from agentarts.toolkit.utils.common import echo_error, echo_success
+from agentarts.toolkit.plugins.memory.installer.cli import (
+    install_cmd,
+    uninstall_cmd,
+)
 
 console = Console()
 
@@ -514,3 +518,9 @@ def space_status_cmd(
             region_info = result.space.get("region")
             if region_info:
                 console.print(f"  Region: [cyan]{region_info}[/cyan]")
+
+
+# Register the installer's install/uninstall/server commands onto the shared
+# memory app: `agentarts memory install|uninstall|server`.
+memory_app.command(name="install")(install_cmd)
+memory_app.command(name="uninstall")(uninstall_cmd)

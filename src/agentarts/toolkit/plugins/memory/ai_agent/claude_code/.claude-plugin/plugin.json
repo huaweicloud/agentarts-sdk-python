@@ -1,0 +1,27 @@
+{
+  "name": "agentarts_memory",
+  "version": "1.0.0",
+  "description": "Huawei Cloud AgentArts Memory as cloud memory backend for Claude Code. 12 hooks.",
+  "author": {
+    "name": "AgentArts"
+  },
+  "homepage": "https://github.com/huaweicloud/agentarts-sdk-python",
+  "repository": "https://github.com/huaweicloud/agentarts-sdk-python",
+  "license": "Apache-2.0",
+  "keywords": ["memory", "agentarts", "huaweicloud", "persistence"],
+  "hooks": "./hooks.json",
+  "userConfig": {
+    "memory_server_url": {
+      "type": "string",
+      "title": "Memory Server URL",
+      "description": "Local AgentArts memory adapter server URL (default: http://127.0.0.1:8719)",
+      "required": false
+    },
+    "user_id": {
+      "type": "string",
+      "title": "User ID",
+      "description": "User ID for memory scope isolation (default: cc-user)",
+      "required": false
+    }
+  }
+}
