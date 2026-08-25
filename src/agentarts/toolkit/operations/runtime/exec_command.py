@@ -2,6 +2,7 @@
 
 import logging
 import shlex
+import uuid
 from collections.abc import Iterator
 from typing import Any
 
@@ -113,6 +114,12 @@ def exec_runtime_command(
         raise ValueError("Command is required")
 
     command_array = build_command_array(command)
+
+    # Auto-generate a session id when none was provided, mirroring `invoke`.
+    # Without this the V11 signer hits `session_id.strip()` on a None header
+    # value and raises an opaque AttributeError.
+    if not session_id:
+        session_id = str(uuid.uuid4())
 
 
     if timeout <= 0:

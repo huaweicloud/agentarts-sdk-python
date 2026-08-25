@@ -1,6 +1,7 @@
 """Runtime exec-command command"""
 
 import json
+import uuid
 from collections.abc import Iterator
 from typing import Annotated
 
@@ -59,6 +60,11 @@ def exec_command_cmd(
     """
     try:
         validated_timeout = validate_timeout(timeout)
+
+        # Mirror `invoke`: auto-generate a session id when the user did not pass
+        # one, instead of crashing later in the V11 signer with an opaque
+        # "'NoneType' object has no attribute 'strip'" error.
+        session = session or str(uuid.uuid4())
 
         mode_str = "chunked (ndjson)" if chunked else "json"
         echo_info(
