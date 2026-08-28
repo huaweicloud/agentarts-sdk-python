@@ -98,6 +98,9 @@ langgraph = [
     "langchain>=1.0.0",
     "langchain-core>=1.0.0",
 ]
+google-adk = [
+    "google-adk>=2.0.0",
+]
 autogen = [
     "pyautogen>=0.2.0",
 ]
@@ -130,7 +133,7 @@ tui = [
     "textual>=0.86.0",
 ]
 all = [
-    "agentarts-sdk[web,langchain,langgraph,autogen,crewai,vector-stores,database,monitoring,huaweicloud,docs,tui]",
+    "agentarts-sdk[web,langchain,langgraph,google-adk,autogen,crewai,vector-stores,database,monitoring,huaweicloud,docs,tui]",
 ]
 
 [project.urls]
