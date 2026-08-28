@@ -142,14 +142,14 @@ class TestAgentArtsMemorySessionSaver:
         assert hasattr(AgentArtsMemorySessionSaver, "get_tuple")
         assert hasattr(AgentArtsMemorySessionSaver, "put")
         assert hasattr(AgentArtsMemorySessionSaver, "list")
-        assert hasattr(AgentArtsMemorySessionSaver, "delete")
+        assert hasattr(AgentArtsMemorySessionSaver, "delete_thread")
         assert hasattr(AgentArtsMemorySessionSaver, "put_writes")
 
         # Check async methods
         assert hasattr(AgentArtsMemorySessionSaver, "aget_tuple")
         assert hasattr(AgentArtsMemorySessionSaver, "aput")
         assert hasattr(AgentArtsMemorySessionSaver, "alist")
-        assert hasattr(AgentArtsMemorySessionSaver, "adelete")
+        assert hasattr(AgentArtsMemorySessionSaver, "adelete_thread")
         assert hasattr(AgentArtsMemorySessionSaver, "aput_writes")
 
     def test_saver_properties(self):
