@@ -1,5 +1,6 @@
 """Unit tests for exec_command operation"""
 
+import uuid
 from collections.abc import Iterator
 from unittest.mock import MagicMock, patch
 
@@ -186,6 +187,36 @@ agents:
 
                 call_args = mock_instance.exec_command.call_args
                 assert call_args.kwargs["session_id"] == "session-123"
+
+    def test_exec_command_auto_generates_session_id(self, tmp_path, monkeypatch):
+        """When no session id is given, one is auto-generated (valid uuid),
+        mirroring `invoke` — instead of crashing in the signer on a None header.
+        """
+        config_content = """
+default_agent: test-agent
+agents:
+  test-agent:
+    base:
+      name: test-agent
+      region: cn-north-4
+"""
+        (tmp_path / ".agentarts_config.yaml").write_text(config_content)
+        monkeypatch.chdir(tmp_path)
+
+        with patch("agentarts.toolkit.operations.runtime.exec_command._get_data_endpoint") as mock_endpoint:
+            with patch("agentarts.toolkit.operations.runtime.exec_command.RuntimeClient") as mock_client:
+                mock_endpoint.return_value = "https://test.example.com"
+                mock_instance = MagicMock()
+                mock_client.return_value = mock_instance
+                mock_instance.exec_command.return_value = {"stdout": ""}
+
+                exec_runtime_command(command="pwd")
+
+                call_args = mock_instance.exec_command.call_args
+                generated = call_args.kwargs["session_id"]
+                # must be a real, non-empty uuid (not None)
+                assert generated is not None
+                uuid.UUID(generated)  # raises ValueError if not a valid uuid
 
     def test_exec_command_with_specific_agent(self, tmp_path, monkeypatch):
         config_content = """
