@@ -5,6 +5,7 @@ import type { ResolvedConfig } from './config.js'
 import type { TurnBatch } from './turn.js'
 
 type Fetch = typeof globalThis.fetch
+export type ApiKeyResolver = () => Promise<string>
 
 interface AgentArtsErrorBody {
   error_code?: unknown
@@ -99,6 +100,12 @@ export class AgentArtsDataPlaneClient implements TurnDataPlane {
   constructor(
     private readonly config: ResolvedConfig,
     private readonly fetchImplementation: Fetch = globalThis.fetch,
+    private readonly resolveApiKey: ApiKeyResolver = async () => {
+      if (config.apiKey === undefined) {
+        throw new Error(`agentarts-memory-dsh: credential "${config.apiKeyEnv}" is not configured`)
+      }
+      return config.apiKey
+    },
   ) {}
 
   async createOrReuseSession(dshSessionId: string): Promise<string> {
@@ -162,10 +169,11 @@ export class AgentArtsDataPlaneClient implements TurnDataPlane {
       )
       const signal = AbortSignal.any([this.lifetime.signal, timeout.signal])
       try {
+        const apiKey = await this.resolveApiKey()
         const response = await this.fetchImplementation(`${this.config.dataEndpoint}${path}`, {
           method,
           headers: {
-            'Authorization': `Bearer ${this.config.apiKey}`,
+            'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json',
             'User-Agent': 'agentarts-memory-dsh/0.1.0',
           },

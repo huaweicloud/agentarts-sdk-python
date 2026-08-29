@@ -4,7 +4,7 @@
     - id: agentarts-memory
       name: agentarts-memory-dsh
       config:
-        apiKey: !!js process.env.HUAWEICLOUD_SDK_MEMORY_API_KEY
+        apiKeyEnv: HUAWEICLOUD_SDK_MEMORY_API_KEY
         spaceId: !!js process.env.AGENTARTS_MEMORY_SPACE_ID
         actorId: !!js process.env.AGENTARTS_MEMORY_ACTOR_ID
         assistantId: !!js process.env.AGENTARTS_MEMORY_ASSISTANT_ID || 'deepseek-harness'

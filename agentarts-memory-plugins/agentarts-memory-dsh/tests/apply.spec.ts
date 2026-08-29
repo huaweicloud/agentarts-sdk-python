@@ -1,4 +1,6 @@
 import { Context } from '@deepseek-ai/cordis'
+import { CredentialProvider } from '@deepseek-ai/dsh-credentials'
+import type { CredentialInfo, CredentialRef, ResolvedCredential } from '@deepseek-ai/dsh-credentials'
 import { createAssistantMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
 import { SessionId, SessionStore } from '@deepseek-ai/dsh-session'
 import SystemPrompt from '@deepseek-ai/dsh-system-prompt'
@@ -8,6 +10,29 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import * as AgentArtsMemory from '../src/index.js'
 
 const contexts: Context[] = []
+const MEMORY_KEY = 'HUAWEICLOUD_SDK_MEMORY_API_KEY'
+
+class TestCredentials extends CredentialProvider {
+  private value = 'credential-secret'
+
+  async resolve(ref: CredentialRef): Promise<ResolvedCredential | undefined> {
+    return ref === MEMORY_KEY ? { value: this.value, source: 'test' } : undefined
+  }
+
+  async describe(ref: CredentialRef): Promise<CredentialInfo> {
+    return ref === MEMORY_KEY
+      ? { configured: true, source: 'test', writable: true }
+      : { configured: false, writable: true }
+  }
+
+  async set(ref: CredentialRef, value: string): Promise<void> {
+    if (ref === MEMORY_KEY) this.value = value
+  }
+
+  async unset(ref: CredentialRef): Promise<void> {
+    if (ref === MEMORY_KEY) this.value = ''
+  }
+}
 
 afterEach(async () => {
   await Promise.all(contexts.splice(0).map(context => context.fiber.dispose()))
@@ -24,7 +49,7 @@ describe('Cordis integration', () => {
       region: 'cn-north-4',
       dataEndpoint: 'https://memory.example.test/',
       mcpCwd: '/srv/dsh',
-    }))).toEqual({
+    }), 'secret')).toEqual({
       transport: 'stdio',
       serverName: 'agentarts-memory',
       command: 'agentarts-memory-mcp',
@@ -49,8 +74,8 @@ describe('Cordis integration', () => {
     await context.plugin(SessionStore)
     await context.plugin(SystemPrompt, { persona: '' })
     await context.plugin(ToolRuntime)
+    await context.plugin(TestCredentials)
     await context.plugin(AgentArtsMemory, {
-      apiKey: 'secret',
       spaceId: 'space-1',
       actorId: 'actor-1',
       mcpCommand: process.execPath,
@@ -81,8 +106,8 @@ describe('Cordis integration', () => {
     await context.plugin(SessionStore)
     await context.plugin(SystemPrompt, { persona: '' })
     await context.plugin(ToolRuntime)
+    await context.plugin(TestCredentials)
     await context.plugin(AgentArtsMemory, {
-      apiKey: 'secret',
       spaceId: 'space-1',
       actorId: 'actor-1',
       dataEndpoint: 'https://memory.example.test',
@@ -109,6 +134,7 @@ describe('Cordis integration', () => {
 
     expect(fetch).toHaveBeenCalledTimes(2)
     const [, write] = fetch.mock.calls[1] ?? []
+    expect(write?.headers).toMatchObject({ Authorization: 'Bearer credential-secret' })
     expect(JSON.parse(String(write?.body))).toMatchObject({
       messages: [
         { role: 'user', parts: [{ type: 'text', text: 'remember green' }] },

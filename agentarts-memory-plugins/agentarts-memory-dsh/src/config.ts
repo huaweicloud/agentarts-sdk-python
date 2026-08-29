@@ -1,7 +1,10 @@
 /** Validated configuration for the AgentArts Memory DSH plugin. */
 
 import z from '@deepseek-ai/schemastery'
+import { credentialRef } from '@deepseek-ai/dsh-credentials'
+import type { CredentialRef } from '@deepseek-ai/dsh-credentials'
 
+export const DEFAULT_API_KEY_ENV = 'HUAWEICLOUD_SDK_MEMORY_API_KEY'
 export const DEFAULT_REGION = 'cn-southwest-2'
 export const DEFAULT_ASSISTANT_ID = 'deepseek-harness'
 export const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
@@ -15,8 +18,10 @@ export const DEFAULT_MCP_TOOL_CALL_TIMEOUT_MS = 60_000
 
 /** User configuration accepted from `cordis.yml`. */
 export interface Config {
-  /** AgentArts Memory data-plane API key. */
-  apiKey: string
+  /** Optional literal AgentArts Memory data-plane API key override. */
+  apiKey?: string
+  /** Credential reference resolved through DSH's credentials service. */
+  apiKeyEnv?: string
   /** Existing AgentArts Memory Space id. */
   spaceId: string
   /** Stable human or tenant identity recorded on synchronized sessions and messages. */
@@ -53,7 +58,8 @@ export interface Config {
 
 /** Complete values consumed by the runtime. */
 export interface ResolvedConfig {
-  apiKey: string
+  apiKey?: string
+  apiKeyEnv: CredentialRef
   spaceId: string
   actorId: string
   assistantId: string
@@ -74,7 +80,8 @@ export interface ResolvedConfig {
 
 /** Cordis configuration schema. */
 export const Config: z<Config> = z.object({
-  apiKey: z.string().required(),
+  apiKey: z.string().role('secret'),
+  apiKeyEnv: z.string().role('credential-ref').default(DEFAULT_API_KEY_ENV),
   spaceId: z.string().required(),
   actorId: z.string().required(),
   assistantId: z.string().default(DEFAULT_ASSISTANT_ID),
@@ -122,7 +129,8 @@ function resolveEndpoint(endpoint: string | undefined, region: string): string {
 
 /** Resolve defaults and validate programmatic calls that bypass Schemastery. */
 export function resolveConfig(config: Config): ResolvedConfig {
-  const apiKey = requireNonEmpty('apiKey', config.apiKey)
+  const apiKey = config.apiKey === undefined ? undefined : requireNonEmpty('apiKey', config.apiKey)
+  const apiKeyEnv = credentialRef(requireNonEmpty('apiKeyEnv', config.apiKeyEnv ?? DEFAULT_API_KEY_ENV))
   const spaceId = requireNonEmpty('spaceId', config.spaceId)
   const actorId = requireNonEmpty('actorId', config.actorId)
   const assistantId = requireNonEmpty('assistantId', config.assistantId ?? DEFAULT_ASSISTANT_ID)
@@ -152,7 +160,8 @@ export function resolveConfig(config: Config): ResolvedConfig {
   }
 
   return {
-    apiKey,
+    ...(apiKey === undefined ? {} : { apiKey }),
+    apiKeyEnv,
     spaceId,
     actorId,
     assistantId,

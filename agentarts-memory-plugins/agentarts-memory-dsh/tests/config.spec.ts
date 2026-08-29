@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DEFAULT_API_KEY_ENV,
   DEFAULT_ASSISTANT_ID,
   DEFAULT_MCP_CWD,
   DEFAULT_REGION,
@@ -8,7 +9,6 @@ import {
 } from '../src/config.js'
 
 const required: Config = {
-  apiKey: 'secret',
   spaceId: 'space-1',
   actorId: 'user-1',
 }
@@ -16,7 +16,7 @@ const required: Config = {
 describe('resolveConfig', () => {
   it('resolves data-plane and MCP defaults', () => {
     expect(resolveConfig(required)).toMatchObject({
-      apiKey: 'secret',
+      apiKeyEnv: DEFAULT_API_KEY_ENV,
       spaceId: 'space-1',
       actorId: 'user-1',
       assistantId: DEFAULT_ASSISTANT_ID,
@@ -38,6 +38,7 @@ describe('resolveConfig', () => {
 
   it.each([
     [{ ...required, apiKey: ' ' }, 'apiKey'],
+    [{ ...required, apiKeyEnv: 'not-valid' }, 'credential ref'],
     [{ ...required, actorId: '' }, 'actorId'],
     [{ ...required, maxRetries: -1 }, 'maxRetries'],
     [{ ...required, requestTimeoutMs: 0 }, 'requestTimeoutMs'],

@@ -123,10 +123,10 @@ jobs:
       - name: Test MCP package
         run: uv run --locked pytest
 
-  memocy-mcp-build-test:
+  memory-mcp-build-test:
     name: Memory MCP package build
     runs-on: ubuntu-latest
-    needs: mcp-test
+    needs: memory-mcp-test
     defaults:
       run:
         working-directory: agentarts-memory-plugins/agentarts-memory-mcp

@@ -172,3 +172,5 @@ examples/navigation_langgraph_memory/sessions.json
 *.tmp
 *.temp
 *.bak
+
+node_modules/

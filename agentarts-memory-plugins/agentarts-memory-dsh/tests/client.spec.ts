@@ -105,6 +105,23 @@ describe('AgentArtsDataPlaneClient', () => {
     expect(fetch).toHaveBeenCalledTimes(2)
   })
 
+  it('resolves the API key for every request so credential rotation reaches the write path', async () => {
+    const keys = ['first-key', 'rotated-key']
+    const fetch = vi.fn<typeof globalThis.fetch>()
+      .mockResolvedValueOnce(jsonResponse({ id: toAgentArtsSessionId('dsh-session-1') }, 201))
+      .mockResolvedValueOnce(jsonResponse({ items: [], count: 2 }, 201))
+    const resolveApiKey = vi.fn(async () => keys.shift() ?? 'unexpected-key')
+    const client = new AgentArtsDataPlaneClient(config, fetch, resolveApiKey)
+
+    const remote = await client.createOrReuseSession('dsh-session-1')
+    await client.addTurn(remote, batch)
+
+    expect(resolveApiKey).toHaveBeenCalledTimes(2)
+    expect(fetch.mock.calls.map(([, init]) =>
+      (init?.headers as Record<string, string>).Authorization,
+    )).toEqual(['Bearer first-key', 'Bearer rotated-key'])
+  })
+
   it('reports service diagnostics without exposing the API key', async () => {
     const fetch = vi.fn<typeof globalThis.fetch>()
       .mockResolvedValue(jsonResponse({ error_code: 'UNAUTHORIZED', error_msg: 'bad credential' }, 401))
