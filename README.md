@@ -360,6 +360,44 @@ The `agentarts memory` command provides two groups of subcommands.
 | `agentarts memory install`       | Install memory plugin into an AI agent (claude, codex, opencode, hermes) |
 | `agentarts memory uninstall`     | Uninstall memory plugin from an AI agent                              |
 
+### Memory MCP Server
+
+Installing `agentarts-sdk` also installs the `agentarts-memory-mcp` stdio
+server. It requires `HUAWEICLOUD_SDK_MEMORY_API_KEY` and
+`AGENTARTS_MEMORY_SPACE_ID`; region, actor, assistant, and project identifiers
+can be supplied with the corresponding `HUAWEICLOUD_SDK_REGION` and
+`AGENTARTS_MEMORY_*` environment variables.
+
+The server preserves the toolkit's existing memory tools and adds the portable
+`ltm_search` tool.
+See [the Memory MCP server guide](docs/memory_mcp.md) for configuration,
+contracts, and lifecycle details.
+
+| Tool | Purpose |
+| --- | --- |
+| `ltm_search` | Portable, read-only long-term-memory search |
+| `search_memories` | Search with explicit result count and score threshold |
+| `add_messages` | Record conversation messages using a reusable memory session |
+| `list_memories` | List scoped memory records with pagination |
+| `search_summary` | Retrieve summary-type memories with a recent-memory fallback |
+
+```json
+{
+  "mcpServers": {
+    "agentarts-memory": {
+      "command": "uvx",
+      "args": ["--from", "agentarts-sdk", "agentarts-memory-mcp"],
+      "env": {
+        "HUAWEICLOUD_SDK_MEMORY_API_KEY": "<memory-api-key>",
+        "AGENTARTS_MEMORY_SPACE_ID": "<space-id>",
+        "AGENTARTS_MEMORY_ACTOR_ID": "<actor-id>",
+        "AGENTARTS_MEMORY_ASSISTANT_ID": "<assistant-id>"
+      }
+    }
+  }
+}
+```
+
 ## Limitations & Requirements
 
 ### Python Version

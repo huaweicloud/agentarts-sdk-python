@@ -58,7 +58,7 @@ dependencies = [
     "pyjwt>=2.8.0",
     "cryptography>=41.0.0",
     "docker>=7.0.0",
-    "mcp>=2.0.0",
+    "mcp>=2.0.0,<3.0.0",
 ]
 
 [dependency-groups]
@@ -142,6 +142,7 @@ Changelog = "https://github.com/huaweicloud/agentarts-sdk-python/blob/main/CHANG
 
 [project.scripts]
 agentarts = "agentarts.toolkit.main:cli"
+agentarts-memory-mcp = "agentarts.toolkit.plugins.memory.mcp.server:main"
 
 [tool.uv.build-backend]
 module-name = ["agentarts"]

@@ -20,7 +20,7 @@ DSH tools <-- dsh-mcp-client <-- stdio --> agentarts-memory-mcp
                                               +--> AgentArts ltm_search
 ```
 
-The write path is not routed through MCP. Doing so would either publish a mutation tool to the model or require a second private MCP client. The Node plugin instead uses the small, stable data-plane subset already implemented by the Python SDK: Bearer authentication, `POST /sessions`, and `POST /sessions/{id}/messages`. Search remains in the existing Python MCP package so its public contract has one owner. Following DSH's `examples/mcp-memory` contract, the plugin provisions an already-installed `agentarts-memory-mcp` command; it does not embed a second server, run a package manager, or create a Memory Space.
+Committed-turn synchronization is not routed through MCP. The Node plugin uses the small, stable data-plane subset already implemented by the Python SDK: Bearer authentication, `POST /sessions`, and `POST /sessions/{id}/messages`. This keeps durable turn ingestion independent from model tool selection. The MCP server bundled with `agentarts-sdk` provides the model-callable memory tools. Following DSH's `examples/mcp-memory` contract, the plugin provisions an already-installed `agentarts-memory-mcp` command; it does not embed a second server, run a package manager, or create a Memory Space.
 
 ## Identity and idempotency
 
@@ -63,8 +63,7 @@ Credentials are never included in errors, metadata, or idempotency keys. HTTP di
 expose only status, service error code, and service message.
 
 The MCP child receives only the resolved AgentArts key plus the connection and identity
-variables it supports. Because stdio child environment is process-bound, a rotated key
-reaches turn writes immediately but requires plugin reload to reach MCP recall. Its Space,
+variables. Because stdio child environment is process-bound, a rotated key reaches turn
+writes immediately but requires plugin reload to reach MCP tools. Its Space,
 Actor, and Assistant filters are also fixed at process startup and cannot be overridden by
-a model tool call. Write operations have no model-visible tool schema; the only advertised
-operation is the read-only `ltm_search` tool owned by `agentarts-memory-mcp`.
+a model tool call. The MCP tool schemas are owned by `agentarts-memory-mcp`.

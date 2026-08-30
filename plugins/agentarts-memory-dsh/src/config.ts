@@ -40,7 +40,7 @@ export interface Config {
   retryBaseDelayMs?: number
   /** Force memory extraction after every synchronized turn. */
   forceExtract?: boolean
-  /** Start the AgentArts search-only MCP server and expose its tools. */
+  /** Start the AgentArts MCP server and expose its tools. */
   mcpEnabled?: boolean
   /** Namespace used in `mcp__<serverName>__ltm_search`. */
   mcpServerName?: string

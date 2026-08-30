@@ -1,7 +1,6 @@
-"""AgentArts Memory MCP server package.
+"""AgentArts Memory MCP server package."""
 
-Exposes ``server`` which contains the ``MCPServer`` instance and tool
-functions backed by :class:`AgentArtsMemoryClient`.
-"""
+from .config import ServerSettings
+from .server import create_server
 
-__all__ = ["server"]
+__all__ = ["ServerSettings", "create_server"]

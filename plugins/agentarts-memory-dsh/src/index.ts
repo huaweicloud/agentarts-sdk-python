@@ -68,7 +68,7 @@ export function createMcpClientConfig(config: ResolvedConfig, apiKey: string): M
   }
 }
 
-/** Attach turn synchronization and, by default, the search-only MCP child. */
+/** Attach turn synchronization and, by default, the AgentArts MCP child. */
 export async function apply(ctx: Context, config: PluginConfig): Promise<void> {
   const resolved = resolveConfig(config)
   const apiKey = await resolveApiKey(ctx, resolved)

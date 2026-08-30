@@ -1,15 +1,18 @@
-"""Tests for startup validation and the real stdio transport."""
+"""Tests for Memory MCP startup and stdio entry points."""
+
+from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 from mcp import Client
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
-from agentarts_memory_mcp.config import ENV_API_KEY, ENV_SPACE_ID
-from agentarts_memory_mcp.server import main
+from agentarts.toolkit.plugins.memory.mcp.config import ENV_API_KEY, ENV_SPACE_ID
+from agentarts.toolkit.plugins.memory.mcp.server import main
 
 
 def test_main_fails_fast_when_required_environment_is_missing(
@@ -33,26 +36,38 @@ def test_main_runs_explicit_stdio_transport(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setenv(ENV_SPACE_ID, "space-id")
     server = MagicMock()
 
-    with patch("agentarts_memory_mcp.server.create_server", return_value=server):
+    with patch(
+        "agentarts.toolkit.plugins.memory.mcp.server.create_server",
+        return_value=server,
+    ):
         main()
 
     server.run.assert_called_once_with(transport="stdio")
 
 
 @pytest.mark.asyncio
-async def test_module_entrypoint_negotiates_over_stdio() -> None:
+async def test_module_entrypoint_negotiates_all_tools_over_stdio() -> None:
     environment = {
         **os.environ,
+        "PYTHONPATH": os.pathsep.join(
+            filter(None, [str(Path("src").resolve()), os.environ.get("PYTHONPATH", "")])
+        ),
         ENV_API_KEY: "api-key",
         ENV_SPACE_ID: "space-id",
     }
     parameters = StdioServerParameters(
         command=sys.executable,
-        args=["-m", "agentarts_memory_mcp"],
+        args=["-m", "agentarts.toolkit.plugins.memory.mcp.server"],
         env=environment,
     )
 
     async with Client(stdio_client(parameters)) as client:
         tools = await client.list_tools()
 
-    assert [tool.name for tool in tools.tools] == ["ltm_search"]
+    assert {tool.name for tool in tools.tools} == {
+        "search_memories",
+        "add_messages",
+        "list_memories",
+        "search_summary",
+        "ltm_search",
+    }
