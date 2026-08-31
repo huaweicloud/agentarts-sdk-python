@@ -35,3 +35,37 @@ def test_code_interpreter_list():
             result = interpreter.list_code_interpreters()
 
             assert result is not None
+
+
+def test_browser_import():
+    """Test that Browser can be imported"""
+    from agentarts.sdk.tools import Browser
+
+    assert Browser is not None
+
+
+def test_browser_create():
+    """Test Browser creation"""
+    from agentarts.sdk.tools import Browser
+
+    with patch("agentarts.sdk.tools.browser.browser_client.ControlBrowserHttpClient"):
+        with patch("agentarts.sdk.tools.browser.browser_client.DataBrowserHttpClient"):
+            browser = Browser(region="cn-north-4")
+
+            assert browser is not None
+
+
+def test_browser_list():
+    """Test Browser list_browsers method"""
+    from agentarts.sdk.tools import Browser
+
+    with patch("agentarts.sdk.tools.browser.browser_client.ControlBrowserHttpClient") as mock_control:
+        mock_instance = MagicMock()
+        mock_control.return_value = mock_instance
+        mock_instance.list_browsers.return_value = {"items": [], "total_count": 0}
+
+        with patch("agentarts.sdk.tools.browser.browser_client.DataBrowserHttpClient"):
+            browser = Browser(region="cn-north-4")
+            result = browser.list_browsers()
+
+            assert result is not None

@@ -2,7 +2,12 @@ import unittest
 from unittest.mock import patch
 
 from agentarts.sdk.service.http_client import RequestResult
-from agentarts.sdk.service.tools_http import ControlToolsHttpClient, DataToolsHttpClient
+from agentarts.sdk.service.tools_http import (
+    ControlBrowserHttpClient,
+    ControlToolsHttpClient,
+    DataBrowserHttpClient,
+    DataToolsHttpClient,
+)
 
 
 class TestToolsHttpClient(unittest.TestCase):
@@ -370,3 +375,206 @@ class TestToolsHttpClient(unittest.TestCase):
             },
             json=params,
         )
+
+
+class TestBrowserHttpClient(unittest.TestCase):
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_AK")
+    @patch("agentarts.sdk.utils.constant.ENV_HUAWEICLOUD_SDK_SK")
+    def setUp(self, mock_ak, mock_sk):
+        self.control_client = ControlBrowserHttpClient(
+            region_name="test-region", endpoint_url="https://test.com"
+        )
+        self.data_client = DataBrowserHttpClient(
+            region_name="test-region", endpoint_url="https://test.com"
+        )
+
+    @patch.object(ControlBrowserHttpClient, "post")
+    def test_create_browser(self, mock_post):
+        mock_post.return_value = RequestResult(
+            success=True, status_code=200, data={"id": "browser-1", "name": "test"}
+        )
+        result = self.control_client.create_browser(
+            request_params={"name": "test-browser", "auth_type": "API_KEY"}
+        )
+        assert result == {"id": "browser-1", "name": "test"}
+        mock_post.assert_called_once_with(
+            url="/v1/core/browsers",
+            json={"name": "test-browser", "auth_type": "API_KEY"},
+        )
+
+    @patch.object(ControlBrowserHttpClient, "get")
+    def test_list_browsers(self, mock_get):
+        mock_get.return_value = RequestResult(
+            success=True, status_code=200, data={"items": [], "total_count": 0}
+        )
+        result = self.control_client.list_browsers(request_params={})
+        assert result == {"items": [], "total_count": 0}
+        mock_get.assert_called_once_with(url="/v1/core/browsers", params={})
+
+    @patch.object(ControlBrowserHttpClient, "get")
+    def test_get_browser(self, mock_get):
+        mock_get.return_value = RequestResult(
+            success=True, status_code=200, data={"id": "browser-1"}
+        )
+        result = self.control_client.get_browser(browser_id="browser-1")
+        assert result == {"id": "browser-1"}
+        mock_get.assert_called_once_with(url="/v1/core/browsers/browser-1")
+
+    @patch.object(ControlBrowserHttpClient, "delete")
+    def test_delete_browser(self, mock_delete):
+        mock_delete.return_value = RequestResult(success=True, status_code=204, data=None)
+        self.control_client.delete_browser(browser_id="browser-1")
+        mock_delete.assert_called_once_with(url="/v1/core/browsers/browser-1")
+
+    @patch.object(DataBrowserHttpClient, "put")
+    def test_start_session(self, mock_put):
+        mock_put.return_value = RequestResult(
+            success=True, status_code=200, data={"session_id": "s-1"}
+        )
+        result = self.data_client.start_session(
+            browser_name="test-browser",
+            session_id="s-1",
+            request_params={"name": "my-session", "session_timeout": 900},
+        )
+        assert result == {"session_id": "s-1"}
+        mock_put.assert_called_once_with(
+            url="/v1/browsers/test-browser/sessions-start",
+            json={"name": "my-session", "session_timeout": 900},
+            headers={"X-hw-Agentarts-Browser-Session-Id": "s-1"},
+        )
+
+    @patch.object(DataBrowserHttpClient, "post")
+    def test_invoke(self, mock_post):
+        mock_post.return_value = RequestResult(
+            success=True, status_code=200, data={"result": "ok"}
+        )
+        result = self.data_client.invoke(
+            browser_name="test-browser",
+            session_id="s-1",
+            type="navigate",
+            action={"url": "https://example.com"},
+        )
+        assert result == {"result": "ok"}
+        mock_post.assert_called_once_with(
+            url="/v1/browsers/test-browser/invoke",
+            headers={"X-hw-Agentarts-Browser-Session-Id": "s-1"},
+            json={"type": "navigate", "action": {"url": "https://example.com"}},
+        )
+
+    @patch.object(ControlBrowserHttpClient, "put")
+    def test_update_browser(self, mock_put):
+        mock_put.return_value = RequestResult(
+            success=True, status_code=200, data={"id": "browser-1"}
+        )
+        result = self.control_client.update_browser(
+            browser_id="browser-1", request_params={"name": "updated"}
+        )
+        assert result == {"id": "browser-1"}
+        mock_put.assert_called_once_with(
+            url="/v1/core/browsers/browser-1", json={"name": "updated"}
+        )
+
+    @patch.object(ControlBrowserHttpClient, "post")
+    def test_create_browser_profile(self, mock_post):
+        mock_post.return_value = RequestResult(
+            success=True, status_code=200, data={"id": "p-1"}
+        )
+        result = self.control_client.create_browser_profile(
+            request_params={"name": "profile-1"}
+        )
+        assert result == {"id": "p-1"}
+        mock_post.assert_called_once_with(
+            url="/v1/core/browser-profiles", json={"name": "profile-1"}
+        )
+
+    @patch.object(ControlBrowserHttpClient, "get")
+    def test_list_browser_profiles(self, mock_get):
+        mock_get.return_value = RequestResult(
+            success=True, status_code=200, data={"items": [], "total_count": 0}
+        )
+        result = self.control_client.list_browser_profiles(request_params={})
+        assert result == {"items": [], "total_count": 0}
+        mock_get.assert_called_once_with(url="/v1/core/browser-profiles", params={})
+
+    @patch.object(ControlBrowserHttpClient, "get")
+    def test_get_browser_profile(self, mock_get):
+        mock_get.return_value = RequestResult(
+            success=True, status_code=200, data={"id": "p-1"}
+        )
+        result = self.control_client.get_browser_profile(profile_id="p-1")
+        assert result == {"id": "p-1"}
+        mock_get.assert_called_once_with(url="/v1/core/browser-profiles/p-1")
+
+    @patch.object(ControlBrowserHttpClient, "delete")
+    def test_delete_browser_profile(self, mock_delete):
+        mock_delete.return_value = RequestResult(success=True, status_code=204, data=None)
+        self.control_client.delete_browser_profile(profile_id="p-1")
+        mock_delete.assert_called_once_with(url="/v1/core/browser-profiles/p-1")
+
+    @patch.object(DataBrowserHttpClient, "put")
+    def test_stop_session(self, mock_put):
+        mock_put.return_value = RequestResult(
+            success=True, status_code=200, data={"session_id": "s-1"}
+        )
+        result = self.data_client.stop_session(
+            browser_name="test-browser", session_id="s-1"
+        )
+        assert result == {"session_id": "s-1"}
+        mock_put.assert_called_once_with(
+            url="/v1/browsers/test-browser/sessions-stop",
+            headers={"X-hw-Agentarts-Browser-Session-Id": "s-1"},
+        )
+
+    @patch.object(DataBrowserHttpClient, "get")
+    def test_get_session(self, mock_get):
+        mock_get.return_value = RequestResult(
+            success=True, status_code=200, data={"session_id": "s-1"}
+        )
+        result = self.data_client.get_session(
+            browser_name="test-browser", session_id="s-1"
+        )
+        assert result == {"session_id": "s-1"}
+        mock_get.assert_called_once_with(
+            url="/v1/browsers/test-browser/sessions-get",
+            headers={"X-hw-Agentarts-Browser-Session-Id": "s-1"},
+        )
+
+    @patch.object(DataBrowserHttpClient, "put")
+    def test_update_stream(self, mock_put):
+        mock_put.return_value = RequestResult(
+            success=True, status_code=200, data={"ok": True}
+        )
+        result = self.data_client.update_stream(
+            browser_name="test-browser", session_id="s-1", stream_status="enabled"
+        )
+        assert result == {"ok": True}
+        mock_put.assert_called_once_with(
+            url="/v1/browsers/test-browser/streams-update",
+            headers={"X-hw-Agentarts-Browser-Session-Id": "s-1"},
+            json={"stream_update": {"automation_stream_update": {"stream_status": "enabled"}}},
+        )
+
+    @patch.object(DataBrowserHttpClient, "put")
+    def test_save_profile(self, mock_put):
+        mock_put.return_value = RequestResult(
+            success=True, status_code=200, data={"ok": True}
+        )
+        result = self.data_client.save_profile(
+            browser_name="test-browser", session_id="s-1", profile_id="p-1"
+        )
+        assert result == {"ok": True}
+        mock_put.assert_called_once_with(
+            url="/v1/browsers/test-browser/save-profile",
+            headers={"X-hw-Agentarts-Browser-Session-Id": "s-1"},
+            json={"profile_id": "p-1"},
+        )
+
+    def test_build_ws_headers_api_key(self):
+        headers = self.data_client.build_ws_headers(
+            session_id="s-1", ws_url="wss://example.com", api_key="test-api-key"
+        )
+        assert headers["X-hw-Agentarts-Browser-Session-Id"] == "s-1"
+        assert headers["Authorization"] == "Bearer test-api-key"
+        assert headers["Upgrade"] == "websocket"
+        assert headers["Connection"] == "Upgrade"
+        assert headers["Sec-WebSocket-Version"] == "13"

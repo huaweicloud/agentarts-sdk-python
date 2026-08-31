@@ -32,6 +32,7 @@ ENV_AGENTARTS_CONTROL_ENDPOINT = "AGENTARTS_CONTROL_ENDPOINT"
 ENV_AGENTARTS_RUNTIME_DATA_ENDPOINT = "AGENTARTS_RUNTIME_DATA_ENDPOINT"
 ENV_AGENTARTS_MEMORY_DATA_ENDPOINT = "AGENTARTS_MEMORY_DATA_ENDPOINT"
 ENV_AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT = "AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT"
+ENV_AGENTARTS_BROWSER_DATA_ENDPOINT = "AGENTARTS_BROWSER_DATA_ENDPOINT"
 
 ENV_HUAWEICLOUD_SDK_IAM_ENDPOINT = "HUAWEICLOUD_SDK_IAM_ENDPOINT"
 ENV_HUAWEICLOUD_SDK_SWR_ENDPOINT = "HUAWEICLOUD_SDK_SWR_ENDPOINT"
@@ -128,6 +129,26 @@ def get_code_interpreter_data_plane_endpoint(endpoint: str | None = None) -> str
     code_endpoint = os.getenv(ENV_AGENTARTS_CODEINTERPRETER_DATA_ENDPOINT)
     if code_endpoint:
         return _ensure_https(code_endpoint)
+    if endpoint:
+        return _ensure_https(endpoint)
+    runtime_endpoint = os.getenv(ENV_AGENTARTS_RUNTIME_DATA_ENDPOINT) or ""
+    return _ensure_https(runtime_endpoint)
+
+
+def get_browser_data_plane_endpoint(endpoint: str | None = None) -> str:
+    """
+    Get the AgentArts browser data plane endpoint URL.
+
+    Args:
+        endpoint: Custom data plane endpoint URL. If not provided,
+                  uses AGENTARTS_BROWSER_DATA_ENDPOINT from environment.
+
+    Returns:
+        The data plane endpoint URL, or empty string if not configured.
+    """
+    browser_endpoint = os.getenv(ENV_AGENTARTS_BROWSER_DATA_ENDPOINT)
+    if browser_endpoint:
+        return _ensure_https(browser_endpoint)
     if endpoint:
         return _ensure_https(endpoint)
     runtime_endpoint = os.getenv(ENV_AGENTARTS_RUNTIME_DATA_ENDPOINT) or ""
