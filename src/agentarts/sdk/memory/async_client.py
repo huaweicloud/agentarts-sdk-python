@@ -23,6 +23,7 @@ from .inner.config import (
     MessageListResponse,
     SessionCreateRequest,
     SessionInfo,
+    SessionListResponse,
     SpaceCreateRequest,
     SpaceInfo,
     SpaceListResponse,
@@ -192,9 +193,18 @@ class AsyncMemoryClient:
 
         return await self._async_data_plane.create_memory_session(space_id, session_request)
 
+    async def list_sessions(self, space_id: str, actor_id: str | None = None,
+                            limit: int = 20, offset: int = 0) -> SessionListResponse:
+        """List sessions in a space - identical to sync version."""
+        return await self._async_data_plane.list_sessions(space_id, actor_id, limit, offset)
+
     async def delete_session(self, space_id: str, session_id: str) -> None:
         """Delete a session (soft delete) - identical to sync version."""
         await self._async_data_plane.delete_session(space_id, session_id)
+
+    async def get_session(self, space_id: str, session_id: str) -> SessionInfo:
+        """Get session details - identical to sync version."""
+        return await self._async_data_plane.get_session(space_id, session_id)
 
     # ==================== Data Plane - Message Management (Async) ====================
 

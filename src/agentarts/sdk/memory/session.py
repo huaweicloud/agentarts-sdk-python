@@ -15,6 +15,7 @@ from .inner.config import (
     MessageInfo,
     MessageListResponse,
     SessionCreateRequest,
+    SessionInfo,
     TextMessage,
     ToolCallMessage,
     ToolResultMessage,
@@ -214,6 +215,16 @@ class MemorySession:
         """
         self._data_plane.delete_session(self.space_id, self.session_id)
         logger.info(f"Session deleted: {self.session_id} in space: {self.space_id}")
+
+    def get_info(self) -> SessionInfo:
+        """
+        Get details of this session.
+
+        Returns:
+            SessionInfo: Session details including id, space_id, actor_id, etc.
+        """
+        logger.info(f"Getting session info: {self.session_id} in space: {self.space_id}")
+        return self._data_plane.get_session(self.space_id, self.session_id)
 
     # ==================== Message Management ====================
 

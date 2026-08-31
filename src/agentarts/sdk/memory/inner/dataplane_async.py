@@ -23,6 +23,7 @@ from .config import (
     MessageListResponse,
     SessionCreateRequest,
     SessionInfo,
+    SessionListResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,23 @@ class _AsyncDataPlane:
         logger.info(f"Memory session created: {result.get('id')}")
         return SessionInfo.from_dict(result)
 
+    async def list_sessions(self, space_id: str, actor_id: str | None = None,
+                            limit: int = 20, offset: int = 0) -> SessionListResponse:
+        """List sessions in a space - identical to sync version."""
+        if not space_id:
+            msg = "space_id is required for data plane operations"
+            raise ValueError(msg)
+
+        logger.info(f"Listing sessions in space: {space_id}")
+        result = await self.client.list_sessions(
+            space_id,
+            actor_id=actor_id,
+            limit=limit,
+            offset=offset
+        )
+        logger.info(f"Sessions retrieved: {len(result.get('items', []))} sessions")
+        return SessionListResponse.from_dict(result)
+
     async def delete_session(self, space_id: str, session_id: str) -> None:
         """
         Delete a session (soft delete) - identical to sync version.
@@ -102,6 +120,19 @@ class _AsyncDataPlane:
 
         await self.client.delete_session(space_id, session_id)
         logger.info(f"Session deleted: {session_id} in space: {space_id}")
+
+    async def get_session(self, space_id: str, session_id: str) -> SessionInfo:
+        """Get session details - identical to sync version."""
+        if not space_id:
+            msg = "space_id is required for data plane operations"
+            raise ValueError(msg)
+        if not session_id:
+            msg = "session_id is required for get_session"
+            raise ValueError(msg)
+
+        result = await self.client.get_session(space_id, session_id)
+        logger.info(f"Session retrieved: {session_id} in space: {space_id}")
+        return SessionInfo.from_dict(result)
 
     async def add_messages(
             self,

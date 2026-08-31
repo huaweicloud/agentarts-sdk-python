@@ -1,0 +1,11 @@
+{
+  "name": "agentarts-memory-capture",
+  "version": "1.0.0",
+  "description": "OpenCode plugin for AgentArts Memory — session lifecycle capture, assistant reply tracking, system prompt injection.",
+  "author": {
+    "name": "AgentArts"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/huaweicloud/agentarts-sdk-python",
+  "repository": "https://github.com/huaweicloud/agentarts-sdk-python"
+}

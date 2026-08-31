@@ -239,6 +239,8 @@ agents:
           sfs_path: null
           mount_path: null    # required when using SFS Turbo
           read_only: false
+        session_storage:
+          mount_path: null  # Session storage mount path in the container
 
       environment_variables:{env_vars_yaml}
 

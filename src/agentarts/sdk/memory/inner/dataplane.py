@@ -32,6 +32,7 @@ from .config import (
     MessageListResponse,
     SessionCreateRequest,
     SessionInfo,
+    SessionListResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -96,6 +97,34 @@ class _DataPlane:
         logger.info(f"Memory session created: {result.get('id')}")
         return SessionInfo.from_dict(result)
 
+    def list_sessions(self, space_id: str, actor_id: str | None = None,
+                      limit: int = 20, offset: int = 0) -> SessionListResponse:
+        """
+        List sessions in a space.
+
+        Args:
+            space_id: Space ID
+            actor_id: Filter by Actor ID (optional)
+            limit: Page size (1-20, default 20)
+            offset: Pagination offset (default 0)
+
+        Returns:
+            SessionListResponse: Paginated session list
+        """
+        if not space_id:
+            msg = "space_id is required for data plane operations"
+            raise ValueError(msg)
+
+        logger.info(f"Listing sessions in space: {space_id}")
+        result = self.client.list_sessions(
+            space_id,
+            actor_id=actor_id,
+            limit=limit,
+            offset=offset
+        )
+        logger.info(f"Sessions retrieved: {len(result.get('items', []))} sessions")
+        return SessionListResponse.from_dict(result)
+
     def delete_session(self, space_id: str, session_id: str) -> None:
         """
         Delete a session (soft delete).
@@ -114,6 +143,28 @@ class _DataPlane:
 
         self.client.delete_session(space_id, session_id)
         logger.info(f"Session deleted: {session_id} in space: {space_id}")
+
+    def get_session(self, space_id: str, session_id: str) -> SessionInfo:
+        """
+        Get session details.
+
+        Args:
+            space_id: Space ID
+            session_id: Session ID
+
+        Returns:
+            SessionInfo: Session details
+        """
+        if not space_id:
+            msg = "space_id is required for data plane operations"
+            raise ValueError(msg)
+        if not session_id:
+            msg = "session_id is required for get_session"
+            raise ValueError(msg)
+
+        result = self.client.get_session(space_id, session_id)
+        logger.info(f"Session retrieved: {session_id} in space: {space_id}")
+        return SessionInfo.from_dict(result)
 
     def add_messages(
             self,

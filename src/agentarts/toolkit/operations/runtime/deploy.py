@@ -114,11 +114,7 @@ def create_agentarts_runtime(
 
             if runtime_cfg.storage_config:
                 sc = runtime_cfg.storage_config.to_dict()
-                # to_dict() returns {"sfs_turbo": [{...}]} (list) or {} (unconfigured).
-                # Only enforce required fields when the user explicitly opted
-                # into SFS Turbo by providing sfs_turbo_id. An unset/all-null
-                # storage_config (e.g. from `agentarts init` / `agentarts config`)
-                # is treated as "not configured" so deploy is never blocked.
+                # Validate sfs_turbo: mount_path is required when sfs_turbo_id is set.
                 st_list = sc.get("sfs_turbo") or []
                 if st_list:
                     st = st_list[0]
@@ -126,7 +122,8 @@ def create_agentarts_runtime(
                         if not st.get("mount_path"):
                             msg = "storage_config.sfs_turbo.mount_path is required when sfs_turbo_id is set"
                             raise ValueError(msg)
-                        storage_config = sc
+                if sc:
+                    storage_config = sc
 
             if runtime_cfg.environment_variables:
                 env_vars = [{"key": kv.key, "value": kv.value} for kv in runtime_cfg.environment_variables if kv.value]

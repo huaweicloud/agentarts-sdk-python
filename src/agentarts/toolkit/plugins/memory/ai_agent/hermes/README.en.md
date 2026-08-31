@@ -1,10 +1,10 @@
-# agentarts-memory-hermes
+# agentarts-hermes
 
-A Hermes Memory Provider plugin that uses Huawei Cloud AgentArts Memory as the long-term memory backend for Hermes Agent.
+A Hermes Memory Provider plugin that uses Huawei Cloud AgentArts Memory as the cloud memory backend for Hermes Agent.
 
 ## Overview
 
-- **Cross-session memory persistence**: Automatically writes conversation content to AgentArts Memory after each turn (non-blocking)
+- **Cross-session memory persistence**: Automatically writes conversation content to AgentArts Memory after each turn
 - **Context injection**: Automatically injects relevant memories before each LLM call (user profile / episodic / semantic + history summary)
 - **Compression protection**: Re-injects relevant memories before context compression to prevent key information from being dropped
 - **MEMORY.md mirroring**: Syncs Hermes built-in `MEMORY.md` writes to AgentArts
@@ -19,37 +19,21 @@ A Hermes Memory Provider plugin that uses Huawei Cloud AgentArts Memory as the l
 
 | Parameter                       | Description                        |
 |---------------------------------|------------------------------------|
-| `AGENTARTS_MEMORY_SPACE_ID`     | AgentArts memory space ID          |
-| `HUAWEICLOUD_SDK_MEMORY_API_KEY`| AgentArts memory space API Key     |
-| `HUAWEICLOUD_SDK_REGION`        | Region (default `cn-southwest-2`)  |
+| `AGENTARTS_MEMORY_SPACE_ID`     | AgentArts memory space ID           |
+| `HUAWEICLOUD_SDK_MEMORY_API_KEY`| AgentArts memory space API Key       |
+| `HUAWEICLOUD_SDK_REGION`        | Region (default `cn-southwest-2`)   |
 
 ## Installation
 
-There are two installation methods — choose either one.
-
-### Option 1: Install as a memory provider
-
-Copy the plugin directory to Hermes' memory provider plugin path:
+Copy the plugin directory `hermes` to Hermes' plugin path and rename it to `agentarts`:
 
 ```bash
-cp -r agentarts-memory-hermes  ~/.hermes/hermes-agent/plugins/memory/
+cp -r src/agentarts/toolkit/plugins/memory/ai_agent/hermes  ~/.hermes/plugins/agentarts
 ```
-
-Configure interactively via `hermes memory setup`, or manually set the environment variables above. Follow the prompts to select `agentarts_memory` and complete configuration.
-
-### Option 2: Install as a general plugin
-
-Copy the plugin directory to Hermes' general plugin path and register via the `hermes plugins` command:
-
-```bash
-cp -r agentarts-memory-hermes ~/.hermes/plugins/
-```
-
-Configure interactively via `hermes plugins`, or manually set the environment variables above. Follow the prompts to select `agentarts_memory` and complete configuration.
 
 ## Configuration
 
-During configuration, you will be prompted to enter the API Key, Space ID, etc. Sensitive fields (API Key) are written to `.env`, while non-sensitive config (`space_id`, `region`) is written to `$HERMES_HOME/agentarts.json`.
+Configure interactively via the `hermes memory setup` command. Follow the prompts to select `agentarts`, then enter the correct parameters to complete configuration.
 
 ## Tools
 
@@ -74,16 +58,16 @@ Get a list of AgentArts memory summaries.
 
 After the plugin is registered, the following CLI subcommands are available (only when the provider is active):
 
-| Command | Description |
-|---|---|
-| `hermes agentarts_memory status` | Show provider status and environment variable configuration |
-| `hermes agentarts_memory config` | Show saved non-sensitive configuration |
-| `hermes agentarts_memory test` | Test provider connectivity |
+| Command                | Description              |
+|------------------------|--------------------------|
+| `hermes memory status` | Show provider status     |
+| `hermes memory setup`  | Configure the provider   |
+| `hermes memory off`    | Disable the provider     |
 
 ## Architecture
 
 - **Client mode**: Uses `MemoryClient` (Client mode), not Session mode
-- **Non-blocking sync**: `sync_turn` executes `add_messages` in a daemon thread, not blocking the Hermes main loop
+- **Synchronous sync**: `sync_turn` executes `add_messages` synchronously; the method is lightweight
 - **Profile isolation**: All paths use the `hermes_home` kwarg from `initialize()`
 - **Thread safety**: `_lock` protects concurrent read/write to `_client`
 
@@ -93,7 +77,7 @@ After the plugin is registered, the following CLI subcommands are available (onl
 |---|---|---|
 | `system_prompt_block` | System prompt assembly | Inject memory capability description |
 | `prefetch` | Before each LLM call | Search and inject relevant memories |
-| `sync_turn` | After each conversation turn | Non-blocking write of conversation content |
+| `sync_turn` | After each conversation turn | Write conversation content |
 | `on_pre_compress` | Before context compression | Re-inject relevant memories |
 | `on_memory_write` | On built-in memory write | Mirror MEMORY.md to AgentArts |
 | `on_session_end` | On session end | No-op (turns already persisted per-turn) |
@@ -116,5 +100,21 @@ Check:
 
 ```bash
 pip install -e ".[dev]"
-pytest tests/unit/ -v
+pytest tests/unit/toolkit/plugins/memory/hermes/ -v
 ```
+
+## About AgentArts Memory
+
+Huawei Cloud AgentArts Memory is a cloud-based memory solution for AI agents, providing full-lifecycle management of agent memory data.
+
+### Advantages of AgentArts Memory
+
+1. **Out of the box**: Short-term + long-term memory — supports both short-term memory (7–365 days) and long-term memory (persistent storage), meeting different time-span memory requirements.
+
+2. **Multiple memory strategies**: Supports strategies such as semantic memory, user preferences, session summaries, and episodic memory to meet various scenario needs.
+
+3. **Multi-dimensional isolation**: Isolation by strategy type — supports memory isolation by space, session, and user dimension, ensuring data security and independence.
+
+4. **Fully managed, zero maintenance**: Fully managed on the cloud — no need to manage databases or memory processing engines, enabling fast business launch and reducing operational costs and complexity.
+
+> Official documentation: [Memory Space Overview](https://support.huaweicloud.com/highcode-agentarts/agentarts_10_015.html)

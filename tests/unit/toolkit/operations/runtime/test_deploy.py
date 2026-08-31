@@ -10,6 +10,7 @@ from agentarts.toolkit.operations.runtime.deploy import (
 from agentarts.toolkit.utils.runtime.config import (
     AgentArtsConfig,
     AgentArtsRuntimeConfig,
+    SessionStorageConfig,
     SfsTurboConfig,
     StorageConfig,
 )
@@ -219,6 +220,78 @@ class TestCreateAgentartsRuntime:
                 "mount_path": "/data",
                 "read_only": True,
             }]
+        }
+
+    @patch("agentarts.toolkit.operations.runtime.deploy.RuntimeClient")
+    def test_storage_config_session_storage_only_forwarded(self, mock_client, tmp_path, monkeypatch):
+        """session_storage alone is forwarded without sfs_turbo."""
+        monkeypatch.chdir(tmp_path)
+
+        mock_client_instance = MagicMock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.create_or_update_agent.return_value = {
+            "id": "agent-123",
+            "latest_version": "v1",
+        }
+
+        agent_config = AgentArtsConfig(
+            runtime=AgentArtsRuntimeConfig(
+                storage_config=StorageConfig(
+                    session_storage=SessionStorageConfig(mount_path="/home/user/sessions"),
+                ),
+            ),
+        )
+
+        create_agentarts_runtime(
+            agent_name="test-agent",
+            swr_image="swr.cn-north-4.myhuaweicloud.com/org/repo:latest",
+            region="cn-north-4",
+            agent_config=agent_config,
+        )
+
+        call_args = mock_client_instance.create_or_update_agent.call_args
+        assert call_args.kwargs["storage_config"] == {
+            "session_storage": {"mount_path": "/home/user/sessions"},
+        }
+
+    @patch("agentarts.toolkit.operations.runtime.deploy.RuntimeClient")
+    def test_storage_config_both_fields_forwarded(self, mock_client, tmp_path, monkeypatch):
+        """Both sfs_turbo and session_storage are forwarded together."""
+        monkeypatch.chdir(tmp_path)
+
+        mock_client_instance = MagicMock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.create_or_update_agent.return_value = {
+            "id": "agent-123",
+            "latest_version": "v1",
+        }
+
+        agent_config = AgentArtsConfig(
+            runtime=AgentArtsRuntimeConfig(
+                storage_config=StorageConfig(
+                    sfs_turbo=SfsTurboConfig(
+                        sfs_turbo_id="12345678-1234-1234-1234-123456789012",
+                        mount_path="/data",
+                    ),
+                    session_storage=SessionStorageConfig(mount_path="/home/user/sessions"),
+                ),
+            ),
+        )
+
+        create_agentarts_runtime(
+            agent_name="test-agent",
+            swr_image="swr.cn-north-4.myhuaweicloud.com/org/repo:latest",
+            region="cn-north-4",
+            agent_config=agent_config,
+        )
+
+        call_args = mock_client_instance.create_or_update_agent.call_args
+        assert call_args.kwargs["storage_config"] == {
+            "sfs_turbo": [{
+                "sfs_turbo_id": "12345678-1234-1234-1234-123456789012",
+                "mount_path": "/data",
+            }],
+            "session_storage": {"mount_path": "/home/user/sessions"},
         }
 
     @patch("agentarts.toolkit.operations.runtime.deploy.RuntimeClient")

@@ -33,6 +33,55 @@ except ImportError:
     FunctionMessage = None
 
 
+def _parse_meta(meta: str | dict | None) -> dict:
+    """Parse meta from backend response.
+
+    Handles both str (JSON string) and dict (already parsed) formats.
+    Returns empty dict if meta is None or unparseable.
+    """
+    if not meta:
+        return {}
+    if isinstance(meta, dict):
+        return dict(meta)
+    if isinstance(meta, str):
+        try:
+            result = json.loads(meta)
+            return result if isinstance(result, dict) else {}
+        except (json.JSONDecodeError, TypeError):
+            return {}
+    return {}
+
+
+def _build_meta(
+    caller_meta: str | None,
+    additional_kwargs: dict | None = None,
+    response_metadata: dict | None = None,
+    extra: dict | None = None,
+) -> str | None:
+    """Merge caller's meta with LangChain-specific fields.
+
+    Args:
+        caller_meta: JSON string from caller (e.g., saver's checkpoint_meta)
+        additional_kwargs: LangChain message's additional_kwargs
+        response_metadata: LangChain message's response_metadata
+        extra: Additional key-value pairs to merge (e.g., _lc_content)
+
+    Returns:
+        Merged JSON string, or None if nothing to store.
+    """
+    merged = _parse_meta(caller_meta)
+
+    if additional_kwargs:
+        merged["_lc_additional_kwargs"] = additional_kwargs
+    if response_metadata:
+        merged["_lc_response_metadata"] = response_metadata
+    if extra:
+        merged.update(extra)
+
+    # NOTE: non-JSON-serializable metadata (e.g. datetime/custom objects) is not handled and may raise TypeError here.
+    return json.dumps(merged, ensure_ascii=False) if merged else caller_meta
+
+
 def langgraph_to_memory_message(
     message: BaseMessage,
     actor_id: str | None = None,
@@ -72,52 +121,85 @@ def langgraph_to_memory_message(
         )
 
     if isinstance(message, HumanMessage):
+        merged_meta = _build_meta(
+            meta,
+            additional_kwargs=getattr(message, "additional_kwargs", None),
+        )
         return TextMessage(
             role="user",
             content=message.content,
             actor_id=actor_id,
             assistant_id=assistant_id,
-            meta=meta,
+            meta=merged_meta,
         )
 
     if isinstance(message, AIMessage):
         if hasattr(message, "tool_calls") and message.tool_calls:
+            extra = {}
+            if message.content:
+                extra["_lc_content"] = message.content
+
+            merged_meta = _build_meta(
+                meta,
+                additional_kwargs=getattr(message, "additional_kwargs", None),
+                response_metadata=getattr(message, "response_metadata", None),
+                extra=extra if extra else None,
+            )
+
             return ToolCallMessage(
                 id=message.tool_calls[0].get("id", ""),
                 name=message.tool_calls[0].get("name", ""),
                 arguments=json.dumps(message.tool_calls[0].get("args", {}), ensure_ascii=False),
-                meta=meta,
+                meta=merged_meta,
             )
+
+        merged_meta = _build_meta(
+            meta,
+            additional_kwargs=getattr(message, "additional_kwargs", None),
+            response_metadata=getattr(message, "response_metadata", None),
+        )
 
         return TextMessage(
             role="assistant",
             content=message.content,
             actor_id=actor_id,
             assistant_id=assistant_id,
-            meta=meta,
+            meta=merged_meta,
         )
 
     if isinstance(message, SystemMessage):
+        merged_meta = _build_meta(
+            meta,
+            additional_kwargs=getattr(message, "additional_kwargs", None),
+        )
         return TextMessage(
             role="system",
             content=message.content,
             actor_id=actor_id,
             assistant_id=assistant_id,
-            meta=meta,
+            meta=merged_meta,
         )
 
     if isinstance(message, ToolMessage):
+        merged_meta = _build_meta(
+            meta,
+            additional_kwargs=getattr(message, "additional_kwargs", None),
+        )
         return ToolResultMessage(
             tool_call_id=message.tool_call_id,
             content=str(message.content),
-            meta=meta,
+            meta=merged_meta,
         )
 
     if isinstance(message, FunctionMessage):
+        merged_meta = _build_meta(
+            meta,
+            additional_kwargs=getattr(message, "additional_kwargs", None),
+        )
         return ToolResultMessage(
             tool_call_id=message.name,
             content=str(message.content),
-            meta=meta,
+            meta=merged_meta,
         )
     if isinstance(message, ChatMessage):
         role = message.role
@@ -128,19 +210,27 @@ def langgraph_to_memory_message(
                 role = "user"
             else:
                 role = "user"
+        merged_meta = _build_meta(
+            meta,
+            additional_kwargs=getattr(message, "additional_kwargs", None),
+        )
         return TextMessage(
             role=role,
             content=str(message.content),
             actor_id=actor_id,
             assistant_id=assistant_id,
-            meta=meta,
+            meta=merged_meta,
         )
+    merged_meta = _build_meta(
+        meta,
+        additional_kwargs=getattr(message, "additional_kwargs", None),
+    )
     return TextMessage(
         role="user",
         content=str(message.content),
         actor_id=actor_id,
         assistant_id=assistant_id,
-        meta=meta,
+        meta=merged_meta,
     )
 
 
@@ -177,6 +267,12 @@ def memory_to_langgraph_message(
     role = message.role
     parts = message.parts or []
 
+    # Parse meta to extract LangChain-specific fields
+    meta_dict = _parse_meta(getattr(message, "meta", None))
+    additional_kwargs = meta_dict.get("_lc_additional_kwargs", {})
+    response_metadata = meta_dict.get("_lc_response_metadata", {})
+    preserved_content = meta_dict.get("_lc_content")
+
     text_content = ""
     tool_call_data = None
     tool_result_data = None
@@ -196,30 +292,48 @@ def memory_to_langgraph_message(
         return ToolMessage(
             content=tool_result_data.get("content", ""),
             tool_call_id=tool_result_data.get("tool_call_id", ""),
+            additional_kwargs=additional_kwargs,
         )
 
     if tool_call_data:
+        content = preserved_content if preserved_content is not None else text_content
         return AIMessage(
-            content=text_content,
+            content=content,
             tool_calls=[{
                 "id": tool_call_data.get("id", ""),
                 "name": tool_call_data.get("name", ""),
                 "args": json.loads(tool_call_data.get("arguments", "{}")),
             }],
+            additional_kwargs=additional_kwargs,
+            response_metadata=response_metadata,
         )
 
     if role == "user":
-        return HumanMessage(content=text_content)
+        return HumanMessage(
+            content=text_content,
+            additional_kwargs=additional_kwargs,
+        )
     if role == "assistant":
-        return AIMessage(content=text_content)
+        return AIMessage(
+            content=text_content,
+            additional_kwargs=additional_kwargs,
+            response_metadata=response_metadata,
+        )
     if role == "system":
-        return SystemMessage(content=text_content)
+        return SystemMessage(
+            content=text_content,
+            additional_kwargs=additional_kwargs,
+        )
     if role == "tool":
         return ToolMessage(
             content=text_content,
             tool_call_id="",
+            additional_kwargs=additional_kwargs,
         )
-    return HumanMessage(content=text_content)
+    return HumanMessage(
+        content=text_content,
+        additional_kwargs=additional_kwargs,
+    )
 
 
 def langgraph_messages_to_memory(

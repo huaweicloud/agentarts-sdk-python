@@ -20,6 +20,7 @@ from .inner.config import (
     MessageListResponse,
     SessionCreateRequest,
     SessionInfo,
+    SessionListResponse,
     SpaceCreateRequest,
     SpaceInfo,
     SpaceListResponse,
@@ -497,6 +498,26 @@ class MemoryClient:
 
         return self._data_plane.create_memory_session(space_id, session_request)
 
+    def list_sessions(self, space_id: str, actor_id: str | None = None,
+                      limit: int = 20, offset: int = 0) -> SessionListResponse:
+        """
+        List sessions in a space.
+
+        Args:
+            space_id: Space ID
+            actor_id: Filter by Actor ID (optional)
+            limit: Page size (1-20, default 20)
+            offset: Pagination offset (default 0)
+
+        Returns:
+            SessionListResponse: Paginated session list
+
+        Examples:
+            >>> sessions = client.list_sessions("space-123")
+            >>> sessions = client.list_sessions("space-123", actor_id="user-456")
+        """
+        return self._data_plane.list_sessions(space_id, actor_id, limit, offset)
+
     def delete_session(self, space_id: str, session_id: str) -> None:
         """
         Delete a session (soft delete).
@@ -512,6 +533,22 @@ class MemoryClient:
             >>> client.delete_session("space-123", "session-456")
         """
         self._data_plane.delete_session(space_id, session_id)
+
+    def get_session(self, space_id: str, session_id: str) -> SessionInfo:
+        """
+        Get session details.
+
+        Args:
+            space_id: Space ID
+            session_id: Session ID
+
+        Returns:
+            SessionInfo: Session details
+
+        Examples:
+            >>> session_info = client.get_session("space-123", "session-456")
+        """
+        return self._data_plane.get_session(space_id, session_id)
 
     # ==================== Data Plane - Message Management ====================
 

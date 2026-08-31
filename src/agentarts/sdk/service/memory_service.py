@@ -445,6 +445,34 @@ class MemoryHttpService:
             space_id=space_id
         )
 
+    def list_sessions(self, space_id: str, actor_id: str | None = None,
+                      limit: int | None = None, offset: int | None = None) -> dict[str, Any]:
+        """List sessions in a space.
+
+        Args:
+            space_id: Space ID
+            actor_id: Filter by Actor ID (optional)
+            limit: Page size (1-20, default 20)
+            offset: Pagination offset (default 0)
+
+        Returns:
+            dict containing items, total, limit, offset
+        """
+        params = {}
+        if actor_id is not None:
+            params["actor_id"] = actor_id
+        if limit is not None:
+            params["limit"] = limit
+        if offset is not None:
+            params["offset"] = offset
+
+        return self._make_request(
+            method="GET",
+            path=f"/v1/core/spaces/{space_id}/sessions",
+            params=params,
+            space_id=space_id
+        )
+
     def get_session(self, space_id: str, session_id: str) -> dict[str, Any]:
         """Get session information.
 

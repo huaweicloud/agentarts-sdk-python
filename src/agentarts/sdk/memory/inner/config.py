@@ -918,6 +918,10 @@ class TextMessage:
             "role": self.role,
             "parts": [{"type": "text", "text": self.content}]
         }
+        if self.actor_id is not None:
+            result["actor_id"] = self.actor_id
+        if self.assistant_id is not None:
+            result["assistant_id"] = self.assistant_id
         if self.meta:
             result["meta"] = self.meta
         return result

@@ -18,6 +18,7 @@ from .inner.config import (
     MessageInfo,
     MessageListResponse,
     SessionCreateRequest,
+    SessionInfo,
     TextMessage,
     ToolCallMessage,
     ToolResultMessage,
@@ -135,6 +136,12 @@ class AsyncMemorySession:
         """Delete this session (soft delete) - identical to sync version."""
         await self._async_data_plane.delete_session(self.space_id, self.session_id)
         logger.info(f"Session deleted: {self.session_id} in space: {self.space_id}")
+
+    async def get_info(self) -> SessionInfo:
+        """Get details of this session - identical to sync version."""
+        await self._ensure_initialized()
+        logger.info(f"Getting session info: {self.session_id} in space: {self.space_id}")
+        return await self._async_data_plane.get_session(self.space_id, self.session_id)
 
     # ==================== Message Management (Async) ====================
 

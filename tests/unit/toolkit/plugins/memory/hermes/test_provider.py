@@ -7,8 +7,6 @@ ltm_search_summary). All tests use a shared set of helpers defined at the top.
 
 import json
 import pathlib
-import threading
-import time
 from unittest.mock import MagicMock, patch
 
 import __init__ as hermes_init
@@ -96,58 +94,63 @@ class TestConfigSchema:
 
 
 class TestSaveConfig:
-    def test_writes_non_secret_fields(self, tmp_path):
+    def test_writes_non_secret_fields_to_env(self, tmp_path):
         values = {
             "api_key": "secret-key",
-            "ak": "my-ak",
-            "sk": "my-sk",
             "space_id": "space-123",
             "region": "cn-north-4",
         }
         save_config(values, str(tmp_path))
 
-        config_path = tmp_path / "agentarts.json"
-        assert config_path.exists()
-        data = json.loads(config_path.read_text(encoding="utf-8"))
-        assert data == {"space_id": "space-123", "region": "cn-north-4"}
+        env_path = tmp_path / ".env"
+        assert env_path.exists()
+        content = env_path.read_text(encoding="utf-8")
+        assert "AGENTARTS_MEMORY_SPACE_ID=space-123" in content
+        assert "HUAWEICLOUD_SDK_REGION=cn-north-4" in content
 
-    def test_secrets_not_written_to_json(self, tmp_path):
+    def test_secrets_not_written_by_save_config(self, tmp_path):
         values = {
             "api_key": "secret-key",
-            "ak": "my-ak",
-            "sk": "my-sk",
             "space_id": "space-123",
         }
         save_config(values, str(tmp_path))
 
-        config_path = tmp_path / "agentarts.json"
-        content = config_path.read_text(encoding="utf-8")
+        env_path = tmp_path / ".env"
+        content = env_path.read_text(encoding="utf-8")
         assert "secret-key" not in content
-        assert "my-ak" not in content
-        assert "my-sk" not in content
 
     def test_partial_values(self, tmp_path):
         save_config({"region": "cn-east-3"}, str(tmp_path))
 
-        config_path = tmp_path / "agentarts.json"
-        data = json.loads(config_path.read_text(encoding="utf-8"))
-        assert data == {"region": "cn-east-3"}
+        env_path = tmp_path / ".env"
+        content = env_path.read_text(encoding="utf-8")
+        assert "HUAWEICLOUD_SDK_REGION=cn-east-3" in content
 
     def test_creates_parent_dir(self, tmp_path):
         nested = tmp_path / "nested" / "path"
         save_config({"space_id": "s1"}, str(nested))
 
-        config_path = nested / "agentarts.json"
-        assert config_path.exists()
-        data = json.loads(config_path.read_text(encoding="utf-8"))
-        assert data == {"space_id": "s1"}
+        env_path = nested / ".env"
+        assert env_path.exists()
+        content = env_path.read_text(encoding="utf-8")
+        assert "AGENTARTS_MEMORY_SPACE_ID=s1" in content
+
+    def test_merges_with_existing_env(self, tmp_path):
+        env_path = tmp_path / ".env"
+        env_path.write_text("HUAWEICLOUD_SDK_MEMORY_API_KEY=existing-key\n", encoding="utf-8")
+
+        save_config({"space_id": "space-123", "region": "cn-north-4"}, str(tmp_path))
+
+        content = env_path.read_text(encoding="utf-8")
+        assert "HUAWEICLOUD_SDK_MEMORY_API_KEY=existing-key" in content
+        assert "AGENTARTS_MEMORY_SPACE_ID=space-123" in content
+        assert "HUAWEICLOUD_SDK_REGION=cn-north-4" in content
 
     def test_empty_values(self, tmp_path):
         save_config({}, str(tmp_path))
 
-        config_path = tmp_path / "agentarts.json"
-        data = json.loads(config_path.read_text(encoding="utf-8"))
-        assert data == {}
+        env_path = tmp_path / ".env"
+        assert not env_path.exists()
 
 
 # ── Constants ──
@@ -169,7 +172,7 @@ class TestConstants:
 class TestName:
     def test_name(self):
         provider = AgentArtsMemoryProvider()
-        assert provider.name == "agentarts_memory"
+        assert provider.name == "agentarts"
 
 
 # ── is_available ──
@@ -226,7 +229,7 @@ class TestInitialize:
         assert provider._client is mock_client
         assert provider._space_id == "test-space-id"
         assert provider._session_id == "agentarts-session-123"
-        assert provider._actor_id == "hermes-session-1"
+        assert provider._actor_id == "hermes-user"
         assert provider._hermes_home == "/tmp/hermes"
         assert provider._assistant_id == "hermes-agent"
 
@@ -280,9 +283,12 @@ class TestConfigMethods:
     def test_save_config(self, tmp_path):
         provider = AgentArtsMemoryProvider()
         provider.save_config({"space_id": "s1", "region": "r1", "api_key": "secret"}, str(tmp_path))
-        config_path = tmp_path / "agentarts.json"
-        data = json.loads(config_path.read_text(encoding="utf-8"))
-        assert data == {"space_id": "s1", "region": "r1"}
+        env_path = tmp_path / ".env"
+        content = env_path.read_text(encoding="utf-8")
+        assert "AGENTARTS_MEMORY_SPACE_ID=s1" in content
+        assert "HUAWEICLOUD_SDK_REGION=r1" in content
+        # api_key is secret, not written by save_config
+        assert "secret" not in content
 
 
 # ── Tool methods (stub phase) ──
@@ -405,19 +411,12 @@ class TestSyncTurn:
     def test_returns_immediately_no_client(self):
         provider = AgentArtsMemoryProvider()
         provider.sync_turn("user", "assistant")
-        assert provider._sync_thread is None
 
-    def test_starts_daemon_thread(self, env_vars):
+    def test_sync_turn_calls_add_messages(self, env_vars):
         provider = AgentArtsMemoryProvider()
         mock_sdk = make_mock_sdk()
         mock_client = mock_sdk.MemoryClient.return_value
         mock_client.create_memory_session.return_value = MagicMock(id="s1")
-        event = threading.Event()
-
-        def _slow_add(*args, **kwargs):
-            event.set()
-
-        mock_client.add_messages.side_effect = _slow_add
 
         with patch(
             "provider.import_memory_sdk",
@@ -426,11 +425,7 @@ class TestSyncTurn:
             provider.initialize("sess-1", hermes_home="/tmp/h")
             provider.sync_turn("hello", "hi there")
 
-        assert provider._sync_thread is not None
-        assert provider._sync_thread.daemon is True
-        assert event.wait(timeout=5.0)
         mock_client.add_messages.assert_called_once()
-        provider._sync_thread.join(timeout=5.0)
 
     def test_add_messages_called_with_correct_args(self, env_vars):
         provider = AgentArtsMemoryProvider()
@@ -444,8 +439,6 @@ class TestSyncTurn:
         ):
             provider.initialize("h-sess", hermes_home="/tmp/h")
             provider.sync_turn("user msg", "assistant msg")
-            if provider._sync_thread:
-                provider._sync_thread.join(timeout=5.0)
 
         mock_client.add_messages.assert_called_once()
         call_kwargs = mock_client.add_messages.call_args.kwargs
@@ -457,33 +450,6 @@ class TestSyncTurn:
         assert messages[0].content == "user msg"
         assert messages[1].role == "assistant"
         assert messages[1].content == "assistant msg"
-
-    def test_join_previous_thread(self, env_vars):
-        provider = AgentArtsMemoryProvider()
-        mock_sdk = make_mock_sdk()
-        mock_client = mock_sdk.MemoryClient.return_value
-        mock_client.create_memory_session.return_value = MagicMock(id="s1")
-
-        barrier = threading.Event()
-
-        def _blocking_add(*args, **kwargs):
-            barrier.set()
-            time.sleep(0.3)
-
-        mock_client.add_messages.side_effect = _blocking_add
-
-        with patch(
-            "provider.import_memory_sdk",
-            return_value=mock_sdk,
-        ):
-            provider.initialize("sess-1", hermes_home="/tmp/h")
-            provider.sync_turn("msg1", "resp1")
-            assert barrier.wait(timeout=5.0) is True
-            provider.sync_turn("msg2", "resp2")
-            if provider._sync_thread:
-                provider._sync_thread.join(timeout=5.0)
-
-        assert mock_client.add_messages.call_count == 2
 
     def test_exception_in_thread_does_not_propagate(self, env_vars):
         provider = AgentArtsMemoryProvider()
@@ -498,8 +464,6 @@ class TestSyncTurn:
         ):
             provider.initialize("sess-1", hermes_home="/tmp/h")
             provider.sync_turn("msg", "resp")
-            if provider._sync_thread:
-                provider._sync_thread.join(timeout=5.0)
 
         mock_client.add_messages.assert_called_once()
 
@@ -712,37 +676,6 @@ class TestShutdown:
         provider.shutdown()
         assert provider._client is None
 
-    def test_waits_for_sync_thread(self, env_vars):
-        provider = AgentArtsMemoryProvider()
-        mock_sdk = make_mock_sdk()
-        mock_client = mock_sdk.MemoryClient.return_value
-        mock_client.create_memory_session.return_value = MagicMock(id="s1")
-
-        done_event = threading.Event()
-
-        def _slow_add(*args, **kwargs):
-            time.sleep(0.2)
-            done_event.set()
-
-        mock_client.add_messages.side_effect = _slow_add
-
-        with patch(
-            "provider.import_memory_sdk",
-            return_value=mock_sdk,
-        ):
-            provider.initialize("sess-1", hermes_home="/tmp/h")
-            provider.sync_turn("msg", "resp")
-            provider.shutdown()
-
-        assert done_event.is_set()
-        assert provider._sync_thread is not None
-        assert not provider._sync_thread.is_alive()
-
-
-# ── TOOL_SCHEMAS ──
-
-
-class TestToolSchemas:
     def test_schemas_count(self):
         assert len(TOOL_SCHEMAS) == 2
 
@@ -1082,10 +1015,38 @@ class TestSyncTurnEdgeCases:
         mock_client = init_provider(provider, mock_sdk)
 
         provider.sync_turn("", "")
-        if provider._sync_thread:
-            provider._sync_thread.join(timeout=5.0)
 
         mock_client.add_messages.assert_called_once()
+
+    def test_sync_turn_prefers_self_session_id_over_kwarg(self, env_vars):
+        """self._session_id takes priority; kwarg is only a fallback."""
+        provider = AgentArtsMemoryProvider()
+        mock_sdk = make_mock_sdk()
+        mock_client = init_provider(provider, mock_sdk)
+
+        provider.sync_turn("user", "assistant", session_id="hermes-session-123")
+
+        mock_client.add_messages.assert_called_once()
+        call_kwargs = mock_client.add_messages.call_args.kwargs
+        # self._session_id ("aa-sess") wins over the kwarg
+        assert call_kwargs["session_id"] == "aa-sess"
+
+    def test_sync_turn_passes_empty_session_id_when_self_empty(self, env_vars):
+        """Empty self._session_id is passed through; kwarg is not a fallback."""
+        provider = AgentArtsMemoryProvider()
+        mock_sdk = make_mock_sdk()
+        mock_client = mock_sdk.MemoryClient.return_value
+        mock_client.create_memory_session.return_value = MagicMock(id="")
+
+        with patch("provider.import_memory_sdk", return_value=mock_sdk):
+            provider.initialize("h-sess", hermes_home="/tmp/h")
+
+        # self._session_id is now "" and is passed through; kwarg is not a fallback
+        provider.sync_turn("user", "assistant", session_id="hermes-session-123")
+
+        mock_client.add_messages.assert_called_once()
+        call_kwargs = mock_client.add_messages.call_args.kwargs
+        assert call_kwargs["session_id"] == ""
 
     def test_sync_multiple_turns(self, env_vars):
         provider = AgentArtsMemoryProvider()
@@ -1094,33 +1055,9 @@ class TestSyncTurnEdgeCases:
 
         for i in range(5):
             provider.sync_turn(f"user-{i}", f"assistant-{i}")
-            if provider._sync_thread:
-                provider._sync_thread.join(timeout=5.0)
 
         assert mock_client.add_messages.call_count == 5
 
-    def test_sync_thread_is_daemon(self, env_vars):
-        provider = AgentArtsMemoryProvider()
-        mock_sdk = make_mock_sdk()
-        mock_client = init_provider(provider, mock_sdk)
-
-        barrier = threading.Event()
-
-        def _slow(*args, **kwargs):
-            barrier.set()
-
-        mock_client.add_messages.side_effect = _slow
-        provider.sync_turn("u", "a")
-        assert provider._sync_thread is not None
-        assert provider._sync_thread.daemon is True
-        barrier.wait(timeout=5.0)
-        provider._sync_thread.join(timeout=5.0)
-
-
-# ── on_pre_compress edge cases ──
-
-
-class TestOnPreCompressEdgeCases:
     def test_only_assistant_messages(self, env_vars):
         """If no user message, query is empty → prefetch returns empty."""
         provider = AgentArtsMemoryProvider()
@@ -1198,7 +1135,6 @@ class TestShutdownEdgeCases:
         provider = AgentArtsMemoryProvider()
         mock_sdk = make_mock_sdk()
         init_provider(provider, mock_sdk)
-        provider._sync_thread = None
         provider.shutdown()
         assert provider._client is None
 
@@ -1271,8 +1207,6 @@ class TestFullLifecycle:
         mock_client = init_provider(provider, mock_sdk)
 
         provider.sync_turn("user question", "assistant answer")
-        if provider._sync_thread:
-            provider._sync_thread.join(timeout=5.0)
         assert mock_client.add_messages.call_count == 1
 
         search_response = MagicMock()
@@ -1323,7 +1257,7 @@ class TestRegister:
     def test_register_provider_name(self):
         ctx = _FakeContext()
         register(ctx)
-        assert ctx.providers[0].name == "agentarts_memory"
+        assert ctx.providers[0].name == "agentarts"
 
 
 class TestPackageExports:
@@ -1347,7 +1281,7 @@ class TestPluginYaml:
         plugin_yaml = _plugin_yaml_path()
         data = yaml.safe_load(plugin_yaml.read_text(encoding="utf-8"))
 
-        assert data["name"] == "agentarts_memory"
+        assert data["name"] == "agentarts"
         assert data["version"] == "1.0.0"
         assert "Memory" in data["description"]
 

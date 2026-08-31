@@ -351,6 +351,24 @@ class AsyncMemoryHttpService:
             space_id=space_id
         )
 
+    async def list_sessions(self, space_id: str, actor_id: str | None = None,
+                            limit: int | None = None, offset: int | None = None) -> dict[str, Any]:
+        """List sessions in a space - identical to sync version."""
+        params = {}
+        if actor_id is not None:
+            params["actor_id"] = actor_id
+        if limit is not None:
+            params["limit"] = limit
+        if offset is not None:
+            params["offset"] = offset
+
+        return await self._make_request(
+            method="GET",
+            path=f"/v1/core/spaces/{space_id}/sessions",
+            params=params,
+            space_id=space_id
+        )
+
     async def get_session(self, space_id: str, session_id: str) -> dict[str, Any]:
         """Get session information - identical to sync version."""
         return await self._make_request(

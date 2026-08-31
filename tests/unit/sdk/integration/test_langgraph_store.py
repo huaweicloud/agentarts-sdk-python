@@ -9,6 +9,7 @@ Tests cover:
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -79,11 +80,12 @@ class TestAgentArtsMemoryStorePut:
                     with pytest.raises(ValueError, match="session_id"):
                         store._handle_put(op)
 
-    def test_put_requires_content(self):
-        """Test that Put requires content in value"""
+    def test_put_serializes_value_when_no_content(self):
+        """Test that missing content serializes the entire value as JSON."""
         from langgraph.store.base import PutOp
 
         from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+        from agentarts.sdk.memory.inner.config import TextMessage
 
         with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
             with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
@@ -96,17 +98,24 @@ class TestAgentArtsMemoryStorePut:
                     op = PutOp(
                         namespace=("memories",),
                         key="msg-1",
-                        value={"session_id": "session-123"},
+                        value={"session_id": "session-123", "preference": "dark mode"},
                     )
 
-                    with pytest.raises(ValueError, match="content"):
-                        store._handle_put(op)
+                    store._handle_put(op)
+
+                    mock_client.add_messages.assert_called_once()
+                    messages = mock_client.add_messages.call_args.kwargs["messages"]
+                    assert isinstance(messages[0], TextMessage)
+                    parsed = json.loads(messages[0].content)
+                    assert parsed["preference"] == "dark mode"
+                    assert "session_id" not in parsed
 
     def test_put_calls_add_messages(self):
-        """Test that Put calls add_messages with correct params"""
+        """Test that Put constructs TextMessage (not raw dict) and calls add_messages."""
         from langgraph.store.base import PutOp
 
         from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+        from agentarts.sdk.memory.inner.config import TextMessage
 
         with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
             with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
@@ -135,11 +144,21 @@ class TestAgentArtsMemoryStorePut:
                     assert call_args.kwargs["session_id"] == "session-123"
                     messages = call_args.kwargs["messages"]
                     assert len(messages) == 1
-                    assert messages[0]["role"] == "user"
-                    assert messages[0]["actor_id"] == "user-001"
+                    # message must be TextMessage instance, not raw dict
+                    assert isinstance(messages[0], TextMessage)
+                    # Verify to_dict() outputs actor_id (was missing before fix)
+                    msg_dict = messages[0].to_dict()
+                    assert msg_dict["role"] == "user"
+                    assert msg_dict["actor_id"] == "user-001"
+                    assert "parts" in msg_dict
+                    # Verify meta contains store_key and store_namespace
+                    assert msg_dict["meta"] is not None
+                    meta = json.loads(msg_dict["meta"])
+                    assert meta["store_key"] == "msg-1"
+                    assert meta["store_namespace"] == ["memories", "user-001"]
 
-    def test_put_delete_not_supported(self):
-        """Test that delete (value=None) is not supported"""
+    def test_put_delete_calls_delete_memory(self):
+        """Test that delete (value=None) calls delete_memory with memory_id=key."""
         from langgraph.store.base import PutOp
 
         from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
@@ -154,13 +173,67 @@ class TestAgentArtsMemoryStorePut:
 
                     op = PutOp(
                         namespace=("memories",),
-                        key="msg-1",
+                        key="memory-123",
                         value=None,
                     )
 
                     store._handle_put(op)
 
+                    mock_client.delete_memory.assert_called_once_with(
+                        space_id="test-space",
+                        memory_id="memory-123",
+                    )
                     mock_client.add_messages.assert_not_called()
+
+    def test_put_delete_handles_not_found(self):
+        """Test that delete swallows 404 not found errors."""
+        from langgraph.store.base import PutOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+
+        with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
+            with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
+                with patch("agentarts.sdk.integration.langgraph.store.AsyncMemoryClient"):
+                    mock_client = MagicMock()
+                    mock_client.delete_memory.side_effect = Exception("404 not found")
+                    mock_client_cls.return_value = mock_client
+
+                    store = AgentArtsMemoryStore(space_id="test-space")
+
+                    op = PutOp(
+                        namespace=("memories",),
+                        key="nonexistent",
+                        value=None,
+                    )
+
+                    # Should not raise, should return None
+                    result = store._handle_put(op)
+                    assert result is None
+
+    def test_put_swallows_exception(self):
+        """Test that Put swallows exceptions (default behavior, opt-in re-raise planned)."""
+        from langgraph.store.base import PutOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+
+        with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
+            with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
+                with patch("agentarts.sdk.integration.langgraph.store.AsyncMemoryClient"):
+                    mock_client = MagicMock()
+                    mock_client.add_messages.side_effect = RuntimeError("network error")
+                    mock_client_cls.return_value = mock_client
+
+                    store = AgentArtsMemoryStore(space_id="test-space")
+
+                    op = PutOp(
+                        namespace=("memories",),
+                        key="msg-1",
+                        value={"content": "test", "session_id": "s1"},
+                    )
+
+                    # Should not raise, should return None
+                    result = store._handle_put(op)
+                    assert result is None
 
 
 class TestAgentArtsMemoryStoreSearch:
@@ -289,6 +362,98 @@ class TestAgentArtsMemoryStoreSearch:
                     mock_client.list_memories.assert_called_once()
                     assert len(results) == 1
                     assert results[0].score is None
+
+    def test_search_without_query_memory_type_filter(self):
+        """Test that memory_type filter keeps only matching items."""
+        from langgraph.store.base import SearchOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+
+        def make_memory(memory_id, memory_type):
+            mem = MagicMock()
+            mem.id = memory_id
+            mem.content = "content"
+            mem.actor_id = "user-001"
+            mem.assistant_id = None
+            mem.session_id = "session-xyz"
+            mem.strategy_type = "semantic"
+            mem.memory_type = memory_type
+            mem.created_at = "2024-01-01T00:00:00Z"
+            mem.updated_at = "2024-01-01T00:00:00Z"
+            return mem
+
+        mock_response = MagicMock()
+        mock_response.items = [
+            make_memory("mem-memory", "memory"),
+            make_memory("mem-episode", "episode"),
+        ]
+
+        with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
+            with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
+                with patch("agentarts.sdk.integration.langgraph.store.AsyncMemoryClient"):
+                    mock_client = MagicMock()
+                    mock_client.list_memories.return_value = mock_response
+                    mock_client_cls.return_value = mock_client
+
+                    store = AgentArtsMemoryStore(space_id="test-space")
+
+                    results = store._handle_search(
+                        SearchOp(
+                            namespace_prefix=("memories",),
+                            filter={"memory_type": "memory"},
+                            limit=10,
+                        )
+                    )
+
+                    assert len(results) == 1
+                    assert results[0].key == "mem-memory"
+                    assert results[0].value["memory_type"] == "memory"
+
+    def test_search_without_query_no_memory_type_filter(self):
+        """Test that filter=None returns all items regardless of memory_type."""
+        from langgraph.store.base import SearchOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+
+        def make_memory(memory_id, memory_type):
+            mem = MagicMock()
+            mem.id = memory_id
+            mem.content = "content"
+            mem.actor_id = "user-001"
+            mem.assistant_id = None
+            mem.session_id = "session-xyz"
+            mem.strategy_type = "semantic"
+            mem.memory_type = memory_type
+            mem.created_at = "2024-01-01T00:00:00Z"
+            mem.updated_at = "2024-01-01T00:00:00Z"
+            return mem
+
+        mock_response = MagicMock()
+        mock_response.items = [
+            make_memory("mem-memory", "memory"),
+            make_memory("mem-episode", "episode"),
+        ]
+
+        with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
+            with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
+                with patch("agentarts.sdk.integration.langgraph.store.AsyncMemoryClient"):
+                    mock_client = MagicMock()
+                    mock_client.list_memories.return_value = mock_response
+                    mock_client_cls.return_value = mock_client
+
+                    store = AgentArtsMemoryStore(space_id="test-space")
+
+                    results = store._handle_search(
+                        SearchOp(
+                            namespace_prefix=("memories",),
+                            filter=None,
+                            limit=10,
+                        )
+                    )
+
+                    assert len(results) == 2
+                    memory_types = {r.value["memory_type"] for r in results}
+                    assert memory_types == {"memory", "episode"}
 
 
 class TestAgentArtsMemoryStoreGet:
@@ -707,8 +872,8 @@ class TestDatetimeParsing:
                     result = store._parse_datetime(dt)
                     assert result == dt
 
-    def test_parse_datetime_none_returns_current(self):
-        """Test that None returns current datetime"""
+    def test_parse_datetime_none_returns_epoch(self):
+        """Test that None returns epoch (1970-01-01)"""
         from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
 
         with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
@@ -717,4 +882,80 @@ class TestDatetimeParsing:
                     store = AgentArtsMemoryStore(space_id="test-space")
 
                     result = store._parse_datetime(None)
-                    assert isinstance(result, datetime)
+                    assert result == datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+    def test_parse_datetime_invalid_string_returns_epoch(self):
+        """Test that invalid datetime string returns epoch (1970-01-01)"""
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+
+        with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
+            with patch("agentarts.sdk.integration.langgraph.store.MemoryClient"):
+                with patch("agentarts.sdk.integration.langgraph.store.AsyncMemoryClient"):
+                    store = AgentArtsMemoryStore(space_id="test-space")
+
+                    result = store._parse_datetime("not-a-date")
+                    assert result == datetime(1970, 1, 1, tzinfo=timezone.utc)
+
+
+class TestWildcardMatching:
+    """Tests for wildcard support in match conditions"""
+
+    def _make_store(self):
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+
+        with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
+            with patch("agentarts.sdk.integration.langgraph.store.MemoryClient"):
+                with patch("agentarts.sdk.integration.langgraph.store.AsyncMemoryClient"):
+                    return AgentArtsMemoryStore(space_id="test-space")
+
+    def test_match_path_with_wildcards_exact_match(self):
+        """Test exact match without wildcards"""
+        store = self._make_store()
+
+        assert store._match_path_with_wildcards(
+            ("memories", "user-001"), ("memories", "user-001")
+        )
+        assert not store._match_path_with_wildcards(
+            ("memories", "user-001"), ("memories", "user-002")
+        )
+
+    def test_match_path_with_wildcards_single_wildcard(self):
+        """Test that '*' matches any single namespace segment"""
+        store = self._make_store()
+
+        assert store._match_path_with_wildcards(
+            ("memories", "user-001"), ("memories", "*")
+        )
+        assert not store._match_path_with_wildcards(
+            ("other", "user-001"), ("memories", "*")
+        )
+
+    def test_match_path_with_wildcards_length_mismatch(self):
+        """Test that length mismatch returns False"""
+        store = self._make_store()
+
+        assert not store._match_path_with_wildcards(("memories",), ("memories", "*"))
+        assert not store._match_path_with_wildcards(
+            ("memories", "user-001"), ("memories",)
+        )
+
+    def test_matches_condition_prefix_with_wildcard(self):
+        """Test prefix match condition with wildcard"""
+        from langgraph.store.base import MatchCondition
+
+        store = self._make_store()
+
+        condition = MatchCondition(match_type="prefix", path=("memories", "*"))
+        assert store._matches_condition(("memories", "user-001"), condition)
+        assert store._matches_condition(("memories", "user-001", "deep"), condition)
+        assert not store._matches_condition(("other", "user-001"), condition)
+
+    def test_matches_condition_suffix_with_wildcard(self):
+        """Test suffix match condition with wildcard"""
+        from langgraph.store.base import MatchCondition
+
+        store = self._make_store()
+
+        condition = MatchCondition(match_type="suffix", path=("*",))
+        assert store._matches_condition(("memories", "user-001"), condition)
+        assert store._matches_condition(("single",), condition)
