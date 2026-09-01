@@ -37,13 +37,17 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe('AgentArtsDataPlaneClient', () => {
-  it('maps DSH session ids to stable AgentArts UUIDs', () => {
+  it('preserves supported DSH session ids and maps unsupported ids to stable UUIDs', () => {
     expect(toAgentArtsSessionId('session-c4bb3657-46c2-4805-a93f-31f523bb1b14'))
-      .toBe('c4bb3657-46c2-4805-a93f-31f523bb1b14')
-    expect(toAgentArtsSessionId('dsh-session-1')).toBe(toAgentArtsSessionId('dsh-session-1'))
-    expect(toAgentArtsSessionId('dsh-session-1'))
+      .toBe('session-c4bb3657-46c2-4805-a93f-31f523bb1b14')
+    expect(toAgentArtsSessionId('dsh-session_1.test')).toBe('dsh-session_1.test')
+    expect(toAgentArtsSessionId('unsupported/session')).toBe(toAgentArtsSessionId('unsupported/session'))
+    expect(toAgentArtsSessionId('unsupported/session'))
       .toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
-    expect(toAgentArtsSessionId('dsh-session-1')).not.toBe(toAgentArtsSessionId('dsh-session-2'))
+    expect(toAgentArtsSessionId('a'.repeat(65)))
+      .toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-8[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+    expect(toAgentArtsSessionId('unsupported/session'))
+      .not.toBe(toAgentArtsSessionId('unsupported/session-2'))
   })
 
   it('creates a deterministic remote session with participant identity', async () => {
@@ -120,6 +124,35 @@ describe('AgentArtsDataPlaneClient', () => {
     expect(fetch.mock.calls.map(([, init]) =>
       (init?.headers as Record<string, string>).Authorization,
     )).toEqual(['Bearer first-key', 'Bearer rotated-key'])
+  })
+
+  it('writes turns larger than 100 messages as ordered, independently idempotent chunks', async () => {
+    const forceConfig = { ...config, forceExtract: true }
+    const fetch = vi.fn<typeof globalThis.fetch>()
+      .mockImplementation(async () => jsonResponse({ items: [] }, 201))
+    const client = new AgentArtsDataPlaneClient(forceConfig, fetch)
+    const largeBatch: TurnBatch = {
+      ...batch,
+      messages: Array.from({ length: 205 }, (_, index) => ({
+        role: index % 2 === 0 ? 'user' as const : 'assistant' as const,
+        content: `message-${index}`,
+        sourceEventSeq: index,
+      })),
+    }
+
+    await client.addTurn('dsh-session-1', largeBatch)
+
+    expect(fetch).toHaveBeenCalledTimes(3)
+    const bodies = fetch.mock.calls.map(([, init]) =>
+      JSON.parse(String(init?.body)) as Record<string, unknown>,
+    )
+    expect(bodies.map(body => (body.messages as unknown[]).length)).toEqual([100, 100, 5])
+    expect(bodies.flatMap(body => body.messages as Array<{ parts: Array<{ text: string }> }>)
+      .map(message => message.parts[0]?.text)).toEqual(
+        Array.from({ length: 205 }, (_, index) => `message-${index}`),
+      )
+    expect(new Set(bodies.map(body => body.idempotency_key)).size).toBe(3)
+    expect(bodies.map(body => body.is_force_extract)).toEqual([false, false, true])
   })
 
   it('reports service diagnostics without exposing the API key', async () => {

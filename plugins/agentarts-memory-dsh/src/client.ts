@@ -35,14 +35,12 @@ function encodePath(value: string): string {
   return encodeURIComponent(value)
 }
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const AGENTARTS_SESSION_ID_PATTERN = /^[a-zA-Z0-9._-]{1,64}$/
+const MAX_MESSAGES_PER_REQUEST = 100
 
-/** Map DSH's opaque session id to the UUID required by AgentArts Memory. */
+/** Preserve supported DSH session ids, with a deterministic fallback for unsupported ids. */
 export function toAgentArtsSessionId(dshSessionId: string): string {
-  const unprefixed = dshSessionId.startsWith('session-')
-    ? dshSessionId.slice('session-'.length)
-    : dshSessionId
-  if (UUID_PATTERN.test(unprefixed)) return unprefixed.toLowerCase()
+  if (AGENTARTS_SESSION_ID_PATTERN.test(dshSessionId)) return dshSessionId
 
   // UUIDv8 reserves the payload for application-defined deterministic schemes.
   const bytes = createHash('sha256')
@@ -57,8 +55,9 @@ export function toAgentArtsSessionId(dshSessionId: string): string {
     + `-${hex.slice(16, 20)}-${hex.slice(20)}`
 }
 
-function idempotencyKey(batch: TurnBatch): string {
-  const source = `${batch.dshSessionId}\0${batch.turn}\0${batch.turnEndSeq}`
+function idempotencyKey(batch: TurnBatch, chunkIndex?: number): string {
+  const chunk = chunkIndex === undefined ? '' : `\0${chunkIndex}`
+  const source = `${batch.dshSessionId}\0${batch.turn}\0${batch.turnEndSeq}${chunk}`
   return `dsh-turn-${createHash('sha256').update(source).digest('hex')}`
 }
 
@@ -141,18 +140,24 @@ export class AgentArtsDataPlaneClient implements TurnDataPlane {
       dsh_turn_end_seq: batch.turnEndSeq,
       dsh_turn_reason: batch.reason,
     })
-    await this.request('POST', path, {
-      messages: batch.messages.map(message => ({
-        role: message.role,
-        parts: [{ type: 'text', text: message.content }],
-        actor_id: this.config.actorId,
-        assistant_id: this.config.assistantId,
-        meta,
-      })),
-      timestamp: batch.timestamp,
-      idempotency_key: idempotencyKey(batch),
-      is_force_extract: this.config.forceExtract,
-    })
+    const messages = batch.messages.map(message => ({
+      role: message.role,
+      parts: [{ type: 'text', text: message.content }],
+      actor_id: this.config.actorId,
+      assistant_id: this.config.assistantId,
+      meta,
+    }))
+    const chunkCount = Math.ceil(messages.length / MAX_MESSAGES_PER_REQUEST)
+    for (let chunkIndex = 0; chunkIndex < chunkCount; chunkIndex += 1) {
+      const offset = chunkIndex * MAX_MESSAGES_PER_REQUEST
+      await this.request('POST', path, {
+        messages: messages.slice(offset, offset + MAX_MESSAGES_PER_REQUEST),
+        timestamp: batch.timestamp,
+        idempotency_key: idempotencyKey(batch, chunkCount === 1 ? undefined : chunkIndex),
+        // Force extraction only after the complete turn has been written.
+        is_force_extract: this.config.forceExtract && chunkIndex === chunkCount - 1,
+      })
+    }
   }
 
   close(): void {
