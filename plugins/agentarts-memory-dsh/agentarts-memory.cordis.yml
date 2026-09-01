@@ -1,4 +1,5 @@
-# Install `agentarts-memory-dsh` and put `agentarts-memory-mcp` on PATH, then
+# Install `agentarts-memory-dsh` and put `agentarts-memory-mcp` on PATH with
+# `uv tool install 'agentarts-sdk[memory-mcp]'`, then
 # apply this opt-in overlay to a DSH profile. Secrets remain process-provided.
 - insert:
     - id: agentarts-memory

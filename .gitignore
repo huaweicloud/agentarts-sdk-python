@@ -174,3 +174,7 @@ examples/navigation_langgraph_memory/sessions.json
 *.bak
 
 node_modules/
+
+# Local design notes
+/docs/memory_mcp.md
+/plugins/agentarts-memory-dsh/DESIGN.md

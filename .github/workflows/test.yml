@@ -75,12 +75,25 @@ jobs:
       - name: Build package
         run: uv build
 
-      - name: Create virtual environment
-        run: uv venv .venv-wheel
+      - name: Create base virtual environment
+        run: uv venv .venv-wheel-base
 
-      - name: Check installed package and Memory MCP entry point
+      - name: Check base package excludes the MCP runtime
         run: |
-          uv pip install --python .venv-wheel/bin/python dist/*.whl
-          .venv-wheel/bin/python -c "import agentarts; from agentarts.toolkit.plugins.memory.mcp import create_server; print(agentarts.__version__)"
-          test -x .venv-wheel/bin/agentarts-memory-mcp
-          .venv-wheel/bin/python -c "from importlib.metadata import entry_points; ep = next(item for item in entry_points(group='console_scripts') if item.name == 'agentarts-memory-mcp'); assert ep.value == 'agentarts.toolkit.plugins.memory.mcp.server:main'"
+          uv pip install --python .venv-wheel-base/bin/python dist/*.whl
+          .venv-wheel-base/bin/python -c "import importlib.util; import agentarts; assert importlib.util.find_spec('mcp') is None; print(agentarts.__version__)"
+          set +e
+          output=$(.venv-wheel-base/bin/agentarts-memory-mcp 2>&1)
+          status=$?
+          set -e
+          test "$status" -eq 2
+          grep -F "agentarts-sdk[memory-mcp]" <<<"$output"
+
+      - name: Check package with the Memory MCP extra
+        run: |
+          uv venv .venv-wheel-mcp
+          wheels=(dist/*.whl)
+          uv pip install --python .venv-wheel-mcp/bin/python "${wheels[0]}[memory-mcp]"
+          .venv-wheel-mcp/bin/python -c "import agentarts; from agentarts.toolkit.plugins.memory.mcp import create_server; print(agentarts.__version__)"
+          test -x .venv-wheel-mcp/bin/agentarts-memory-mcp
+          .venv-wheel-mcp/bin/python -c "from importlib.metadata import entry_points; ep = next(item for item in entry_points(group='console_scripts') if item.name == 'agentarts-memory-mcp'); assert ep.value == 'agentarts.toolkit.plugins.memory.mcp.cli:main'"

@@ -7,13 +7,14 @@ the original argparse-based ``agentarts-memory`` installer.
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import sys
 from typing import Annotated
 
 import typer
-
 from rich.console import Console
+from rich.markup import escape
 
 from agentarts.toolkit.utils.common import echo_error, echo_key_value, echo_success, echo_warning
 
@@ -35,6 +36,13 @@ from .utils import (
 console = Console()
 
 VALID_TARGETS = ("hermes", "claude", "codex", "opencode", "openclaw")
+MCP_TARGETS = frozenset({"claude", "codex", "opencode"})
+MCP_INSTALL_HINT = "pip install 'agentarts-sdk[memory-mcp]'"
+
+
+def _mcp_runtime_available() -> bool:
+    """Return whether the optional MCP runtime is installed."""
+    return importlib.util.find_spec("mcp") is not None
 
 
 def _select_scope(platform_name: str, yes: bool) -> str:
@@ -115,6 +123,13 @@ def _do_install(target: str | None, global_scope: bool, yes: bool) -> int:
     platform = get_platform(target)
     if platform is None:
         echo_error(f"Unknown platform '{target}'")
+        return 2
+
+    if target in MCP_TARGETS and not _mcp_runtime_available():
+        echo_error(
+            "This integration requires the optional Memory MCP server. "
+            f"Install it with: {escape(MCP_INSTALL_HINT)}"
+        )
         return 2
 
     console.print("\nChecking credentials...")

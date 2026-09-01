@@ -198,6 +198,9 @@ pip install agentarts-sdk[langchain]
 # With LangGraph support
 pip install agentarts-sdk[langgraph]
 
+# With the Memory MCP server
+pip install 'agentarts-sdk[memory-mcp]'
+
 # With all optional dependencies
 pip install agentarts-sdk[all]
 ```
@@ -362,16 +365,15 @@ The `agentarts memory` command provides two groups of subcommands.
 
 ### Memory MCP Server
 
-Installing `agentarts-sdk` also installs the `agentarts-memory-mcp` stdio
-server. It requires `HUAWEICLOUD_SDK_MEMORY_API_KEY` and
-`AGENTARTS_MEMORY_SPACE_ID`; region, actor, assistant, and project identifiers
-can be supplied with the corresponding `HUAWEICLOUD_SDK_REGION` and
-`AGENTARTS_MEMORY_*` environment variables.
+The `agentarts-memory-mcp` stdio server is optional. Install it with
+`pip install 'agentarts-sdk[memory-mcp]'`; a plain `agentarts-sdk` installation
+does not install the MCP runtime. The server requires
+`HUAWEICLOUD_SDK_MEMORY_API_KEY` and `AGENTARTS_MEMORY_SPACE_ID`; region, actor,
+assistant, and project identifiers can be supplied with the corresponding
+`HUAWEICLOUD_SDK_REGION` and `AGENTARTS_MEMORY_*` environment variables.
 
 The server preserves the toolkit's existing memory tools and adds the portable
 `ltm_search` tool.
-See [the Memory MCP server guide](docs/memory_mcp.md) for configuration,
-contracts, and lifecycle details.
 
 | Tool | Purpose |
 | --- | --- |
@@ -386,7 +388,7 @@ contracts, and lifecycle details.
   "mcpServers": {
     "agentarts-memory": {
       "command": "uvx",
-      "args": ["--from", "agentarts-sdk", "agentarts-memory-mcp"],
+      "args": ["--from", "agentarts-sdk[memory-mcp]", "agentarts-memory-mcp"],
       "env": {
         "HUAWEICLOUD_SDK_MEMORY_API_KEY": "<memory-api-key>",
         "AGENTARTS_MEMORY_SPACE_ID": "<space-id>",

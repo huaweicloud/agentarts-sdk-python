@@ -29,7 +29,6 @@ dependencies = [
     { name = "huaweicloudsdkagentidentity" },
     { name = "huaweicloudsdkiam" },
     { name = "huaweicloudsdkswr" },
-    { name = "mcp" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pyjwt" },
@@ -54,6 +53,7 @@ all = [
     { name = "langchain-community" },
     { name = "langchain-core" },
     { name = "langgraph" },
+    { name = "mcp" },
     { name = "myst-parser", version = "4.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "myst-parser", version = "5.0.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "opentelemetry-instrumentation-fastapi" },
@@ -102,6 +102,9 @@ langgraph = [
     { name = "langchain-core" },
     { name = "langgraph" },
 ]
+memory-mcp = [
+    { name = "mcp" },
+]
 monitoring = [
     { name = "opentelemetry-instrumentation-fastapi" },
     { name = "opentelemetry-sdk" },
@@ -126,6 +129,7 @@ dev = [
     { name = "langchain" },
     { name = "langchain-core" },
     { name = "langgraph" },
+    { name = "mcp" },
     { name = "mypy" },
     { name = "pre-commit" },
     { name = "pytest" },
@@ -139,7 +143,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agentarts-sdk", extras = ["web", "langchain", "langgraph", "autogen", "crewai", "vector-stores", "database", "monitoring", "huaweicloud", "docs", "tui"], marker = "extra == 'all'" },
+    { name = "agentarts-sdk", extras = ["web", "langchain", "langgraph", "autogen", "crewai", "vector-stores", "database", "monitoring", "huaweicloud", "docs", "tui", "memory-mcp"], marker = "extra == 'all'" },
     { name = "asyncpg", marker = "extra == 'database'", specifier = ">=0.29.0" },
     { name = "crewai", marker = "extra == 'crewai'", specifier = ">=0.1.0" },
     { name = "cryptography", specifier = ">=41.0.0" },
@@ -158,7 +162,7 @@ requires-dist = [
     { name = "langchain-core", marker = "extra == 'langchain'", specifier = ">=1.0.0" },
     { name = "langchain-core", marker = "extra == 'langgraph'", specifier = ">=1.0.0" },
     { name = "langgraph", marker = "extra == 'langgraph'", specifier = ">=1.0.0" },
-    { name = "mcp", specifier = ">=2.0.0,<3.0.0" },
+    { name = "mcp", marker = "extra == 'memory-mcp'", specifier = ">=2.0.0,<3.0.0" },
     { name = "myst-parser", marker = "extra == 'docs'", specifier = ">=2.0.0" },
     { name = "opentelemetry-instrumentation-fastapi", marker = "extra == 'monitoring'", specifier = ">=0.41b0" },
     { name = "opentelemetry-sdk", marker = "extra == 'monitoring'", specifier = ">=1.20.0" },
@@ -182,7 +186,7 @@ requires-dist = [
     { name = "typer", specifier = ">=0.9.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.24.0" },
 ]
-provides-extras = ["web", "langchain", "langgraph", "autogen", "crewai", "vector-stores", "database", "monitoring", "huaweicloud", "docs", "tui", "all"]
+provides-extras = ["web", "langchain", "langgraph", "autogen", "crewai", "vector-stores", "database", "monitoring", "huaweicloud", "docs", "tui", "memory-mcp", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -193,6 +197,7 @@ dev = [
     { name = "langchain", specifier = ">=1.0.0" },
     { name = "langchain-core", specifier = ">=1.0.0" },
     { name = "langgraph", specifier = ">=1.0.0" },
+    { name = "mcp", specifier = ">=2.0.0,<3.0.0" },
     { name = "mypy", specifier = ">=1.5.0" },
     { name = "pre-commit", specifier = ">=3.5.0" },
     { name = "pytest", specifier = ">=7.4.0" },

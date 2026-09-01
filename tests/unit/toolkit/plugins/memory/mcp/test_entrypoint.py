@@ -11,8 +11,9 @@ import pytest
 from mcp import Client
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
+from agentarts.toolkit.plugins.memory.mcp.cli import main as cli_main
 from agentarts.toolkit.plugins.memory.mcp.config import ENV_API_KEY, ENV_SPACE_ID
-from agentarts.toolkit.plugins.memory.mcp.server import main
+from agentarts.toolkit.plugins.memory.mcp.server import main as server_main
 
 
 def test_main_fails_fast_when_required_environment_is_missing(
@@ -23,7 +24,7 @@ def test_main_fails_fast_when_required_environment_is_missing(
     monkeypatch.delenv(ENV_SPACE_ID, raising=False)
 
     with pytest.raises(SystemExit, match="2"):
-        main()
+        server_main()
 
     captured = capsys.readouterr()
     assert captured.out == ""
@@ -40,9 +41,40 @@ def test_main_runs_explicit_stdio_transport(monkeypatch: pytest.MonkeyPatch) -> 
         "agentarts.toolkit.plugins.memory.mcp.server.create_server",
         return_value=server,
     ):
-        main()
+        server_main()
 
     server.run.assert_called_once_with(transport="stdio")
+
+
+def test_console_launcher_delegates_to_server() -> None:
+    server_main_mock = MagicMock()
+
+    with patch(
+        "agentarts.toolkit.plugins.memory.mcp.cli._load_server_main",
+        return_value=server_main_mock,
+    ):
+        cli_main()
+
+    server_main_mock.assert_called_once_with()
+
+
+def test_console_launcher_explains_missing_optional_dependency(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    missing_mcp = ModuleNotFoundError("No module named 'mcp'", name="mcp")
+
+    with (
+        patch(
+            "agentarts.toolkit.plugins.memory.mcp.cli._load_server_main",
+            side_effect=missing_mcp,
+        ),
+        pytest.raises(SystemExit, match="2"),
+    ):
+        cli_main()
+
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "agentarts-sdk[memory-mcp]" in captured.err
 
 
 @pytest.mark.asyncio

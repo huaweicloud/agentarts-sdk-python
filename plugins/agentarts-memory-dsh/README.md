@@ -5,16 +5,14 @@
 ## 功能概述
 
 - **回合同步（写通路）**：每轮 DSH 交互结束（`turn/end` 事件）后，将该轮中的用户输入与 Agent 回复异步写入 AgentArts Memory——只投影人类可读的对话，排除工具协议载荷与私有推理；
-- **MCP 工具（读写通路）**：基于 AgentArts SDK 内置的 `agentarts-memory-mcp` 拉起常驻 stdio 子进程，向模型注入 `ltm_search` 及 SDK 内置的记忆工具；
+- **MCP 工具（读写通路）**：基于 AgentArts SDK 的可选 `memory-mcp` extra 拉起 `agentarts-memory-mcp` 常驻 stdio 子进程，向模型注入 `ltm_search` 及 SDK 内置的记忆工具；
 - **身份隔离**：写入与检索同时限定在配置的 Actor / Assistant 范围内，模型无法在工具调用时越权扩大范围；
 - **凭据安全**：插件配置仅保存凭据引用（`apiKeyEnv`），由 DSH 的凭据服务在运行时解析，API Key 不展开进 Cordis YAML。
-
-设计取舍（写通路为何不经 MCP、幂等与失败隔离策略等）见 [DESIGN.md](DESIGN.md)。
 
 ## 前置条件
 
 - Node.js `^22.19` 或 `>=24`；管理 Profile 插件需要 `pnpm`；
-- Python 3.10+ 与 `uv`（通过 `agentarts-sdk` 安装 `agentarts-memory-mcp` 检索服务）；
+- Python 3.10+ 与 `uv`（通过 `agentarts-sdk[memory-mcp]` 安装 `agentarts-memory-mcp` 服务）；
 - 已创建 AgentArts 记忆库，取得记忆库 ID 与 Data Plane API Key。
 
 ## 安装
@@ -38,14 +36,14 @@ agentarts-memory install dsh --profile web
 1. 安装 MCP 检索服务（稳定版）：
 
    ```bash
-   uv tool install agentarts-sdk
+   uv tool install 'agentarts-sdk[memory-mcp]'
    ```
 
    开发版（本仓库 main 分支）：
 
    ```bash
    uv tool install \
-     'git+https://github.com/huaweicloud/agentarts-sdk-python.git@main'
+     'agentarts-sdk[memory-mcp] @ git+https://github.com/huaweicloud/agentarts-sdk-python.git@main'
    ```
 
 2. 把插件安装进目标 Profile（DSH 的插件以 pnpm 依赖的形式装入 Profile，裸 `npm install` 不会生效）：
@@ -54,7 +52,7 @@ agentarts-memory install dsh --profile web
    dsh plugin --profile web add agentarts-memory-dsh
    ```
 
-   开发联调可改用本地源码路径：`dsh plugin --profile web add /path/to/agentarts-sdk-python/agentarts-memory-plugins/agentarts-memory-dsh`。
+   开发联调可改用本地源码路径：`dsh plugin --profile web add /path/to/agentarts-sdk-python/plugins/agentarts-memory-dsh`。
 
 3. 应用 Profile 覆盖层激活插件。临时体验可经 `--patch` 传入：
 
@@ -143,4 +141,4 @@ npm install
 npm run check
 ```
 
-`npm run check` = 类型检查 + vitest + 构建。架构与决策细节见 [DESIGN.md](DESIGN.md)。
+`npm run check` = 类型检查 + vitest + 构建。

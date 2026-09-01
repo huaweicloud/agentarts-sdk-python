@@ -58,7 +58,6 @@ dependencies = [
     "pyjwt>=2.8.0",
     "cryptography>=41.0.0",
     "docker>=7.0.0",
-    "mcp>=2.0.0,<3.0.0",
 ]
 
 [dependency-groups]
@@ -79,6 +78,7 @@ dev = [
     "langgraph>=1.0.0",
     "langchain>=1.0.0",
     "langchain-core>=1.0.0",
+    "mcp>=2.0.0,<3.0.0",
 ]
 
 [project.optional-dependencies]
@@ -129,8 +129,11 @@ docs = [
 tui = [
     "textual>=0.86.0",
 ]
+memory-mcp = [
+    "mcp>=2.0.0,<3.0.0",
+]
 all = [
-    "agentarts-sdk[web,langchain,langgraph,autogen,crewai,vector-stores,database,monitoring,huaweicloud,docs,tui]",
+    "agentarts-sdk[web,langchain,langgraph,autogen,crewai,vector-stores,database,monitoring,huaweicloud,docs,tui,memory-mcp]",
 ]
 
 [project.urls]
@@ -142,7 +145,7 @@ Changelog = "https://github.com/huaweicloud/agentarts-sdk-python/blob/main/CHANG
 
 [project.scripts]
 agentarts = "agentarts.toolkit.main:cli"
-agentarts-memory-mcp = "agentarts.toolkit.plugins.memory.mcp.server:main"
+agentarts-memory-mcp = "agentarts.toolkit.plugins.memory.mcp.cli:main"
 
 [tool.uv.build-backend]
 module-name = ["agentarts"]
