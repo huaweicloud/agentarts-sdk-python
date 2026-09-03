@@ -25,6 +25,7 @@ from agentarts.sdk.service.identity.polling.token_poller import (
     TokenPoller,
 )
 from agentarts.sdk.utils.constant import get_identity_endpoint
+from agentarts.sdk.utils.user_agent import build_user_agent
 from huaweicloudsdkagentidentity.v1 import (
     AgentIdentityClient,
     ApiKeyCredentialProvider,
@@ -127,6 +128,7 @@ class IdentityClient:
         # Set HTTP configuration
         http_config = HttpConfig.get_default_config()
         http_config.ignore_ssl_verification = ignore_ssl_verification
+        http_config.user_agent = build_user_agent()
 
         # Initialize clients using builder pattern
         if client is not None:

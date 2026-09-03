@@ -13,6 +13,7 @@ import requests
 
 from agentarts.sdk.utils.constant import get_memory_endpoint, get_region
 from agentarts.sdk.utils.signer import SDKSigner
+from agentarts.sdk.utils.user_agent import build_user_agent
 
 from .http_client import APIException
 
@@ -76,7 +77,6 @@ class DataPlaneAuthenticationStrategy(AuthenticationStrategy):
         """Get headers with API_KEY authentication."""
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "agentarts-sdk-python/0.0.1",
         }
 
         api_key = self._api_key or os.getenv("HUAWEICLOUD_SDK_MEMORY_API_KEY")
@@ -142,7 +142,6 @@ class ControlPlaneAuthenticationStrategy(AuthenticationStrategy):
         """Get base headers for control plane requests."""
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "agentarts-sdk/0.0.1",
         }
 
         if hasattr(self, "client_request_id"):
@@ -240,6 +239,8 @@ class MemoryHttpService:
             self._enable_signing = enable_signing
 
         self.session = requests.Session()
+        original_ua = self.session.headers.get("User-Agent", "")
+        self.session.headers["User-Agent"] = build_user_agent(original_ua)
 
         self._auth_strategy = self._create_authentication_strategy(endpoint_type)
 

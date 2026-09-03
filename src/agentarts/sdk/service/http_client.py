@@ -24,6 +24,7 @@ from typing_extensions import Self
 
 from agentarts.sdk.utils.signer import SDKSigner
 from agentarts.sdk.utils.signer_v11 import V11Signer
+from agentarts.sdk.utils.user_agent import build_user_agent
 
 logger = logging.getLogger(__name__)
 
@@ -184,6 +185,8 @@ class BaseHTTPClient:
         self._config = config or RequestConfig()
         self._session = requests.Session()
         self._session.headers.update(self._config.headers)
+        original_ua = self._session.headers.get("User-Agent", "")
+        self._session.headers["User-Agent"] = build_user_agent(original_ua)
         self._open_ak_sk = open_ak_sk
         self._sign_mode = sign_mode
         self._region_id = region_id
