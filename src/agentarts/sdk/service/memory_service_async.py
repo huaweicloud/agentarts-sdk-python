@@ -15,6 +15,7 @@ import httpx
 
 from agentarts.sdk.utils.constant import get_memory_endpoint, get_region
 from agentarts.sdk.utils.signer import SDKSigner
+from agentarts.sdk.utils.user_agent import build_user_agent
 
 from .http_client import APIException
 
@@ -41,7 +42,6 @@ class AsyncDataPlaneAuthenticationStrategy:
         """Get headers with API_KEY authentication - identical to sync version."""
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "agentarts-sdk-python/0.0.1",
         }
 
         api_key = self._api_key or os.getenv("HUAWEICLOUD_SDK_MEMORY_API_KEY")
@@ -109,7 +109,6 @@ class AsyncControlPlaneAuthenticationStrategy:
         """Get base headers for control plane requests - identical to sync version."""
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "agentarts-sdk/0.0.1",
         }
 
         if hasattr(self, "client_request_id"):
@@ -227,6 +226,8 @@ class AsyncMemoryHttpService:
                 timeout=httpx.Timeout(self.timeout),
                 verify=verify,
             )
+            original_ua = self._async_client.headers.get("User-Agent", "")
+            self._async_client.headers["User-Agent"] = build_user_agent(original_ua)
         return self._async_client
 
     async def _make_request(
