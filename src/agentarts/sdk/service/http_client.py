@@ -40,6 +40,27 @@ class APIException(Exception):
         super().__init__(f"[{error_code}] HTTP {status_code}: {error_msg}")
 
 
+class MemoryAPIException(APIException):
+    """Custom exception for Memory API errors.
+
+    分类约定：
+    - 网络错误：status_code=0, error_code="NETWORK_ERROR"（请求未获得服务器响应）。
+    - 解析错误：status_code 为实际 HTTP 状态码, error_code="PARSE_ERROR"
+      （2xx 但响应体非合法 JSON）。
+    - 服务端错误：status_code 为实际 HTTP 状态码。
+    """
+
+    @property
+    def is_network_error(self) -> bool:
+        """True 表示请求未获得服务器响应（网络层故障）。"""
+        return self.status_code == 0 and self.error_code == "NETWORK_ERROR"
+
+    @property
+    def retryable(self) -> bool:
+        """是否建议重试：网络错误、429 限流、5xx 服务端错误。"""
+        return self.is_network_error or self.status_code in (429, 500, 502, 503, 504)
+
+
 class SignMode(Enum):
     """Signature mode for AK/SK authentication."""
 
