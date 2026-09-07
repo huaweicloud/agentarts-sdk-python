@@ -114,7 +114,7 @@ def main(
             default_dep = config_op.detect_dependency_file()
 
         console.print(f"\n[bold]Dependency file [cyan]({default_dep})[/cyan]:[/bold]")
-        console.print("[dim]  Auto-detected from requirements.txt or pyproject.toml. Press Enter to use default[/dim]")
+        console.print("[dim]  Auto-detected from requirements.txt, pyproject.toml or pom.xml. Press Enter to use default[/dim]")
         agent_dependency_file = Prompt.ask("  File", default=default_dep)
 
     org = swr_organization

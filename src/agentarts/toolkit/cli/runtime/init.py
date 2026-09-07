@@ -20,6 +20,8 @@ class TemplateType(str, Enum):
     langgraph = "langgraph"
     langchain = "langchain"
     google_adk = "google-adk"
+    java_basic = "java-basic"
+    java_agentscope = "java-agentscope"
 
 
 TEMPLATE_DESCRIPTIONS = {
@@ -27,6 +29,8 @@ TEMPLATE_DESCRIPTIONS = {
     TemplateType.langgraph: "LangGraph-based agent with state management",
     TemplateType.langchain: "LangChain-based agent with tool integration",
     TemplateType.google_adk: "Google ADK agent template",
+    TemplateType.java_basic: "Basic Java agent (Maven/JDK17, agentarts-sdk-runtime)",
+    TemplateType.java_agentscope: "AgentScope Java agent (Maven/JDK17, agentscope integration)",
 }
 
 
@@ -76,7 +80,7 @@ def init(
         typer.Option(
             "--template",
             "-t",
-            help="Project template (basic, langgraph, langchain, google-adk)",
+            help="Project template (basic, langgraph, langchain, google-adk, java-basic, java-agentscope)",
         ),
     ] = None,
     path: Annotated[str, typer.Option("--path", "-p", help="Project path")] = ".",

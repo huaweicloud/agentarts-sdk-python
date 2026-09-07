@@ -40,6 +40,20 @@ def run_dev_server(
         console.print("[dim]Please set 'entrypoint' in .agentarts_config.yaml[/dim]")
         return False
 
+    # Java agents run as a child JVM (mvn compile + `java -cp ... <MainClass>`);
+    # Python agents run in-process via uvicorn.
+    language = get_language(config)
+    if language and language.lower().startswith("java"):
+        from agentarts.toolkit.operations.runtime.dev_java import run_java_dev_server
+
+        return run_java_dev_server(
+            port=port,
+            host=host,
+            reload=reload,
+            config_path=config_path,
+            env_vars=env_vars,
+        )
+
     module_name = entrypoint.split(":")[0] if ":" in entrypoint else entrypoint
     module_file = Path(f"{module_name}.py")
     if not module_file.exists():
@@ -222,6 +236,23 @@ def get_entrypoint(config: dict) -> str | None:
     Returns:
         Entrypoint string (e.g., "agent:create_app") or None
     """
+    return _get_base_field(config, "entrypoint")
+
+
+def get_language(config: dict) -> str | None:
+    """
+    Get the agent language from configuration.
+
+    Args:
+        config: Configuration dictionary
+
+    Returns:
+        Language string (e.g., "python3", "java17") or None
+    """
+    return _get_base_field(config, "language")
+
+
+def _get_base_field(config: dict, field: str) -> str | None:
     default_agent = config.get("default_agent")
     if not default_agent:
         agents = config.get("agents", {})
@@ -234,7 +265,7 @@ def get_entrypoint(config: dict) -> str | None:
     agents = config.get("agents", {})
     agent_config = agents.get(default_agent, {})
     base_config = agent_config.get("base", {})
-    return base_config.get("entrypoint")
+    return base_config.get(field)
 
 
 

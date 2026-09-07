@@ -1,0 +1,46 @@
+package com.example;
+
+import com.huaweicloud.agentarts.sdk.runtime.AgentArtsRuntimeApp;
+import com.huaweicloud.agentarts.sdk.runtime.context.RequestContext;
+import java.util.Map;
+
+public class Agent {
+
+    /**
+     * Factory used by {@code agentarts dev} to load this agent's runtime app.
+     * Mirrors the Python {@code create_app} entrypoint contract.
+     */
+    public static AgentArtsRuntimeApp createApp() {
+        AgentArtsRuntimeApp app = new AgentArtsRuntimeApp();
+        app.setEntrypoint((Map<String, Object> payload, RequestContext ctx) -> {
+            String message = (String) payload.getOrDefault("message", "");
+            return Map.of("result", "Hello from {{ name }}: " + message);
+        });
+        app.setPingHandler(() -> com.huaweicloud.agentarts.sdk.core.PingStatus.HEALTHY);
+        return app;
+    }
+
+    public static void main(String[] args) {
+        AgentArtsRuntimeApp app = createApp();
+        System.out.println("Starting {{ name }} agent...");
+        int port = positiveIntEnvironment("PORT", 8080);
+        String host = System.getenv().getOrDefault("HOST", "0.0.0.0");
+        app.runUntilShutdown(port, host);
+    }
+
+    private static int positiveIntEnvironment(String name, int fallback) {
+        String value = System.getenv(name);
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        try {
+            int parsed = Integer.parseInt(value);
+            if (parsed <= 0) {
+                throw new NumberFormatException();
+            }
+            return parsed;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(name + " must be a positive integer", e);
+        }
+    }
+}

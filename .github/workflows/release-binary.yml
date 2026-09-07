@@ -1,0 +1,110 @@
+name: release-binary
+
+# Builds a standalone (no-Python-required) agentarts CLI binary for each
+# platform and attaches it to the GitHub Release that triggered the run.
+# Also supports manual workflow_dispatch for testing.
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+permissions:
+  contents: write  # needed to upload assets to the release
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: agentarts-linux-x86_64
+            archive: agentarts-linux-x86_64.tar.gz
+          - os: windows-latest
+            artifact: agentarts-windows-x86_64.exe
+            archive: agentarts-windows-x86_64.zip
+          - os: macos-latest
+            artifact: agentarts-darwin-arm64
+            archive: agentarts-darwin-arm64.tar.gz
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Install project dependencies
+        run: uv sync --no-dev
+
+      - name: Install PyInstaller
+        run: uv pip install pyinstaller
+
+      - name: Build binary
+        run: uv run pyinstaller packaging/agentarts.spec --noconfirm
+
+      - name: Smoke test — every command imports
+        shell: bash
+        run: |
+          set -e
+          BIN=dist/agentarts
+          if [ "$RUNNER_OS" = "Windows" ]; then BIN=dist/agentarts.exe; fi
+          "$BIN" --version
+          "$BIN" --help
+          # Exercise each top-level command's help path to catch missing
+          # imports under the frozen bundle (huaweicloudsdk dynamic plugins,
+          # uvicorn/starlette backends).
+          for cmd in init config dev launch invoke runtime destroy gateway memory; do
+            "$BIN" "$cmd" --help
+          done
+
+      - name: Rename binary
+        shell: bash
+        run: |
+          mkdir -p release
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp dist/agentarts.exe "release/${{ matrix.artifact }}"
+          else
+            cp dist/agentarts "release/${{ matrix.artifact }}"
+          fi
+
+      - name: Archive (tar.gz)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: tar -C release -czf "release/${{ matrix.archive }}" "${{ matrix.artifact }}"
+
+      - name: Archive (zip)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: cd release && 7z a "${{ matrix.archive }}" "${{ matrix.artifact }}"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: release/${{ matrix.archive }}
+
+      - name: Upload to Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/${{ matrix.archive }}
+
+      # Optional code signing on Windows to reduce Defender false positives
+      # on onefile builds. Configure AGENTARTS_CODESIGN_* secrets to enable.
+      - name: Code sign (Windows, optional)
+        if: runner.os == 'Windows' && env.AGENTARTS_CODESIGN_PFX != ''
+        env:
+          AGENTARTS_CODESIGN_PFX: ${{ secrets.AGENTARTS_CODESIGN_PFX }}
+          AGENTARTS_CODESIGN_PWD: ${{ secrets.AGENTARTS_CODESIGN_PWD }}
+        shell: pwsh
+        run: |
+          $pfx = [System.IO.Path]::GetTempFileName()
+          [System.IO.File]::WriteAllBytes($pfx, [System.Convert]::FromBase64String($env:AGENTARTS_CODESIGN_PFX))
+          & signtool sign /f $pfx /p $env:AGENTARTS_CODESIGN_PWD /fd sha256 /tr http://timestamp.digicert.com /td sha256 "release/${{ matrix.artifact }}"
