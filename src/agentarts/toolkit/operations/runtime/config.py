@@ -183,6 +183,31 @@ def get_agent(name: str | None = None) -> AgentArtsConfig | None:
     return config.get_agent(name)
 
 
+def infer_language(dependency_file: str | None, entrypoint: str | None) -> str:
+    """
+    Infer the agent language from the dependency file / entrypoint.
+
+    Java projects use ``pom.xml`` and a fully-qualified main class as the
+    entrypoint (no colon). Python projects use ``requirements.txt`` /
+    ``pyproject.toml`` and a ``module:attribute`` entrypoint.
+    """
+    if dependency_file == "pom.xml":
+        return "java17"
+    if dependency_file in ("requirements.txt", "pyproject.toml"):
+        return "python3"
+    if entrypoint and ":" not in entrypoint and "." in entrypoint:
+        # Looks like a Java fully-qualified class name (com.example.Agent).
+        return "java17"
+    return "python3"
+
+
+def default_base_image(language: str | None) -> str:
+    """Default base image for a language."""
+    if language and language.lower().startswith("java"):
+        return "eclipse-temurin:17-jre"
+    return "python:3.10-slim"
+
+
 def add_agent(
     name: str,
     entrypoint: str,
@@ -190,6 +215,7 @@ def add_agent(
     swr_organization: str | None = None,
     swr_repository: str | None = None,
     dependency_file: str | None = None,
+    language: str | None = None,
     set_as_default: bool = True,
     organization_auto_create: bool = False,
     repository_auto_create: bool = False,
@@ -203,7 +229,9 @@ def add_agent(
         region: Huawei Cloud region
         swr_organization: SWR organization
         swr_repository: SWR repository
-        dependency_file: Path to dependency file (e.g., requirements.txt)
+        dependency_file: Path to dependency file (e.g., requirements.txt, pom.xml)
+        language: Agent language (e.g., python3, java17). Inferred from
+            dependency_file/entrypoint if not provided.
         set_as_default: Whether to set as default agent
         organization_auto_create: Whether to auto-create SWR organization
         repository_auto_create: Whether to auto-create SWR repository
@@ -226,6 +254,18 @@ def add_agent(
             existing_dict.setdefault("base", {})["dependency_file"] = dependency_file
         existing_dict.setdefault("base", {})["name"] = name
 
+        # Language: explicit override wins; otherwise keep the existing value;
+        # otherwise infer from the (possibly updated) dependency file/entrypoint.
+        effective_dep = existing_dict.get("base", {}).get("dependency_file", dependency_file)
+        effective_ep = existing_dict.get("base", {}).get("entrypoint", entrypoint)
+        if language is not None:
+            existing_dict.setdefault("base", {})["language"] = language
+            existing_dict.setdefault("base", {})["base_image"] = default_base_image(language)
+        elif not existing_dict.get("base", {}).get("language"):
+            inferred = infer_language(effective_dep, effective_ep)
+            existing_dict.setdefault("base", {})["language"] = inferred
+            existing_dict.setdefault("base", {})["base_image"] = default_base_image(inferred)
+
         if swr_organization is not None:
             existing_dict.setdefault("swr_config", {})["organization"] = swr_organization
         if swr_repository is not None:
@@ -237,6 +277,7 @@ def add_agent(
     else:
         detected_platform = detect_platform()
         detected_arch = detect_arch()
+        effective_language = language or infer_language(dependency_file, entrypoint)
         agent_config = AgentArtsConfig(
             base=BaseConfig(
                 name=name,
@@ -244,6 +285,8 @@ def add_agent(
                 region=region,
                 dependency_file=dependency_file,
                 platform=detected_platform,
+                language=effective_language,
+                base_image=default_base_image(effective_language),
                 arch=detected_arch,
             ),
             swr_config=SWRConfig(
