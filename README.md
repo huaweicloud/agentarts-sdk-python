@@ -176,6 +176,40 @@ pip install agentarts-sdk
 pip install agentarts-sdk
 ```
 
+### Install the standalone CLI binary (no Python required)
+
+If you only need the `agentarts` CLI (not the SDK as a Python library), download
+a prebuilt standalone binary — it bundles its own Python interpreter and runs
+without a Python installation.
+
+**Linux / macOS — one-line install:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/huaweicloud/agentarts-sdk-python/main/install.sh | sh
+```
+
+The script detects your OS/architecture, downloads the matching binary from the
+latest [Release](https://github.com/huaweicloud/agentarts-sdk-python/releases),
+and installs it to `~/.local/bin` (run with `sudo` for `/usr/local/bin`). If
+that directory is not on your `PATH`, it prints the `export PATH=...` line to
+add. You can override the install location with `AGENTARTS_BIN_DIR=...`.
+
+**Manual download** (any platform): grab the archive for your platform from the
+[Releases page](https://github.com/huaweicloud/agentarts-sdk-python/releases),
+extract it, and put the `agentarts` binary on your `PATH`:
+
+| Platform | Archive |
+|---|---|
+| Linux x86_64 | `agentarts-linux-x86_64.tar.gz` |
+| Linux arm64 | `agentarts-linux-arm64.tar.gz` |
+| macOS arm64 | `agentarts-darwin-arm64.tar.gz` |
+| Windows x86_64 | `agentarts-windows-x86_64.zip` |
+
+> **Note for Java agents:** the binary bundles a Python interpreter but not a
+> JVM. To run `agentarts dev` / `agentarts deploy` against a Java agent you
+> still need a local **JDK 17** and **Maven** on your `PATH`. Python agents need
+> nothing extra (the interpreter is bundled).
+
 ### Install with Optional Dependencies
 
 ```bash
