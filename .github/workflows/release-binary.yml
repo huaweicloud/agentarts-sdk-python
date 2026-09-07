@@ -22,6 +22,9 @@ jobs:
           - os: ubuntu-latest
             artifact: agentarts-linux-x86_64
             archive: agentarts-linux-x86_64.tar.gz
+          - os: ubuntu-24.04-arm
+            artifact: agentarts-linux-arm64
+            archive: agentarts-linux-arm64.tar.gz
           - os: windows-latest
             artifact: agentarts-windows-x86_64.exe
             archive: agentarts-windows-x86_64.zip
@@ -64,25 +67,41 @@ jobs:
             "$BIN" "$cmd" --help
           done
 
-      - name: Rename binary
+      - name: Stage binary
         shell: bash
         run: |
           mkdir -p release
+          # Generic name "agentarts" inside the archive so the install script
+          # extracts a consistent binary name regardless of platform. The
+          # archive FILENAME stays platform-specific for download selection.
           if [ "$RUNNER_OS" = "Windows" ]; then
-            cp dist/agentarts.exe "release/${{ matrix.artifact }}"
+            cp dist/agentarts.exe release/agentarts.exe
           else
-            cp dist/agentarts "release/${{ matrix.artifact }}"
+            cp dist/agentarts release/agentarts
           fi
 
-      - name: Archive (tar.gz)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: tar -C release -czf "release/${{ matrix.archive }}" "${{ matrix.artifact }}"
+      # Optional code signing on Windows to reduce Defender false positives
+      # on onefile builds. Configure AGENTARTS_CODESIGN_* secrets to enable;
+      # the step is a no-op without them.
+      - name: Code sign (Windows, optional)
+        if: runner.os == 'Windows' && env.AGENTARTS_CODESIGN_PFX != ''
+        env:
+          AGENTARTS_CODESIGN_PFX: ${{ secrets.AGENTARTS_CODESIGN_PFX }}
+          AGENTARTS_CODESIGN_PWD: ${{ secrets.AGENTARTS_CODESIGN_PWD }}
+        shell: pwsh
+        run: |
+          $pfx = [System.IO.Path]::GetTempFileName()
+          [System.IO.File]::WriteAllBytes($pfx, [System.Convert]::FromBase64String($env:AGENTARTS_CODESIGN_PFX))
+          & signtool sign /f $pfx /p $env:AGENTARTS_CODESIGN_PWD /fd sha256 /tr http://timestamp.digicert.com /td sha256 release/agentarts.exe
 
-      - name: Archive (zip)
-        if: runner.os == 'Windows'
+      - name: Archive binary
         shell: bash
-        run: cd release && 7z a "${{ matrix.archive }}" "${{ matrix.artifact }}"
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cd release && 7z a "${{ matrix.archive }}" agentarts.exe
+          else
+            tar -C release -czf "release/${{ matrix.archive }}" agentarts
+          fi
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -96,15 +115,3 @@ jobs:
         with:
           files: release/${{ matrix.archive }}
 
-      # Optional code signing on Windows to reduce Defender false positives
-      # on onefile builds. Configure AGENTARTS_CODESIGN_* secrets to enable.
-      - name: Code sign (Windows, optional)
-        if: runner.os == 'Windows' && env.AGENTARTS_CODESIGN_PFX != ''
-        env:
-          AGENTARTS_CODESIGN_PFX: ${{ secrets.AGENTARTS_CODESIGN_PFX }}
-          AGENTARTS_CODESIGN_PWD: ${{ secrets.AGENTARTS_CODESIGN_PWD }}
-        shell: pwsh
-        run: |
-          $pfx = [System.IO.Path]::GetTempFileName()
-          [System.IO.File]::WriteAllBytes($pfx, [System.Convert]::FromBase64String($env:AGENTARTS_CODESIGN_PFX))
-          & signtool sign /f $pfx /p $env:AGENTARTS_CODESIGN_PWD /fd sha256 /tr http://timestamp.digicert.com /td sha256 "release/${{ matrix.artifact }}"
