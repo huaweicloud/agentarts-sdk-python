@@ -73,6 +73,67 @@ class TestTarDetection:
         assert upload_content_type(content=b"hello", filename="f.txt") == "application/octet-stream"
 
 
+class TestRuntimeClientLifecycleConfig:
+    """Lifecycle configuration is sent through every control-plane path."""
+
+    def test_create_agent_includes_lifecycle_config(self):
+        client = RuntimeClient(control_endpoint="https://control.example.com")
+        lifecycle_config = {
+            "idle_session_timeout_sec": 600,
+            "max_alive_time_sec": 3600,
+        }
+
+        with patch.object(client, "_control") as mock_control, patch.object(
+            client, "_check", return_value={"id": "agent-1"}
+        ):
+            client.create_agent(name="test-agent", lifecycle_config=lifecycle_config)
+
+        assert mock_control.call_args.kwargs["json"]["lifecycle_config"] == lifecycle_config
+
+    def test_update_agent_includes_lifecycle_config(self):
+        client = RuntimeClient(control_endpoint="https://control.example.com")
+        lifecycle_config = {"idle_session_timeout_sec": 900}
+
+        with patch.object(client, "_control") as mock_control, patch.object(
+            client, "_check", return_value={"id": "agent-1"}
+        ):
+            client.update_agent(agent_id="agent-1", lifecycle_config=lifecycle_config)
+
+        assert mock_control.call_args.kwargs["json"]["lifecycle_config"] == lifecycle_config
+
+    def test_lifecycle_config_none_is_omitted(self):
+        client = RuntimeClient(control_endpoint="https://control.example.com")
+
+        with patch.object(client, "_control") as mock_control, patch.object(
+            client, "_check", return_value={"id": "agent-1"}
+        ):
+            client.create_agent(name="test-agent", lifecycle_config=None)
+
+        assert "lifecycle_config" not in mock_control.call_args.kwargs["json"]
+
+    def test_upsert_forwards_lifecycle_config_to_create_and_update(self):
+        client = RuntimeClient(control_endpoint="https://control.example.com")
+        lifecycle_config = {"max_alive_time_sec": 86400}
+
+        with patch.object(client, "find_agent_by_name", return_value=None), patch.object(
+            client, "create_agent", return_value={"id": "agent-1"}
+        ) as mock_create:
+            client.create_or_update_agent(
+                agent_name="test-agent", lifecycle_config=lifecycle_config
+            )
+        assert mock_create.call_args.kwargs["lifecycle_config"] == lifecycle_config
+
+        with patch.object(
+            client, "find_agent_by_name", return_value={"id": "agent-1"}
+        ), patch.object(
+            client, "update_agent", return_value={"id": "agent-1"}
+        ) as mock_update:
+            client.create_or_update_agent(
+                agent_name="test-agent", lifecycle_config=lifecycle_config
+            )
+        assert mock_update.call_args.kwargs["lifecycle_config"] == lifecycle_config
+
+
 class TestRuntimeClientExecCommand:
     """Tests for RuntimeClient.exec_command method."""
 

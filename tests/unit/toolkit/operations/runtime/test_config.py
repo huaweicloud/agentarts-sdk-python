@@ -27,8 +27,9 @@ from agentarts.toolkit.utils.runtime.config import (
     BaseConfig,
     CustomJWTAuthConfig,
     InboundIdentityConfig,
-    SfsTurboConfig,
+    LifecycleConfig,
     SessionStorageConfig,
+    SfsTurboConfig,
     StorageConfig,
 )
 
@@ -635,6 +636,47 @@ class TestStorageConfig:
         assert runtime.storage_config.sfs_turbo.sfs_turbo_id is None
         assert runtime.storage_config.sfs_turbo.mount_path is None
         assert runtime.storage_config.sfs_turbo.read_only is None
+
+
+class TestLifecycleConfig:
+    """Tests for runtime lifecycle configuration."""
+
+    def test_default_to_dict_is_empty(self):
+        assert LifecycleConfig().to_dict() == {}
+
+    def test_to_dict_excludes_none(self):
+        config = LifecycleConfig(idle_session_timeout_sec=900)
+        assert config.to_dict() == {"idle_session_timeout_sec": 900}
+
+    def test_to_dict_includes_both_limits(self):
+        config = LifecycleConfig(
+            idle_session_timeout_sec=600,
+            max_alive_time_sec=86400,
+        )
+        assert config.to_dict() == {
+            "idle_session_timeout_sec": 600,
+            "max_alive_time_sec": 86400,
+        }
+
+    def test_limits_are_validated(self):
+        import pytest
+        from pydantic import ValidationError
+
+        for field, value in (
+            ("idle_session_timeout_sec", 59),
+            ("idle_session_timeout_sec", 604801),
+            ("max_alive_time_sec", 59),
+            ("max_alive_time_sec", 604801),
+        ):
+            with pytest.raises(ValidationError):
+                LifecycleConfig(**{field: value})
+
+    def test_runtime_config_exposes_typed_lifecycle_config(self):
+        from agentarts.toolkit.utils.runtime.config import AgentArtsRuntimeConfig
+
+        runtime = AgentArtsRuntimeConfig()
+        assert isinstance(runtime.lifecycle_config, LifecycleConfig)
+        assert runtime.lifecycle_config.to_dict() == {}
 
 
 class TestArtifactSourceSwrInstanceId:

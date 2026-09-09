@@ -242,6 +242,10 @@ agents:
         session_storage:
           mount_path: null  # Session storage mount path in the container
 
+      lifecycle_config:
+        idle_session_timeout_sec: null  # 60-604800; service default: 900
+        max_alive_time_sec: null  # 60-604800; service default: 86400
+
       environment_variables:{env_vars_yaml}
 
       tags: []

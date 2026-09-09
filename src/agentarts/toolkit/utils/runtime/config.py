@@ -279,6 +279,31 @@ class StorageConfig(BaseModel):
         return result
 
 
+class LifecycleConfig(BaseModel):
+    """Lifecycle limits for runtime sessions."""
+
+    idle_session_timeout_sec: int | None = Field(
+        default=None,
+        ge=60,
+        le=604800,
+        description="Idle session timeout in seconds (60-604800)",
+    )
+    max_alive_time_sec: int | None = Field(
+        default=None,
+        ge=60,
+        le=604800,
+        description="Maximum session lifetime in seconds (60-604800)",
+    )
+
+    model_config = {
+        "extra": "allow",
+    }
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert configuration to an API-ready dictionary."""
+        return self.model_dump(mode="json", exclude_none=True)
+
+
 class NetworkConfig(BaseModel):
     """Network endpoint configuration."""
 
@@ -590,6 +615,10 @@ class AgentArtsRuntimeConfig(BaseModel):
         default_factory=StorageConfig,
         description="Storage configuration",
     )
+    lifecycle_config: LifecycleConfig | None = Field(
+        default_factory=LifecycleConfig,
+        description="Runtime lifecycle configuration",
+    )
     environment_variables: list[KeyValuePair] | None = Field(
         default_factory=list,
         description="Environment variables configuration",
@@ -670,7 +699,7 @@ class AgentArtsConfig(BaseModel):
                 if "runtime" in ordered_agents[agent_name]:
                     ordered_agents[agent_name]["runtime"] = order_dict(
                         ordered_agents[agent_name]["runtime"],
-                        ["arch", "agent_gateway_id", "agent_id", "execution_agency_name", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "storage_config", "environment_variables", "tags"]
+                        ["arch", "agent_gateway_id", "agent_id", "execution_agency_name", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "storage_config", "lifecycle_config", "environment_variables", "tags"]
                     )
             ordered_data["agents"] = ordered_agents
 
@@ -749,7 +778,7 @@ class AgentArtsConfigList(BaseModel):
                 if "runtime" in ordered_agents[agent_name]:
                     ordered_agents[agent_name]["runtime"] = order_dict(
                         ordered_agents[agent_name]["runtime"],
-                        ["arch", "agent_gateway_id", "agent_id", "execution_agency_name", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "storage_config", "environment_variables", "tags"]
+                        ["arch", "agent_gateway_id", "agent_id", "execution_agency_name", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "storage_config", "lifecycle_config", "environment_variables", "tags"]
                     )
             ordered_data["agents"] = ordered_agents
 

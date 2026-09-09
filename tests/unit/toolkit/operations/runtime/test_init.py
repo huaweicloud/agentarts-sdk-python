@@ -179,6 +179,19 @@ class TestCreateConfigFile:
         assert "sfs_turbo_id:" in content
         assert "mount_path:" in content
 
+    def test_config_includes_lifecycle_config_block(self, tmp_path):
+        """Config exposes lifecycle settings without overriding service defaults."""
+        create_config_file(
+            project_path=tmp_path,
+            name="test-agent",
+            template="basic",
+        )
+
+        content = (tmp_path / ".agentarts_config.yaml").read_text()
+        assert "lifecycle_config:" in content
+        assert "idle_session_timeout_sec: null" in content
+        assert "max_alive_time_sec: null" in content
+
 
 class TestCreateAgentFile:
     """Tests for create_agent_file() function."""

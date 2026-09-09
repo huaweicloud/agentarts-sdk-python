@@ -10,6 +10,7 @@ from agentarts.toolkit.operations.runtime.deploy import (
 from agentarts.toolkit.utils.runtime.config import (
     AgentArtsConfig,
     AgentArtsRuntimeConfig,
+    LifecycleConfig,
     SessionStorageConfig,
     SfsTurboConfig,
     StorageConfig,
@@ -115,6 +116,58 @@ class TestCreateAgentartsRuntime:
 
         call_args = mock_client_instance.create_or_update_agent.call_args
         assert call_args.kwargs["storage_config"] is None
+
+    @patch("agentarts.toolkit.operations.runtime.deploy.RuntimeClient")
+    def test_lifecycle_config_absent_passes_none(self, mock_client, tmp_path, monkeypatch):
+        """An unset lifecycle block leaves service defaults unchanged."""
+        monkeypatch.chdir(tmp_path)
+        mock_client_instance = MagicMock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.create_or_update_agent.return_value = {
+            "id": "agent-123",
+            "latest_version": "v1",
+        }
+
+        create_agentarts_runtime(
+            agent_name="test-agent",
+            swr_image="swr.cn-north-4.myhuaweicloud.com/org/repo:latest",
+            region="cn-north-4",
+        )
+
+        call_args = mock_client_instance.create_or_update_agent.call_args
+        assert call_args.kwargs["lifecycle_config"] is None
+
+    @patch("agentarts.toolkit.operations.runtime.deploy.RuntimeClient")
+    def test_lifecycle_config_forwarded(self, mock_client, tmp_path, monkeypatch):
+        """Configured lifecycle limits are forwarded during deploy."""
+        monkeypatch.chdir(tmp_path)
+        mock_client_instance = MagicMock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.create_or_update_agent.return_value = {
+            "id": "agent-123",
+            "latest_version": "v1",
+        }
+        agent_config = AgentArtsConfig(
+            runtime=AgentArtsRuntimeConfig(
+                lifecycle_config=LifecycleConfig(
+                    idle_session_timeout_sec=600,
+                    max_alive_time_sec=86400,
+                )
+            )
+        )
+
+        create_agentarts_runtime(
+            agent_name="test-agent",
+            swr_image="swr.cn-north-4.myhuaweicloud.com/org/repo:latest",
+            region="cn-north-4",
+            agent_config=agent_config,
+        )
+
+        call_args = mock_client_instance.create_or_update_agent.call_args
+        assert call_args.kwargs["lifecycle_config"] == {
+            "idle_session_timeout_sec": 600,
+            "max_alive_time_sec": 86400,
+        }
 
     @patch("agentarts.toolkit.operations.runtime.deploy.RuntimeClient")
     def test_storage_config_null_placeholder_does_not_break_deploy(self, mock_client, tmp_path, monkeypatch):

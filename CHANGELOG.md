@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Runtime `lifecycle_config` support for create/update APIs and Toolkit deployments, including timeout validation and generated YAML configuration
+
 ## [0.1.3] - 2026-06-06
 
 ### Added

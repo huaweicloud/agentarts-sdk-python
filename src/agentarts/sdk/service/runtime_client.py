@@ -318,6 +318,7 @@ class RuntimeClient:
         observability_config: dict | None = None,
         storage_config: dict | None = None,
         tags_config: list[dict] | None = None,
+        lifecycle_config: dict | None = None,
         **extra: Any,
     ) -> dict[str, Any]:
         """
@@ -336,6 +337,11 @@ class RuntimeClient:
             observability_config: Observability (tracing, metrics) configuration.
             storage_config: Storage (e.g. SFS Turbo) configuration.
             tags_config: Tags as list of {"key": "K", "value": "V"} dicts.
+            lifecycle_config: Runtime lifecycle configuration. May contain:
+                - "idle_session_timeout_sec": int, 60-604800 seconds; null or
+                  unset uses the default 900 seconds (15 minutes).
+                - "max_alive_time_sec": int, 60-604800 seconds; null or unset
+                  uses the default 86400 seconds (24 hours).
             **extra: Additional fields forwarded to the API.
 
         Returns:
@@ -365,6 +371,8 @@ class RuntimeClient:
             payload["observability"] = observability_config
         if storage_config is not None:
             payload["storage_config"] = storage_config
+        if lifecycle_config is not None:
+            payload["lifecycle_config"] = lifecycle_config
         if tags_config is not None:
             payload["tags"] = tags_config
 
@@ -384,6 +392,7 @@ class RuntimeClient:
         observability_config: dict | None = None,
         storage_config: dict | None = None,
         tags_config: list[dict] | None = None,
+        lifecycle_config: dict | None = None,
         **extra: Any,
     ) -> dict[str, Any]:
         """
@@ -401,6 +410,11 @@ class RuntimeClient:
             observability_config: Observability (tracing, metrics) configuration.
             storage_config: Storage (e.g. SFS Turbo) configuration.
             tags_config: Tags as list of {"key": "K", "value": "V"} dicts.
+            lifecycle_config: Runtime lifecycle configuration. May contain:
+                - "idle_session_timeout_sec": int, 60-604800 seconds; null or
+                  unset uses the default 900 seconds (15 minutes).
+                - "max_alive_time_sec": int, 60-604800 seconds; null or unset
+                  uses the default 86400 seconds (24 hours).
             **extra: Additional fields forwarded to the API.
 
         Returns:
@@ -428,6 +442,8 @@ class RuntimeClient:
             payload["observability"] = observability_config
         if storage_config is not None:
             payload["storage_config"] = storage_config
+        if lifecycle_config is not None:
+            payload["lifecycle_config"] = lifecycle_config
         if tags_config is not None:
             payload["tags"] = tags_config
 
@@ -448,6 +464,7 @@ class RuntimeClient:
         observability_config: dict | None = None,
         storage_config: dict | None = None,
         tags_config: list[dict] | None = None,
+        lifecycle_config: dict | None = None,
         **extra: Any,
     ) -> dict[str, Any]:
         """
@@ -470,6 +487,11 @@ class RuntimeClient:
             observability_config: Observability (tracing, metrics) configuration.
             storage_config: Storage (e.g. SFS Turbo) configuration.
             tags_config: Tags as list of {"key": "K", "value": "V"} dicts.
+            lifecycle_config: Runtime lifecycle configuration. May contain:
+                - "idle_session_timeout_sec": int, 60-604800 seconds; null or
+                  unset uses the default 900 seconds (15 minutes).
+                - "max_alive_time_sec": int, 60-604800 seconds; null or unset
+                  uses the default 86400 seconds (24 hours).
             **extra: Additional fields forwarded to the API.
 
         Returns:
@@ -492,6 +514,7 @@ class RuntimeClient:
                 invoke_config=invoke_config,
                 observability_config=observability_config,
                 storage_config=storage_config,
+                lifecycle_config=lifecycle_config,
                 tags_config=tags_config,
                 **extra,
             )
@@ -509,6 +532,7 @@ class RuntimeClient:
             invoke_config=invoke_config,
             observability_config=observability_config,
             storage_config=storage_config,
+            lifecycle_config=lifecycle_config,
             tags_config=tags_config,
             **extra,
         )
