@@ -167,6 +167,9 @@ test-results/
 
 # Demo local data
 examples/navigation_langgraph_memory/sessions.json
+examples/finance_adk/expenses.json
+examples/finance_adk/sessions.json
+examples/finance_adk/chart_*.png
 
 # Temporary files
 *.tmp
