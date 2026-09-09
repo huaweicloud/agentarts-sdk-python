@@ -650,27 +650,31 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         Args:
             thread_id: Thread ID (= session ID) to delete
         """
-        try:
-            self._client.delete_session(
-                space_id=self._space_id,
-                session_id=thread_id,
-            )
-        except Exception as e:
-            logger.exception(f"Failed to delete session for thread {thread_id}: {e}")
-
-        # Also delete the writes session
         writes_sid = self._writes_session_id(thread_id)
         try:
-            self._client.delete_session(
-                space_id=self._space_id,
-                session_id=writes_sid,
-            )
-        except Exception as e:
             # Writes session may not exist — log at debug level
-            logger.debug(f"Failed to delete writes session for thread {thread_id}: {e}")
+            try:
+                self._client.delete_session(
+                    space_id=self._space_id,
+                    session_id=writes_sid,
+                )
+            except Exception as e:
+                logger.debug(
+                    f"Failed to delete writes session for thread {thread_id}: {e}"
+                )
 
-        # Clean up persisted count tracking
-        self._persisted_count.pop(thread_id, None)
+            try:
+                self._client.delete_session(
+                    space_id=self._space_id,
+                    session_id=thread_id,
+                )
+            except Exception as e:
+                logger.exception(
+                    f"Failed to delete session for thread {thread_id}: {e}"
+                )
+        finally:
+            # Clean up persisted count tracking regardless of outcome
+            self._persisted_count.pop(thread_id, None)
 
     def close(self) -> None:
         """
@@ -1076,21 +1080,28 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
         Args:
             thread_id: Thread ID (= session ID) to delete
         """
-        try:
-            await self._async_client.delete_session(
-                space_id=self._space_id,
-                session_id=thread_id,
-            )
-        except Exception as e:
-            logger.exception(f"Failed to delete session for thread {thread_id}: {e}")
-
         writes_sid = self._writes_session_id(thread_id)
         try:
-            await self._async_client.delete_session(
-                space_id=self._space_id,
-                session_id=writes_sid,
-            )
-        except Exception as e:
-            logger.debug(f"Failed to delete writes session for thread {thread_id}: {e}")
+            # Writes session may not exist — log at debug level
+            try:
+                await self._async_client.delete_session(
+                    space_id=self._space_id,
+                    session_id=writes_sid,
+                )
+            except Exception as e:
+                logger.debug(
+                    f"Failed to delete writes session for thread {thread_id}: {e}"
+                )
 
-        self._persisted_count.pop(thread_id, None)
+            try:
+                await self._async_client.delete_session(
+                    space_id=self._space_id,
+                    session_id=thread_id,
+                )
+            except Exception as e:
+                logger.exception(
+                    f"Failed to delete session for thread {thread_id}: {e}"
+                )
+        finally:
+            # Clean up persisted count tracking regardless of outcome
+            self._persisted_count.pop(thread_id, None)
