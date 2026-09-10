@@ -1,6 +1,7 @@
 """Deploy operation implementation"""
 
 from enum import Enum
+from pathlib import Path
 from typing import Any
 
 from rich.console import Console
@@ -37,6 +38,41 @@ class DeployMode(str, Enum):
 
     LOCAL = "local"
     CLOUD = "cloud"
+
+
+def _build_java_artifact(name: str) -> bool:
+    """Build the Java fat jar (``target/<name>.jar``) via ``mvn package``.
+
+    The Dockerfile copies this jar into a JRE image, so it must exist before
+    ``docker build``. Mirrors the Java toolkit CLI's deploy build step.
+    """
+    import subprocess
+    import sys
+
+    mvn = "mvn.cmd" if sys.platform == "win32" else "mvn"
+    console.print(f"[bold cyan]Building Java artifact (mvn package)...[/bold cyan]")
+    try:
+        result = subprocess.run(
+            [mvn, "-q", "-B", "-DskipTests", "package"],
+            timeout=900,
+            check=False,
+        )
+    except FileNotFoundError:
+        echo_error(f"Cannot run Maven ('{mvn}' not found). Install Maven and ensure it is on PATH.")
+        return False
+    except subprocess.TimeoutExpired:
+        echo_error("Maven package timed out after 900s")
+        return False
+    if result.returncode != 0:
+        echo_error(f"Maven package failed (exit {result.returncode})")
+        return False
+
+    jar = Path("target") / f"{name}.jar"
+    if not jar.exists():
+        echo_error(f"Expected jar not found after build: {jar}")
+        console.print("[dim]Check the pom.xml <finalName> matches the agent name.[/dim]")
+        return False
+    return True
 
 
 def create_agentarts_runtime(
@@ -237,6 +273,14 @@ def deploy_project(
             echo_error("Dockerfile not found in current directory")
             console.print("[dim]Run 'agentarts config' to generate Dockerfile first[/dim]")
             return False
+
+        # Java projects are built into a shaded fat jar (target/<name>.jar)
+        # before the Docker image is built; the Dockerfile only copies that jar
+        # into a JRE image.
+        language = agent_config.base.language
+        if language and language.lower().startswith("java"):
+            if not _build_java_artifact(actual_agent_name):
+                return False
 
     if mode == DeployMode.LOCAL:
         if not check_docker_available():

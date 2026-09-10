@@ -189,6 +189,67 @@ pip install agentarts-sdk
 pip install agentarts-sdk
 ```
 
+### Install the standalone CLI binary (no Python required)
+
+If you only need the `agentarts` CLI (not the SDK as a Python library), download
+a prebuilt standalone binary — it bundles its own Python interpreter and runs
+without a Python installation.
+
+**Linux / macOS — one-line install:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/huaweicloud/agentarts-sdk-python/main/install.sh | sh
+```
+
+**Windows (PowerShell) — one-line install:**
+
+```powershell
+irm https://raw.githubusercontent.com/huaweicloud/agentarts-sdk-python/main/install.ps1 | iex
+```
+
+If execution policy blocks the pipe form, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/huaweicloud/agentarts-sdk-python/main/install.ps1 | iex"
+```
+
+The install scripts detect your platform, download the matching binary from the
+latest [Release](https://github.com/huaweicloud/agentarts-sdk-python/releases),
+and put `agentarts` on your `PATH` (Linux/macOS: `~/.local/bin`, or
+`/usr/local/bin` under `sudo`; Windows: `%LOCALAPPDATA%\Programs\agentarts`).
+Overrides: `AGENTARTS_BIN_DIR` (install location), `AGENTARTS_DOWNLOAD_URL`
+(mirror / custom source).
+
+**Prefer a package-managed install?** If you already use [`uv`](https://docs.astral.sh/uv/)
+(itself a one-line install: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+on Linux/macOS, `irm https://astral.sh/uv/install.ps1 | iex` on Windows), you
+can install the CLI as an isolated, upgradable tool:
+
+```bash
+uv tool install agentarts-sdk          # install
+uv tool upgrade  agentarts-sdk         # upgrade later
+```
+
+This installs the `agentarts` console script into an isolated environment and
+adds it to your `PATH`. It is the same cross-language CLI — it drives both
+Python agents (natively) and Java agents (via your local JDK + Maven).
+
+**Manual download** (any platform): grab the archive for your platform from the
+[Releases page](https://github.com/huaweicloud/agentarts-sdk-python/releases),
+extract it, and put the `agentarts` binary on your `PATH`:
+
+| Platform | Archive |
+|---|---|
+| Linux x86_64 | `agentarts-linux-x86_64.tar.gz` |
+| Linux arm64 | `agentarts-linux-arm64.tar.gz` |
+| macOS arm64 | `agentarts-darwin-arm64.tar.gz` |
+| Windows x86_64 | `agentarts-windows-x86_64.zip` |
+
+> **Note for Java agents:** the binary bundles a Python interpreter but not a
+> JVM. To run `agentarts dev` / `agentarts deploy` against a Java agent you
+> still need a local **JDK 17** and **Maven** on your `PATH`. Python agents need
+> nothing extra (the interpreter is bundled).
+
 ### Install with Optional Dependencies
 
 ```bash

@@ -50,7 +50,7 @@ def detect_dependency_file() -> str:
     """
     Detect dependency file in current directory.
 
-    Priority: requirements.txt > pyproject.toml
+    Priority: requirements.txt > pyproject.toml > pom.xml
 
     Returns:
         Detected dependency file name or 'requirements.txt' as default
@@ -62,6 +62,9 @@ def detect_dependency_file() -> str:
 
     if (cwd / "pyproject.toml").exists():
         return "pyproject.toml"
+
+    if (cwd / "pom.xml").exists():
+        return "pom.xml"
 
     return "requirements.txt"
 
@@ -180,6 +183,31 @@ def get_agent(name: str | None = None) -> AgentArtsConfig | None:
     return config.get_agent(name)
 
 
+def infer_language(dependency_file: str | None, entrypoint: str | None) -> str:
+    """
+    Infer the agent language from the dependency file / entrypoint.
+
+    Java projects use ``pom.xml`` and a fully-qualified main class as the
+    entrypoint (no colon). Python projects use ``requirements.txt`` /
+    ``pyproject.toml`` and a ``module:attribute`` entrypoint.
+    """
+    if dependency_file == "pom.xml":
+        return "java17"
+    if dependency_file in ("requirements.txt", "pyproject.toml"):
+        return "python3"
+    if entrypoint and ":" not in entrypoint and "." in entrypoint:
+        # Looks like a Java fully-qualified class name (com.example.Agent).
+        return "java17"
+    return "python3"
+
+
+def default_base_image(language: str | None) -> str:
+    """Default base image for a language."""
+    if language and language.lower().startswith("java"):
+        return "eclipse-temurin:17-jre"
+    return "python:3.10-slim"
+
+
 def add_agent(
     name: str,
     entrypoint: str,
@@ -187,6 +215,7 @@ def add_agent(
     swr_organization: str | None = None,
     swr_repository: str | None = None,
     dependency_file: str | None = None,
+    language: str | None = None,
     set_as_default: bool = True,
     organization_auto_create: bool = False,
     repository_auto_create: bool = False,
@@ -200,7 +229,9 @@ def add_agent(
         region: Huawei Cloud region
         swr_organization: SWR organization
         swr_repository: SWR repository
-        dependency_file: Path to dependency file (e.g., requirements.txt)
+        dependency_file: Path to dependency file (e.g., requirements.txt, pom.xml)
+        language: Agent language (e.g., python3, java17). Inferred from
+            dependency_file/entrypoint if not provided.
         set_as_default: Whether to set as default agent
         organization_auto_create: Whether to auto-create SWR organization
         repository_auto_create: Whether to auto-create SWR repository
@@ -223,6 +254,18 @@ def add_agent(
             existing_dict.setdefault("base", {})["dependency_file"] = dependency_file
         existing_dict.setdefault("base", {})["name"] = name
 
+        # Language: explicit override wins; otherwise keep the existing value;
+        # otherwise infer from the (possibly updated) dependency file/entrypoint.
+        effective_dep = existing_dict.get("base", {}).get("dependency_file", dependency_file)
+        effective_ep = existing_dict.get("base", {}).get("entrypoint", entrypoint)
+        if language is not None:
+            existing_dict.setdefault("base", {})["language"] = language
+            existing_dict.setdefault("base", {})["base_image"] = default_base_image(language)
+        elif not existing_dict.get("base", {}).get("language"):
+            inferred = infer_language(effective_dep, effective_ep)
+            existing_dict.setdefault("base", {})["language"] = inferred
+            existing_dict.setdefault("base", {})["base_image"] = default_base_image(inferred)
+
         if swr_organization is not None:
             existing_dict.setdefault("swr_config", {})["organization"] = swr_organization
         if swr_repository is not None:
@@ -234,6 +277,7 @@ def add_agent(
     else:
         detected_platform = detect_platform()
         detected_arch = detect_arch()
+        effective_language = language or infer_language(dependency_file, entrypoint)
         agent_config = AgentArtsConfig(
             base=BaseConfig(
                 name=name,
@@ -241,6 +285,8 @@ def add_agent(
                 region=region,
                 dependency_file=dependency_file,
                 platform=detected_platform,
+                language=effective_language,
+                base_image=default_base_image(effective_language),
                 arch=detected_arch,
             ),
             swr_config=SWRConfig(
@@ -633,7 +679,24 @@ def generate_dockerfile(agent_name: str | None = None, output_path: str | None =
     dependency_file = agent_config.base.dependency_file
     entrypoint = agent_config.base.entrypoint
     region = agent_config.base.region
+    language = agent_config.base.language
     port = agent_config.runtime.invoke_config.port if agent_config.runtime.invoke_config else 8080
+
+    # Java projects are built into a shaded fat jar by `agentarts deploy`
+    # before the image is built; the Dockerfile only copies the jar into a
+    # JRE image, so it needs the Java Dockerfile template (not the Python
+    # pip-install one).
+    if language and language.lower().startswith("java"):
+        from agentarts.toolkit.utils.templates.docker import render_java_dockerfile
+
+        dockerfile_content = render_java_dockerfile(
+            name=agent_name or agent_config.base.name or "agent",
+            port=port,
+            region=region,
+        )
+        output = output_path or "Dockerfile"
+        Path(output).write_text(dockerfile_content, encoding="utf-8")
+        return True
 
     return _generate_dockerfile(
         base_image=base_image,
