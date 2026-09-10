@@ -188,11 +188,38 @@ without a Python installation.
 curl -fsSL https://raw.githubusercontent.com/huaweicloud/agentarts-sdk-python/main/install.sh | sh
 ```
 
-The script detects your OS/architecture, downloads the matching binary from the
+**Windows (PowerShell) — one-line install:**
+
+```powershell
+irm https://raw.githubusercontent.com/huaweicloud/agentarts-sdk-python/main/install.ps1 | iex
+```
+
+If execution policy blocks the pipe form, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -c "irm https://raw.githubusercontent.com/huaweicloud/agentarts-sdk-python/main/install.ps1 | iex"
+```
+
+The install scripts detect your platform, download the matching binary from the
 latest [Release](https://github.com/huaweicloud/agentarts-sdk-python/releases),
-and installs it to `~/.local/bin` (run with `sudo` for `/usr/local/bin`). If
-that directory is not on your `PATH`, it prints the `export PATH=...` line to
-add. You can override the install location with `AGENTARTS_BIN_DIR=...`.
+and put `agentarts` on your `PATH` (Linux/macOS: `~/.local/bin`, or
+`/usr/local/bin` under `sudo`; Windows: `%LOCALAPPDATA%\Programs\agentarts`).
+Overrides: `AGENTARTS_BIN_DIR` (install location), `AGENTARTS_DOWNLOAD_URL`
+(mirror / custom source).
+
+**Prefer a package-managed install?** If you already use [`uv`](https://docs.astral.sh/uv/)
+(itself a one-line install: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+on Linux/macOS, `irm https://astral.sh/uv/install.ps1 | iex` on Windows), you
+can install the CLI as an isolated, upgradable tool:
+
+```bash
+uv tool install agentarts-sdk          # install
+uv tool upgrade  agentarts-sdk         # upgrade later
+```
+
+This installs the `agentarts` console script into an isolated environment and
+adds it to your `PATH`. It is the same cross-language CLI — it drives both
+Python agents (natively) and Java agents (via your local JDK + Maven).
 
 **Manual download** (any platform): grab the archive for your platform from the
 [Releases page](https://github.com/huaweicloud/agentarts-sdk-python/releases),
