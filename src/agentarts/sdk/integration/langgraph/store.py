@@ -18,8 +18,10 @@ from collections.abc import Iterable
 from datetime import datetime, timezone
 from typing import Any
 
+from agentarts.sdk.integration.langgraph.exceptions import map_exception
 from agentarts.sdk.memory import AsyncMemoryClient, MemoryClient
 from agentarts.sdk.memory.inner.config import MemorySearchFilter, TextMessage
+from agentarts.sdk.service import APIException
 from agentarts.sdk.utils.constant import get_region
 
 logger = logging.getLogger(__name__)
@@ -243,12 +245,16 @@ class AgentArtsMemoryStore(BaseStore):
                     memory_id=op.key,
                 )
                 logger.debug(f"Deleted memory {op.key}")
-            except Exception as e:
-                error_str = str(e).lower()
-                if "not found" in error_str or "404" in error_str:
+            except APIException as e:
+                if e.status_code == 404:
+                    # 404 = 已删除（幂等），静默
                     logger.debug(f"Memory {op.key} not found for deletion")
                 else:
-                    logger.exception(f"Failed to delete memory {op.key}: {e}")
+                    raise map_exception(e) from e
+            except Exception as e:
+                # 非 APIException（编程错误）保持原样抛出
+                logger.exception(f"Failed to delete memory {op.key}: {e}")
+                raise
             return
 
         session_id = op.value.get("session_id")
@@ -290,8 +296,13 @@ class AgentArtsMemoryStore(BaseStore):
             )
             logger.debug(f"Added message to session {session_id} for namespace {op.namespace}")
 
+        except APIException as e:
+            # 写入失败必须抛出：session 不存在 = 配置错误，用户需检查 namespace
+            raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出
             logger.exception(f"Failed to put item: {e}")
+            raise
 
     async def _async_handle_put(self, op: PutOp) -> None:
         """Async version of _handle_put."""
@@ -303,12 +314,16 @@ class AgentArtsMemoryStore(BaseStore):
                     memory_id=op.key,
                 )
                 logger.debug(f"Deleted memory {op.key}")
-            except Exception as e:
-                error_str = str(e).lower()
-                if "not found" in error_str or "404" in error_str:
+            except APIException as e:
+                if e.status_code == 404:
+                    # 404 = 已删除（幂等），静默
                     logger.debug(f"Memory {op.key} not found for deletion")
                 else:
-                    logger.exception(f"Failed to delete memory {op.key}: {e}")
+                    raise map_exception(e) from e
+            except Exception as e:
+                # 非 APIException（编程错误）保持原样抛出
+                logger.exception(f"Failed to delete memory {op.key}: {e}")
+                raise
             return
 
         session_id = op.value.get("session_id")
@@ -350,8 +365,13 @@ class AgentArtsMemoryStore(BaseStore):
             )
             logger.debug(f"Added message to session {session_id} for namespace {op.namespace}")
 
+        except APIException as e:
+            # 写入失败必须抛出：session 不存在 = 配置错误，用户需检查 namespace
+            raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出
             logger.exception(f"Failed to put item: {e}")
+            raise
 
     def _handle_get(self, op: GetOp) -> Item | None:
         """
@@ -371,11 +391,14 @@ class AgentArtsMemoryStore(BaseStore):
 
             return self._convert_memory_to_item(memory_info, op.namespace)
 
-        except Exception as e:
-            error_str = str(e).lower()
-            if "not found" in error_str or "404" in error_str:
+        except APIException as e:
+            if e.status_code == 404:
+                # 404 = memory 不存在 = 无数据（读取语义）
                 logger.debug(f"Memory {op.key} not found")
                 return None
+            raise map_exception(e) from e
+        except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出
             logger.exception(f"Failed to get memory {op.key}: {e}")
             raise
 
@@ -389,11 +412,14 @@ class AgentArtsMemoryStore(BaseStore):
 
             return self._convert_memory_to_item(memory_info, op.namespace)
 
-        except Exception as e:
-            error_str = str(e).lower()
-            if "not found" in error_str or "404" in error_str:
+        except APIException as e:
+            if e.status_code == 404:
+                # 404 = memory 不存在 = 无数据（读取语义）
                 logger.debug(f"Memory {op.key} not found")
                 return None
+            raise map_exception(e) from e
+        except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出
             logger.exception(f"Failed to get memory {op.key}: {e}")
             raise
 
@@ -444,9 +470,16 @@ class AgentArtsMemoryStore(BaseStore):
                 response.results, op.namespace_prefix
             )
 
+        except APIException as e:
+            if e.status_code == 404:
+                # 404 = namespace 不存在 = 无数据（读取语义）
+                logger.debug(f"No memories found for search in namespace {op.namespace_prefix}")
+                return []
+            raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出
             logger.exception(f"Failed to search memories: {e}")
-            return []
+            raise
 
     async def _async_handle_search(self, op: SearchOp) -> list[SearchItem]:
         """Async version of _handle_search."""
@@ -481,9 +514,16 @@ class AgentArtsMemoryStore(BaseStore):
                 response.results, op.namespace_prefix
             )
 
+        except APIException as e:
+            if e.status_code == 404:
+                # 404 = namespace 不存在 = 无数据（读取语义）
+                logger.debug(f"No memories found for search in namespace {op.namespace_prefix}")
+                return []
+            raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出
             logger.exception(f"Failed to search memories: {e}")
-            return []
+            raise
 
     def _handle_search_without_query(self, op: SearchOp) -> list[SearchItem]:
         """Handle SearchOp without query using list_memories."""
@@ -531,9 +571,16 @@ class AgentArtsMemoryStore(BaseStore):
                 if target_memory_type is None or mem.memory_type == target_memory_type
             ]
 
+        except APIException as e:
+            if e.status_code == 404:
+                # 404 = namespace 不存在 = 无数据（读取语义）
+                logger.debug(f"No memories found in namespace {op.namespace_prefix}")
+                return []
+            raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出
             logger.exception(f"Failed to list memories: {e}")
-            return []
+            raise
 
     async def _async_handle_search_without_query(self, op: SearchOp) -> list[SearchItem]:
         """Async version of _handle_search_without_query."""
@@ -581,9 +628,16 @@ class AgentArtsMemoryStore(BaseStore):
                 if target_memory_type is None or mem.memory_type == target_memory_type
             ]
 
+        except APIException as e:
+            if e.status_code == 404:
+                # 404 = namespace 不存在 = 无数据（读取语义）
+                logger.debug(f"No memories found in namespace {op.namespace_prefix}")
+                return []
+            raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出
             logger.exception(f"Failed to list memories: {e}")
-            return []
+            raise
 
     def _handle_list_namespaces(self, op: ListNamespacesOp) -> list[tuple[str, ...]]:
         """
@@ -629,9 +683,16 @@ class AgentArtsMemoryStore(BaseStore):
 
             return namespaces[op.offset:op.offset + op.limit]
 
+        except APIException as e:
+            if e.status_code == 404:
+                # 404 = 无数据（读取语义）
+                logger.debug("No namespaces found")
+                return []
+            raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出
             logger.exception(f"Failed to list namespaces: {e}")
-            return []
+            raise
 
     async def _async_handle_list_namespaces(self, op: ListNamespacesOp) -> list[tuple[str, ...]]:
         """Async version of _handle_list_namespaces."""
@@ -664,9 +725,16 @@ class AgentArtsMemoryStore(BaseStore):
 
             return namespaces[op.offset:op.offset + op.limit]
 
+        except APIException as e:
+            if e.status_code == 404:
+                # 404 = 无数据（读取语义）
+                logger.debug("No namespaces found")
+                return []
+            raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出
             logger.exception(f"Failed to list namespaces: {e}")
-            return []
+            raise
 
     def _convert_memory_to_item(self, memory_info: Any, namespace: tuple[str, ...]) -> Item:
         """Convert MemoryInfo to LangGraph Item."""

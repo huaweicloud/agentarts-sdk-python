@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 2xx responses with non-JSON bodies are now classified as `PARSE_ERROR` instead of being mislabeled as network errors
 - `delete_thread` / `adelete_thread` now clean up the persisted-count tracking even when session deletion fails (via `try/finally`)
 
+### Changed (Breaking)
+- **LangGraph integration (`AgentArtsMemoryStore`, `AgentArtsMemorySessionSaver`) now raises exceptions on backend/network failures instead of silently returning empty results.** Catch `AgentArtsIntegrationError` (exported from `agentarts.sdk.integration.langgraph`) to handle them.
+- **Migration**: wrap `graph.invoke()` / store calls in `try/except AgentArtsIntegrationError`; retry network errors at the invocation layer (checkpointer exceptions are not retried by LangGraph `retry_policy`).
+
 ## [0.1.3] - 2026-06-06
 
 ### Added

@@ -11,7 +11,6 @@ git-ignored) into the formal unit test suite. Covers the actual behavior of:
 Uses in-memory fake clients (no real API calls).
 """
 
-import asyncio
 import base64
 import json
 from unittest.mock import MagicMock
@@ -45,6 +44,14 @@ class FakeMemoryClient:
         self.create_memory_session_calls = []
         self.close_called = False
         self._add_messages_fail_404 = False
+        self._add_messages_fail_500 = False
+        self._add_messages_fail_500_after_404 = False
+        self._get_messages_fail_404 = False
+        self._get_messages_fail_network = False
+        self._list_messages_fail_404 = False
+        self._list_messages_fail_network = False
+        self._create_session_fail_already_exists = False
+        self._create_session_fail = False
         self._delete_session_fail = False
         self.delete_session_attempts = 0
 
@@ -52,7 +59,12 @@ class FakeMemoryClient:
         # Simulate 404 on first call if flag is set
         if self._add_messages_fail_404:
             self._add_messages_fail_404 = False
+            if self._add_messages_fail_500_after_404:
+                raise APIException(500, "InternalError", "add failed after retry")
             raise APIException(404, "NotFound", "session not found")
+        # Simulate a persistent backend failure
+        if self._add_messages_fail_500:
+            raise APIException(500, "InternalError", "add failed")
         # Call to_dict() on each message to simulate real backend behavior
         # This catches bugs like empty content (TextMessage.to_dict validates)
         for msg in messages:
@@ -73,12 +85,25 @@ class FakeMemoryClient:
             "space_id": space_id,
             "id": id,
         })
+        if self._create_session_fail_already_exists:
+            # Simulate concurrent creation of the same session (HTTP 400 + error code)
+            raise APIException(400, "AgentArts.01020001", "Session id already exists")
+        if self._create_session_fail:
+            raise APIException(500, "InternalError", "create failed")
 
     def get_last_k_messages(self, session_id, k, space_id):
+        if self._get_messages_fail_404:
+            raise APIException(404, "NotFound", "session not found")
+        if self._get_messages_fail_network:
+            raise APIException(0, "NETWORK_ERROR", "connection refused")
         msgs = self.sessions.get(session_id, [])
         return msgs[-k:] if len(msgs) > k else msgs
 
     def list_messages(self, space_id, session_id, limit, offset):
+        if self._list_messages_fail_404:
+            raise APIException(404, "NotFound", "session not found")
+        if self._list_messages_fail_network:
+            raise APIException(0, "NETWORK_ERROR", "connection refused")
         msgs = self.sessions.get(session_id, [])
         items = msgs[offset:offset + limit]
         result = MagicMock()
@@ -109,6 +134,14 @@ class FakeAsyncMemoryClient:
         self.create_memory_session_calls = []
         self.close_called = False
         self._add_messages_fail_404 = False
+        self._add_messages_fail_500 = False
+        self._add_messages_fail_500_after_404 = False
+        self._get_messages_fail_404 = False
+        self._get_messages_fail_network = False
+        self._list_messages_fail_404 = False
+        self._list_messages_fail_network = False
+        self._create_session_fail_already_exists = False
+        self._create_session_fail = False
         self._delete_session_fail = False
         self.delete_session_attempts = 0
 
@@ -116,7 +149,12 @@ class FakeAsyncMemoryClient:
         # Simulate 404 on first call if flag is set
         if self._add_messages_fail_404:
             self._add_messages_fail_404 = False
+            if self._add_messages_fail_500_after_404:
+                raise APIException(500, "InternalError", "add failed after retry")
             raise APIException(404, "NotFound", "session not found")
+        # Simulate a persistent backend failure
+        if self._add_messages_fail_500:
+            raise APIException(500, "InternalError", "add failed")
         # Call to_dict() on each message to simulate real backend behavior
         for msg in messages:
             msg.to_dict()
@@ -136,12 +174,25 @@ class FakeAsyncMemoryClient:
             "space_id": space_id,
             "id": id,
         })
+        if self._create_session_fail_already_exists:
+            # Simulate concurrent creation of the same session (HTTP 400 + error code)
+            raise APIException(400, "AgentArts.01020001", "Session id already exists")
+        if self._create_session_fail:
+            raise APIException(500, "InternalError", "create failed")
 
     async def get_last_k_messages(self, session_id, k, space_id):
+        if self._get_messages_fail_404:
+            raise APIException(404, "NotFound", "session not found")
+        if self._get_messages_fail_network:
+            raise APIException(0, "NETWORK_ERROR", "connection refused")
         msgs = self.sessions.get(session_id, [])
         return msgs[-k:] if len(msgs) > k else msgs
 
     async def list_messages(self, space_id, session_id, limit, offset):
+        if self._list_messages_fail_404:
+            raise APIException(404, "NotFound", "session not found")
+        if self._list_messages_fail_network:
+            raise APIException(0, "NETWORK_ERROR", "connection refused")
         msgs = self.sessions.get(session_id, [])
         items = msgs[offset:offset + limit]
         result = MagicMock()
@@ -281,6 +332,52 @@ class TestPutWrites:
         assert expected_writes_session in fake_sync.sessions
         assert len(fake_sync.sessions[expected_writes_session]) == 1
 
+    def test_put_writes_create_already_exists_is_treated_as_success(self):
+        """create returns 400 AgentArts.01020001 ("already exists") on concurrent
+        creation: treat it as success and retry add_messages."""
+        saver, fake_sync, _ = create_saver()
+        thread_id = "test-thread-already-exists"
+        checkpoint_id = "cp-already-exists"
+        config = make_config(thread_id, checkpoint_id)
+
+        fake_sync._add_messages_fail_404 = True
+        fake_sync._create_session_fail_already_exists = True
+        saver.put_writes(config, [("channelX", "valueX")], "task-already-exists")
+
+        assert len(fake_sync.create_memory_session_calls) == 1
+        expected_writes_session = saver._writes_session_id(thread_id)
+        assert len(fake_sync.add_messages_calls) == 1
+        assert expected_writes_session in fake_sync.sessions
+        assert len(fake_sync.sessions[expected_writes_session]) == 1
+
+    def test_put_writes_create_real_error_raises(self):
+        """create failing with a genuine error (not "already exists") must raise."""
+        from agentarts.sdk.integration.langgraph.exceptions import AgentArtsServiceError
+
+        saver, fake_sync, _ = create_saver()
+        thread_id = "test-thread-create-error"
+        checkpoint_id = "cp-create-error"
+        config = make_config(thread_id, checkpoint_id)
+
+        fake_sync._add_messages_fail_404 = True
+        fake_sync._create_session_fail = True  # 500
+        with pytest.raises(AgentArtsServiceError):
+            saver.put_writes(config, [("channelY", "valueY")], "task-create-error")
+
+    def test_put_writes_retry_add_messages_failure_raises(self):
+        """A failure on the add_messages retry (after 404 self-healing) must raise."""
+        from agentarts.sdk.integration.langgraph.exceptions import AgentArtsServiceError
+
+        saver, fake_sync, _ = create_saver()
+        thread_id = "test-thread-retry-fail"
+        checkpoint_id = "cp-retry-fail"
+        config = make_config(thread_id, checkpoint_id)
+
+        fake_sync._add_messages_fail_404 = True
+        fake_sync._add_messages_fail_500_after_404 = True
+        with pytest.raises(AgentArtsServiceError):
+            saver.put_writes(config, [("channelZ", "valueZ")], "task-retry-fail")
+
 
 class TestAPutWrites:
     """aput_writes behavior (async)."""
@@ -319,6 +416,55 @@ class TestAPutWrites:
         assert len(fake_async.add_messages_calls) == 1
         assert expected_writes_session in fake_async.sessions
         assert len(fake_async.sessions[expected_writes_session]) == 1
+
+    @pytest.mark.asyncio
+    async def test_aput_writes_create_already_exists_is_treated_as_success(self):
+        """(async) create returns 400 AgentArts.01020001 ("already exists"):
+        treat it as success and retry add_messages."""
+        saver, _, fake_async = create_saver()
+        thread_id = "test-thread-already-exists-async"
+        checkpoint_id = "cp-already-exists-async"
+        config = make_config(thread_id, checkpoint_id)
+
+        fake_async._add_messages_fail_404 = True
+        fake_async._create_session_fail_already_exists = True
+        await saver.aput_writes(config, [("channelX", "valueX")], "task-already-exists-async")
+
+        assert len(fake_async.create_memory_session_calls) == 1
+        expected_writes_session = saver._writes_session_id(thread_id)
+        assert len(fake_async.add_messages_calls) == 1
+        assert expected_writes_session in fake_async.sessions
+        assert len(fake_async.sessions[expected_writes_session]) == 1
+
+    @pytest.mark.asyncio
+    async def test_aput_writes_create_real_error_raises(self):
+        """(async) create failing with a genuine error must raise."""
+        from agentarts.sdk.integration.langgraph.exceptions import AgentArtsServiceError
+
+        saver, _, fake_async = create_saver()
+        thread_id = "test-thread-create-error-async"
+        checkpoint_id = "cp-create-error-async"
+        config = make_config(thread_id, checkpoint_id)
+
+        fake_async._add_messages_fail_404 = True
+        fake_async._create_session_fail = True  # 500
+        with pytest.raises(AgentArtsServiceError):
+            await saver.aput_writes(config, [("channelY", "valueY")], "task-create-error-async")
+
+    @pytest.mark.asyncio
+    async def test_aput_writes_retry_add_messages_failure_raises(self):
+        """(async) a failure on the add_messages retry (after 404 self-healing) must raise."""
+        from agentarts.sdk.integration.langgraph.exceptions import AgentArtsServiceError
+
+        saver, _, fake_async = create_saver()
+        thread_id = "test-thread-retry-fail-async"
+        checkpoint_id = "cp-retry-fail-async"
+        config = make_config(thread_id, checkpoint_id)
+
+        fake_async._add_messages_fail_404 = True
+        fake_async._add_messages_fail_500_after_404 = True
+        with pytest.raises(AgentArtsServiceError):
+            await saver.aput_writes(config, [("channelZ", "valueZ")], "task-retry-fail-async")
 
 
 class TestGetTuplePendingWrites:
@@ -457,13 +603,17 @@ class TestDeleteThread:
         assert deleted_sessions[0] == writes_sid
         assert deleted_sessions[1] == thread_id
 
-    def test_delete_thread_swallows_failures_and_cleans_up(self):
+    def test_delete_thread_main_session_failure_raises_and_cleans_up(self):
+        """Writes-session failure is swallowed; main-session failure propagates (cleanup still runs)."""
+        from agentarts.sdk.integration.langgraph.exceptions import AgentArtsServiceError
+
         saver, fake_sync, _ = create_saver()
         thread_id = "test-thread-swallow"
         saver._persisted_count[thread_id] = 5
         fake_sync._delete_session_fail = True
 
-        saver.delete_thread(thread_id)  # must NOT raise
+        with pytest.raises(AgentArtsServiceError):
+            saver.delete_thread(thread_id)
 
         assert fake_sync.delete_session_attempts == 2
         assert thread_id not in saver._persisted_count
@@ -486,7 +636,9 @@ class TestDeleteThread:
         assert thread_id not in saver._persisted_count
 
     @pytest.mark.asyncio
-    async def test_adelete_thread_order_and_swallow(self):
+    async def test_adelete_thread_order_and_main_failure_raises(self):
+        from agentarts.sdk.integration.langgraph.exceptions import AgentArtsServiceError
+
         saver, _, fake_async = create_saver()
         thread_id = "test-thread-async-order"
 
@@ -499,10 +651,11 @@ class TestDeleteThread:
         assert deleted_sessions[1] == thread_id
         assert thread_id not in saver._persisted_count
 
-        # Failure path: no raise + cleanup
+        # Failure path: writes-session failure swallowed, main-session failure raises, cleanup runs
         saver._persisted_count[thread_id] = 7
         fake_async._delete_session_fail = True
-        await saver.adelete_thread(thread_id)  # must not raise
+        with pytest.raises(AgentArtsServiceError):
+            await saver.adelete_thread(thread_id)
         assert fake_async.delete_session_attempts == 4
         assert thread_id not in saver._persisted_count
 
@@ -528,3 +681,149 @@ class TestContextManager:
 
         assert fake_sync.close_called
         assert fake_async.close_called
+
+
+class TestExceptionPropagation:
+    """Exception propagation assertions (behavior after the breaking change)."""
+
+    def _make_put_config(self, thread_id):
+        return make_config(thread_id, f"cp-{thread_id}")
+
+    def _build_checkpoint(self, messages=None):
+        from langgraph.checkpoint.base import Checkpoint, CheckpointMetadata
+
+        return (
+            Checkpoint(
+                v=1,
+                id="cp-1",
+                ts="2026-01-01T00:00:00+00:00",
+                channel_values={"messages": messages or []},
+                channel_versions={"messages": 1},
+                versions_seen={},
+                step=-1,
+                pending_sends=[],
+                parents={},
+            ),
+            CheckpointMetadata(source="loop", step=0, writes={}, parents={}),
+        )
+
+    def test_put_raises_on_backend_failure(self):
+        """put must raise on backend failure (no longer returns config)."""
+        from langchain_core.messages import HumanMessage
+
+        from agentarts.sdk.integration.langgraph.exceptions import AgentArtsServiceError
+
+        saver, fake_sync, _ = create_saver()
+        thread_id = "test-thread-put-raise"
+        config = self._make_put_config(thread_id)
+        fake_sync._add_messages_fail_500 = True
+
+        checkpoint, metadata = self._build_checkpoint([HumanMessage(content="hi")])
+        with pytest.raises(AgentArtsServiceError):
+            saver.put(config, checkpoint, metadata)
+
+    def test_get_tuple_network_error_raises(self):
+        """get_tuple must raise on network errors (status_code=0)."""
+        from agentarts.sdk.integration.langgraph.exceptions import AgentArtsNetworkError
+
+        saver, fake_sync, _ = create_saver()
+        thread_id = "test-thread-get-neterr"
+        config = self._make_put_config(thread_id)
+
+        fake_sync._get_messages_fail_network = True
+        with pytest.raises(AgentArtsNetworkError):
+            saver.get_tuple(config)
+
+    def test_get_tuple_404_returns_none(self):
+        """get_tuple 404 = session does not exist = None (read semantics)."""
+        saver, fake_sync, _ = create_saver()
+        thread_id = "test-thread-get-404"
+        config = self._make_put_config(thread_id)
+
+        fake_sync._get_messages_fail_404 = True
+        assert saver.get_tuple(config) is None
+
+    def test_list_network_error_raises(self):
+        """list must raise on network errors."""
+        from agentarts.sdk.integration.langgraph.exceptions import AgentArtsNetworkError
+
+        saver, fake_sync, _ = create_saver()
+        thread_id = "test-thread-list-neterr"
+        config = self._make_put_config(thread_id)
+
+        fake_sync._list_messages_fail_network = True
+        with pytest.raises(AgentArtsNetworkError):
+            saver.list(config)
+
+    def test_list_404_returns_empty(self):
+        """list 404 = session does not exist = [] (read semantics)."""
+        saver, fake_sync, _ = create_saver()
+        thread_id = "test-thread-list-404"
+        config = self._make_put_config(thread_id)
+
+        fake_sync._list_messages_fail_404 = True
+        assert saver.list(config) == []
+
+    # Async parity: the async methods must propagate exactly like the sync ones.
+
+    @pytest.mark.asyncio
+    async def test_aput_raises_on_backend_failure(self):
+        """aput must raise on backend failure (no longer returns config)."""
+        from langchain_core.messages import HumanMessage
+
+        from agentarts.sdk.integration.langgraph.exceptions import AgentArtsServiceError
+
+        saver, _, fake_async = create_saver()
+        thread_id = "test-thread-aput-raise"
+        config = self._make_put_config(thread_id)
+        fake_async._add_messages_fail_500 = True
+
+        checkpoint, metadata = self._build_checkpoint([HumanMessage(content="hi")])
+        with pytest.raises(AgentArtsServiceError):
+            await saver.aput(config, checkpoint, metadata)
+
+    @pytest.mark.asyncio
+    async def test_aget_tuple_network_error_raises(self):
+        """aget_tuple must raise on network errors (status_code=0)."""
+        from agentarts.sdk.integration.langgraph.exceptions import AgentArtsNetworkError
+
+        saver, _, fake_async = create_saver()
+        thread_id = "test-thread-aget-neterr"
+        config = self._make_put_config(thread_id)
+
+        fake_async._get_messages_fail_network = True
+        with pytest.raises(AgentArtsNetworkError):
+            await saver.aget_tuple(config)
+
+    @pytest.mark.asyncio
+    async def test_aget_tuple_404_returns_none(self):
+        """aget_tuple 404 = session does not exist = None (read semantics)."""
+        saver, _, fake_async = create_saver()
+        thread_id = "test-thread-aget-404"
+        config = self._make_put_config(thread_id)
+
+        fake_async._get_messages_fail_404 = True
+        assert await saver.aget_tuple(config) is None
+
+    @pytest.mark.asyncio
+    async def test_alist_network_error_raises(self):
+        """alist must raise on network errors."""
+        from agentarts.sdk.integration.langgraph.exceptions import AgentArtsNetworkError
+
+        saver, _, fake_async = create_saver()
+        thread_id = "test-thread-alist-neterr"
+        config = self._make_put_config(thread_id)
+
+        fake_async._list_messages_fail_network = True
+        with pytest.raises(AgentArtsNetworkError):
+            await saver.alist(config)
+
+    @pytest.mark.asyncio
+    async def test_alist_404_returns_empty(self):
+        """alist 404 = session does not exist = [] (read semantics)."""
+        saver, _, fake_async = create_saver()
+        thread_id = "test-thread-alist-404"
+        config = self._make_put_config(thread_id)
+
+        fake_async._list_messages_fail_404 = True
+        assert await saver.alist(config) == []

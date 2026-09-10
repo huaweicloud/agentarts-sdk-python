@@ -186,16 +186,19 @@ class TestAgentArtsMemoryStorePut:
                     mock_client.add_messages.assert_not_called()
 
     def test_put_delete_handles_not_found(self):
-        """Test that delete swallows 404 not found errors."""
+        """Test that delete treats a 404 (already deleted) as success."""
         from langgraph.store.base import PutOp
 
         from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+        from agentarts.sdk.service import APIException
 
         with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
             with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
                 with patch("agentarts.sdk.integration.langgraph.store.AsyncMemoryClient"):
                     mock_client = MagicMock()
-                    mock_client.delete_memory.side_effect = Exception("404 not found")
+                    mock_client.delete_memory.side_effect = APIException(
+                        404, "NotFound", "not found"
+                    )
                     mock_client_cls.return_value = mock_client
 
                     store = AgentArtsMemoryStore(space_id="test-space")
@@ -210,17 +213,21 @@ class TestAgentArtsMemoryStorePut:
                     result = store._handle_put(op)
                     assert result is None
 
-    def test_put_swallows_exception(self):
-        """Test that Put swallows exceptions (default behavior, opt-in re-raise planned)."""
+    def test_put_raises_on_write_failure(self):
+        """Test that Put propagates backend write failures (no longer swallowed)."""
         from langgraph.store.base import PutOp
 
+        from agentarts.sdk.integration.langgraph.exceptions import AgentArtsServiceError
         from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+        from agentarts.sdk.service import APIException
 
         with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
             with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
                 with patch("agentarts.sdk.integration.langgraph.store.AsyncMemoryClient"):
                     mock_client = MagicMock()
-                    mock_client.add_messages.side_effect = RuntimeError("network error")
+                    mock_client.add_messages.side_effect = APIException(
+                        500, "InternalError", "backend down"
+                    )
                     mock_client_cls.return_value = mock_client
 
                     store = AgentArtsMemoryStore(space_id="test-space")
@@ -231,9 +238,8 @@ class TestAgentArtsMemoryStorePut:
                         value={"content": "test", "session_id": "s1"},
                     )
 
-                    # Should not raise, should return None
-                    result = store._handle_put(op)
-                    assert result is None
+                    with pytest.raises(AgentArtsServiceError):
+                        store._handle_put(op)
 
 
 class TestAgentArtsMemoryStoreSearch:
@@ -455,6 +461,78 @@ class TestAgentArtsMemoryStoreSearch:
                     memory_types = {r.value["memory_type"] for r in results}
                     assert memory_types == {"memory", "episode"}
 
+    def test_search_404_returns_empty(self):
+        """search 404 = namespace does not exist = [] (read semantics)."""
+        from langgraph.store.base import SearchOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+        from agentarts.sdk.service import APIException
+
+        with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
+            with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
+                with patch("agentarts.sdk.integration.langgraph.store.AsyncMemoryClient"):
+                    mock_client = MagicMock()
+                    mock_client.search_memories.side_effect = APIException(
+                        404, "NotFound", "not found"
+                    )
+                    mock_client_cls.return_value = mock_client
+
+                    store = AgentArtsMemoryStore(space_id="test-space")
+
+                    results = store._handle_search(
+                        SearchOp(namespace_prefix=("memories",), query="test", limit=5)
+                    )
+
+                    assert results == []
+
+    def test_search_network_error_raises(self):
+        """search network errors must raise a mapped exception."""
+        from langgraph.store.base import SearchOp
+
+        from agentarts.sdk.integration.langgraph.exceptions import AgentArtsNetworkError
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+        from agentarts.sdk.service import APIException
+
+        with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
+            with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
+                with patch("agentarts.sdk.integration.langgraph.store.AsyncMemoryClient"):
+                    mock_client = MagicMock()
+                    mock_client.search_memories.side_effect = APIException(
+                        0, "NETWORK_ERROR", "timeout"
+                    )
+                    mock_client_cls.return_value = mock_client
+
+                    store = AgentArtsMemoryStore(space_id="test-space")
+
+                    with pytest.raises(AgentArtsNetworkError):
+                        store._handle_search(
+                            SearchOp(namespace_prefix=("memories",), query="test", limit=5)
+                        )
+
+    def test_search_without_query_404_returns_empty(self):
+        """search without query (list_memories) 404 = [] (read semantics)."""
+        from langgraph.store.base import SearchOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+        from agentarts.sdk.service import APIException
+
+        with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
+            with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
+                with patch("agentarts.sdk.integration.langgraph.store.AsyncMemoryClient"):
+                    mock_client = MagicMock()
+                    mock_client.list_memories.side_effect = APIException(
+                        404, "NotFound", "not found"
+                    )
+                    mock_client_cls.return_value = mock_client
+
+                    store = AgentArtsMemoryStore(space_id="test-space")
+
+                    results = store._handle_search(
+                        SearchOp(namespace_prefix=("memories",), limit=10)
+                    )
+
+                    assert results == []
+
 
 class TestAgentArtsMemoryStoreGet:
     """Tests for GetOp handling"""
@@ -493,16 +571,19 @@ class TestAgentArtsMemoryStoreGet:
                     assert result.value["content"] == "test content"
 
     def test_get_returns_none_when_not_found(self):
-        """Test that get returns None when memory doesn't exist"""
+        """Test that get returns None when memory doesn't exist (404)"""
         from langgraph.store.base import GetOp
 
         from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+        from agentarts.sdk.service import APIException
 
         with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
             with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
                 with patch("agentarts.sdk.integration.langgraph.store.AsyncMemoryClient"):
                     mock_client = MagicMock()
-                    mock_client.get_memory.side_effect = Exception("not found")
+                    mock_client.get_memory.side_effect = APIException(
+                        404, "NotFound", "not found"
+                    )
                     mock_client_cls.return_value = mock_client
 
                     store = AgentArtsMemoryStore(space_id="test-space")
@@ -522,6 +603,7 @@ class TestAgentArtsMemoryStoreBatch:
         from langgraph.store.base import GetOp, PutOp, SearchOp
 
         from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+        from agentarts.sdk.service import APIException
 
         mock_response = MagicMock()
         mock_response.results = []
@@ -532,7 +614,9 @@ class TestAgentArtsMemoryStoreBatch:
                     mock_client = MagicMock()
                     mock_client.search_memories.return_value = mock_response
                     mock_client.add_messages.return_value = MagicMock()
-                    mock_client.get_memory.side_effect = Exception("404 not found")
+                    mock_client.get_memory.side_effect = APIException(
+                        404, "NotFound", "not found"
+                    )
                     mock_client_cls.return_value = mock_client
 
                     store = AgentArtsMemoryStore(space_id="test-space")
@@ -614,6 +698,7 @@ class TestAgentArtsMemoryStoreAsync:
         from langgraph.store.base import GetOp, PutOp, SearchOp
 
         from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+        from agentarts.sdk.service import APIException
 
         mock_response = MagicMock()
         mock_response.results = []
@@ -624,7 +709,9 @@ class TestAgentArtsMemoryStoreAsync:
                     mock_async_client = AsyncMock()
                     mock_async_client.search_memories.return_value = mock_response
                     mock_async_client.add_messages.return_value = MagicMock()
-                    mock_async_client.get_memory.side_effect = Exception("not found")
+                    mock_async_client.get_memory.side_effect = APIException(
+                        404, "NotFound", "not found"
+                    )
                     mock_async_cls.return_value = mock_async_client
 
                     store = AgentArtsMemoryStore(space_id="test-space")
@@ -959,3 +1046,55 @@ class TestWildcardMatching:
         condition = MatchCondition(match_type="suffix", path=("*",))
         assert store._matches_condition(("memories", "user-001"), condition)
         assert store._matches_condition(("single",), condition)
+
+
+class TestListNamespacesExceptionHandling:
+    """list_namespaces 404 -> [] and network error propagation."""
+
+    def test_list_namespaces_404_returns_empty(self):
+        """404 = no data (read semantics), return []."""
+        from langgraph.store.base import ListNamespacesOp
+
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+        from agentarts.sdk.service import APIException
+
+        with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
+            with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
+                with patch("agentarts.sdk.integration.langgraph.store.AsyncMemoryClient"):
+                    mock_client = MagicMock()
+                    mock_client.list_memories.side_effect = APIException(
+                        404, "NotFound", "not found"
+                    )
+                    mock_client_cls.return_value = mock_client
+
+                    store = AgentArtsMemoryStore(space_id="test-space")
+
+                    result = store._handle_list_namespaces(
+                        ListNamespacesOp(match_conditions=None, max_depth=0, limit=10, offset=0)
+                    )
+
+                    assert result == []
+
+    def test_list_namespaces_network_error_raises(self):
+        """Network errors must raise a mapped exception."""
+        from langgraph.store.base import ListNamespacesOp
+
+        from agentarts.sdk.integration.langgraph.exceptions import AgentArtsNetworkError
+        from agentarts.sdk.integration.langgraph.store import AgentArtsMemoryStore
+        from agentarts.sdk.service import APIException
+
+        with patch("agentarts.sdk.integration.langgraph.store.LANGGRAPH_AVAILABLE", True):
+            with patch("agentarts.sdk.integration.langgraph.store.MemoryClient") as mock_client_cls:
+                with patch("agentarts.sdk.integration.langgraph.store.AsyncMemoryClient"):
+                    mock_client = MagicMock()
+                    mock_client.list_memories.side_effect = APIException(
+                        0, "NETWORK_ERROR", "timeout"
+                    )
+                    mock_client_cls.return_value = mock_client
+
+                    store = AgentArtsMemoryStore(space_id="test-space")
+
+                    with pytest.raises(AgentArtsNetworkError):
+                        store._handle_list_namespaces(
+                            ListNamespacesOp(match_conditions=None, max_depth=0, limit=10, offset=0)
+                        )

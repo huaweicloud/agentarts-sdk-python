@@ -25,6 +25,10 @@ from agentarts.sdk.integration.langgraph.converter import (
     langgraph_messages_to_memory,
     memory_to_langgraph_message,
 )
+from agentarts.sdk.integration.langgraph.exceptions import (
+    AgentArtsIntegrationError,
+    map_exception,
+)
 from agentarts.sdk.memory import AsyncMemoryClient, MemoryClient, TextMessage
 from agentarts.sdk.service import APIException
 from agentarts.sdk.utils.constant import get_region
@@ -266,9 +270,16 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                 space_id=self._space_id
             )
 
+        except APIException as e:
+            if e.status_code == 404:
+                # 404 = session 不存在 = 无 checkpoint（LangGraph 契约：None = 无数据）
+                logger.debug(f"Session {session_id} not found for get_tuple")
+                return None
+            raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出
             logger.exception(f"Failed to get checkpoint tuple: {e}")
-            return None
+            raise
         if not messages:
             return None
 
@@ -343,8 +354,18 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                 pending_writes = self._extract_pending_writes(
                     writes_messages, checkpoint_id
                 )
+        except APIException as e:
+            if e.status_code == 404:
+                # writes session 尚未创建 = 无 pending writes，属正常情况
+                logger.debug(
+                    f"Writes session not found for session {session_id} (no pending writes)"
+                )
+            else:
+                raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出，与 store 原则统一
             logger.debug(f"Failed to retrieve pending writes: {e}")
+            raise
 
         return CheckpointTuple(
             config=runtime_config.to_runnable_config(),
@@ -425,8 +446,13 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             # If the call failed (exception), the count remains at the last successful persisted count, so next put() will retry sending the delta.
             self._persisted_count[session_id] = len(messages)
 
+        except APIException as e:
+            # 写入失败必须抛出，不再返回 config（LangGraph 否则会认为写入成功、数据实际丢失）
+            raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出，不包装
             logger.exception(f"Failed to put checkpoint for session {session_id} with: {e}")
+            raise
 
         return config
 
@@ -506,25 +532,32 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                         space_id=self._space_id,
                         id=writes_session_id,
                     )
-                except Exception:
-                    pass
+                except APIException as ce:
+                    # 并发场景下另一调用已创建同一 session：HTTP 400 + 错误码
+                    # AgentArts.01020001（"session 已存在"）视为成功，继续重试 add_messages
+                    if not (ce.status_code == 400 and ce.error_code == "AgentArts.01020001"):
+                        raise map_exception(ce) from ce
                 try:
                     self._client.add_messages(
                         space_id=self._space_id,
                         session_id=writes_session_id,
                         messages=[cloud_message],
                     )
+                except APIException as e2:
+                    raise map_exception(e2) from e2
                 except Exception as e2:
                     logger.exception(
                         f"Failed to put_writes for session {session_id} "
                         f"after retry: {e2}"
                     )
+                    raise
             else:
-                logger.exception(
-                    f"Failed to put_writes for session {session_id}: {e}"
-                )
+                raise map_exception(e) from e
         except Exception as e:
+            if isinstance(e, AgentArtsIntegrationError):
+                raise
             logger.exception(f"Failed to put_writes for session {session_id}: {e}")
+            raise
 
     def list(
             self,
@@ -559,9 +592,16 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                 limit=limit or self._max_messages,
                 offset=0
             )
+        except APIException as e:
+            if e.status_code == 404:
+                # 404 = session 不存在 = 无 checkpoint
+                logger.debug(f"Session {session_id} not found for list")
+                return []
+            raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出
             logger.exception(f"Failed to list checkpoints: {e}")
-            return []
+            raise
         messages = result.items if hasattr(result, "items") else []
 
         if not messages:
@@ -626,8 +666,18 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                 pending_writes = self._extract_pending_writes(
                     writes_messages, checkpoint_id
                 )
+        except APIException as e:
+            if e.status_code == 404:
+                # writes session 尚未创建 = 无 pending writes，属正常情况
+                logger.debug(
+                    f"Writes session not found for session {session_id} (no pending writes)"
+                )
+            else:
+                raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出，与 store 原则统一
             logger.debug(f"Failed to retrieve pending writes: {e}")
+            raise
 
         return [
             CheckpointTuple(
@@ -658,6 +708,16 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                     space_id=self._space_id,
                     session_id=writes_sid,
                 )
+            except APIException as e:
+                if e.status_code == 404:
+                    logger.debug(
+                        f"Writes session {writes_sid} not found for thread {thread_id}"
+                    )
+                else:
+                    # writes session 删除失败：辅助数据，保持吞没（debug 级，不影响主 session 删除）
+                    logger.debug(
+                        f"Failed to delete writes session for thread {thread_id}: {e}"
+                    )
             except Exception as e:
                 logger.debug(
                     f"Failed to delete writes session for thread {thread_id}: {e}"
@@ -668,10 +728,18 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                     space_id=self._space_id,
                     session_id=thread_id,
                 )
+            except APIException as e:
+                if e.status_code == 404:
+                    # 404 = session 不存在 = 已删除（幂等）
+                    logger.debug(f"Session {thread_id} not found for delete_thread")
+                else:
+                    raise map_exception(e) from e
             except Exception as e:
+                # 非 APIException（编程错误）保持原样抛出
                 logger.exception(
                     f"Failed to delete session for thread {thread_id}: {e}"
                 )
+                raise
         finally:
             # Clean up persisted count tracking regardless of outcome
             self._persisted_count.pop(thread_id, None)
@@ -725,9 +793,16 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                 space_id=self._space_id
             )
 
+        except APIException as e:
+            if e.status_code == 404:
+                # 404 = session 不存在 = 无 checkpoint（LangGraph 契约：None = 无数据）
+                logger.debug(f"Session {session_id} not found for aget_tuple")
+                return None
+            raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出
             logger.exception(f"Failed to get checkpoint tuple: {e}")
-            return None
+            raise
         if not messages:
             return None
 
@@ -800,8 +875,18 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                 pending_writes = self._extract_pending_writes(
                     writes_messages, checkpoint_id
                 )
+        except APIException as e:
+            if e.status_code == 404:
+                # writes session 尚未创建 = 无 pending writes，属正常情况
+                logger.debug(
+                    f"Writes session not found for session {session_id} (no pending writes)"
+                )
+            else:
+                raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出，与 store 原则统一
             logger.debug(f"Failed to retrieve pending writes: {e}")
+            raise
 
         return CheckpointTuple(
             config=runtime_config.to_runnable_config(),
@@ -876,8 +961,13 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
             # Only update persisted count after successful aput to backend.
             self._persisted_count[session_id] = len(messages)
 
+        except APIException as e:
+            # 写入失败必须抛出，不再返回 config（LangGraph 否则会认为写入成功、数据实际丢失）
+            raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出，不包装
             logger.exception(f"Failed to put checkpoint for session {session_id} with: {e}")
+            raise
 
         return config
 
@@ -938,25 +1028,32 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                         space_id=self._space_id,
                         id=writes_session_id,
                     )
-                except Exception:
-                    pass
+                except APIException as ce:
+                    # 并发场景下另一调用已创建同一 session：HTTP 400 + 错误码
+                    # AgentArts.01020001（"session 已存在"）视为成功，继续重试 add_messages
+                    if not (ce.status_code == 400 and ce.error_code == "AgentArts.01020001"):
+                        raise map_exception(ce) from ce
                 try:
                     await self._async_client.add_messages(
                         space_id=self._space_id,
                         session_id=writes_session_id,
                         messages=[cloud_message],
                     )
+                except APIException as e2:
+                    raise map_exception(e2) from e2
                 except Exception as e2:
                     logger.exception(
                         f"Failed to aput_writes for session {session_id} "
                         f"after retry: {e2}"
                     )
+                    raise
             else:
-                logger.exception(
-                    f"Failed to aput_writes for session {session_id}: {e}"
-                )
+                raise map_exception(e) from e
         except Exception as e:
+            if isinstance(e, AgentArtsIntegrationError):
+                raise
             logger.exception(f"Failed to aput_writes for session {session_id}: {e}")
+            raise
 
     async def alist(
             self,
@@ -993,9 +1090,16 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                 limit=limit or self._max_messages,
                 offset=0
             )
+        except APIException as e:
+            if e.status_code == 404:
+                # 404 = session 不存在 = 无 checkpoint
+                logger.debug(f"Session {session_id} not found for list")
+                return []
+            raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出
             logger.exception(f"Failed to list checkpoints: {e}")
-            return []
+            raise
         messages = result.items if hasattr(result, "items") else []
 
         if not messages:
@@ -1060,8 +1164,18 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                 pending_writes = self._extract_pending_writes(
                     writes_messages, checkpoint_id
                 )
+        except APIException as e:
+            if e.status_code == 404:
+                # writes session 尚未创建 = 无 pending writes，属正常情况
+                logger.debug(
+                    f"Writes session not found for session {session_id} (no pending writes)"
+                )
+            else:
+                raise map_exception(e) from e
         except Exception as e:
+            # 非 APIException（编程错误）保持原样抛出，与 store 原则统一
             logger.debug(f"Failed to retrieve pending writes: {e}")
+            raise
 
         return [
             CheckpointTuple(
@@ -1088,6 +1202,16 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                     space_id=self._space_id,
                     session_id=writes_sid,
                 )
+            except APIException as e:
+                if e.status_code == 404:
+                    logger.debug(
+                        f"Writes session {writes_sid} not found for thread {thread_id}"
+                    )
+                else:
+                    # writes session 删除失败：辅助数据，保持吞没（debug 级，不影响主 session 删除）
+                    logger.debug(
+                        f"Failed to delete writes session for thread {thread_id}: {e}"
+                    )
             except Exception as e:
                 logger.debug(
                     f"Failed to delete writes session for thread {thread_id}: {e}"
@@ -1098,10 +1222,18 @@ class AgentArtsMemorySessionSaver(BaseCheckpointSaver):
                     space_id=self._space_id,
                     session_id=thread_id,
                 )
+            except APIException as e:
+                if e.status_code == 404:
+                    # 404 = session 不存在 = 已删除（幂等）
+                    logger.debug(f"Session {thread_id} not found for adelete_thread")
+                else:
+                    raise map_exception(e) from e
             except Exception as e:
+                # 非 APIException（编程错误）保持原样抛出
                 logger.exception(
                     f"Failed to delete session for thread {thread_id}: {e}"
                 )
+                raise
         finally:
             # Clean up persisted count tracking regardless of outcome
             self._persisted_count.pop(thread_id, None)
