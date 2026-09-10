@@ -130,50 +130,45 @@ def validate_session(session_id: str) -> bool:
 def select_session_interactive() -> tuple[str, str]:
     """Interactive CLI: show menu, let user pick or create a session.
 
+    Invalid choices re-prompt the menu instead of silently creating a
+    session (a stray keystroke should never spawn an empty conversation).
+
     Returns:
         Tuple of (session_id, session_title).
     """
-    sessions = list_sessions()
+    while True:
+        sessions = list_sessions()
 
-    print("\n" + "=" * 60)
-    print("Session Manager")
-    print("=" * 60)
-    print("[1] Start new session")
+        print("\n" + "=" * 60)
+        print("Session Manager")
+        print("=" * 60)
+        print("[1] Start new session")
 
-    start_index = 2
-    if sessions:
-        print("[2] Resume existing session:\n")
-        for i, s in enumerate(sessions):
-            title = s.get("title", "untitled")
-            ts = s.get("last_active", "?")
-            count = s.get("message_count", 0)
-            print(f"    [{i + 3}] {title}")
-            print(f"        last: {ts}, messages: {count}")
-        start_index = 3
-    else:
-        print("    (no existing sessions)")
+        if sessions:
+            print("-- Resume existing session --\n")
+            for i, s in enumerate(sessions):
+                title = s.get("title", "untitled")
+                ts = s.get("last_active", "?")
+                count = s.get("message_count", 0)
+                print(f"    [{i + 3}] {title}")
+                print(f"        last: {ts}, messages: {count}")
+        else:
+            print("    (no existing sessions)")
 
-    choice = input("\nChoice: ").strip()
+        choice = input("\nChoice: ").strip()
 
-    if choice == "1":
-        title = input("Session title (optional, Enter to auto-generate): ").strip()
-        session = create_new_session(title)
-        print(f"\n[OK] New session created: {session['session_id']}")
-        return session["session_id"], session["title"]
+        if choice == "1":
+            title = input("Session title (optional, Enter to auto-generate): ").strip()
+            session = create_new_session(title)
+            print(f"\n[OK] New session created: {session['session_id']}")
+            return session["session_id"], session["title"]
 
-    if choice == "2" and not sessions:
-        print("[ERR] No existing sessions. Creating new one.")
-        session = create_new_session("")
-        return session["session_id"], session["title"]
+        # Numeric choice for existing session
+        if choice.isdigit():
+            idx = int(choice) - 3  # offset: [3] is first session
+            if 0 <= idx < len(sessions):
+                s = sessions[idx]
+                print(f"\n[OK] Resuming session: {s['title']}")
+                return s["session_id"], s["title"]
 
-    # Numeric choice for existing session
-    if choice.isdigit():
-        idx = int(choice) - 3  # offset: [3] is first session
-        if 0 <= idx < len(sessions):
-            s = sessions[idx]
-            print(f"\n[OK] Resuming session: {s['title']}")
-            return s["session_id"], s["title"]
-
-    print("[ERR] Invalid choice, creating new session.")
-    session = create_new_session("")
-    return session["session_id"], session["title"]
+        print("[ERR] Invalid choice, please try again.")
