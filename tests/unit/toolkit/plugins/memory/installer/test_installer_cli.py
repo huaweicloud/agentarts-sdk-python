@@ -127,6 +127,16 @@ class TestEndToEndHermes:
 
 
 class TestEndToEndClaude:
+    def test_install_requires_memory_mcp_extra(self, monkeypatch, tmp_path, capsys):
+        _set_home_and_creds(monkeypatch, tmp_path)
+        monkeypatch.setattr(cli, "_mcp_runtime_available", lambda: False)
+
+        assert _do_install("claude", True, True) == 2
+
+        output = capsys.readouterr().out
+        assert "optional Memory MCP server" in output
+        assert "agentarts-sdk[memory-mcp]" in output
+
     def test_install_claude_global_yes(self, monkeypatch, tmp_path):
         _set_home_and_creds(monkeypatch, tmp_path)
         assert _do_install("claude", True, True) == 0

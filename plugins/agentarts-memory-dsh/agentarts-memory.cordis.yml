@@ -1,0 +1,13 @@
+# Install `agentarts-memory-dsh` and put `agentarts-memory-mcp` on PATH with
+# `uv tool install 'agentarts-sdk[memory-mcp]'`, then
+# apply this opt-in overlay to a DSH profile. Secrets remain process-provided.
+- insert:
+    - id: agentarts-memory
+      name: agentarts-memory-dsh
+      config:
+        apiKeyEnv: HUAWEICLOUD_SDK_MEMORY_API_KEY
+        spaceId: !!js process.env.AGENTARTS_MEMORY_SPACE_ID
+        actorId: !!js process.env.AGENTARTS_MEMORY_ACTOR_ID
+        assistantId: !!js process.env.AGENTARTS_MEMORY_ASSISTANT_ID || 'deepseek-harness'
+        region: !!js process.env.HUAWEICLOUD_SDK_REGION || 'cn-southwest-2'
+        dataEndpoint: !!js process.env.AGENTARTS_MEMORY_DATA_ENDPOINT

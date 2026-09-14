@@ -496,8 +496,8 @@ MCP_SERVER_ARGS = ["-m", MCP_SERVER_MODULE]
 def build_mcp_env(creds: dict, platform_name: str = "") -> dict[str, str]:
     """Build the env dict for MCP server config from credentials.
 
-    Includes ``AGENTARTS_MEMORY_PLATFORM`` so the MCP server subprocess can
-    resolve the correct default user_id (e.g. opencode-user, cc-user).
+    Includes ``AGENTARTS_MEMORY_PLATFORM`` so the MCP subprocess can resolve
+    the correct default actor (for example, opencode-user or cc-user).
     """
     env: dict[str, str] = {}
     if platform_name:
@@ -1122,7 +1122,7 @@ def ensure_credentials(yes: bool) -> dict[str, str]:
     if not yes and all_env_present:
         # All three vars exist in environment -- show and confirm.
         console.print("\nExisting configuration found:")
-        for var in (ENV_SPACE_ID, ENV_API_KEY,  ENV_REGION):
+        for var in (ENV_SPACE_ID, ENV_API_KEY, ENV_REGION):
             value = original_env[var]
             desc = VAR_DESCRIPTIONS.get(var, var)
             if var == ENV_API_KEY:
