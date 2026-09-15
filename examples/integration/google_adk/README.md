@@ -44,12 +44,34 @@ Google ADK                    AgentArts
 - **AgentArtsSessionService**：将 ADK 的会话（Session）和事件（Event）持久化到 AgentArts 后端，支持 O(1) 复杂度的状态读取
 - **AgentArtsMemoryService**：将对话事件写入 AgentArts 记忆系统，支持语义搜索，自动去重（基于 idempotency_key）
 
+## 跨会话用户偏好
+
+本示例演示了跨会话的用户偏好恢复：
+
+```
+Session 1  "我每个月预算 5000 元"
+   │  → 对话内容入库 → 后端异步抽取为 user_preference 记忆
+   ▼
+Session 2  （新的 session_id，同一用户）
+   │  → get_session 时从记忆中搜索偏好
+   │  → 注入到 instruction 模板的 {user:preferences?} 位置
+   ▼
+Agent 参考"月预算 5000"回答消费建议
+```
+
+- **写入**：用户口头表达的偏好随对话入库，由后端抽取管道异步提取为 `user_preference` 记忆
+- **读取**：`AgentArtsSessionService` 在恢复会话时搜索该用户的偏好，合并进 `session.state`
+- **注入**：instruction 模板中的 `{user:preferences?}` 渲染出全部偏好文本（`?` 表示可选引用——首次会话无偏好时渲染为空，不报错）
+- **异步最终一致**：偏好抽取是异步的。新会话立即开始可能搜不到刚表达的偏好，示例默认在两个会话间等待 30 秒（可用 `PREFERENCE_EXTRACT_WAIT_SECONDS` 调整）
+
 ## Agent 配置
 
 Agent 配备了两个工具：
 
 1. **calculate** - 计算数学表达式（支持 sqrt、sin、cos、log 等）
 2. **get_current_time** - 获取当前日期和时间
+
+Agent 的 `instruction` 引用 `{user:preferences?}` 模板，使偏好能进入提示词。
 
 ## 模型配置
 
@@ -69,6 +91,7 @@ ADK 的 `Agent.model` 接受 LiteLLM 格式的字符串，支持多种 LLM 提�
 | `OPENAI_API_KEY` | OpenAI API Key | 是（使用 OpenAI 模型时） |
 | `OPENAI_MODEL_NAME` | 模型名称（LiteLLM 格式） | 否（默认 `openai/gpt-4o-mini`） |
 | `OPENAI_BASE_URL` | API Base URL | 否 |
+| `PREFERENCE_EXTRACT_WAIT_SECONDS` | 会话间等待异步抽取的秒数 | 否（默认 `30`） |
 
 ## 常见问题
 

@@ -456,6 +456,523 @@ class TestAppendEvent:
 
 
 # ============================================================================
+# TestAppendEventForceExtract
+# ============================================================================
+
+
+def _make_state_delta_event(
+    event_id="evt-delta", author="agent", text="Reply", state_delta=None
+):
+    """Create an ADK Event with actions.state_delta and a text part."""
+    from google.adk.events.event import EventActions
+
+    return Event(
+        id=event_id,
+        author=author,
+        actions=EventActions(state_delta=state_delta or {}),
+        content=types.Content(
+            role="model",
+            parts=[types.Part(text=text)],
+        ),
+    )
+
+
+class TestAppendEventForceExtract:
+    """Tests for force_extract behavior in append_event."""
+
+    @pytest.mark.asyncio
+    async def test_append_event_user_delta_with_content_forces_extract(self):
+        """user: delta + content parts -> is_force_extract=True."""
+        client = _make_mock_client()
+        service = AgentArtsSessionService(client)
+
+        session = Session(
+            id="session-123",
+            app_name="test-app",
+            user_id="user-123",
+            state={"user:budget": "5000"},
+            events=[],
+        )
+        event = _make_state_delta_event(
+            state_delta={"user:budget": "5000"}
+        )
+
+        await service.append_event(session, event)
+
+        call_kwargs = client.add_messages.call_args.kwargs
+        assert call_kwargs["is_force_extract"] is True
+
+    @pytest.mark.asyncio
+    async def test_append_event_user_delta_without_content_no_extract(self):
+        """user: delta without content parts -> is_force_extract=False."""
+        client = _make_mock_client()
+        service = AgentArtsSessionService(client)
+
+        session = Session(
+            id="session-123",
+            app_name="test-app",
+            user_id="user-123",
+            state={"user:lang": "zh"},
+            events=[],
+        )
+        # Pure state-update event: no content parts
+        from google.adk.events.event import EventActions
+
+        event = Event(
+            id="evt-pure",
+            author="agent",
+            actions=EventActions(state_delta={"user:lang": "zh"}),
+            content=None,
+        )
+
+        await service.append_event(session, event)
+
+        call_kwargs = client.add_messages.call_args.kwargs
+        assert call_kwargs["is_force_extract"] is False
+
+    @pytest.mark.asyncio
+    async def test_append_event_no_user_delta_no_extract(self):
+        """No user: delta -> is_force_extract=False (session/app delta)."""
+        client = _make_mock_client()
+        service = AgentArtsSessionService(client)
+
+        session = Session(
+            id="session-123",
+            app_name="test-app",
+            user_id="user-123",
+            state={"step": 1},
+            events=[],
+        )
+        event = _make_state_delta_event(state_delta={"step": 1})
+
+        await service.append_event(session, event)
+
+        call_kwargs = client.add_messages.call_args.kwargs
+        assert call_kwargs["is_force_extract"] is False
+
+    @pytest.mark.asyncio
+    async def test_append_event_no_delta_no_extract(self):
+        """Event without state_delta -> is_force_extract=False."""
+        client = _make_mock_client()
+        service = AgentArtsSessionService(client)
+
+        session = Session(
+            id="session-123",
+            app_name="test-app",
+            user_id="user-123",
+            state={},
+            events=[],
+        )
+        event = _make_text_event()
+
+        await service.append_event(session, event)
+
+        call_kwargs = client.add_messages.call_args.kwargs
+        assert call_kwargs["is_force_extract"] is False
+
+
+# ============================================================================
+# TestUserStateRecovery
+# ============================================================================
+
+
+def _make_search_response(results):
+    """Create a mock MemorySearchResponse with given results list."""
+    response = MagicMock()
+    response.results = results
+    return response
+
+
+def _make_search_record(content, updated_at=None, created_at=None):
+    """Create a search result dict: {"record": {...}, "score": ...}."""
+    record = {"content": content}
+    if updated_at is not None:
+        record["updated_at"] = updated_at
+    if created_at is not None:
+        record["created_at"] = created_at
+    return {"record": record, "score": 0.9}
+
+
+class TestUserStateRecovery:
+    """Tests for user state recovery in get_session."""
+
+    @pytest.mark.asyncio
+    async def test_get_session_merges_preferences_fixed_key(self):
+        """Track 1: preferences merged under the fixed key."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        client.get_last_k_messages.return_value = []
+        client.list_messages.return_value = _make_message_list_response([])
+        client.search_memories.return_value = _make_search_response(
+            [
+                _make_search_record("用户月预算 5000 元"),
+                _make_search_record("用户偏好饼图"),
+            ]
+        )
+
+        service = AgentArtsSessionService(client)
+        session = await service.get_session(
+            app_name="test-app",
+            user_id="user-123",
+            session_id="session-123",
+        )
+
+        assert session.state["user:preferences"] == (
+            "- 用户月预算 5000 元\n- 用户偏好饼图"
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_session_search_filter(self):
+        """search_memories is called with the right filter."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        client.get_last_k_messages.return_value = []
+        client.list_messages.return_value = _make_message_list_response([])
+        client.search_memories.return_value = _make_search_response([])
+
+        service = AgentArtsSessionService(client)
+        await service.get_session(
+            app_name="test-app",
+            user_id="user-123",
+            session_id="session-123",
+        )
+
+        client.search_memories.assert_called_once()
+        filters = client.search_memories.call_args.kwargs["filters"]
+        assert filters.actor_id == "user-123"
+        assert filters.strategy_type == "user_preference"
+        assert filters.query == "user preferences and settings"
+        assert filters.top_k == 10
+        assert filters.min_score == 0.5
+
+    @pytest.mark.asyncio
+    async def test_get_session_user_state_disabled(self):
+        """Switch off: no search, session state still restored."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        state = {"step": 1}
+        client.get_last_k_messages.return_value = [_make_message_with_state(state=state)]
+        client.list_messages.return_value = _make_message_list_response([])
+
+        service = AgentArtsSessionService(
+            client, user_state_recovery_enabled=False
+        )
+        session = await service.get_session(
+            app_name="test-app",
+            user_id="user-123",
+            session_id="session-123",
+        )
+
+        client.search_memories.assert_not_called()
+        assert session.state == state
+        assert "user:preferences" not in session.state
+
+    @pytest.mark.asyncio
+    async def test_get_session_search_exception_degrades(self):
+        """Search exception -> empty dict, get_session still works."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        state = {"step": 1}
+        client.get_last_k_messages.return_value = [_make_message_with_state(state=state)]
+        client.list_messages.return_value = _make_message_list_response([])
+        client.search_memories.side_effect = RuntimeError("boom")
+
+        service = AgentArtsSessionService(client)
+        session = await service.get_session(
+            app_name="test-app",
+            user_id="user-123",
+            session_id="session-123",
+        )
+
+        # get_session must not fail; session state still restored
+        assert session is not None
+        assert session.state == state
+        assert "user:preferences" not in session.state
+
+    @pytest.mark.asyncio
+    async def test_get_session_empty_search(self):
+        """Empty search results -> no user: keys."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        client.get_last_k_messages.return_value = []
+        client.list_messages.return_value = _make_message_list_response([])
+        client.search_memories.return_value = _make_search_response([])
+
+        service = AgentArtsSessionService(client)
+        session = await service.get_session(
+            app_name="test-app",
+            user_id="user-123",
+            session_id="session-123",
+        )
+
+        assert "user:preferences" not in session.state
+
+    @pytest.mark.asyncio
+    async def test_get_session_structured_parse_disabled_by_default(self):
+        """Track 2 off: key=value content stays only in preferences text."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        client.get_last_k_messages.return_value = []
+        client.list_messages.return_value = _make_message_list_response([])
+        client.search_memories.return_value = _make_search_response(
+            [_make_search_record("budget=5000")]
+        )
+
+        service = AgentArtsSessionService(client)
+        session = await service.get_session(
+            app_name="test-app",
+            user_id="user-123",
+            session_id="session-123",
+        )
+
+        assert session.state == {"user:preferences": "- budget=5000"}
+        assert "user:budget" not in session.state
+
+    @pytest.mark.asyncio
+    async def test_get_session_structured_parse_enabled(self):
+        """Track 2 on: precise key parsed from key=value content."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        client.get_last_k_messages.return_value = []
+        client.list_messages.return_value = _make_message_list_response([])
+        client.search_memories.return_value = _make_search_response(
+            [_make_search_record("budget=5000")]
+        )
+
+        service = AgentArtsSessionService(
+            client, parse_structured_preferences=True
+        )
+        session = await service.get_session(
+            app_name="test-app",
+            user_id="user-123",
+            session_id="session-123",
+        )
+
+        assert session.state["user:budget"] == "5000"
+        assert session.state["user:preferences"] == "- budget=5000"
+
+    @pytest.mark.asyncio
+    async def test_get_session_structured_reserved_key_skipped(self):
+        """Track 2 skips the reserved 'preferences' key."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        client.get_last_k_messages.return_value = []
+        client.list_messages.return_value = _make_message_list_response([])
+        client.search_memories.return_value = _make_search_response(
+            [_make_search_record("preferences=pie")]
+        )
+
+        service = AgentArtsSessionService(
+            client, parse_structured_preferences=True
+        )
+        session = await service.get_session(
+            app_name="test-app",
+            user_id="user-123",
+            session_id="session-123",
+        )
+
+        # Track 2 must not create user:preferences from structured parsing
+        assert session.state["user:preferences"] == "- preferences=pie"
+
+    @pytest.mark.asyncio
+    async def test_get_session_structured_latest_wins(self):
+        """Same key multiple hits -> newest updated_at wins."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        client.get_last_k_messages.return_value = []
+        client.list_messages.return_value = _make_message_list_response([])
+        client.search_memories.return_value = _make_search_response(
+            [
+                _make_search_record("budget=5000", updated_at="2026-09-01T00:00:00Z"),
+                _make_search_record("budget=6000", updated_at="2026-09-05T00:00:00Z"),
+            ]
+        )
+
+        service = AgentArtsSessionService(
+            client, parse_structured_preferences=True
+        )
+        session = await service.get_session(
+            app_name="test-app",
+            user_id="user-123",
+            session_id="session-123",
+        )
+
+        assert session.state["user:budget"] == "6000"
+
+    @pytest.mark.asyncio
+    async def test_get_session_structured_int_timestamp(self):
+        """int millisecond timestamps do not raise TypeError."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        client.get_last_k_messages.return_value = []
+        client.list_messages.return_value = _make_message_list_response([])
+        client.search_memories.return_value = _make_search_response(
+            [
+                _make_search_record("budget=5000", updated_at=1756000000000),
+                _make_search_record("budget=6000", updated_at=1756500000000),
+            ]
+        )
+
+        service = AgentArtsSessionService(
+            client, parse_structured_preferences=True
+        )
+        session = await service.get_session(
+            app_name="test-app",
+            user_id="user-123",
+            session_id="session-123",
+        )
+
+        assert session.state["user:budget"] == "6000"
+
+    @pytest.mark.asyncio
+    async def test_get_session_structured_no_timestamp_first_wins(self):
+        """No timestamp -> degrade to first wins."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        client.get_last_k_messages.return_value = []
+        client.list_messages.return_value = _make_message_list_response([])
+        client.search_memories.return_value = _make_search_response(
+            [
+                _make_search_record("budget=5000"),
+                _make_search_record("budget=6000"),
+            ]
+        )
+
+        service = AgentArtsSessionService(
+            client, parse_structured_preferences=True
+        )
+        session = await service.get_session(
+            app_name="test-app",
+            user_id="user-123",
+            session_id="session-123",
+        )
+
+        assert session.state["user:budget"] == "5000"
+
+    @pytest.mark.asyncio
+    async def test_get_session_structured_bad_key_rejected(self):
+        """Digit-leading key rejected by isidentifier."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        client.get_last_k_messages.return_value = []
+        client.list_messages.return_value = _make_message_list_response([])
+        client.search_memories.return_value = _make_search_response(
+            [_make_search_record("1key=xxx")]
+        )
+
+        service = AgentArtsSessionService(
+            client, parse_structured_preferences=True
+        )
+        session = await service.get_session(
+            app_name="test-app",
+            user_id="user-123",
+            session_id="session-123",
+        )
+
+        assert "user:1key" not in session.state
+        assert session.state["user:preferences"] == "- 1key=xxx"
+
+    @pytest.mark.asyncio
+    async def test_get_session_record_none_skipped(self):
+        """record is None -> skipped, no crash."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        client.get_last_k_messages.return_value = []
+        client.list_messages.return_value = _make_message_list_response([])
+        client.search_memories.return_value = _make_search_response(
+            [{"record": None, "score": 0.9}, _make_search_record("预算 5000")]
+        )
+
+        service = AgentArtsSessionService(client)
+        session = await service.get_session(
+            app_name="test-app",
+            user_id="user-123",
+            session_id="session-123",
+        )
+
+        assert session.state["user:preferences"] == "- 预算 5000"
+
+    @pytest.mark.asyncio
+    async def test_get_session_result_not_dict_skipped(self):
+        """Search result element not a dict -> skipped."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        client.get_last_k_messages.return_value = []
+        client.list_messages.return_value = _make_message_list_response([])
+        client.search_memories.return_value = _make_search_response(
+            [None, "junk", _make_search_record("预算 5000")]
+        )
+
+        service = AgentArtsSessionService(client)
+        session = await service.get_session(
+            app_name="test-app",
+            user_id="user-123",
+            session_id="session-123",
+        )
+
+        assert session.state["user:preferences"] == "- 预算 5000"
+
+    @pytest.mark.asyncio
+    async def test_get_session_content_not_string_skipped(self):
+        """Non-string content -> skipped."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        client.get_last_k_messages.return_value = []
+        client.list_messages.return_value = _make_message_list_response([])
+        client.search_memories.return_value = _make_search_response(
+            [
+                {"record": {"content": {"nested": True}}, "score": 0.9},
+                _make_search_record("预算 5000"),
+            ]
+        )
+
+        service = AgentArtsSessionService(client)
+        session = await service.get_session(
+            app_name="test-app",
+            user_id="user-123",
+            session_id="session-123",
+        )
+
+        assert session.state["user:preferences"] == "- 预算 5000"
+
+    @pytest.mark.asyncio
+    async def test_get_session_parse_exception_isolated(self):
+        """Track 2 parse exception -> that entry dropped, Track 1 intact."""
+        client = _make_mock_client()
+        client.get_session.return_value = _make_session_info()
+        client.get_last_k_messages.return_value = []
+        client.list_messages.return_value = _make_message_list_response([])
+        client.search_memories.return_value = _make_search_response(
+            [_make_search_record("预算 5000")]
+        )
+
+        service = AgentArtsSessionService(
+            client, parse_structured_preferences=True
+        )
+
+        # Monkey-patch the parser to raise, simulating an unexpected failure
+        import agentarts.sdk.integration.google_adk.session_service as ss
+
+        original = ss._parse_structured_preference
+
+        def _boom(content):
+            raise ValueError("unexpected")
+
+        ss._parse_structured_preference = _boom
+        try:
+            session = await service.get_session(
+                app_name="test-app",
+                user_id="user-123",
+                session_id="session-123",
+            )
+        finally:
+            ss._parse_structured_preference = original
+
+        # Track 1 still intact despite Track 2 parse failure
+        assert session.state["user:preferences"] == "- 预算 5000"
+
+
+# ============================================================================
 # TestFetchMessages
 # ============================================================================
 
