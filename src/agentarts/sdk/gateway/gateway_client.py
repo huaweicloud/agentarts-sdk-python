@@ -20,10 +20,11 @@ class GatewayClient(BaseHTTPClient):
     Inherits from BaseHTTPClient to provide service-specific API methods.
     """
 
-    def __init__(self, verify_ssl: bool = True):
+    def __init__(self, verify_ssl: bool = True, max_retries: int = 2):
         config = RequestConfig()
         config.base_url = f"{get_control_plane_endpoint()}/v1/core"
         config.verify_ssl = verify_ssl
+        config.max_retries = max_retries
         self.verify_ssl = verify_ssl
         super().__init__(config, open_ak_sk=True)
 

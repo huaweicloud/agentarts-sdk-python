@@ -55,6 +55,7 @@ class _DataPlane:
             region_name: str | None = None,
             api_key: str | None = None,
             verify_ssl: bool | str = True,
+            max_retries: int = 2,
     ):
         """
         Initialize data plane.
@@ -66,12 +67,16 @@ class _DataPlane:
                 - True: Verify SSL certificates using system CA bundle
                 - False: Skip SSL verification (not recommended for production)
                 - str: Path to custom CA certificate file
+            max_retries: Maximum number of retries for retryable failures
+                (network error, 429, 5xx). ``0`` disables retry.
+                Default ``2``.
         """
         self.client = MemoryHttpService(
             region_name=region_name,
             endpoint_type="data",
             api_key=api_key,
             verify_ssl=verify_ssl,
+            max_retries=max_retries,
         )
         logger.info("DataPlane initialized")
 

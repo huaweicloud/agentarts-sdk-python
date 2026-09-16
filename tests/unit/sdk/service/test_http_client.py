@@ -447,11 +447,13 @@ class TestBaseHTTPClientResponseParsing:
         mock_resp.headers = {}
         mock_request.return_value = mock_resp
 
-        client = BaseHTTPClient()
+        # max_retries=0: 失败路径测试不触发重试，保持快速且断言明确。
+        client = BaseHTTPClient(RequestConfig(max_retries=0))
         result = client.get("/error")
 
         assert result.success is False
         assert result.status_code == 500
+        mock_request.assert_called_once()
 
     @patch("agentarts.sdk.service.http_client.requests.Session.request")
     def test_response_headers_captured(self, mock_request):
@@ -482,48 +484,53 @@ class TestBaseHTTPClientErrors:
         """Test that Timeout exception returns a failed result."""
         mock_request.side_effect = Timeout("Connection timed out")
 
-        client = BaseHTTPClient()
+        # max_retries=0: 网络错误默认会重试，此测试只验证单次失败语义。
+        client = BaseHTTPClient(RequestConfig(max_retries=0))
         result = client.get("/slow")
 
         assert result.success is False
         assert result.status_code == 0
         assert "timeout" in result.error.lower()
+        mock_request.assert_called_once()
 
     @patch("agentarts.sdk.service.http_client.requests.Session.request")
     def test_connection_error(self, mock_request):
         """Test that ConnectionError returns a failed result."""
         mock_request.side_effect = ConnectionError("Connection refused")
 
-        client = BaseHTTPClient()
+        client = BaseHTTPClient(RequestConfig(max_retries=0))
         result = client.get("/unreachable")
 
         assert result.success is False
         assert result.status_code == 0
         assert "error" in result.error.lower()
+        mock_request.assert_called_once()
 
     @patch("agentarts.sdk.service.http_client.requests.Session.request")
     def test_generic_request_exception(self, mock_request):
         """Test that generic RequestException returns a failed result."""
         mock_request.side_effect = RequestException("Something went wrong")
 
-        client = BaseHTTPClient()
+        client = BaseHTTPClient(RequestConfig(max_retries=0))
         result = client.get("/fail")
 
         assert result.success is False
         assert result.status_code == 0
         assert "error" in result.error.lower()
+        mock_request.assert_called_once()
 
     @patch("agentarts.sdk.service.http_client.requests.Session.request")
     def test_unexpected_exception(self, mock_request):
         """Test that unexpected exceptions are caught and returned."""
         mock_request.side_effect = RuntimeError("Unexpected")
 
-        client = BaseHTTPClient()
+        client = BaseHTTPClient(RequestConfig(max_retries=0))
         result = client.get("/unexpected")
 
         assert result.success is False
         assert result.status_code == 0
         assert "unexpected" in result.error.lower()
+        mock_request.assert_called_once()
 
 
 # ============================================================

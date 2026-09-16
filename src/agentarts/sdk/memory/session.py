@@ -74,7 +74,8 @@ class MemorySession:
             actor_id: str,
             session_id: str | None = None,
             region_name: str | None = None,
-            api_key: str | None = None
+            api_key: str | None = None,
+            max_retries: int = 2,
     ):
         """
         Initialize MemorySession
@@ -95,6 +96,9 @@ class MemorySession:
             region_name: Huawei Cloud region name, optional, default "cn-southwest-2"
             api_key: API Key for data plane authentication, optional.
                 If not provided, will read from HUAWEICLOUD_SDK_MEMORY_API_KEY environment variable.
+            max_retries: Maximum number of retries for retryable failures
+                (network error, 429, 5xx). ``0`` disables retry.
+                Default ``2`` (total attempts = max_retries + 1).
 
         Raises:
             ValueError: When Session creation fails
@@ -125,7 +129,11 @@ class MemorySession:
         self.actor_id = actor_id
         self._region_name = region_name
 
-        self._data_plane = _DataPlane(region_name=region_name, api_key=api_key)
+        self._data_plane = _DataPlane(
+            region_name=region_name,
+            api_key=api_key,
+            max_retries=max_retries,
+        )
 
         # If session_id is not provided, call backend API to create a new session
         if session_id is None:

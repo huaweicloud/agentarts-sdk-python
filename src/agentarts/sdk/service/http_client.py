@@ -13,6 +13,8 @@ response ``Content-Type`` header:
 """
 
 import logging
+import random
+import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from enum import Enum
@@ -30,6 +32,10 @@ logger = logging.getLogger(__name__)
 
 _STREAM_CONTENT_TYPES = {"text/event-stream", "application/x-ndjson"}
 
+# 可重试的 HTTP 状态码：429 限流 + 5xx 服务端错误。
+# 与 MemoryAPIException.retryable 的判定集合保持一致（同一错误分类语义）。
+_RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+
 
 class APIException(Exception):
     """Exception for API errors."""
@@ -39,6 +45,31 @@ class APIException(Exception):
         self.error_code = error_code
         self.error_msg = error_msg
         super().__init__(f"[{error_code}] HTTP {status_code}: {error_msg}")
+
+
+class MemoryAPIException(APIException):
+    """Custom exception for Memory API errors.
+
+    分类约定：
+    - 网络错误：status_code=0, error_code="NETWORK_ERROR"（请求未获得服务器响应）。
+    - 解析错误：status_code 为实际 HTTP 状态码, error_code="PARSE_ERROR"
+      （2xx 但响应体非合法 JSON）。
+    - 服务端错误：status_code 为实际 HTTP 状态码。
+    """
+
+    @property
+    def is_network_error(self) -> bool:
+        """True 表示请求未获得服务器响应（网络层故障）。"""
+        return self.status_code == 0 and self.error_code == "NETWORK_ERROR"
+
+    @property
+    def retryable(self) -> bool:
+        """是否建议重试：网络错误、429 限流、5xx 服务端错误。
+
+        状态码判定复用模块级 ``_RETRYABLE_STATUS_CODES`` 常量，与
+        ``BaseHTTPClient._request`` 的重试判定保持单一事实来源。
+        """
+        return self.is_network_error or self.status_code in _RETRYABLE_STATUS_CODES
 
 
 class SignMode(Enum):
@@ -60,12 +91,21 @@ class RequestConfig:
             - True: Verify SSL certificates using system CA bundle (default)
             - False: Skip SSL verification (not recommended for production)
             - str: Path to custom CA certificate file
+        max_retries: Maximum number of retries for retryable
+            failures (network error, 429, 5xx). ``0`` disables retry.
+            Default ``2`` (total attempts = max_retries + 1).
+        retry_backoff: Initial backoff seconds for exponential retry.
+            Default 1.0.
+        retry_max_backoff: Maximum backoff seconds. Default 60.0.
     """
 
     base_url: str = ""
     timeout: float = 30.0
     headers: dict[str, str] = field(default_factory=dict)
     verify_ssl: bool | str = True
+    max_retries: int = 2
+    retry_backoff: float = 1.0
+    retry_max_backoff: float = 60.0
 
 
 @dataclass
@@ -337,7 +377,7 @@ class BaseHTTPClient:
 
     def _request(self, method: str, url: str, **kwargs) -> RequestResult:
         """
-        Execute HTTP request and return a RequestResult.
+        Execute HTTP request with bounded retry and return a RequestResult.
 
         The response body is **not** consumed immediately.  Instead the
         ``Content-Type`` header is inspected:
@@ -346,20 +386,68 @@ class BaseHTTPClient:
           a streaming ``RequestResult`` is returned.  The caller must
           consume the body via ``iter_lines()`` / ``iter_bytes()`` and
           eventually call ``close()`` (or let the iterator exhaust).
+          Streaming responses are **never retried** (the stream cannot
+          be replayed); retry only applies to regular responses.
 
         - Otherwise the body is read into memory and parsed as JSON
           (falling back to plain text).
+
+        Retry semantics:
+        - Only retryable failures are retried: network errors
+          (``status_code == 0``) and HTTP 429 / 5xx.
+        - ``max_retries`` (per-call override or ``RequestConfig``
+          default) bounds the number of retries; ``0`` disables retry.
+        - Exponential backoff with jitter between attempts.  Each
+          attempt runs ``_request_once`` which re-signs the request,
+          so the AK/SK timestamp stays fresh across retries.
 
         Args:
             method: HTTP method (GET, POST, etc.).
             url: Relative URL path (appended to base_url).
             **kwargs: Additional arguments forwarded to
                 ``requests.Session.request`` (e.g. ``json``, ``data``,
-                ``params``, ``headers``).
+                ``params``, ``headers``).  ``max_retries`` may be passed
+                to override the ``RequestConfig`` default per call.
 
         Returns:
             A RequestResult with status, headers, and parsed/streaming body.
         """
+        max_retries = kwargs.pop("max_retries", self._config.max_retries)
+        backoff = self._config.retry_backoff
+        max_backoff = self._config.retry_max_backoff
+
+        attempt = 0
+        while True:
+            result = self._request_once(method, url, **kwargs)
+
+            # 流式响应不可重放，不自动重试（即使失败也交给调用方处理）。
+            if result.streaming:
+                return result
+
+            retryable = (
+                result.status_code == 0  # 网络错误 / 超时
+                or result.status_code in _RETRYABLE_STATUS_CODES
+            )
+            if not retryable or attempt >= max_retries:
+                return result
+
+            attempt += 1
+            delay = min(backoff * (2 ** (attempt - 1)), max_backoff)
+            jitter = random.uniform(0, delay * 0.1)
+            logger.info(
+                "Request %s %s failed (status=%s), retrying %d/%d "
+                "after %.2fs",
+                method,
+                url,
+                result.status_code,
+                attempt,
+                max_retries,
+                delay + jitter,
+            )
+            time.sleep(delay + jitter)
+
+    def _request_once(self, method: str, url: str, **kwargs) -> RequestResult:
+        """Execute a single HTTP attempt (no retry)."""
         full_url = self._config.base_url + url
 
         if self._open_ak_sk:

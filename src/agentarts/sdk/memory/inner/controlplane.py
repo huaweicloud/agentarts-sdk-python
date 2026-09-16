@@ -26,6 +26,7 @@ class _ControlPlane:
             self,
             region_name: str | None = None,
             verify_ssl: bool | str = True,
+            max_retries: int = 2,
     ):
         """
         Initialize control plane.
@@ -36,11 +37,15 @@ class _ControlPlane:
                 - True: Verify SSL certificates using system CA bundle (default)
                 - False: Skip SSL verification (not recommended for production)
                 - str: Path to custom CA certificate file
+            max_retries: Maximum number of retries for retryable failures
+                (network error, 429, 5xx). ``0`` disables retry.
+                Default ``2``.
         """
         self.client = MemoryHttpService(
             region_name=region_name,
             endpoint_type="control",
             verify_ssl=verify_ssl,
+            max_retries=max_retries,
         )
         logger.info("ControlPlane initialized")
 

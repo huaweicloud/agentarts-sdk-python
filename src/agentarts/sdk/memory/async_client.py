@@ -56,6 +56,7 @@ class AsyncMemoryClient:
             region_name: str | None = None,
             api_key: str | None = None,
             verify_ssl: bool | str = True,
+            max_retries: int = 2,
     ):
         """
         Initialize Async Memory Client - identical parameters to MemoryClient.
@@ -67,15 +68,20 @@ class AsyncMemoryClient:
                 - True: Verify SSL certificates using system CA bundle (default)
                 - False: Skip SSL verification (not recommended for production)
                 - str: Path to custom CA certificate file
+            max_retries: Maximum number of retries for retryable failures
+                (network error, 429, 5xx). ``0`` disables retry.
+                Default ``2`` (total attempts = max_retries + 1).
         """
         self.region_name = region_name or get_region()
         self._verify_ssl = verify_ssl
+        self._max_retries = max_retries
 
         self._control_plane = None
         self._async_data_plane = _AsyncDataPlane(
             region_name=region_name,
             api_key=api_key,
             verify_ssl=verify_ssl,
+            max_retries=max_retries,
         )
         self._control_plane_init_lock = threading.Lock()
 
@@ -86,6 +92,7 @@ class AsyncMemoryClient:
                 self._control_plane = _ControlPlane(
                     region_name=region_name,
                     verify_ssl=self._verify_ssl,
+                    max_retries=self._max_retries,
                 )
 
     # ==================== Control Plane - Space Management (Synchronous) ====================

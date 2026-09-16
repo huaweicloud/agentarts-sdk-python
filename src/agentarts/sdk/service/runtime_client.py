@@ -723,6 +723,7 @@ class RuntimeClient:
         timeout: int = 900,
         user_id: str | None = None,
         custom_path: str | None = None,
+        max_retries: int = 2,
         **extra: Any,
     ) -> dict[str, Any] | Iterator[str]:
         """
@@ -745,6 +746,12 @@ class RuntimeClient:
                 passed as the ``USER_ID_HEADER`` header.
             custom_path: Optional custom path appended to /invocations path
                 (e.g., 'stream' -> /invocations/stream).
+            max_retries: Maximum number of retries for retryable failures
+                (network error, 429, 5xx). ``0`` disables retry.
+                Default ``2``.  Streaming responses are never retried
+                (the SSE stream cannot be replayed) — retry only applies
+                to regular JSON responses; for streaming calls the caller
+                should handle retry at a higher level.
             **extra: Additional fields merged into the request.
 
         Returns:
@@ -776,6 +783,7 @@ class RuntimeClient:
             params=params if params else None,
             headers=headers,
             timeout=timeout,
+            max_retries=max_retries,
         )
 
         return self._dispatch_response(result, "invoke_agent")
@@ -790,6 +798,7 @@ class RuntimeClient:
         endpoint: str | None = None,
         user_id: str | None = None,
         timeout: int = 900,
+        max_retries: int = 2,
     ) -> dict[str, Any] | Iterator[str]:
         """
         Execute command in runtime with optional streaming response.
@@ -805,6 +814,12 @@ class RuntimeClient:
             user_id: Optional user ID for OAuth2 outbound credentials.
             timeout: Command execution timeout in seconds (sent in the request body).
                 The HTTP client timeout is set to timeout + 60s to allow for overhead.
+            max_retries: Maximum number of retries for retryable failures
+                (network error, 429, 5xx). ``0`` disables retry.
+                Default ``2``.  Chunked/streaming responses are never
+                retried (the ndjson stream cannot be replayed); for
+                chunked calls the caller should handle retry at a
+                higher level.
 
         Returns:
             dict for normal mode, Iterator[str] for chunked mode (ndjson lines).
@@ -835,6 +850,7 @@ class RuntimeClient:
             params=params if params else None,
             headers=headers,
             timeout=timeout + 60,
+            max_retries=max_retries,
         )
 
         if not result.success:

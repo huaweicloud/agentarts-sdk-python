@@ -46,6 +46,7 @@ class _AsyncDataPlane:
             region_name: str | None = None,
             api_key: str | None = None,
             verify_ssl: bool | str = True,
+            max_retries: int = 2,
     ):
         """
         Initialize async data plane - identical to sync version.
@@ -54,12 +55,16 @@ class _AsyncDataPlane:
             region_name: Huawei Cloud region name, auto-detected from environment if not provided
             api_key: API Key for data plane authentication (optional, falls back to environment variable)
             verify_ssl: SSL verification setting (default: True).
+            max_retries: Maximum number of retries for retryable failures
+                (network error, 429, 5xx). ``0`` disables retry.
+                Default ``2``.
         """
         self.client = AsyncMemoryHttpService(
             region_name=region_name,
             endpoint_type="data",
             api_key=api_key,
             verify_ssl=verify_ssl,
+            max_retries=max_retries,
         )
         logger.info("AsyncDataPlane initialized")
 

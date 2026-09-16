@@ -6,9 +6,11 @@ using httpx and HTTP authentication.
 All request parameters, headers, and signing logic are identical to MemoryHttpService.
 """
 
+import asyncio
 import json
 import logging
 import os
+import random
 from typing import Any
 
 import httpx
@@ -17,13 +19,9 @@ from agentarts.sdk.utils.constant import get_memory_endpoint, get_region
 from agentarts.sdk.utils.signer import SDKSigner
 from agentarts.sdk.utils.user_agent import build_user_agent
 
-from .http_client import APIException
+from .http_client import APIException, MemoryAPIException
 
 logger = logging.getLogger(__name__)
-
-
-class MemoryAPIException(APIException):
-    """Custom exception for Memory API errors."""
 
 
 class AsyncDataPlaneAuthenticationStrategy:
@@ -161,6 +159,9 @@ class AsyncMemoryHttpService:
             api_key: str | None = None,
             verify_ssl: bool | str = True,
             enable_signing: bool | None = None,
+            max_retries: int = 2,
+            retry_backoff: float = 1.0,
+            retry_max_backoff: float = 60.0,
     ):
         """Initialize async Memory HTTP service - parameters identical to sync version.
 
@@ -176,6 +177,13 @@ class AsyncMemoryHttpService:
                 - str: Path to custom CA certificate file
             enable_signing: Whether to enable request signing. If None, automatically enabled
                            for control plane and disabled for data plane.
+            max_retries: Maximum number of retries for retryable
+                failures (network error, 429, 5xx). ``0`` disables retry.
+                Default ``2`` (total attempts = max_retries + 1).
+            retry_backoff: Initial backoff seconds for exponential retry.
+                Default 1.0 (same as ``RequestConfig``).
+            retry_max_backoff: Maximum backoff seconds. Default 60.0
+                (same as ``RequestConfig``).
         """
         self.region_name = region_name or get_region()
         self._endpoint = endpoint
@@ -183,6 +191,9 @@ class AsyncMemoryHttpService:
         self.verify_ssl = verify_ssl
         self._api_key = api_key
         self._endpoint_type = endpoint_type
+        self.max_retries = max_retries
+        self.retry_backoff = retry_backoff
+        self.retry_max_backoff = retry_max_backoff
 
         if enable_signing is None:
             self._enable_signing = (endpoint_type == "control")
@@ -237,9 +248,73 @@ class AsyncMemoryHttpService:
             params: dict[str, Any] | None = None,
             data: str | dict[str, Any] | None = None,
             headers: dict[str, str] | None = None,
+            space_id: str | None = None,
+            max_retries: int | None = None,
+    ) -> Any:
+        """Make an async HTTP request to the Memory API with bounded retry.
+
+        Only retryable failures are retried: network errors and HTTP
+        429 / 5xx (``MemoryAPIException.retryable``).  Exponential
+        backoff with jitter between attempts (non-blocking
+        ``asyncio.sleep``).  ``max_retries`` bounds the retry count;
+        ``0`` disables retry.
+
+        Args:
+            method: HTTP method
+            path: API path
+            params: Query parameters
+            data: Request body
+            headers: Custom headers
+            space_id: Space ID for data plane requests
+            max_retries: Per-call override for the retry count
+                (defaults to the value passed at construction).
+
+        Returns:
+            API response data
+
+        Raises:
+            MemoryAPIException: If API request fails
+        """
+        retries = self.max_retries if max_retries is None else max_retries
+        attempt = 0
+        while True:
+            try:
+                return await self._make_request_once(
+                    method=method,
+                    path=path,
+                    params=params,
+                    data=data,
+                    headers=headers,
+                    space_id=space_id,
+                )
+            except MemoryAPIException as e:
+                if not e.retryable or attempt >= retries:
+                    raise
+                attempt += 1
+                delay = min(self.retry_backoff * (2 ** (attempt - 1)), self.retry_max_backoff)
+                jitter = random.uniform(0, delay * 0.1)
+                logger.info(
+                    "Memory async request %s %s failed (status=%s), "
+                    "retrying %d/%d after %.2fs",
+                    method,
+                    path,
+                    e.status_code,
+                    attempt,
+                    retries,
+                    delay + jitter,
+                )
+                await asyncio.sleep(delay + jitter)
+
+    async def _make_request_once(
+            self,
+            method: str,
+            path: str,
+            params: dict[str, Any] | None = None,
+            data: str | dict[str, Any] | None = None,
+            headers: dict[str, str] | None = None,
             space_id: str | None = None
     ) -> Any:
-        """Make an async HTTP request to the Memory API.
+        """Make a single async HTTP request to the Memory API (no retry).
 
         All request handling logic identical to sync version:
         - URL construction
@@ -290,7 +365,15 @@ class AsyncMemoryHttpService:
 
             if response.status_code in {200, 201}:
                 if response.headers.get("content-type", "").startswith("application/json"):
-                    return response.json()
+                    try:
+                        return response.json()
+                    except ValueError as e:  # 覆盖 json.JSONDecodeError
+                        # 2xx 但响应体非合法 JSON：解析错误，区别于网络错误
+                        raise MemoryAPIException(
+                            status_code=response.status_code,
+                            error_code="PARSE_ERROR",
+                            error_msg=f"Failed to parse JSON response: {e}",
+                        ) from e
                 return {"response": response.text}
             if response.status_code == 204:
                 return {}
@@ -311,12 +394,12 @@ class AsyncMemoryHttpService:
         except Exception as e:
             if isinstance(e, MemoryAPIException):
                 raise
-            logger.exception(f"HTTP request failed: {e}")
+            logger.warning(f"Network request failed: {e}")
             raise MemoryAPIException(
-                status_code=503,
+                status_code=0,  # 0 = 无 HTTP 响应（对齐 BaseHTTPClient 先例）
                 error_code="NETWORK_ERROR",
-                error_msg=str(e)
-            )
+                error_msg=str(e),
+            ) from e  # 保留原始异常链，用户可访问 e.__cause__
 
     async def create_space(self, data: dict[str, Any]) -> dict[str, Any]:
         """Create a new memory space - identical to sync version."""

@@ -108,6 +108,7 @@ class IdentityClient:
         region: str,
         ignore_ssl_verification: bool | None = None,
         client: AgentIdentityClient | None = None,
+        max_retries: int = 3,
     ) -> None:
         """Initialize the identity client with the specified region.
 
@@ -115,9 +116,16 @@ class IdentityClient:
             region: The region name (e.g., 'ap-southeast-4').
             ignore_ssl_verification: Whether to ignore SSL verification.
             client: Optional AgentIdentityClient instance to inject.
+            max_retries: Maximum number of retries for retryable failures
+                (network error, 429, 5xx). Default ``3``.  Semantics
+                follow the Huawei Cloud SDK ``with_retry``: total attempts
+                = max_retries + 1, and the value must be in range [1, 10]
+                (``0`` is not accepted by the SDK — pass a small value to
+                effectively disable retries if needed).
         """
         self.logger = logging.getLogger("agentarts.identity_client")
         self.region = region
+        self._max_retries = max_retries
 
         # Determine SSL verification behavior
         if ignore_ssl_verification is None:
@@ -422,7 +430,7 @@ class IdentityClient:
             )
             resp: CreateWorkloadAccessTokenForJwtResponse = invoker.with_retry(
                 retry_condition=self._should_retry,
-                max_retries=3,
+                max_retries=self._max_retries,
                 backoff_strategy=BackoffStrategies.EQUAL_JITTER,
             ).invoke()
         elif user_id:
@@ -437,7 +445,7 @@ class IdentityClient:
             )
             resp: CreateWorkloadAccessTokenForUserIdResponse = invoker.with_retry(
                 retry_condition=self._should_retry,
-                max_retries=3,
+                max_retries=self._max_retries,
                 backoff_strategy=BackoffStrategies.EQUAL_JITTER,
             ).invoke()
         else:
@@ -450,7 +458,7 @@ class IdentityClient:
             )
             resp: CreateWorkloadAccessTokenResponse = invoker.with_retry(
                 retry_condition=self._should_retry,
-                max_retries=3,
+                max_retries=self._max_retries,
                 backoff_strategy=BackoffStrategies.EQUAL_JITTER,
             ).invoke()
 
@@ -695,7 +703,7 @@ class IdentityClient:
         )
         response: GetResourceApiKeyResponse = invoker.with_retry(
             retry_condition=self._should_retry,
-            max_retries=3,
+            max_retries=self._max_retries,
             backoff_strategy=BackoffStrategies.EQUAL_JITTER,
         ).invoke()
 
@@ -746,7 +754,7 @@ class IdentityClient:
         )
         response: GetResourceStsTokenResponse = invoker.with_retry(
             retry_condition=self._should_retry,
-            max_retries=3,
+            max_retries=self._max_retries,
             backoff_strategy=BackoffStrategies.EQUAL_JITTER,
         ).invoke()
 
