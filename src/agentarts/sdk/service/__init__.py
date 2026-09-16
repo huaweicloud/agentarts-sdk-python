@@ -7,6 +7,7 @@ Provides base HTTP client for API calls.
 from agentarts.sdk.service.http_client import (
     APIException,
     BaseHTTPClient,
+    MemoryAPIException,
     RequestConfig,
     RequestResult,
 )
@@ -19,6 +20,7 @@ __all__ = [
     "BaseHTTPClient",
     "IAMClient",
     "LocalRuntimeClient",
+    "MemoryAPIException",
     "RequestConfig",
     "RequestResult",
     "RuntimeClient",
