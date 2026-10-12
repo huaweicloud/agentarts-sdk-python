@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from requests.exceptions import ConnectionError, RequestException, Timeout
+from requests.structures import CaseInsensitiveDict
 
 from agentarts.sdk.service import (
     BaseHTTPClient,
@@ -827,6 +828,28 @@ class TestBaseHTTPClientStreaming:
         assert result.data is None
         assert result._raw_response is mock_resp
         assert result.headers["Content-Type"] == "text/event-stream; charset=utf-8"
+
+    @patch("agentarts.sdk.service.http_client.requests.Session.request")
+    def test_lowercase_content_type_header_is_recognised(self, mock_request):
+        """Header names are case-insensitive (RFC 9110 §5.1).
+
+        Starlette/Go/nginx commonly emit ``content-type`` in lower case.
+        Storing response headers in a plain dict used to preserve that
+        casing, so every downstream ``result.headers.get("Content-Type")``
+        missed and an SSE reply was swallowed as a raw blob.
+        """
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.ok = True
+        mock_resp.headers = CaseInsensitiveDict({"content-type": "text/event-stream"})
+        mock_request.return_value = mock_resp
+
+        client = BaseHTTPClient(RequestConfig(base_url="https://api.example.com"))
+        result = client._request("GET", "/invocations")
+
+        assert result.streaming is True
+        assert result.headers.get("Content-Type") == "text/event-stream"
+        assert "text/event-stream" in result.headers.get("Content-Type", "")
 
     @patch("agentarts.sdk.service.http_client.requests.Session.request")
     def test_ndjson_content_type_returns_streaming_result(self, mock_request):

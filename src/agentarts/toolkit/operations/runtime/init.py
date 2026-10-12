@@ -1,6 +1,5 @@
 """Init operation implementation"""
 
-import platform as platform_module
 from pathlib import Path
 
 from rich.console import Console
@@ -23,32 +22,6 @@ TEMPLATES = {
     "langgraph": "langgraph",
     "google-adk": "google-adk",
 }
-
-
-def detect_platform() -> str:
-    """
-    Detect the current platform architecture.
-
-    Returns:
-        str: Platform string (e.g., 'linux/amd64', 'linux/arm64')
-    """
-    machine = platform_module.machine().lower()
-    system = platform_module.system().lower()
-
-    if system in {"linux", "darwin"}:
-        if machine in ("aarch64", "arm64"):
-            return "linux/arm64"
-        if machine in ("x86_64", "amd64"):
-            return "linux/amd64"
-    elif system == "windows":
-        if machine in ("amd64", "x86_64"):
-            return "linux/amd64"
-        if machine in ("arm64", "aarch64"):
-            return "linux/arm64"
-
-    # Unknown architecture: default to linux/arm64 (the backend is
-    # predominantly arm).
-    return "linux/arm64"
 
 
 def init_project(
@@ -161,7 +134,6 @@ def create_config_file(
     actual_region = region or "cn-southwest-2"
     actual_swr_org = swr_org or generate_swr_org_name(region=actual_region)
     actual_swr_repo = swr_repo or f"agent_{name}"
-    detected_platform = detect_platform()
     detected_arch = detect_arch()
 
     env_vars = get_template_env_vars(template)
@@ -181,8 +153,6 @@ agents:
       name: {name}
       entrypoint: agent:app
       dependency_file: requirements.txt
-      platform: {detected_platform}
-      language: python3
       base_image: python:3.10-slim
       region: {actual_region}
 

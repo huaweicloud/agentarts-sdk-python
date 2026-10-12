@@ -169,6 +169,14 @@ class V11Signer:
         """
         timestamp = self._get_timestamp()
 
+        # urllib3 silently drops headers whose value is None, so the gateway
+        # never sees them. Drop them here too: otherwise the signature would
+        # cover a header that is not on the wire (401), and `v.strip()` in
+        # `_canonical_headers` would blow up on the None value itself with
+        # "'NoneType' object has no attribute 'strip'".
+        for _key in [k for k, v in headers.items() if v is None]:
+            del headers[_key]
+
         headers["x-sdk-date"] = timestamp
 
         signed_headers = self._signed_headers(headers)

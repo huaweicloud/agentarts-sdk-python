@@ -13,6 +13,34 @@ AGENT_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9-]*[a-z0-9]$")
 AGENT_NAME_MIN_LENGTH = 2
 AGENT_NAME_MAX_LENGTH = 48
 
+ENV_VAR_NAME_PATTERN = re.compile(r"\A[A-Za-z_][A-Za-z0-9_]*\Z")
+
+
+def validate_env_var_name(name: str) -> tuple[bool, str]:
+    """Validate environment variable name format.
+
+    A name must be usable by ``os.environ`` and by a POSIX shell, so it is
+    restricted to letters, digits and underscores and may not start with a
+    digit.
+
+    Args:
+        name: Environment variable name to validate
+
+    Returns:
+        Tuple of (is_valid, error_message)
+        If valid, error_message is empty string
+    """
+    if not name:
+        return False, "Environment variable name is required"
+
+    if not ENV_VAR_NAME_PATTERN.match(name):
+        return False, (
+            f"Invalid environment variable name '{name}': "
+            "must start with a letter or underscore and contain only letters, digits and underscores"
+        )
+
+    return True, ""
+
 
 def validate_agent_name(name: str) -> tuple[bool, str]:
     """Validate agent name format.

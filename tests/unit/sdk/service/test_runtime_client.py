@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from agentarts.sdk.service.runtime_client import (
+    LocalRuntimeClient,
     RuntimeClient,
     StreamDownloadResult,
     is_tar_payload,
@@ -677,3 +678,35 @@ class TestStreamDownloadResult:
 
         result.close()
         assert result._raw_response is None
+
+
+class TestLocalRuntimeClientStreaming:
+    """LocalRuntimeClient does not inherit from RuntimeClient.
+
+    It used to call ``self._parse_sse_stream`` for every
+    ``text/event-stream`` reply, raising
+    ``AttributeError: 'LocalRuntimeClient' object has no attribute '_parse_sse_stream'``.
+    """
+
+    @patch("agentarts.sdk.service.runtime_client.LocalRuntimeClient._request")
+    def test_invoke_agent_parses_sse_stream(self, mock_request):
+        mock_result = MagicMock()
+        mock_result.success = True
+        mock_result.streaming = True
+        mock_result.headers = {"Content-Type": "text/event-stream"}
+        mock_result.iter_lines.return_value = iter(
+            ["data: hello", "", "data: world", "", "data: [DONE]", ""]
+        )
+        mock_request.return_value = mock_result
+
+        client = LocalRuntimeClient(port=8080)
+
+        assert list(client.invoke_agent("{}")) == ["hello", "world"]
+
+
+class TestDeleteAgentByName:
+    def test_missing_agent_returns_false_instead_of_raising(self):
+        client = RuntimeClient(data_endpoint="https://test.example.com")
+
+        with patch.object(RuntimeClient, "find_agent_by_name", return_value=None):
+            assert client.delete_agent_by_name("nope") is False

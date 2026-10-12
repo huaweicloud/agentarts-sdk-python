@@ -79,18 +79,6 @@ class BaseConfig(BaseModel):
         default=None,
         description="Huawei Cloud region",
     )
-    platform: str = Field(
-        default="linux/arm64",
-        description="Platform of the AgentArts runtime",
-    )
-    language: str = Field(
-        default="python3",
-        description="Language of the AgentArts runtime",
-    )
-    container_runtime: str = Field(
-        default="docker",
-        description="Container runtime of the AgentArts runtime",
-    )
     base_image: str = Field(
         default="python:3.10-slim",
         description="Base image of the AgentArts runtime",
@@ -665,7 +653,7 @@ class AgentArtsConfig(BaseModel):
                 if "base" in ordered_agents[agent_name]:
                     ordered_agents[agent_name]["base"] = order_dict(
                         ordered_agents[agent_name]["base"],
-                        ["name", "entrypoint", "dependency_file", "region", "platform", "language", "base_image"]
+                        ["name", "entrypoint", "dependency_file", "region", "base_image"]
                     )
                 if "runtime" in ordered_agents[agent_name]:
                     ordered_agents[agent_name]["runtime"] = order_dict(
@@ -744,7 +732,7 @@ class AgentArtsConfigList(BaseModel):
                 if "base" in ordered_agents[agent_name]:
                     ordered_agents[agent_name]["base"] = order_dict(
                         ordered_agents[agent_name]["base"],
-                        ["name", "entrypoint", "dependency_file", "region", "platform", "language", "base_image"]
+                        ["name", "entrypoint", "dependency_file", "region", "base_image"]
                     )
                 if "runtime" in ordered_agents[agent_name]:
                     ordered_agents[agent_name]["runtime"] = order_dict(

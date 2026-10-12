@@ -4,41 +4,46 @@ AgentArts Framework Integration Module
 Provides adapters for popular agent frameworks with lazy loading support.
 
 Supported frameworks:
-- LangGraph (Priority)
+- LangGraph
 - Google ADK
-- LangChain
-- AutoGen
-- CrewAI
 
 Usage:
-    from agentarts.sdk.integration import LangGraphAdapter
-    adapter = LangGraphAdapter()
+    from agentarts.sdk.integration import AgentArtsMemorySessionSaver
+    saver = AgentArtsMemorySessionSaver(config)
 """
 
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agentarts.sdk.integration.base import BaseAdapter, WrappedAgent
     from agentarts.sdk.integration.google_adk import (
         AgentArtsMemoryService,
         AgentArtsSessionService,
     )
-    from agentarts.sdk.integration.langgraph import LangGraphAdapter
+    from agentarts.sdk.integration.langgraph import (
+        AgentArtsMemorySessionSaver,
+        AgentArtsMemoryStore,
+        CheckpointerConfig,
+    )
 
 __all__ = [
     "AgentArtsMemoryService",
+    "AgentArtsMemorySessionSaver",
+    "AgentArtsMemoryStore",
     "AgentArtsSessionService",
-    "BaseAdapter",
-    "LangGraphAdapter",
-    "WrappedAgent",
+    "CheckpointerConfig",
 ]
 
 _ADAPTER_MODULES = {
-    "BaseAdapter": "agentarts.sdk.integration.base",
-    "WrappedAgent": "agentarts.sdk.integration.base",
-    "LangGraphAdapter": "agentarts.sdk.integration.langgraph",
-    "AgentArtsSessionService": "agentarts.sdk.integration.google_adk",
     "AgentArtsMemoryService": "agentarts.sdk.integration.google_adk",
+    "AgentArtsMemorySessionSaver": "agentarts.sdk.integration.langgraph",
+    "AgentArtsMemoryStore": "agentarts.sdk.integration.langgraph",
+    "AgentArtsSessionService": "agentarts.sdk.integration.google_adk",
+    "CheckpointerConfig": "agentarts.sdk.integration.langgraph",
+}
+
+_EXTRA_FOR_MODULE = {
+    "agentarts.sdk.integration.google_adk": "google-adk",
+    "agentarts.sdk.integration.langgraph": "langgraph",
 }
 
 
@@ -61,24 +66,15 @@ def __getattr__(name: str):
         module = importlib.import_module(module_path)
         return getattr(module, name)
     except ImportError as e:
-        if name == "LangGraphAdapter":
-            msg = (
-                f"{name} requires the 'langgraph' extra to be installed. "
-                f"Install it with:\n"
-                f"  pip install agentarts-sdk[langgraph]\n"
-                f"Original error: {e}"
-            )
-            raise ImportError(
-                msg
-            ) from e
-        if name in ("AgentArtsSessionService", "AgentArtsMemoryService"):
-            msg = (
-                f"{name} requires the 'google-adk' extra to be installed. "
-                f"Install it with:\n"
-                f"  pip install agentarts-sdk[google-adk]\n"
-                f"Original error: {e}"
-            )
-            raise ImportError(
-                msg
-            ) from e
-        raise
+        extra = _EXTRA_FOR_MODULE.get(module_path)
+        if extra is None:
+            raise
+        msg = (
+            f"{name} requires the {extra!r} extra to be installed. "
+            f"Install it with:\n"
+            f"  pip install agentarts-sdk[{extra}]\n"
+            f"Original error: {e}"
+        )
+        raise ImportError(
+            msg
+        ) from e

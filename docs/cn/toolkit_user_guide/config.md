@@ -94,8 +94,6 @@
 | `base.entrypoint` | 入口函数 | `agent:create_app` |
 | `base.region` | 华为云区域 | `cn-southwest-2` |
 | `base.dependency_file` | 依赖文件 | `requirements.txt` |
-| `base.platform` | 目标平台 | `linux/amd64` |
-| `base.language` | 编程语言 | `python3` |
 | `base.base_image` | 基础镜像 | `python:3.10-slim` |
 
 ### SWR 配置 (swr_config.*)
@@ -276,8 +274,6 @@ agents:
       name: my-agent
       entrypoint: agent:create_app
       dependency_file: requirements.txt
-      platform: linux/amd64
-      language: python3
       base_image: python:3.10-slim
       region: cn-southwest-2
 

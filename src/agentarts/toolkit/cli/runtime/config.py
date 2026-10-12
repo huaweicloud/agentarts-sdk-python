@@ -37,19 +37,36 @@ def main(
     """
     Configure agent settings.
 
-    If run without arguments, starts interactive configuration.
-    If arguments are provided, creates/updates configuration directly.
-
-    Required parameters (will prompt if not provided):
-    - Agent name
-    - Entrypoint
+    If run without arguments, starts interactive configuration, prompting for
+    every value that was not passed as an option.
 
     Examples:
         agentarts config
         agentarts config --name myagent --entrypoint app:main
         agentarts config -n myagent -e app:main --dependency-file requirements.txt --swr-org my-org --swr-repo my-repo
+
+    These options configure an agent directly and therefore only apply to
+    'agentarts config' itself. Use the subcommands (list, get, set, set-default,
+    set-env, remove-env, list-env, remove) for everything else.
     """
     if ctx.invoked_subcommand is not None:
+        unused_options = [
+            flag
+            for flag, option_value in (
+                ("--name", name),
+                ("--entrypoint", entrypoint),
+                ("--region", region),
+                ("--dependency-file", dependency_file),
+                ("--swr-org", swr_organization),
+                ("--swr-repo", swr_repository),
+            )
+            if option_value is not None
+        ]
+        if unused_options:
+            echo_error(
+                f"{', '.join(unused_options)} cannot be used with the '{ctx.invoked_subcommand}' subcommand"
+            )
+            raise typer.Exit(2)
         return
 
     console.print()
