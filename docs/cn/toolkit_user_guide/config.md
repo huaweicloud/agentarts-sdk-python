@@ -114,6 +114,10 @@
 | `runtime.invoke_config.protocol` | 调用协议 | `HTTP` |
 | `runtime.invoke_config.port` | 服务端口 | `8080` |
 | `runtime.identity_configuration.authorizer_type` | 认证类型 | `IAM` |
+| `runtime.lifecycle_config.idle_session_timeout_sec` | 会话空闲超时时间（秒，60-604800） | `900` |
+| `runtime.lifecycle_config.max_alive_time_sec` | 会话最大存活时间（秒，60-604800） | `86400` |
+
+生命周期字段均为可选项。未配置或配置为 `null` 时，由服务端分别使用 900 秒和 86400 秒的默认值。
 
 ## 执行效果
 
@@ -298,6 +302,10 @@ agents:
 
       identity_configuration:
         authorizer_type: IAM
+
+      lifecycle_config:
+        idle_session_timeout_sec: 900
+        max_alive_time_sec: 86400
 
       environment_variables:
         - key: HUAWEICLOUD_SDK_AK
