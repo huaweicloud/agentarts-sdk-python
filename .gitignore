@@ -177,3 +177,6 @@ examples/finance_adk/chart_*.png
 *.bak
 .mnemon/
 docs/agents/
+
+# Local agent workspace (never committed)
+.scratch/
