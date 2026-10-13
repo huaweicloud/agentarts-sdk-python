@@ -176,3 +176,4 @@ examples/finance_adk/chart_*.png
 *.temp
 *.bak
 .mnemon/
+docs/agents/
