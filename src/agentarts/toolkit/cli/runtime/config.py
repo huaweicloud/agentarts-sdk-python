@@ -28,9 +28,10 @@ config_app = typer.Typer(
 def main(
     ctx: typer.Context,
     name: Annotated[str | None, typer.Option("--name", "-n", help="Agent name")] = None,
-    entrypoint: Annotated[str | None, typer.Option("--entrypoint", "-e", help="Agent entrypoint (e.g., app:main)")] = None,
+    entrypoint: Annotated[str | None, typer.Option("--entrypoint", "-e", help="Agent entrypoint (e.g., app:main, com.example.Agent)")] = None,
     region: Annotated[str | None, typer.Option("--region", "-r", help="Huawei Cloud region (e.g., cn-southwest-2)")] = None,
-    dependency_file: Annotated[str | None, typer.Option("--dependency-file", "-d", help="Path to dependency file (e.g., requirements.txt)")] = None,
+    dependency_file: Annotated[str | None, typer.Option("--dependency-file", "-d", help="Path to dependency file (e.g., requirements.txt, pom.xml)")] = None,
+    language: Annotated[str | None, typer.Option("--language", "-l", help="Agent language (e.g., python3, java17). Inferred from dependency-file if omitted.")] = None,
     swr_organization: Annotated[str | None, typer.Option("--swr-org", help="SWR organization name")] = None,
     swr_repository: Annotated[str | None, typer.Option("--swr-repo", help="SWR repository name")] = None,
 ):
@@ -39,6 +40,8 @@ def main(
 
     If run without arguments, starts interactive configuration.
     If arguments are provided, creates/updates configuration directly.
+    Use this (not `init`) when you already have your own project code and
+    only need the `.agentarts_config.yaml` + Dockerfile generated.
 
     Required parameters (will prompt if not provided):
     - Agent name
@@ -48,6 +51,7 @@ def main(
         agentarts config
         agentarts config --name myagent --entrypoint app:main
         agentarts config -n myagent -e app:main --dependency-file requirements.txt --swr-org my-org --swr-repo my-repo
+        agentarts config -n myagent -e com.example.Agent --dependency-file pom.xml --language java17
     """
     if ctx.invoked_subcommand is not None:
         return
@@ -114,7 +118,7 @@ def main(
             default_dep = config_op.detect_dependency_file()
 
         console.print(f"\n[bold]Dependency file [cyan]({default_dep})[/cyan]:[/bold]")
-        console.print("[dim]  Auto-detected from requirements.txt or pyproject.toml. Press Enter to use default[/dim]")
+        console.print("[dim]  Auto-detected from requirements.txt, pyproject.toml or pom.xml. Press Enter to use default[/dim]")
         agent_dependency_file = Prompt.ask("  File", default=default_dep)
 
     org = swr_organization
@@ -184,6 +188,7 @@ def main(
         entrypoint=agent_entrypoint,
         region=agent_region,
         dependency_file=agent_dependency_file if agent_dependency_file else None,
+        language=language,
         swr_organization=org,
         swr_repository=repo,
         set_as_default=True,
