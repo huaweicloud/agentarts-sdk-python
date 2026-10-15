@@ -9,7 +9,7 @@ import platform as platform_module
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class NetworkProtocol(str, Enum):
@@ -179,7 +179,7 @@ class VpcConfig(BaseModel):
         default=None,
         description="Subnet ID",
     )
-    security_group_id: list[str] | None = Field(
+    security_group_ids: list[str] | None = Field(
         default_factory=list,
         description="Security group IDs",
     )
@@ -187,6 +187,26 @@ class VpcConfig(BaseModel):
     model_config = {
         "extra": "allow",
     }
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_security_groups(cls, data: Any) -> Any:
+        """Accept legacy configuration without emitting the old API key."""
+        if not isinstance(data, dict) or "security_group_id" not in data:
+            return data
+        data = data.copy()
+        legacy = data.pop("security_group_id")
+        data.setdefault("security_group_ids", legacy)
+        return data
+
+    @property
+    def security_group_id(self) -> list[str] | None:
+        """Legacy attribute alias for security_group_ids."""
+        return self.security_group_ids
+
+    @security_group_id.setter
+    def security_group_id(self, value: list[str] | None) -> None:
+        self.security_group_ids = value
 
     def to_dict(self) -> dict[str, Any]:
         """Convert configuration to dictionary."""
