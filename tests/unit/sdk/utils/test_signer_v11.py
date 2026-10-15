@@ -122,6 +122,26 @@ class TestSignBasics:
         assert a["Authorization"] == b["Authorization"]
 
 
+class TestNoneValuedHeader:
+    """A None header value (e.g. an unset `x-hw-agentarts-session-id`) used to
+    crash inside `_canonical_headers` with "'NoneType' object has no attribute
+    'strip'".  Signing it would also have been wrong: the transport drops None
+    headers, so the gateway never sees them and verification would fail."""
+
+    def test_none_valued_header_is_dropped_not_signed(self):
+        out = _make_signer().sign(
+            "POST", "/p", None, {"host": "h", "x-hw-agentarts-session-id": None}
+        )
+        assert "x-hw-agentarts-session-id" not in out
+        assert _signed_headers_from_auth(out["Authorization"]) == ["host", "x-sdk-date"]
+
+    def test_signature_matches_the_same_request_without_that_header(self):
+        signer = _make_signer()
+        with_none = signer.sign("POST", "/p", None, {"host": "h", "X-Empty": None})
+        without = signer.sign("POST", "/p", None, {"host": "h"})
+        assert with_none["Authorization"] == without["Authorization"]
+
+
 class TestCanonicalQueryString:
     """``_canonical_query_string`` is the standard-V11 reference implementation.
     It is **not** used to build the signature (the gateway does not sign the

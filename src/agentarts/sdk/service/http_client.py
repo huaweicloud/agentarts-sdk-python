@@ -13,7 +13,7 @@ response ``Content-Type`` header:
 """
 
 import logging
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -101,7 +101,10 @@ class RequestResult:
             ``dict`` (JSON) or ``str``.  For streaming responses this
             is ``None``; use ``iter_lines()`` / ``iter_bytes()`` instead.
         error: Error message if the request failed.
-        headers: Response headers as a dict.
+        headers: Response headers as a case-insensitive mapping (the live
+            ``requests`` header mapping).  Header names are case-insensitive
+            (RFC 9110 §5.1), so a server may legally send ``content-type``
+            instead of ``Content-Type``.
         streaming: ``True`` when the response Content-Type indicates a
             streaming payload (e.g. ``text/event-stream``).
     """
@@ -110,7 +113,7 @@ class RequestResult:
     status_code: int
     data: Any = None
     error: str | None = None
-    headers: dict[str, str] = field(default_factory=dict)
+    headers: Mapping[str, str] = field(default_factory=dict)
     streaming: bool = False
     _raw_response: Any = field(default=None, repr=False)
 
@@ -406,7 +409,7 @@ class BaseHTTPClient:
                     success=response.ok,
                     status_code=response.status_code,
                     data=None,
-                    headers=dict(response.headers),
+                    headers=response.headers,
                     streaming=True,
                     _raw_response=response,
                 )
@@ -429,7 +432,7 @@ class BaseHTTPClient:
                 status_code=response.status_code,
                 data=data,
                 error=error_msg,
-                headers=dict(response.headers),
+                headers=response.headers,
             )
 
         except requests.Timeout as e:

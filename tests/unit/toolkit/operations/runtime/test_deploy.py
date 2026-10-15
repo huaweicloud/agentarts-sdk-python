@@ -10,6 +10,7 @@ from agentarts.toolkit.operations.runtime.deploy import (
 from agentarts.toolkit.utils.runtime.config import (
     AgentArtsConfig,
     AgentArtsRuntimeConfig,
+    KeyValuePair,
     SessionStorageConfig,
     SfsTurboConfig,
     StorageConfig,
@@ -223,6 +224,85 @@ class TestCreateAgentartsRuntime:
         }
 
     @patch("agentarts.toolkit.operations.runtime.deploy.RuntimeClient")
+    def test_empty_env_value_is_forwarded(self, mock_client, tmp_path, monkeypatch):
+        """An explicitly empty env value reaches the API instead of being dropped.
+
+        `dev` injects empty values (it filters on `value is not None`), so
+        `deploy` must use the same rule or the same config behaves differently
+        locally and in the cloud.
+        """
+        monkeypatch.chdir(tmp_path)
+
+        mock_client_instance = MagicMock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.create_or_update_agent.return_value = {
+            "id": "agent-123",
+            "latest_version": "v1",
+        }
+
+        agent_config = AgentArtsConfig(
+            runtime=AgentArtsRuntimeConfig(
+                environment_variables=[
+                    KeyValuePair(key="EMPTY", value=""),
+                    KeyValuePair(key="SET", value="x"),
+                ]
+            )
+        )
+
+        create_agentarts_runtime(
+            agent_name="test-agent",
+            swr_image="swr.cn-north-4.myhuaweicloud.com/org/repo:latest",
+            region="cn-north-4",
+            agent_config=agent_config,
+        )
+
+        call_args = mock_client_instance.create_or_update_agent.call_args
+        assert call_args.kwargs["env_vars"] == [
+            {"key": "EMPTY", "value": ""},
+            {"key": "SET", "value": "x"},
+        ]
+
+    @patch("agentarts.toolkit.operations.runtime.deploy.RuntimeClient")
+    def test_empty_tag_value_is_forwarded(self, mock_client, tmp_path, monkeypatch):
+        """An explicitly empty tag value reaches the API instead of being dropped.
+
+        Tags must filter on `value is not None` (like environment variables)
+        so an empty-string tag is forwarded, while a truly unset (`None`)
+        value is omitted.
+        """
+        monkeypatch.chdir(tmp_path)
+
+        mock_client_instance = MagicMock()
+        mock_client.return_value = mock_client_instance
+        mock_client_instance.create_or_update_agent.return_value = {
+            "id": "agent-123",
+            "latest_version": "v1",
+        }
+
+        agent_config = AgentArtsConfig(
+            runtime=AgentArtsRuntimeConfig(
+                tags=[
+                    KeyValuePair(key="EMPTY", value=""),
+                    KeyValuePair(key="SET", value="x"),
+                    KeyValuePair(key="UNSET", value=None),
+                ]
+            )
+        )
+
+        create_agentarts_runtime(
+            agent_name="test-agent",
+            swr_image="swr.cn-north-4.myhuaweicloud.com/org/repo:latest",
+            region="cn-north-4",
+            agent_config=agent_config,
+        )
+
+        call_args = mock_client_instance.create_or_update_agent.call_args
+        assert call_args.kwargs["tags_config"] == [
+            {"key": "EMPTY", "value": ""},
+            {"key": "SET", "value": "x"},
+        ]
+
+    @patch("agentarts.toolkit.operations.runtime.deploy.RuntimeClient")
     def test_storage_config_session_storage_only_forwarded(self, mock_client, tmp_path, monkeypatch):
         """session_storage alone is forwarded without sfs_turbo."""
         monkeypatch.chdir(tmp_path)
@@ -365,7 +445,7 @@ agents:
     @patch("agentarts.toolkit.operations.runtime.deploy.check_dockerfile_exists")
     @patch("agentarts.toolkit.operations.runtime.deploy.build_docker_image")
     @patch("agentarts.toolkit.operations.runtime.deploy.run_container")
-    def test_local_mode_runs_container(self, mock_build, mock_run, mock_docker, mock_dockerfile, tmp_path, monkeypatch):
+    def test_local_mode_runs_container(self, mock_run, mock_build, mock_dockerfile, mock_docker, tmp_path, monkeypatch):
         """Local mode runs container directly."""
         mock_build.return_value = True
         mock_run.return_value = True

@@ -1,54 +1,14 @@
 """Unit tests for init.py module"""
 
-from unittest.mock import patch
-
 from agentarts.toolkit.operations.runtime.init import (
     TEMPLATES,
     create_agent_file,
     create_config_file,
     create_dockerfile,
     create_requirements_file,
-    detect_platform,
     get_template_env_vars,
     init_project,
 )
-
-
-class TestDetectPlatform:
-    """Tests for detect_platform() function."""
-
-    def test_returns_valid_platform_format(self):
-        """Returns a valid platform string format."""
-        result = detect_platform()
-        assert result in ("linux/amd64", "linux/arm64")
-
-    @patch("platform.machine", return_value="x86_64")
-    @patch("platform.system", return_value="Linux")
-    def test_linux_amd64(self, mock_system, mock_machine):
-        """Returns linux/amd64 for x86_64 Linux."""
-        result = detect_platform()
-        assert result == "linux/amd64"
-
-    @patch("platform.machine", return_value="aarch64")
-    @patch("platform.system", return_value="Linux")
-    def test_linux_arm64(self, mock_system, mock_machine):
-        """Returns linux/arm64 for aarch64 Linux."""
-        result = detect_platform()
-        assert result == "linux/arm64"
-
-    @patch("platform.machine", return_value="amd64")
-    @patch("platform.system", return_value="Windows")
-    def test_windows_amd64(self, mock_system, mock_machine):
-        """Returns linux/amd64 for amd64 Windows."""
-        result = detect_platform()
-        assert result == "linux/amd64"
-
-    @patch("platform.machine", return_value="riscv64")
-    @patch("platform.system", return_value="Linux")
-    def test_unknown_defaults_to_linux_arm64(self, mock_system, mock_machine):
-        """An unrecognised architecture defaults to linux/arm64 (the backend
-        is predominantly arm)."""
-        assert detect_platform() == "linux/arm64"
 
 
 class TestGetTemplateEnvVars:

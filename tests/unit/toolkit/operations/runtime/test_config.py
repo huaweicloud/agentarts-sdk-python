@@ -7,7 +7,6 @@ from agentarts.toolkit.operations.runtime.config import (
     add_agent,
     detect_arch,
     detect_dependency_file,
-    detect_platform,
     get_agent,
     get_config_file_path,
     get_config_value,
@@ -17,6 +16,7 @@ from agentarts.toolkit.operations.runtime.config import (
     save_config,
     set_config_value,
     set_default_agent,
+    set_env,
 )
 from agentarts.toolkit.utils.runtime.config import (
     AgentArtsConfig,
@@ -31,22 +31,6 @@ from agentarts.toolkit.utils.runtime.config import (
     SessionStorageConfig,
     StorageConfig,
 )
-
-
-class TestDetectPlatform:
-    """Tests for detect_platform() function."""
-
-    def test_returns_valid_platform_format(self):
-        """Returns a valid platform string format."""
-        result = detect_platform()
-        assert result in ("linux/amd64", "linux/arm64")
-
-    @patch("platform.machine", return_value="riscv64")
-    @patch("platform.system", return_value="Linux")
-    def test_unknown_defaults_to_linux_arm64(self, mock_system, mock_machine):
-        """An unrecognised architecture defaults to linux/arm64 (the backend
-        is predominantly arm)."""
-        assert detect_platform() == "linux/arm64"
 
 
 class TestDetectArch:
@@ -289,7 +273,7 @@ class TestAddAgent:
 
         config = load_config()
         agent = config.get_agent("test-agent")
-        assert agent.base.arch == ArchType.ARM64
+        assert agent.runtime.arch == ArchType.ARM64
 
     @patch("platform.machine", return_value="x86_64")
     def test_sets_arch_from_detected_environment_x86_64(self, mock_machine, tmp_path, monkeypatch):
@@ -300,12 +284,12 @@ class TestAddAgent:
 
         config = load_config()
         agent = config.get_agent("test-agent")
-        assert agent.base.arch == ArchType.X86_64
+        assert agent.runtime.arch == ArchType.X86_64
 
-    def test_arch_and_platform_default_to_arm_when_omitted(self, tmp_path, monkeypatch):
-        """A config that omits arch/platform defaults to arm64 / linux/arm64 —
-        the AgentArts backend is predominantly arm, so the field defaults (not
-        the machine detection) prefer arm over x86."""
+    def test_arch_defaults_to_arm_when_omitted(self, tmp_path, monkeypatch):
+        """A config that omits arch defaults to arm64 — the AgentArts backend
+        is predominantly arm, so the field default (not the machine detection)
+        prefers arm over x86."""
         (tmp_path / ".agentarts_config.yaml").write_text(
             "default_agent: test-agent\n"
             "agents:\n"
@@ -318,7 +302,6 @@ class TestAddAgent:
 
         agent = load_config().get_agent("test-agent")
         assert agent.runtime.arch == ArchType.ARM64
-        assert agent.base.platform == "linux/arm64"
 
 
 class TestRemoveAgent:
@@ -679,3 +662,93 @@ class TestArtifactSourceSwrInstanceId:
         add_agent(name="c", entrypoint="agent:app", region="cn-southwest-2")
         cfg_txt = (cfg_dir / CONFIG_FILE_NAME).read_text()
         assert "swr_instance_id:" in cfg_txt
+
+
+class TestConfigKeyValidation:
+    """`config set` must reject keys that do not exist in AgentArtsConfig.
+
+    Before the fix any key was accepted, silently written as a pydantic extra
+    and reported as "Done".
+    """
+
+    def test_rejects_unknown_top_level_key(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        add_agent(name="test-agent", entrypoint="agent:app")
+
+        assert set_config_value("nope.key", "x", "test-agent") is False
+        assert "nope" not in (tmp_path / CONFIG_FILE_NAME).read_text()
+
+    def test_rejects_unknown_nested_key(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        add_agent(name="test-agent", entrypoint="agent:app")
+
+        assert set_config_value("base.description", "hello", "test-agent") is False
+        assert "hello" not in (tmp_path / CONFIG_FILE_NAME).read_text()
+
+    def test_rejects_path_through_a_list(self, tmp_path, monkeypatch):
+        """`runtime.environment_variables.0.key` used to raise an uncaught
+        TypeError and abort the CLI with a traceback."""
+        monkeypatch.chdir(tmp_path)
+        add_agent(name="test-agent", entrypoint="agent:app")
+
+        assert set_config_value("runtime.environment_variables.0.key", "K", "test-agent") is False
+
+    def test_rejects_top_level_default_agent(self, tmp_path, monkeypatch):
+        """`default_agent` is not an agent field; `set-default` owns it."""
+        monkeypatch.chdir(tmp_path)
+        add_agent(name="test-agent", entrypoint="agent:app")
+
+        assert set_config_value("default_agent", "other", "test-agent") is False
+
+    def test_sets_value_into_a_null_section(self, tmp_path, monkeypatch):
+        """A nested section that is explicitly null is created instead of crashing."""
+        monkeypatch.chdir(tmp_path)
+        (tmp_path / CONFIG_FILE_NAME).write_text(
+            "default_agent: test-agent\n"
+            "agents:\n"
+            "  test-agent:\n"
+            "    base:\n"
+            "      name: test-agent\n"
+            "    runtime:\n"
+            "      invoke_config: null\n"
+        )
+
+        assert set_config_value("runtime.invoke_config.port", "9090", "test-agent") is True
+        assert get_agent("test-agent").runtime.invoke_config.port == 9090
+
+
+class TestSetEnvValidation:
+    """`set-env` must reject names that os.environ / a shell cannot accept."""
+
+    def test_rejects_name_with_space(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        add_agent(name="test-agent", entrypoint="agent:app")
+
+        assert set_env("a b", "v", "test-agent") is False
+        assert "a b" not in (tmp_path / CONFIG_FILE_NAME).read_text()
+
+    def test_rejects_name_with_equals_sign(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        add_agent(name="test-agent", entrypoint="agent:app")
+
+        assert set_env("X=1", "v", "test-agent") is False
+
+    def test_rejects_empty_name(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        add_agent(name="test-agent", entrypoint="agent:app")
+
+        assert set_env("", "v", "test-agent") is False
+
+    def test_rejects_trailing_newline(self, tmp_path, monkeypatch):
+        """A trailing newline must not slip through a `$`-anchored pattern."""
+        monkeypatch.chdir(tmp_path)
+        add_agent(name="test-agent", entrypoint="agent:app")
+
+        assert set_env("FOO\n", "v", "test-agent") is False
+
+    def test_accepts_valid_name(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        add_agent(name="test-agent", entrypoint="agent:app")
+
+        assert set_env("_MY_VAR1", "v", "test-agent") is True
+        assert get_agent("test-agent").runtime.environment_variables[0].key == "_MY_VAR1"

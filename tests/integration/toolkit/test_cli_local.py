@@ -100,14 +100,23 @@ def test_config_add_writes_yaml_and_lists(cli_runner, tmp_project):
 def test_config_set_get_roundtrip(cli_runner, tmp_project):
     _add_agent(cli_runner)
     assert cli_runner.invoke(
-        app, ["config", "set", "base.description", "hello", "-a", "myagent"]
+        app, ["config", "set", "swr_config.organization", "hello-org", "-a", "myagent"]
     ).exit_code == 0
     # assert the value landed in the YAML (robust vs rich stdout capture)
     cfg = (tmp_project / ".agentarts_config.yaml").read_text()
-    assert "hello" in cfg
+    assert "hello-org" in cfg
     assert cli_runner.invoke(
-        app, ["config", "get", "base.description", "-a", "myagent"]
+        app, ["config", "get", "swr_config.organization", "-a", "myagent"]
     ).exit_code == 0
+
+
+def test_config_set_rejects_unknown_key(cli_runner, tmp_project):
+    _add_agent(cli_runner)
+    result = cli_runner.invoke(
+        app, ["config", "set", "base.description", "hello", "-a", "myagent"]
+    )
+    assert result.exit_code != 0
+    assert "hello" not in (tmp_project / ".agentarts_config.yaml").read_text()
 
 
 def test_config_env_lifecycle(cli_runner, tmp_project):

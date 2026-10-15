@@ -286,7 +286,7 @@ class _DataPlane:
             self,
             space_id: str,
             filters: MemorySearchFilter = None
-    ) -> dict[str, Any]:
+    ) -> MemorySearchResponse:
         """
         Search memories.
 

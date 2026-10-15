@@ -1,14 +1,17 @@
 """Config operation implementation"""
 
-import platform as platform_module
 from pathlib import Path
+from typing import Any, get_args
 
+from pydantic import BaseModel
 from rich.console import Console
 from rich.table import Table
 
+from agentarts.toolkit.utils.common import validate_env_var_name
 from agentarts.toolkit.utils.runtime.config import (
     AgentArtsConfig,
     AgentArtsConfigList,
+    AgentArtsRuntimeConfig,
     BaseConfig,
     SWRConfig,
     detect_arch,
@@ -18,32 +21,6 @@ from agentarts.toolkit.utils.swr_org import generate_swr_org_name
 console = Console()
 
 CONFIG_FILE_NAME = ".agentarts_config.yaml"
-
-
-def detect_platform() -> str:
-    """
-    Detect the current platform architecture.
-
-    Returns:
-        str: Platform string (e.g., 'linux/amd64', 'linux/arm64')
-    """
-    machine = platform_module.machine().lower()
-    system = platform_module.system().lower()
-
-    if system in {"linux", "darwin"}:
-        if machine in ("aarch64", "arm64"):
-            return "linux/arm64"
-        if machine in ("x86_64", "amd64"):
-            return "linux/amd64"
-    elif system == "windows":
-        if machine in ("amd64", "x86_64"):
-            return "linux/amd64"
-        if machine in ("arm64", "aarch64"):
-            return "linux/arm64"
-
-    # Unknown architecture: default to linux/arm64 (the backend is
-    # predominantly arm).
-    return "linux/arm64"
 
 
 def detect_dependency_file() -> str:
@@ -232,7 +209,6 @@ def add_agent(
 
         agent_config = AgentArtsConfig.from_dict(existing_dict)
     else:
-        detected_platform = detect_platform()
         detected_arch = detect_arch()
         agent_config = AgentArtsConfig(
             base=BaseConfig(
@@ -240,8 +216,6 @@ def add_agent(
                 entrypoint=entrypoint,
                 region=region,
                 dependency_file=dependency_file,
-                platform=detected_platform,
-                arch=detected_arch,
             ),
             swr_config=SWRConfig(
                 organization=swr_organization,
@@ -249,6 +223,7 @@ def add_agent(
                 organization_auto_create=organization_auto_create,
                 repository_auto_create=repository_auto_create,
             ),
+            runtime=AgentArtsRuntimeConfig(arch=detected_arch),
         )
 
         final_region = region or "cn-southwest-2"
@@ -364,6 +339,52 @@ def print_agent_detail(name: str | None = None) -> bool:
     return True
 
 
+def _nested_model(annotation: Any) -> type[BaseModel] | None:
+    """Return the BaseModel type inside an annotation, if there is one."""
+    if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+        return annotation
+    for arg in get_args(annotation):
+        if isinstance(arg, type) and issubclass(arg, BaseModel):
+            return arg
+    return None
+
+
+def validate_config_key(key: str) -> tuple[bool, str]:
+    """
+    Check that a dot-notation key addresses a settable field of AgentArtsConfig.
+
+    Args:
+        key: Configuration key (supports dot notation, e.g., "base.region")
+
+    Returns:
+        Tuple of (is_valid, error_message)
+        If valid, error_message is empty string
+    """
+    if key.split(".", 1)[0] == "default_agent":
+        return False, (
+            "The default agent is a top-level setting; use 'agentarts config set-default <name>' instead"
+        )
+
+    model: Any = AgentArtsConfig
+    parts = key.split(".")
+
+    for index, part in enumerate(parts):
+        field = model.model_fields.get(part)
+        if field is None:
+            return False, f"Unknown configuration key '{key}'"
+
+        if index < len(parts) - 1:
+            nested = _nested_model(field.annotation)
+            if nested is None:
+                return False, (
+                    f"Configuration key '{key}' is not settable: "
+                    f"'{part}' is not a nested configuration section"
+                )
+            model = nested
+
+    return True, ""
+
+
 def set_config_value(key: str, value: str, agent_name: str | None = None) -> bool:
     """
     Set a configuration value for an agent.
@@ -390,18 +411,23 @@ def set_config_value(key: str, value: str, agent_name: str | None = None) -> boo
         console.print(f"[red]Error: Agent '{agent_name}' not found[/red]")
         return False
 
+    is_valid, error_msg = validate_config_key(key)
+    if not is_valid:
+        console.print(f"[red]Error: {error_msg}[/red]")
+        return False
+
     keys = key.split(".")
     config_dict = agent_config.to_dict()
 
-    current = config_dict
-    for k in keys[:-1]:
-        if k not in current:
-            current[k] = {}
-        current = current[k]
-
-    current[keys[-1]] = value
-
     try:
+        current = config_dict
+        for k in keys[:-1]:
+            if not isinstance(current.get(k), dict):
+                current[k] = {}
+            current = current[k]
+
+        current[keys[-1]] = value
+
         updated_config = AgentArtsConfig.from_dict(config_dict)
 
         if key == "base.name" and value != agent_name:
@@ -490,6 +516,11 @@ def set_env(key: str, value: str, agent_name: str | None = None) -> bool:
     agent_config = config.get_agent(agent_name)
     if agent_config is None:
         console.print(f"[red]Error: Agent '{agent_name}' not found[/red]")
+        return False
+
+    is_valid, error_msg = validate_env_var_name(key)
+    if not is_valid:
+        console.print(f"[red]Error: {error_msg}[/red]")
         return False
 
     config_dict = agent_config.to_dict()

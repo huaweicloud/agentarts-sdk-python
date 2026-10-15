@@ -126,10 +126,18 @@ def create_agentarts_runtime(
                     storage_config = sc
 
             if runtime_cfg.environment_variables:
-                env_vars = [{"key": kv.key, "value": kv.value} for kv in runtime_cfg.environment_variables if kv.value]
+                env_vars = [
+                    {"key": kv.key, "value": kv.value}
+                    for kv in runtime_cfg.environment_variables
+                    if kv.value is not None
+                ]
 
             if runtime_cfg.tags:
-                tags_config = [{"key": kv.key, "value": kv.value} for kv in runtime_cfg.tags if kv.value]
+                tags_config = [
+                    {"key": kv.key, "value": kv.value}
+                    for kv in runtime_cfg.tags
+                    if kv.value is not None
+                ]
 
             execution_agency_name = runtime_cfg.execution_agency_name
             agent_gateway_id = runtime_cfg.agent_gateway_id
