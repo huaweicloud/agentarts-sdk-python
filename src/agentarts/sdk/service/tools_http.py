@@ -195,6 +195,30 @@ class DataToolsHttpClient(BaseHTTPClient):
             raise ToolsAPIError(response.status_code, response.error)
         return response.data
 
+    def invoke_stream(
+        self,
+        code_interpreter_name: str,
+        session_id: str,
+        arguments: dict | None = None,
+        api_key: str | None = None,
+    ):
+        """POST v1/code-interpreters/{code_interpreter_name}/invoke (SSE streaming)
+
+        Invoke a code interpreter session with SSE streaming response.
+        Returns a RequestResult with streaming=True; use iter_lines() to consume events.
+        """
+        endpoint = f"/v1/code-interpreters/{code_interpreter_name}/invoke"
+        headers = {
+            "x-HW-Agentarts-Code-Interpreter-Session-Id": session_id,
+            "Accept": "text/event-stream",
+        }
+        if api_key is not None:
+            headers["Authorization"] = f"Bearer {api_key}"
+        response = self.post(url=endpoint, headers=headers, json=arguments)
+        if not response.success:
+            raise ToolsAPIError(response.status_code, response.error)
+        return response
+
 
 class ControlBrowserHttpClient(BaseHTTPClient):
     """Browser control plane HTTP client.
@@ -359,6 +383,7 @@ class DataBrowserHttpClient(BaseHTTPClient):
         browser_name: str,
         request_params: dict,
         session_id: str | None = None,
+        profile_id: str | None = None,
         api_key: str | None = None,
     ) -> dict[Any, Any]:
         """PUT /v1/browsers/{browser_name}/sessions-start
@@ -369,6 +394,8 @@ class DataBrowserHttpClient(BaseHTTPClient):
         headers = {}
         if session_id is not None:
             headers["X-hw-Agentarts-Browser-Session-Id"] = session_id
+        if profile_id is not None:
+            headers["X-hw-Agentarts-Browser-Profile-Id"] = profile_id
         if api_key is not None:
             headers["Authorization"] = f"Bearer {api_key}"
         response = self.put(url=endpoint, json=request_params, headers=headers)
@@ -478,13 +505,14 @@ class DataBrowserHttpClient(BaseHTTPClient):
         Save current browser session state to a profile.
         """
         endpoint = f"/v1/browsers/{browser_name}/save-profile"
-        headers = {"X-hw-Agentarts-Browser-Session-Id": session_id}
+        headers = {
+            "X-hw-Agentarts-Browser-Session-Id": session_id,
+            "X-hw-Agentarts-Browser-Profile-Id": profile_id,
+        }
         if api_key is not None:
             headers["Authorization"] = f"Bearer {api_key}"
 
-        request_params = {"profile_id": profile_id}
-
-        response = self.put(url=endpoint, headers=headers, json=request_params)
+        response = self.put(url=endpoint, headers=headers)
         if not response.success:
             raise ToolsAPIError(response.status_code, response.error)
         return response.data

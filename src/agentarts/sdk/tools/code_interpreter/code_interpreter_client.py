@@ -13,10 +13,11 @@ Data Plane:
 """
 
 import base64
+import json
 import logging
 import os
 import re
-from collections.abc import Generator
+from collections.abc import Generator, Iterator
 from contextlib import contextmanager
 from typing import Any
 
@@ -32,6 +33,25 @@ DEFAULT_PATH = "/home/user"  # Default path, currently only supports upload/down
 
 logger = logging.getLogger(__name__)
 
+
+def _parse_sse_events(lines: Iterator[str]) -> Iterator[dict]:
+    """Parse SSE event stream lines into dicts.
+
+    SSE format:
+        event: result
+        data: {"result": {"content": [...], "is_error": false}}
+    Yields parsed JSON dicts from 'data:' lines.
+    """
+    for line in lines:
+        if isinstance(line, bytes):
+            line = line.decode("utf-8")
+        line = line.strip()
+        if line.startswith("data: "):
+            data_str = line[len("data: "):]
+            try:
+                yield json.loads(data_str)
+            except json.JSONDecodeError:
+                logger.warning(f"Failed to parse SSE data: {data_str[:200]}")
 
 class CodeInterpreter:
     """Client for interacting with the Code Interpreter sandbox service.
@@ -621,6 +641,7 @@ class CodeInterpreter:
         code: str,
         language: str = "python",
         clear_context: bool = False,
+        api_key: str | None = None
     ) -> dict[str, Any]:
         """Execute code in the code interpreter.
 
@@ -642,7 +663,7 @@ class CodeInterpreter:
             >>> # Clear context
             >>> result = client.execute_code("x = 10", clear_context=True)
         """
-        valid_languages = ["python"]
+        valid_languages = ["python", "typescript"]
         if language not in valid_languages:
             msg = f"Invalid language. Supported languages are: {', '.join(valid_languages)}"
             raise ValueError(msg)
@@ -652,6 +673,46 @@ class CodeInterpreter:
         return self.invoke(
             operate_type="execute_code",
             arguments={"code": code, "language": language, "clear_context": clear_context},
+            api_key=api_key,
+        )
+
+    def execute_code_stream(
+        self,
+        code: str,
+        language: str = "python",
+        clear_context: bool = False,
+        api_key: str | None = None,
+    ) -> Iterator[dict]:
+        """Execute code with SSE streaming output.
+
+        Yields parsed SSE event dicts in real time as the code executes.
+
+        Args:
+            code (str): The code to execute
+            language (str): The programming language, default "python"
+            clear_context (bool): Whether to clear context before execution, default False
+            api_key (Optional[str]): API Key for authentication
+
+        Yields:
+            dict: Parsed SSE event, e.g., {"result": {"content": [...], "is_error": False}}
+
+        Example: 
+            >>> for event in client.execute_code_stream(
+            ...     code="import time\\nfor i in range(5):\\n   print(f'step {i}')\\n   time.sleep(0.5)"
+            ... ):
+            ...     print(event)
+        """
+        valid_languages = ["python", "typescript"]
+        if language not in valid_languages:
+            msg = f"Invalid language. Supported languages are: {', '.join(valid_languages)}"
+            raise ValueError(msg)
+
+        logger.info(f"Streaming {language} code execution")
+
+        yield from self.invoke_stream(
+            operate_type="execute_code",
+            arguments={"code": code, "language": language, "clear_context": clear_context},
+            api_key=api_key,
         )
 
     def execute_command(self, command: str) -> dict[str, Any]:
@@ -941,6 +1002,228 @@ class CodeInterpreter:
         return self.invoke(
             operate_type="execute_code",
             arguments={"code": "# Context cleared", "language": "python", "clear_context": True},
+        )
+
+    def list_files(self, directory_path: str | None = None) -> dict[str, Any]:
+        """List directory contents.
+
+        Args:
+            directory_path (str,optional): Directory path. Defaults to "/home/user"
+
+        Returns:return
+            result[dict]: Dictionary containing directory entries
+
+        Example:
+            >>>  result= client.list_files("/home/user"):
+        """
+        directory_path = directory_path or DEFAULT_PATH
+        logger.info(f"Listing files: {directory_path}")
+        return self.invoke(
+            operate_type="list_files",
+            arguments={"directory_path": directory_path},
+        )
+
+    def remove_files(self, paths: list[str]) -> dict[str, Any]:
+        """Remove files or directories.
+
+        Args:
+            paths(list[str]): List of file/directory paths to remove
+
+        Returns:
+            result[dict]: Dictionary containing removal result
+
+        Example:
+            >>>  result=client.remove_files("/home/user/tmp.txt",""/home/user/folder"):
+        """
+        logger.info(f"Removing files: {paths}")
+        return self.invoke(
+            operate_type="remove_files",
+            arguments={"paths": paths},
+        )
+
+    def invoke_stream(
+        self,
+        operate_type: str,
+        arguments: dict,
+        api_key: str | None = None,
+    ) -> Iterator[dict]:
+        """Invoke a code interpreter session with SSE streaming.
+        Yields parsed SSE event dicts as they arrive from the server.
+
+        Args:
+            operate_type (str): The operation method name, e.g., "execute_command" or "read_files"
+            arguments (Dict): Invocation arguments, varies based on operate_type
+            api_key (Optional[str]): API Key for authentication, use only when auth_type is "API_KEY",
+                if not provided will be retrieved from environment variable API_KEY
+
+        Returns:
+            result[Dict]: Dictionary containing the invocation result
+
+        Example:
+            >>>  for event in client.invoke_stream("execute_code",{"commands":"ls -la"}):
+            ...      print(event)
+        """
+        if not self.session_id or not self.code_interpreter_name:
+            msg = "No Code Interpreter exists, use create_code_interpreter method first"
+            raise ValueError(msg)
+
+        request_params = {"operate_type": operate_type, "arguments": arguments}
+
+        if self.data_plane_client.open_ak_sk:
+            response = self.data_plane_client.invoke_stream(
+                code_interpreter_name=self.code_interpreter_name,
+                session_id=self.session_id,
+                arguments=request_params,
+            )
+        else:
+            api_key = api_key or os.getenv("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
+            if api_key is None:
+                msg = "API Key is not provided and not found in environment variable."
+                raise ValueError(msg)
+            response = self.data_plane_client.invoke_stream(
+                code_interpreter_name=self.code_interpreter_name,
+                session_id=self.session_id,
+                arguments=request_params,
+                api_key=api_key,
+            )
+        
+        try:
+            yield from _parse_sse_events(response.iter_lines())
+        finally:
+            response.close()
+
+    def execute_command_stream(self, command: str) -> Iterator[dict]:
+        """Execute a command with SSE streaming output.
+
+        Yields SSE events as stdout/stderror output arrives in real time.
+
+        Args:
+            command (str): The command to execute
+
+        Yields:
+            dict: SSE event with stdout/stderror content
+
+        Example:
+            >>> for event in client.execute_command_stream("ping -c 5 localhost"):
+            ...     if not event["result"]["is_error"]:
+            ...         print(event["result"]["content"][0]["text"],end="")
+        """
+        logger.info(f"Executing command (stream): {command}")
+        yield from self.invoke_stream(
+            operate_type="execute_command",
+            arguments={"command": command},
+        )
+
+    def download_file_stream(self, path: str) -> Iterator[dict]:
+        """Download a file with SSE streaming.
+
+        Yields SSE events as file chunks arrive, useful for large files.
+
+        Args:
+            path (str): File path, must start with "/"
+
+        Yields:
+            dict: SSE event with file chunk content (text or base64 blob)
+
+        Example:
+            >>> for event in client.download_file_stream("/home/user/large_file.csv"):
+            ...     chunk = event["result"]["content"][0]
+            ...     if chunk["type"] === "resource":
+            ...         print(f"Received {len(chunk['resource']).get('text', ''))} chars")
+        """
+
+        if not path.startswith(DEFAULT_PATH):
+            msg = f"Invalid path. Path must start with {DEFAULT_PATH}"
+            raise ValueError(msg)
+
+        logger.info(f"Downloading file from {path}")
+        yield from self.invoke_stream(
+            operate_type="read_files",
+            arguments={"paths": [path]}
+        )
+
+    def upload_file_stream(
+        self,
+        path: str,
+        content: str | bytes,
+        description: str = "",
+    ) -> Iterator[dict]:
+        """Upload a file with SSE streaming.
+        Yields SSE events as each file is written.
+
+        Args:
+            path (str): File path, supports absolute and relative paths, must start with "/",
+                currently only supports file upload under /home/user path
+            content (Union[str, bytes]): File content, can be string or binary data,
+                binary content will be Base64 encoded
+            description (str): File description, this field can be used for LLMs to understand data structure
+                                (e.g., "CSV with columns: date, revenue, product_id")
+
+        Yields:
+            dict: SSE event with resource_link for each written file
+
+        Example:
+            >>>  for event in client.upload_file_stream("/home/user/data.txt","hello world"):
+            ...      print(event)
+        """
+
+        if not path.startswith("/"):
+            path = os.path.normpath(path)
+            path = os.path.join(DEFAULT_PATH, path)
+        elif not path.startswith(DEFAULT_PATH):
+            msg = f"Invalid path. Path must start with {DEFAULT_PATH}"
+            raise ValueError(msg)
+
+        # Handle binary content
+        if isinstance(content, bytes):
+            file_content = {"path": path, "blob": base64.b64encode(content).decode("utf-8")}
+        else:
+            file_content = {"path": path, "text": content}
+
+        logger.info(f"Uploading file (stream):{path}")
+        yield from self.invoke_stream(operate_type="write_files", arguments={"write_contents": [file_content]})
+    
+    def list_files_stream(self, directory_path: str | None = None) -> Iterator[dict]:
+        """List directory contents with SSE streaming.
+        Yields SSE with resource_link for each entry.
+
+        Args:
+            directory_path (str,optional): Directory path. Defaults to "/home/user"
+
+        Yields:
+            dict: SSE event with resource_link for each written file
+
+        Example:
+            >>>  for event in client.list_files_stream("/home/user"):
+            ...      entry = event["result"]["content"][0]
+            ...      print(f"{entry['name']}: {entry.get('description','file')}")
+        """
+        directory_path = directory_path or DEFAULT_PATH
+        logger.info(f"Listing files (stream): {directory_path}")
+        yield from self.invoke_stream(
+            operate_type="list_files",
+            arguments={"directory_path": directory_path},
+        )
+
+    def remove_files_stream(self, paths: list[str]) -> Iterator[dict]:
+        """Remove files with SSE streaming.
+
+        Yields SSE events as files are removed.
+
+        Args:
+            paths: List of file/directory paths to remove
+
+        Yields:
+            dict: SSE event with removal confirmation
+
+        Example:
+            >>>  for event in client.remove_files_stream("/home/user/tmp.txt"):
+            ...      print(event)
+        """
+        logger.info(f"Removing files (stream): {paths}")
+        yield from self.invoke_stream(
+            operate_type="remove_files",
+            arguments={"paths": paths},
         )
 
 
