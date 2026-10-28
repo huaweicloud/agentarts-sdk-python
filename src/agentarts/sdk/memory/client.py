@@ -842,6 +842,7 @@ class MemoryClient:
                 - query: Search query (string)
                 - top_k: Return count, default 5
                 - min_score: Minimum similarity score, between 0-1
+                - rerank: Whether to rerank search results (boolean); omitted uses server default
                 - strategy_type: Memory type filter (semantic/episodic/user_preference)
                 - created_start / created_end: Time range filter
                 - only_actived: When True, return only currently active memories;
