@@ -459,7 +459,20 @@ search_memories(
 | session_id | str | 否 | None | 会话 ID 过滤 |
 | top_k | int | 否 | 10 | 返回前 K 个结果 |
 | min_score | float | 否 | 0.5 | 最小相关性分数（0-1） |
+| rerank | bool | 否 | None | 是否对搜索结果重排；不传时使用服务端默认行为 |
 | only_actived | bool | 否 | False | 是否仅返回当前活跃的记忆；False 返回搜索到的全量记忆 |
+
+可通过 `filter_kwargs` 设置 `rerank`：
+
+```python
+filter_kwargs = {"query": "用户偏好", "top_k": 5, "rerank": True}
+filters = MemorySearchFilter(**filter_kwargs)
+result = client.search_memories(space_id=space_id, filters=filters)
+```
+
+`rerank` 位于搜索请求 body 顶层，与 `query`、`top_k` 同级。
+`True` 和 `False` 均会原样发送；未传或设为 `None` 时不发送该字段。
+同步、异步 Client 和 Session 均支持此参数。
 
 ##### list_memories
 
