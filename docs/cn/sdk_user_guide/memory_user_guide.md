@@ -423,6 +423,27 @@ add_messages(
   )
   ```
 
+**逐条控制记忆抽取**：
+
+`TextMessage`、`ToolCallMessage`、`ToolResultMessage` 和底层 `MessageRequest` 均支持
+可选字段 `skip_extract: bool | None = None`。该字段位于 `messages[]` 的每条消息上，
+与 `role`、`parts` 同级：`True` 表示跳过该消息的记忆抽取，`False` 表示不跳过；
+不传或设为 `None` 时，请求不包含该字段，使用数据库默认值 `false`（不跳过抽取）。
+
+```python
+messages = [
+    TextMessage(role="user", content="这条消息不参与记忆抽取", skip_extract=True),
+    TextMessage(role="user", content="我喜欢 Python", skip_extract=False),
+    TextMessage(role="assistant", content="收到"),
+]
+result = client.add_messages(space_id, session_id, messages)
+```
+
+新增消息返回的 `result.items`，以及 `get_message`、`list_messages`、
+`get_last_k_messages` 返回的 `MessageInfo`，都通过 `skip_extract` 属性保留服务端返回值。
+服务端未返回该字段时，该属性默认为 `False`，与数据库默认值一致；显式返回 `null` 时保留为 `None`。
+同步、异步 Client 和 Session 均支持上述行为。
+
 ##### list_messages
 
 列出消息。
