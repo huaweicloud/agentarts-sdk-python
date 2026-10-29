@@ -24,6 +24,7 @@ import {
   getApiKey,
   getBaseUrl,
   getSpaceId,
+  resolveRerank,
   resolveUserId,
 } from "./config.js";
 import { MemoryDataPlane } from "./api.js";
@@ -43,7 +44,10 @@ let client: MemoryClient | null = null;
 
 function getClient(): MemoryClient {
   if (client === null) {
-    client = new MemoryClient(new MemoryDataPlane(getBaseUrl(), getApiKey(), getSpaceId()));
+    client = new MemoryClient(
+      new MemoryDataPlane(getBaseUrl(), getApiKey(), getSpaceId()),
+      resolveRerank(),
+    );
   }
   return client;
 }
@@ -134,7 +138,7 @@ async function main(): Promise<void> {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  log(`MCP server (typescript) running on stdio, endpoint=${getBaseUrl()}`);
+  log(`MCP server (typescript) running on stdio, endpoint=${getBaseUrl()}, rerank=${resolveRerank()}`);
 }
 
 main().catch((e) => {

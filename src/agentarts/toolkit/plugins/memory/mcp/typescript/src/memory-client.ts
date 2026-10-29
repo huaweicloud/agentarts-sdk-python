@@ -69,7 +69,12 @@ export interface SearchOptions {
 }
 
 export class MemoryClient {
-  constructor(private readonly api: MemoryDataPlane) {}
+  constructor(
+    private readonly api: MemoryDataPlane,
+    /** Rerank is backend-ON by default; this server sends it explicitly so the
+     *  operator controls it via AGENTARTS_MEMORY_RERANK (default: off). */
+    private readonly rerank: boolean = false,
+  ) {}
 
   /** Semantic search; optional filters are omitted from the body when unset
    *  (same as the Python SDK's MemorySearchFilter.to_dict). */
@@ -80,6 +85,7 @@ export class MemoryClient {
       min_score: opts.min_score ?? DEFAULT_MIN_SCORE,
       actor_id: opts.userId,
     };
+    body.rerank = this.rerank;
     if (opts.strategy_type !== undefined) body.strategy_type = opts.strategy_type;
     if (opts.start_time !== undefined) body.start_time = opts.start_time;
     if (opts.end_time !== undefined) body.end_time = opts.end_time;
