@@ -44,10 +44,7 @@ let client: MemoryClient | null = null;
 
 function getClient(): MemoryClient {
   if (client === null) {
-    client = new MemoryClient(
-      new MemoryDataPlane(getBaseUrl(), getApiKey(), getSpaceId()),
-      resolveRerank(),
-    );
+    client = new MemoryClient(new MemoryDataPlane(getBaseUrl(), getApiKey(), getSpaceId()));
   }
   return client;
 }
@@ -113,6 +110,7 @@ server.registerTool(
       const results = await getClient().searchMemories({
         query,
         userId: resolveUserId(),
+        rerank: resolveRerank(),
         strategy_type,
         top_k,
         min_score,
