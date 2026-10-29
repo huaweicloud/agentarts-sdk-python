@@ -74,16 +74,17 @@ export interface SearchOptions {
 export class MemoryClient {
   constructor(private readonly api: MemoryDataPlane) {}
 
-  /** Semantic search; optional filters are omitted from the body when unset
-   *  (same as the Python SDK's MemorySearchFilter.to_dict). */
+  /** Semantic search. Optional filters are omitted from the body when unset
+   *  (same as the Python SDK's MemorySearchFilter.to_dict), except rerank,
+   *  which is always sent explicitly — off by default. */
   async searchMemories(opts: SearchOptions): Promise<SearchItem[]> {
     const body: SearchRequestBody = {
       query: opts.query,
       top_k: opts.top_k ?? DEFAULT_TOP_K,
       min_score: opts.min_score ?? DEFAULT_MIN_SCORE,
       actor_id: opts.userId,
+      rerank: opts.rerank ?? false,
     };
-    body.rerank = opts.rerank ?? false;
     if (opts.strategy_type !== undefined) body.strategy_type = opts.strategy_type;
     if (opts.start_time !== undefined) body.start_time = opts.start_time;
     if (opts.end_time !== undefined) body.end_time = opts.end_time;
