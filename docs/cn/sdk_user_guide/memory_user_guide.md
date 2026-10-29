@@ -460,6 +460,7 @@ search_memories(
 | top_k | int | 否 | 10 | 返回前 K 个结果 |
 | min_score | float | 否 | 0.5 | 最小相关性分数（0-1） |
 | only_actived | bool | 否 | False | 是否仅返回当前活跃的记忆；False 返回搜索到的全量记忆 |
+| rerank | bool | 否 | True | 搜索记忆时是否开启重排序，默认开启 |
 
 ##### list_memories
 

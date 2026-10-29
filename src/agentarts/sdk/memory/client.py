@@ -846,6 +846,8 @@ class MemoryClient:
                 - created_start / created_end: Time range filter
                 - only_actived: When True, return only currently active memories;
                   when False (default), return all matched memories
+                - rerank: When True (default), rerank the search results;
+                  when False, return the results in vector retrieval order
 
         Returns:
             MemorySearchResponse: Search results, containing:

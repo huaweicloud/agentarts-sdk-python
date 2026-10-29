@@ -122,6 +122,7 @@ class MemorySearchFilter:
     top_k: int | None = None
     min_score: float | None = None
     only_actived: bool = False
+    rerank: bool = True
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to API request body format, set default values."""
