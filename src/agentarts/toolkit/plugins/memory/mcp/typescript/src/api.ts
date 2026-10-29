@@ -27,6 +27,7 @@ export interface SearchRequestBody {
   actor_id?: string;
   start_time?: number;
   end_time?: number;
+  rerank?: boolean;
 }
 
 /** Search hit as returned by the backend: the memory record plus its score. */

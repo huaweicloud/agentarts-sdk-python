@@ -24,6 +24,7 @@ import {
   getApiKey,
   getBaseUrl,
   getSpaceId,
+  resolveRerank,
   resolveUserId,
 } from "./config.js";
 import { MemoryDataPlane } from "./api.js";
@@ -109,6 +110,7 @@ server.registerTool(
       const results = await getClient().searchMemories({
         query,
         userId: resolveUserId(),
+        rerank: resolveRerank(),
         strategy_type,
         top_k,
         min_score,
@@ -134,7 +136,7 @@ async function main(): Promise<void> {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  log(`MCP server (typescript) running on stdio, endpoint=${getBaseUrl()}`);
+  log(`MCP server (typescript) running on stdio, endpoint=${getBaseUrl()}, rerank=${resolveRerank()}`);
 }
 
 main().catch((e) => {

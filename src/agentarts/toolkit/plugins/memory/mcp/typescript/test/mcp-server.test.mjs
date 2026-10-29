@@ -149,9 +149,9 @@ describe("agentarts-memory MCP server (with credentials)", () => {
     assert.ok(call, "search endpoint was called");
     assert.equal(call.auth, `Bearer ${API_KEY}`);
     // Defaults mirror the Python server: top_k=5, min_score=0.7, actor_id from
-    // env. deepEqual is strict, so this also proves the optional filters
-    // (strategy_type/start_time/end_time) are omitted from the body when unset.
-    assert.deepEqual(call.body, { query: "hello world", top_k: 5, min_score: 0.7, actor_id: USER });
+    // env; rerank is pinned off unless the operator opts in. deepEqual is
+    // strict, so this also proves the optional filters are omitted when unset.
+    assert.deepEqual(call.body, { query: "hello world", top_k: 5, min_score: 0.7, actor_id: USER, rerank: false });
     // Normalized result: {content, score, type} from records[].record/score.
     assert.deepEqual(out.results, [{ content: "found it", score: 0.88, type: "semantic" }]);
     assert.equal(out.total, 1);
@@ -176,6 +176,7 @@ describe("agentarts-memory MCP server (with credentials)", () => {
       actor_id: USER,
       start_time: 1760000000000,
       end_time: 1770000000000,
+      rerank: false,
     });
   });
 
@@ -197,6 +198,35 @@ describe("agentarts-memory MCP server (with credentials)", () => {
   test("unknown tool: JSON-RPC level error, no crash", async () => {
     const r = await mcp.rpc("tools/call", { name: "add_messages", arguments: { messages: [] } });
     assert.ok(r.error || r.result?.isError, "unknown tool must produce an error");
+  });
+});
+
+describe("agentarts-memory MCP server (rerank enabled via env)", () => {
+  let httpServer, mcp;
+
+  before(async () => {
+    httpServer = createServer(mockHandler);
+    await once(httpServer.listen(0, "127.0.0.1"), "listening");
+    mcp = startMcp({
+      AGENTARTS_MEMORY_DATA_ENDPOINT: `http://127.0.0.1:${httpServer.address().port}`,
+      HUAWEICLOUD_SDK_MEMORY_API_KEY: API_KEY,
+      AGENTARTS_MEMORY_SPACE_ID: SPACE,
+      AGENTARTS_MEMORY_USER_ID: USER,
+      AGENTARTS_MEMORY_RERANK: "1",
+    });
+    await mcp.rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "0.0.0" } });
+  });
+
+  after(() => {
+    mcp.kill();
+    httpServer.close();
+  });
+
+  test("AGENTARTS_MEMORY_RERANK=1 sends rerank: true in the search body", async () => {
+    await mcp.callTool("search_memories", { query: "rerank on please" });
+    const call = calls.find((c) => c.body?.query === "rerank on please");
+    assert.ok(call, "search was called");
+    assert.equal(call.body.rerank, true);
   });
 });
 

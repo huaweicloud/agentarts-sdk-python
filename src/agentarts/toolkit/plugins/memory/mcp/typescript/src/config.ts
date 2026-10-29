@@ -12,6 +12,7 @@ export const ENV_REGION_OS = "OS_REGION_NAME";
 export const ENV_DATA_ENDPOINT = "AGENTARTS_MEMORY_DATA_ENDPOINT";
 export const ENV_PLATFORM = "AGENTARTS_MEMORY_PLATFORM";
 export const ENV_USER_ID = "AGENTARTS_MEMORY_USER_ID";
+export const ENV_RERANK = "AGENTARTS_MEMORY_RERANK";
 
 export const DEFAULT_REGION = "cn-southwest-2";
 export const DEFAULT_TOP_K = 5;
@@ -59,6 +60,14 @@ export function detectPlatform(): string {
   if (process.env.CODEX_PLUGIN_ROOT) return "codex";
   if (process.env.OPENCODE_PLUGIN_ROOT) return "opencode";
   return "unknown";
+}
+
+/** Search-result reranking. The backend enables rerank by default (SDK 0.1.9);
+ *  this server turns it OFF by default — the operator opts in via env, the tool
+ *  never exposes it to the model. Truthy values: "1" / "true" (case-insensitive). */
+export function resolveRerank(): boolean {
+  const v = process.env[ENV_RERANK];
+  return v === "1" || (v ?? "").toLowerCase() === "true";
 }
 
 /** Resolve the memory actor: AGENTARTS_MEMORY_USER_ID > platform default. */
