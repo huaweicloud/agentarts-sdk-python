@@ -57,7 +57,11 @@ RUN pip install --no-cache-dir -r {dependency_file}"""
     else:
         dependency_section = "# No dependency file specified"
 
-    chown_app_section = f"RUN chown -R {user_name}:{user_name} /app"
+    # `COPY . .` keeps the build context's permission bits, so the modes come from
+    # the build host's umask (EulerOS 0027 -> 0640/0750, Ubuntu 0022 -> 0644/0755).
+    # chown alone only fixes ownership; without widening the modes, a runtime UID
+    # other than appuser cannot read /app and the container fails to start.
+    chown_app_section = f"RUN chown -R {user_name}:{user_name} /app && \\\n    chmod -R a+rX /app"
 
     if entrypoint:
         module = entrypoint.split(":")[0] if ":" in entrypoint else entrypoint
