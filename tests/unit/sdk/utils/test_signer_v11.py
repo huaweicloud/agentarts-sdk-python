@@ -179,3 +179,18 @@ class TestSignRequestV11Integration:
         # Signature is independent of the query (query not signed).
         assert _signature_from_auth(with_q["headers"]["Authorization"]) == \
             _signature_from_auth(without_q["headers"]["Authorization"])
+
+
+def test_sign_drops_none_valued_headers():
+    """A None header value is dropped instead of crashing ``v.strip()``.
+
+    urllib3 omits such headers from the wire, so signing them would also
+    produce a signature the gateway cannot reproduce (HTTP 401).
+    """
+    signer = _make_signer()
+    headers = {"host": "h", "x-optional": None}
+
+    out = signer.sign("POST", "/p", None, headers)
+
+    assert "x-optional" not in out
+    assert "x-optional" not in _signed_headers_from_auth(out["Authorization"])
