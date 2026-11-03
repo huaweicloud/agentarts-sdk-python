@@ -1187,7 +1187,7 @@ class RuntimeClient:
                     success=response.ok,
                     status_code=response.status_code,
                     data=None,
-                    headers=dict(response.headers),
+                    headers=response.headers,
                     streaming=True,
                     _raw_response=response,
                 )
@@ -1210,7 +1210,7 @@ class RuntimeClient:
                 status_code=response.status_code,
                 data=data,
                 error=error_msg,
-                headers=dict(response.headers),
+                headers=response.headers,
             )
 
         except Exception as e:
