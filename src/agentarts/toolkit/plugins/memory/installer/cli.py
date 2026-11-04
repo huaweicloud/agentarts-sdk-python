@@ -12,11 +12,11 @@ import sys
 from typing import Annotated
 
 import typer
-
 from rich.console import Console
 
 from agentarts.toolkit.utils.common import echo_error, echo_key_value, echo_success, echo_warning
 
+from .deps import MCP_REQUIRED_SPEC, ensure_mcp_installed, needs_mcp
 from .platforms import detect_all, get_platform
 from .platforms.hermes import hermes_home
 from .utils import (
@@ -116,6 +116,14 @@ def _do_install(target: str | None, global_scope: bool, yes: bool) -> int:
     if platform is None:
         echo_error(f"Unknown platform '{target}'")
         return 2
+
+    if needs_mcp(target):
+        console.print("\nChecking dependencies...")
+        if not ensure_mcp_installed():
+            echo_error(
+                f"Installation aborted: required dependency '{MCP_REQUIRED_SPEC}' is unavailable."
+            )
+            return 1
 
     console.print("\nChecking credentials...")
     creds = ensure_credentials(yes)

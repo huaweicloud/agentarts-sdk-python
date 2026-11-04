@@ -258,3 +258,79 @@ class TestMemorySession:
         session.get_message("msg-1")
 
         mock_data_plane.get_message.assert_called_once_with("msg-1", "space-123", "session-456")
+
+
+class TestMemorySearchFilter:
+    """Tests for MemorySearchFilter search options."""
+
+    def test_only_actived_defaults_to_false(self):
+        """By default search returns all matched memories."""
+        from agentarts.sdk.memory import MemorySearchFilter
+
+        filters = MemorySearchFilter(query="test query")
+
+        assert filters.only_actived is False
+        assert filters.to_dict()["only_actived"] is False
+
+    def test_only_actived_true_is_included_in_request(self):
+        """When True, only active memories should be requested."""
+        from agentarts.sdk.memory import MemorySearchFilter
+
+        filters = MemorySearchFilter(query="test query", only_actived=True)
+
+        assert filters.to_dict()["only_actived"] is True
+
+    def test_search_memories_forwards_only_actived_to_http_service(self):
+        """Data plane forwards only_actived to the search API body."""
+        from agentarts.sdk.memory import MemorySearchFilter
+        from agentarts.sdk.memory.inner.dataplane import _DataPlane
+
+        data_plane = _DataPlane(region_name="cn-north-4", api_key="test-api-key")
+
+        with patch.object(
+            data_plane.client,
+            "search_memories",
+            return_value={"records": [], "total": 0},
+        ) as mock_search:
+            data_plane.search_memories(
+                "space-123",
+                MemorySearchFilter(query="test query", only_actived=True),
+            )
+
+        assert mock_search.call_args.args[1]["only_actived"] is True
+
+    def test_rerank_defaults_to_true(self):
+        """Reranking is enabled by default."""
+        from agentarts.sdk.memory import MemorySearchFilter
+
+        filters = MemorySearchFilter(query="test query")
+
+        assert filters.rerank is True
+        assert filters.to_dict()["rerank"] is True
+
+    def test_rerank_false_is_included_in_request(self):
+        """When False, reranking should be disabled in the request."""
+        from agentarts.sdk.memory import MemorySearchFilter
+
+        filters = MemorySearchFilter(query="test query", rerank=False)
+
+        assert filters.to_dict()["rerank"] is False
+
+    def test_search_memories_forwards_rerank_to_http_service(self):
+        """Data plane forwards rerank to the search API body."""
+        from agentarts.sdk.memory import MemorySearchFilter
+        from agentarts.sdk.memory.inner.dataplane import _DataPlane
+
+        data_plane = _DataPlane(region_name="cn-north-4", api_key="test-api-key")
+
+        with patch.object(
+            data_plane.client,
+            "search_memories",
+            return_value={"records": [], "total": 0},
+        ) as mock_search:
+            data_plane.search_memories(
+                "space-123",
+                MemorySearchFilter(query="test query", rerank=False),
+            )
+
+        assert mock_search.call_args.args[1]["rerank"] is False

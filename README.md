@@ -198,6 +198,9 @@ pip install agentarts-sdk[langchain]
 # With LangGraph support
 pip install agentarts-sdk[langgraph]
 
+# With MCP memory server support (required by `agentarts memory install`)
+pip install agentarts-sdk[mcp]
+
 # With all optional dependencies
 pip install agentarts-sdk[all]
 ```

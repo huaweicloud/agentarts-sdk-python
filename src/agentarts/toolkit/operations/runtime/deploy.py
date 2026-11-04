@@ -75,6 +75,7 @@ def create_agentarts_runtime(
         identity_config = None
         observability_config = None
         storage_config = None
+        lifecycle_config = None
         env_vars = None
         tags_config = None
         execution_agency_name = None
@@ -125,6 +126,11 @@ def create_agentarts_runtime(
                 if sc:
                     storage_config = sc
 
+            if runtime_cfg.lifecycle_config:
+                lc = runtime_cfg.lifecycle_config.to_dict()
+                if lc:
+                    lifecycle_config = lc
+
             if runtime_cfg.environment_variables:
                 env_vars = [{"key": kv.key, "value": kv.value} for kv in runtime_cfg.environment_variables if kv.value]
 
@@ -159,6 +165,7 @@ def create_agentarts_runtime(
             identity_config=identity_config,
             observability_config=observability_config,
             storage_config=storage_config,
+            lifecycle_config=lifecycle_config,
             env_vars=env_vars,
             tags_config=tags_config,
             execution_agency_name=execution_agency_name,

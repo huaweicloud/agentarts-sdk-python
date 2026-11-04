@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "agentarts-sdk"
-version = "0.1.6"
+version = "0.1.10"
 description = "Huawei Cloud AgentArts SDK - Build, deploy and manage AI agents with cloud capabilities"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -58,7 +58,6 @@ dependencies = [
     "pyjwt>=2.8.0",
     "cryptography>=41.0.0",
     "docker>=7.0.0",
-    "mcp>=2.0.0",
 ]
 
 [dependency-groups]
@@ -79,6 +78,8 @@ dev = [
     "langgraph>=1.0.0",
     "langchain>=1.0.0",
     "langchain-core>=1.0.0",
+    # Needed by the memory MCP server unit tests; it is an optional runtime extra.
+    "mcp>=2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -97,6 +98,9 @@ langgraph = [
     "langgraph>=1.0.0",
     "langchain>=1.0.0",
     "langchain-core>=1.0.0",
+]
+google-adk = [
+    "google-adk>=2.0.0",
 ]
 autogen = [
     "pyautogen>=0.2.0",
@@ -129,8 +133,13 @@ docs = [
 tui = [
     "textual>=0.86.0",
 ]
+mcp = [
+    # Required only for the memory MCP server
+    # (agentarts.toolkit.plugins.memory.mcp.server), not for the SDK itself.
+    "mcp>=2.0.0",
+]
 all = [
-    "agentarts-sdk[web,langchain,langgraph,autogen,crewai,vector-stores,database,monitoring,huaweicloud,docs,tui]",
+    "agentarts-sdk[web,langchain,langgraph,google-adk,autogen,crewai,vector-stores,database,monitoring,huaweicloud,docs,tui,mcp]",
 ]
 
 [project.urls]
@@ -146,6 +155,14 @@ agentarts = "agentarts.toolkit.main:cli"
 [tool.uv.build-backend]
 module-name = ["agentarts"]
 module-root = "src"
+# The TS MCP server (toolkit/plugins/memory/mcp/typescript) lives in this
+# repo but is NOT shipped in wheel/sdist: no Python code references it, and
+# its dist/ is a gitignored build artifact (wheel contents would otherwise
+# depend on whether `npm run build` ran before `uv build`). Distributed from
+# the git repo instead. (Verified working on the pinned uv_build 0.11.x;
+# node_modules is also excluded by uv_build defaults.)
+source-exclude = ["mcp/typescript", "node_modules"]
+wheel-exclude = ["mcp/typescript", "node_modules"]
 
 [tool.black]
 line-length = 100

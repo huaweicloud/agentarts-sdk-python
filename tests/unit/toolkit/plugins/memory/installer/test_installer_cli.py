@@ -6,7 +6,7 @@ logic (``_do_install``/``_do_uninstall``).
 """
 
 import os
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from agentarts.toolkit.plugins.memory.installer import cli
 from agentarts.toolkit.plugins.memory.installer.utils import (
@@ -157,6 +157,64 @@ class TestEndToEndClaude:
         out = capsys.readouterr().out
         # Server hint removed; MCP config is written by installer instead.
         assert "Restart" in out
+
+
+# ── runtime dependencies ────────────────────────────────────────────
+
+
+class TestInstallDependencies:
+    @staticmethod
+    def _mock_platform(tmp_path):
+        """Platform mock that performs no filesystem writes."""
+        platform = MagicMock()
+        platform.install.return_value = MagicMock(
+            config_dir=str(tmp_path),
+            scripts_dir="",
+            files=[],
+            config_files=[],
+        )
+        return platform
+
+    def test_mcp_platform_installs_dependency(self, monkeypatch, tmp_path):
+        _set_home_and_creds(monkeypatch, tmp_path)
+        platform = self._mock_platform(tmp_path)
+
+        with (
+            patch.object(cli, "get_platform", return_value=platform),
+            patch.object(cli, "add"),
+            patch.object(cli, "ensure_mcp_installed", return_value=True) as ensure,
+        ):
+            assert _do_install("claude", True, True) == 0
+
+        ensure.assert_called_once_with()
+        platform.install.assert_called_once()
+
+    def test_hermes_skips_dependency_install(self, monkeypatch, tmp_path):
+        _set_home_and_creds(monkeypatch, tmp_path)
+        platform = self._mock_platform(tmp_path)
+
+        with (
+            patch.object(cli, "get_platform", return_value=platform),
+            patch.object(cli, "add"),
+            patch.object(cli, "ensure_mcp_installed", return_value=True) as ensure,
+        ):
+            assert _do_install("hermes", False, True) == 0
+
+        ensure.assert_not_called()
+        platform.install.assert_called_once()
+
+    def test_dependency_failure_aborts_install(self, monkeypatch, tmp_path):
+        _set_home_and_creds(monkeypatch, tmp_path)
+        platform = self._mock_platform(tmp_path)
+
+        with (
+            patch.object(cli, "get_platform", return_value=platform),
+            patch.object(cli, "add"),
+            patch.object(cli, "ensure_mcp_installed", return_value=False),
+        ):
+            assert _do_install("claude", True, True) == 1
+
+        platform.install.assert_not_called()
 
 
 # ── escape interrupt ───────────────────────────────────────────────
