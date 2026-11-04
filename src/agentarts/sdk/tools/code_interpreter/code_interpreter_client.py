@@ -28,7 +28,7 @@ from agentarts.sdk.utils.constant import (
     get_region,
 )
 
-DEFAULT_TIMEOUT = 900  # Default 15 minutes
+DEFAULT_TIMEOUT = 1500  # Default 15 minutes
 DEFAULT_PATH = "/home/user"  # Default path, currently only supports upload/download in this path
 
 logger = logging.getLogger(__name__)

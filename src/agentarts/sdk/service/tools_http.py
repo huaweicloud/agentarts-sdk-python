@@ -92,6 +92,7 @@ class DataToolsHttpClient(BaseHTTPClient):
         endpoint_url: str,
         auth_type: str = "API_KEY",
         verify_ssl: bool | str = True,
+        timeout: float = 30.0,
     ):
         """Initialize the data tools HTTP client.
 
@@ -106,13 +107,13 @@ class DataToolsHttpClient(BaseHTTPClient):
         """
         if auth_type == "IAM":
             super().__init__(
-                RequestConfig(base_url=endpoint_url, verify_ssl=verify_ssl),
+                RequestConfig(base_url=endpoint_url, verify_ssl=verify_ssl, timeout=timeout),
                 open_ak_sk=True,
                 sign_mode=SignMode.V11_HMAC_SHA256,
                 region_id=region_name,
             )
         else:
-            super().__init__(RequestConfig(base_url=endpoint_url, verify_ssl=verify_ssl))
+            super().__init__(RequestConfig(base_url=endpoint_url, verify_ssl=verify_ssl, timeout=timeout))
         self.region_name = region_name
 
     @property
