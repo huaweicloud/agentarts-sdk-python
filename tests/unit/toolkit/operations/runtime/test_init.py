@@ -92,7 +92,7 @@ class TestCreateDockerfile:
 
     def test_creates_dockerfile_with_region(self, tmp_path):
         """Creates Dockerfile with region environment variable."""
-        create_dockerfile(tmp_path, "basic", region="cn-north-4")
+        create_dockerfile(tmp_path, "basic", name="test-agent", region="cn-north-4")
 
         dockerfile_path = tmp_path / "Dockerfile"
         assert dockerfile_path.exists()
@@ -102,7 +102,7 @@ class TestCreateDockerfile:
 
     def test_creates_dockerfile_with_default_region(self, tmp_path):
         """Creates Dockerfile with default region when not specified."""
-        create_dockerfile(tmp_path, "basic")
+        create_dockerfile(tmp_path, "basic", name="test-agent")
 
         dockerfile_path = tmp_path / "Dockerfile"
         content = dockerfile_path.read_text()
@@ -110,13 +110,23 @@ class TestCreateDockerfile:
 
     def test_dockerfile_contains_required_sections(self, tmp_path):
         """Dockerfile contains all required sections."""
-        create_dockerfile(tmp_path, "basic", region="cn-north-4")
+        create_dockerfile(tmp_path, "basic", name="test-agent", region="cn-north-4")
 
         content = (tmp_path / "Dockerfile").read_text()
         assert "FROM python:3.10-slim" in content
         assert "WORKDIR /app" in content
         assert "EXPOSE 8080" in content
         assert "agent" in content
+
+    def test_creates_java_dockerfile_with_name(self, tmp_path):
+        """Java templates render a Temurin image that copies the fat jar by name."""
+        create_dockerfile(tmp_path, "java-basic", name="my-agent", region="cn-north-4")
+
+        content = (tmp_path / "Dockerfile").read_text()
+        assert "FROM eclipse-temurin:17-jre" in content
+        assert "COPY target/my-agent.jar app.jar" in content
+        assert "HUAWEICLOUD_SDK_REGION=cn-north-4" in content
+        assert "ENTRYPOINT" in content
 
 
 class TestCreateConfigFile:
