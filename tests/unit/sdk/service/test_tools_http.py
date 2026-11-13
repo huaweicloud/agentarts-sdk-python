@@ -565,8 +565,10 @@ class TestBrowserHttpClient(unittest.TestCase):
         assert result == {"ok": True}
         mock_put.assert_called_once_with(
             url="/v1/browsers/test-browser/save-profile",
-            headers={"X-hw-Agentarts-Browser-Session-Id": "s-1"},
-            json={"profile_id": "p-1"},
+            headers={
+                "X-hw-Agentarts-Browser-Session-Id": "s-1",
+                "X-hw-Agentarts-Browser-Profile-Id": "p-1",
+            },
         )
 
     def test_build_ws_headers_api_key(self):
