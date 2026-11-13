@@ -9,8 +9,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from agentarts.sdk.service.runtime_client import (
+    LocalRuntimeClient,
     RuntimeClient,
     StreamDownloadResult,
+    _parse_sse_stream,
     is_tar_payload,
     upload_content_type,
 )
@@ -738,3 +740,41 @@ class TestStreamDownloadResult:
 
         result.close()
         assert result._raw_response is None
+
+
+class TestMissingAgentAndSseStream:
+    """Regressions for a None lookup result and for SSE reachability.
+
+    ``find_agent_by_name`` returns ``None`` when nothing matches, and
+    ``LocalRuntimeClient`` extends ``BaseHTTPClient`` rather than
+    ``RuntimeClient``, so a method defined on the latter is unreachable
+    from it.
+    """
+
+    def test_delete_agent_by_name_returns_false_when_agent_missing(self):
+        client = RuntimeClient(control_endpoint="https://control.example.com")
+
+        with patch.object(client, "find_agent_by_name", return_value=None), patch.object(
+            client, "_control"
+        ) as mock_control:
+            assert client.delete_agent_by_name("ghost") is False
+
+        mock_control.assert_not_called()
+
+    def test_parse_sse_stream_yields_data_payloads(self):
+        lines = ['data: {"a": 1}', "", "data: [DONE]", ""]
+
+        assert list(_parse_sse_stream(iter(lines))) == ['{"a": 1}']
+
+    def test_local_client_parses_sse_response(self):
+        client = LocalRuntimeClient()
+        stub = MagicMock()
+        stub.success = True
+        stub.streaming = True
+        stub.headers = {"Content-Type": "text/event-stream"}
+        stub.iter_lines.return_value = iter(['data: {"ok": true}', "", "data: [DONE]", ""])
+
+        with patch.object(client, "_request", return_value=stub):
+            events = list(client.invoke_agent('{"input": "x"}'))
+
+        assert events == ['{"ok": true}']

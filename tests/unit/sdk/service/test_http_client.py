@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from requests.exceptions import ConnectionError, RequestException, Timeout
+from requests.structures import CaseInsensitiveDict
 
 from agentarts.sdk.service import (
     BaseHTTPClient,
@@ -936,3 +937,50 @@ class TestBaseHTTPClientStreaming:
         assert result.success is False
         assert result.status_code == 0
         assert result.streaming is False
+
+
+# ============================================================
+# Case-insensitive response header tests
+# ============================================================
+
+
+class TestResponseHeaderCaseInsensitivity:
+    """Response headers must stay case-insensitive (RFC 9110).
+
+    ``requests`` returns a ``CaseInsensitiveDict``; converting it with
+    ``dict(...)`` drops that behaviour, so a server sending ``content-type``
+    in lower case would break ``headers.get("Content-Type")`` lookups and the
+    SSE detection built on them.
+    """
+
+    @staticmethod
+    def _mock_response(lowercase_content_type, status_code=200):
+        mock_resp = MagicMock()
+        mock_resp.status_code = status_code
+        mock_resp.ok = 200 <= status_code < 300
+        mock_resp.content = b'{"id": 1}'
+        mock_resp.json.return_value = {"id": 1}
+        mock_resp.text = '{"id": 1}'
+        mock_resp.headers = CaseInsensitiveDict({"content-type": lowercase_content_type})
+        return mock_resp
+
+    @patch("agentarts.sdk.service.http_client.requests.Session.request")
+    def test_content_type_lookup_ignores_case(self, mock_request):
+        mock_request.return_value = self._mock_response("application/json")
+
+        client = BaseHTTPClient(RequestConfig(base_url="https://api.example.com"))
+        result = client._request("GET", "/users/1")
+
+        assert result.headers.get("Content-Type") == "application/json"
+
+    @patch("agentarts.sdk.service.http_client.requests.Session.request")
+    def test_stream_detection_ignores_case(self, mock_request):
+        from agentarts.sdk.service.runtime_client import RuntimeClient
+
+        mock_request.return_value = self._mock_response("text/event-stream")
+
+        client = BaseHTTPClient(RequestConfig(base_url="https://api.example.com"))
+        result = client._request("POST", "/v1/agents/1/invoke")
+
+        assert result.streaming is True
+        assert RuntimeClient._is_stream_response(result) is True
