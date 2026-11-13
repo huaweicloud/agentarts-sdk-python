@@ -285,7 +285,7 @@ agents:
         vpc_config:
           vpc_id: null
           subnet_id: null
-          security_group_id: []
+          security_group_ids: []
 
       identity_configuration:
         authorizer_type: IAM
