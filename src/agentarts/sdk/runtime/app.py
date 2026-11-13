@@ -92,9 +92,10 @@ class AgentArtsRuntimeApp(Starlette):
         self._ping_handler: Callable | None = None
         self._ws_handler: Callable | None = None
         self._last_status_update_time: float = time.time()
+        self._last_known_status: PingStatus | None = None
         self._force_ping_status: PingStatus | None = None
         self._active_tasks: dict[int, dict[str, Any]] = {}
-        self._task_counter_lock :threading.Lock = threading.Lock()
+        self._task_counter_lock: threading.Lock = threading.Lock()
         self._invocation_semaphore = asyncio.Semaphore(max_concurrency)
         self._invocation_executor = ThreadPoolExecutor(
             max_workers=max_concurrency, thread_name_prefix="invocation"
@@ -107,9 +108,7 @@ class AgentArtsRuntimeApp(Starlette):
             Route("/ping", self._handle_ping, methods=["GET"]),
             WebSocketRoute("/ws", self._handle_websocket),
         ]
-        super().__init__(
-            debug=debug, lifespan=lifespan, middleware=middleware, routes=routes
-        )
+        super().__init__(debug=debug, lifespan=lifespan, middleware=middleware, routes=routes)
 
     # ------------------------------------------------------------------
     # Decorators
@@ -157,9 +156,7 @@ class AgentArtsRuntimeApp(Starlette):
         """
         if not asyncio.iscoroutinefunction(func):
             msg = "async_task decorator must be used with async functions"
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
 
         async def wrapper(*args, **kwargs):
             task_id = self._add_task(func.__name__)
@@ -213,10 +210,13 @@ class AgentArtsRuntimeApp(Starlette):
             if removed:
                 name = removed.get("name", "unknown")
                 duration = time.time() - removed.get("start_time", time.time())
-                self.logger.debug("Async task completed: %s(ID: %s, duration: %.3fs)", name, task_id, duration)
+                self.logger.debug(
+                    "Async task completed: %s(ID: %s, duration: %.3fs)", name, task_id, duration
+                )
                 return True
             self.logger.warning("Async task not found in registry: %s", task_id)
             return False
+
     def has_running_tasks(self) -> bool:
         """
         Check if there are any async tasks currently running.
@@ -239,9 +239,9 @@ class AgentArtsRuntimeApp(Starlette):
         Args:
             request: Either an HTTP Request or WebSocket connection.
         """
-        workload_access_token = request.headers.get(
-            ACCESS_TOKEN_HEADER
-        ) or request.headers.get(ACCESS_TOKEN_HEADER.lower())
+        workload_access_token = request.headers.get(ACCESS_TOKEN_HEADER) or request.headers.get(
+            ACCESS_TOKEN_HEADER.lower()
+        )
         if workload_access_token:
             AgentArtsRuntimeContext.set_workload_access_token(workload_access_token)
 
@@ -251,9 +251,7 @@ class AgentArtsRuntimeApp(Starlette):
         if session_id:
             AgentArtsRuntimeContext.set_session_id(session_id)
 
-        user_id = request.headers.get(USER_ID_HEADER) or request.headers.get(
-            USER_ID_HEADER.lower()
-        )
+        user_id = request.headers.get(USER_ID_HEADER) or request.headers.get(USER_ID_HEADER.lower())
         if user_id:
             AgentArtsRuntimeContext.set_user_id(user_id)
 
@@ -301,32 +299,22 @@ class AgentArtsRuntimeApp(Starlette):
 
             handler = self.handlers.get("main")
             if not handler:
-                return JSONResponse(
-                    status_code=404, content={"error": "No entrypoint defined"}
-                )
+                return JSONResponse(status_code=404, content={"error": "No entrypoint defined"})
 
             request_context = self._build_request_context(request)
             task_context = self._task_context(handler)
-            handler_name = (
-                handler.__name__ if hasattr(handler, "__name__") else "unknown"
-            )
+            handler_name = handler.__name__ if hasattr(handler, "__name__") else "unknown"
             self.logger.debug("Invoking handler %s", handler_name)
 
-            result = await self._invoke_handler(
-                handler, request_context, task_context, payload
-            )
+            result = await self._invoke_handler(handler, request_context, task_context, payload)
             duration = time.time() - start_time
 
             if isinstance(result, (StreamingResponse, JSONResponse, Response)):
-                self.logger.debug(
-                    "Returning predefined response type %s", type(result).__name__
-                )
+                self.logger.debug("Returning predefined response type %s", type(result).__name__)
                 return result
 
             if inspect.isgenerator(result):
-                self.logger.info(
-                    "Returning streaming response (generator) (%.3f s)", duration
-                )
+                self.logger.info("Returning streaming response (generator) (%.3f s)", duration)
                 return StreamingResponse(
                     self._sync_stream_handler(result),
                     media_type="text/event-stream",
@@ -438,15 +426,15 @@ class AgentArtsRuntimeApp(Starlette):
                     exc,
                     type(exc).__name__,
                 )
-                return json.dumps({"error": "Serialization failed", "message": str(exc)}, ensure_ascii=False)
+                return json.dumps(
+                    {"error": "Serialization failed", "message": str(exc)}, ensure_ascii=False
+                )
 
     # ------------------------------------------------------------------
     # Stream generators
     # ------------------------------------------------------------------
 
-    def _sync_stream_handler(
-        self, gen: Generator
-    ) -> Generator[str, None, None]:
+    def _sync_stream_handler(self, gen: Generator) -> Generator[str, None, None]:
         """
         Wrap a synchronous generator into an SSE (Server-Sent Events)
         byte stream.
@@ -467,9 +455,7 @@ class AgentArtsRuntimeApp(Starlette):
             }
             yield self._convert_to_sse(error_data)
 
-    async def _async_stream_handler(
-        self, agen: AsyncGenerator
-    ) -> AsyncGenerator[str, None]:
+    async def _async_stream_handler(self, agen: AsyncGenerator) -> AsyncGenerator[str, None]:
         """
         Wrap an asynchronous generator into an SSE byte stream.
 
@@ -529,25 +515,29 @@ class AgentArtsRuntimeApp(Starlette):
         """
         Get the current status of the AgentArts runtime.
 
+        Resolution order (highest priority first):
+
+        1. Status set via :meth:`force_ping_status` (graceful shutdown /
+           maintenance mode). While set, the custom ping handler is skipped.
+        2. Custom ``@app.ping`` handler result: a :class:`PingStatus` or a
+           valid status string. A handler that raises or returns an invalid
+           value fails safe to ``UNHEALTHY`` so a broken health check never
+           silently reports ``HEALTHY``.
+        3. Default: ``HEALTHY_BUSY`` while async tasks are running,
+           otherwise ``HEALTHY``.
+
         Args:
             request_context: Optional request context to pass to the ping handler.
 
         Returns:
             PingStatus: The current health status of the runtime.
         """
-        current_status = None
-
         if self._force_ping_status is not None:
             current_status = self._force_ping_status
-
-        if self._ping_handler is not None:
-            try:
-                task_context = self._ping_task_context(self._ping_handler)
-                args = (request_context,) if task_context and request_context else ()
-                result = self._ping_handler(*args)
-                current_status = PingStatus(result) if isinstance(result, str) else result
-            except Exception as exc:
-                self.logger.warning("Custom Ping handler failed: %s: %s", type(exc).__name__, exc)
+        elif self._ping_handler is not None:
+            current_status = self._evaluate_ping_handler(request_context)
+        else:
+            current_status = None
 
         if current_status is None:
             if self.has_running_tasks():
@@ -561,14 +551,55 @@ class AgentArtsRuntimeApp(Starlette):
 
         return current_status
 
-    def force_ping_status(self, status: PingStatus) -> None:
+    def _evaluate_ping_handler(self, request_context: RequestContext | None) -> PingStatus:
+        """
+        Run the custom ping handler and validate its result.
+
+        Any failure - a raised exception, an unknown status string, or an
+        invalid return type - degrades to ``UNHEALTHY`` and is logged as an
+        error, so a malfunctioning health check is always visible to the
+        control plane instead of silently falling back to ``HEALTHY``.
+
+        Args:
+            request_context: Request context to pass if the handler accepts one.
+
+        Returns:
+            PingStatus: The handler's status, or ``UNHEALTHY`` on failure.
+        """
+        handler = self._ping_handler
+        if handler is None:  # callers narrow this; kept so the method is safe standalone
+            return PingStatus.UNHEALTHY
+        try:
+            task_context = self._ping_task_context(handler)
+            args = (request_context,) if task_context else ()
+            result = handler(*args)
+        except Exception as exc:
+            self.logger.exception("Custom ping handler raised: %s", type(exc).__name__)
+            return PingStatus.UNHEALTHY
+
+        if isinstance(result, PingStatus):
+            return result
+        if isinstance(result, str):
+            try:
+                return PingStatus(result)
+            except ValueError:
+                self.logger.exception("Custom ping handler returned unknown status: %r", result)
+                return PingStatus.UNHEALTHY
+
+        self.logger.error("Custom ping handler returned invalid status: %r", result)
+        return PingStatus.UNHEALTHY
+
+    def force_ping_status(self, status: PingStatus | None) -> None:
         """
         Force a specific ping status.
 
-        This can be used for graceful shutdown or maintenance mode.
+        This can be used for graceful shutdown or maintenance mode. While
+        set, it takes precedence over the custom ``@app.ping`` handler.
+        Pass ``None`` to clear the forced status and resume normal status
+        resolution.
 
         Args:
-            status: The status to force.
+            status: The status to force, or ``None`` to clear.
         """
         self._force_ping_status = status
         self._last_status_update_time = time.time()
@@ -603,9 +634,7 @@ class AgentArtsRuntimeApp(Starlette):
         except WebSocketDisconnect:
             self.logger.debug("WebSocket connection closed")
         except Exception as exc:
-            self.logger.exception(
-                "WebSocket handler failed: %s: %s", type(exc).__name__, exc
-            )
+            self.logger.exception("WebSocket handler failed: %s: %s", type(exc).__name__, exc)
             try:
                 await websocket.close(code=1011)
             except Exception:
@@ -706,7 +735,5 @@ class AgentArtsRuntimeApp(Starlette):
             else:
                 host = "127.0.0.1"
 
-        self.logger.info(
-            "Starting AgentArts runtime on %s:%s (%s)", host, port, self.protocol
-        )
+        self.logger.info("Starting AgentArts runtime on %s:%s (%s)", host, port, self.protocol)
         uvicorn.run(self, host=host, port=port, **kwargs)

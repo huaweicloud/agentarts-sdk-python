@@ -29,6 +29,8 @@ MANIFEST
 # PyInstaller
 *.manifest
 *.spec
+# Keep the PyInstaller spec that builds the standalone CLI binary.
+!packaging/agentarts.spec
 
 # Installer logs
 pip-log.txt

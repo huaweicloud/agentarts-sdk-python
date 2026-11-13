@@ -23,11 +23,16 @@ class PingStatus(Enum):
     of the runtime to the control plane for liveness/readiness probes.
 
     Attributes:
+        INITING: Process is up and ``/ping`` is answering, but the agent is
+            still initializing (e.g. loading models or data) and is not
+            ready to accept invocations yet. Typically reported by a
+            custom ``@app.ping`` handler during startup.
         HEALTHY: Runtime is healthy and accepting requests.
         HEALTHY_BUSY: Runtime is healthy but processing requests.
         UNHEALTHY: Runtime is unhealthy and not accepting requests.
     """
 
+    INITING = "Initing"
     HEALTHY = "Healthy"
     HEALTHY_BUSY = "HealthyBusy"
     UNHEALTHY = "Unhealthy"

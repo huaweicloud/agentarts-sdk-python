@@ -73,7 +73,7 @@ class BaseConfig(BaseModel):
     )
     dependency_file: str | None = Field(
         default=None,
-        description="Path to dependency file (e.g., requirements.txt, pyproject.toml)",
+        description="Path to dependency file (e.g., requirements.txt, pyproject.toml, pom.xml)",
     )
     region: str | None = Field(
         default=None,

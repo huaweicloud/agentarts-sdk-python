@@ -6,6 +6,46 @@ from typing import Optional
 TEMPLATES_DIR = Path(__file__).parent
 
 
+def render_java_dockerfile(
+    name: str,
+    port: int = 8080,
+    region: str | None = None,
+) -> str:
+    """
+    Render a Java Dockerfile for an agentarts agent.
+
+    The agent is built into a shaded fat jar (``target/<name>..jar``) by
+    ``agentarts deploy`` before the image is built, so the Dockerfile only
+    needs to copy the jar into an Eclipse Temurin JRE image.
+
+    Args:
+        name: Project name (matches the Maven ``finalName`` / jar name).
+        port: Port to expose.
+        region: Huawei Cloud region (e.g., "cn-southwest-2").
+
+    Returns:
+        Rendered Dockerfile content.
+    """
+    env_lines = ["# Set container environment marker", "ENV DOCKER_CONTAINER=true"]
+    if region:
+        env_lines.append(f"ENV HUAWEICLOUD_SDK_REGION={region}")
+    env_section = "\n".join(env_lines)
+
+    content = f"""FROM eclipse-temurin:17-jre
+
+{env_section}
+
+WORKDIR /app
+
+COPY target/{name}.jar app.jar
+
+EXPOSE {port}
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
+"""
+    return content.strip() + "\n"
+
+
 def get_dockerfile_template() -> str:
     """Get the Dockerfile template content."""
     template_path = TEMPLATES_DIR / "Dockerfile.j2"
