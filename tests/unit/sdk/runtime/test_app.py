@@ -13,6 +13,7 @@ Tests cover:
 """
 
 import json
+import time
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -89,6 +90,7 @@ class TestDecorators:
         app = AgentArtsRuntimeApp()
 
         with pytest.raises(ValueError, match="must be used with async functions"):
+
             @app.async_task
             def sync_func():
                 pass
@@ -550,6 +552,40 @@ class TestHandlePing:
         assert body["status"] == "HealthyBusy"
 
     @pytest.mark.asyncio
+    async def test_handle_ping_custom_handler_initing(self):
+        """Test _handle_ping reports Initing from a custom handler (startup loading)."""
+        app = AgentArtsRuntimeApp()
+
+        @app.ping
+        def custom_ping():
+            return PingStatus.INITING
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {}
+
+        response = await app._handle_ping(mock_request)
+
+        body = json.loads(response.body)
+        assert body["status"] == "Initing"
+
+    @pytest.mark.asyncio
+    async def test_handle_ping_handler_error_returns_unhealthy(self):
+        """A broken ping handler must fail safe to Unhealthy, never silently Healthy."""
+        app = AgentArtsRuntimeApp()
+
+        @app.ping
+        def broken_ping():
+            raise RuntimeError("health check crashed")
+
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {}
+
+        response = await app._handle_ping(mock_request)
+
+        body = json.loads(response.body)
+        assert body["status"] == "Unhealthy"
+
+    @pytest.mark.asyncio
     async def test_handle_ping_with_running_tasks(self):
         """Test _handle_ping returns HealthyBusy when tasks running."""
         app = AgentArtsRuntimeApp()
@@ -671,6 +707,46 @@ class TestGetCurrentPingStatus:
 
         assert status == PingStatus.UNHEALTHY
 
+    def test_get_current_ping_status_handler_unknown_string_fails_unhealthy(self):
+        """An unknown status string (e.g. wrong case) fails safe to UNHEALTHY, not HEALTHY."""
+        app = AgentArtsRuntimeApp()
+
+        @app.ping
+        def typo_ping():
+            return "initing"  # wrong case - must not silently fall back to HEALTHY
+
+        assert app.get_current_ping_status() == PingStatus.UNHEALTHY
+
+    def test_get_current_ping_status_handler_invalid_return_fails_unhealthy(self):
+        """A non PingStatus/str return value fails safe to UNHEALTHY."""
+        app = AgentArtsRuntimeApp()
+
+        @app.ping
+        def dict_ping():
+            return {"status": "healthy"}
+
+        assert app.get_current_ping_status() == PingStatus.UNHEALTHY
+
+    def test_get_current_ping_status_transition_updates_timestamp(self):
+        """Status transition (Initing -> Healthy) refreshes time_of_last_update."""
+        app = AgentArtsRuntimeApp()
+        state = {"ready": False}
+
+        @app.ping
+        def readiness_ping():
+            return PingStatus.HEALTHY if state["ready"] else PingStatus.INITING
+
+        before = app.get_current_ping_status()
+        timestamp_before = app._last_status_update_time
+
+        state["ready"] = True  # background loading finished
+        time.sleep(0.01)
+        after = app.get_current_ping_status()
+
+        assert before == PingStatus.INITING
+        assert after == PingStatus.HEALTHY
+        assert app._last_status_update_time > timestamp_before
+
     def test_get_current_ping_status_with_context_param_handler(self):
         """Test get_current_ping_status passes context to handler with context param."""
         app = AgentArtsRuntimeApp()
@@ -684,9 +760,7 @@ class TestGetCurrentPingStatus:
             return PingStatus.HEALTHY
 
         request_context = RequestContext(
-            session_id="test-session",
-            request_id="req-123",
-            request=None
+            session_id="test-session", request_id="req-123", request=None
         )
 
         status = app.get_current_ping_status(request_context)
@@ -707,9 +781,7 @@ class TestGetCurrentPingStatus:
             return PingStatus.HEALTHY
 
         request_context = RequestContext(
-            session_id="test-session",
-            request_id="req-123",
-            request=None
+            session_id="test-session", request_id="req-123", request=None
         )
 
         status = app.get_current_ping_status(request_context)
@@ -717,8 +789,8 @@ class TestGetCurrentPingStatus:
         assert status == PingStatus.HEALTHY
         assert handler_called is True
 
-    def test_get_current_ping_status_no_context_passed_when_none(self):
-        """Test get_current_ping_status does not pass None context."""
+    def test_get_current_ping_status_passes_none_context_when_unavailable(self):
+        """Handlers declaring a context param receive None when no context exists."""
         app = AgentArtsRuntimeApp()
 
         received_context = None
@@ -745,14 +817,10 @@ class TestGetCurrentPingStatus:
             return PingStatus.UNHEALTHY
 
         healthy_context = RequestContext(
-            session_id="healthy-session",
-            request_id="req-1",
-            request=None
+            session_id="healthy-session", request_id="req-1", request=None
         )
         unhealthy_context = RequestContext(
-            session_id="unhealthy-session",
-            request_id="req-2",
-            request=None
+            session_id="unhealthy-session", request_id="req-2", request=None
         )
 
         assert app.get_current_ping_status(healthy_context) == PingStatus.HEALTHY
@@ -778,6 +846,20 @@ class TestForcePingStatus:
 
         app.force_ping_status(PingStatus.HEALTHY)
 
+        assert app.get_current_ping_status() == PingStatus.HEALTHY
+
+    def test_force_ping_status_overrides_custom_handler(self):
+        """Forced status takes precedence over the custom ping handler while set."""
+        app = AgentArtsRuntimeApp()
+
+        @app.ping
+        def custom_ping():
+            return PingStatus.HEALTHY
+
+        app.force_ping_status(PingStatus.INITING)
+        assert app.get_current_ping_status() == PingStatus.INITING
+
+        app.force_ping_status(None)  # clear -> handler resolution resumes
         assert app.get_current_ping_status() == PingStatus.HEALTHY
 
 
@@ -1019,6 +1101,7 @@ class TestInvokeHandlerContextPropagation:
                 local_token = AgentArtsRuntimeContext.get_workload_access_token()
                 results[key] = local_token
                 return {"key": key, "token": local_token}
+
             return handler
 
         async def run_with_context(key, token_value):

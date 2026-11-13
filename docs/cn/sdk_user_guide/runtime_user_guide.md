@@ -200,9 +200,27 @@ def health_check() -> PingStatus:
 
 | 状态 | 说明 |
 |------|------|
+| `INITING` | 进程已启动、`/ping` 可应答，但 Agent 仍在初始化（如加载模型/数据），暂不接受调用 |
 | `HEALTHY` | 服务健康，无正在执行的任务 |
 | `HEALTHY_BUSY` | 服务健康，有任务正在执行 |
 | `UNHEALTHY` | 服务不健康 |
+
+#### 初始化阶段上报 Init
+
+进程已启动但 Agent 尚未就绪时（例如启动后需要加载模型），可在自定义 `@app.ping` 中返回
+`INITING`，加载完成后再返回 `HEALTHY`，控制面将据此等待而不会提前路由流量：
+
+```python
+_ready = False  # 后台加载完成后置为 True
+
+
+@app.ping
+def health_check() -> PingStatus:
+    return PingStatus.HEALTHY if _ready else PingStatus.INITING
+```
+
+> 注意：自定义 ping 处理函数抛出异常或返回无法识别的状态值时，`/ping` 会返回
+> `UNHEALTHY`（fail-safe），而不会静默回退为 `HEALTHY`。
 
 #### 强制设置状态
 
@@ -213,6 +231,9 @@ app.force_ping_status(PingStatus.UNHEALTHY)
 # 恢复正常
 app.force_ping_status(None)
 ```
+
+强制状态设置后优先于自定义 `@app.ping` 处理函数生效；传入 `None` 清除强制状态，
+恢复正常的健康检查逻辑。
 
 ### @app.websocket
 
