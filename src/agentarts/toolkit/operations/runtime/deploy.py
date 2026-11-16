@@ -117,6 +117,7 @@ def create_agentarts_runtime(
         execution_agency_name = None
         agent_gateway_id = None
         arch = None
+        enable_restricted_credentials = None
 
         if agent_config is not None:
             runtime_cfg = agent_config.runtime
@@ -175,6 +176,7 @@ def create_agentarts_runtime(
 
             execution_agency_name = runtime_cfg.execution_agency_name
             agent_gateway_id = runtime_cfg.agent_gateway_id
+            enable_restricted_credentials = runtime_cfg.enable_restricted_credentials
 
         if not artifact_source_config:
             artifact_source_config = {
@@ -207,6 +209,7 @@ def create_agentarts_runtime(
             execution_agency_name=execution_agency_name,
             agent_gateway_id=agent_gateway_id,
             arch=arch,
+            enable_restricted_credentials = enable_restricted_credentials,
         )
 
         agent_id = agent.get("id")

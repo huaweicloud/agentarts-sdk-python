@@ -591,6 +591,12 @@ class AgentArtsRuntimeConfig(BaseModel):
         default=None,
         description="Execution agency name",
     )
+    enable_restricted_credentials : bool = Field(
+        default=False,
+        description="Credential anti-theft switch. When True, runtime credentials are "
+                    "bound to the current VPC and rejected outside it. Only supported "
+                    "in private(VPC) network mode.Defaults to False.",
+    )
     identity_configuration: InboundIdentityConfig | None = Field(
         default_factory=InboundIdentityConfig,
         description="Identity configuration",
@@ -699,7 +705,7 @@ class AgentArtsConfig(BaseModel):
                 if "runtime" in ordered_agents[agent_name]:
                     ordered_agents[agent_name]["runtime"] = order_dict(
                         ordered_agents[agent_name]["runtime"],
-                        ["arch", "agent_gateway_id", "agent_id", "execution_agency_name", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "storage_config", "lifecycle_config", "environment_variables", "tags"]
+                        ["arch", "agent_gateway_id", "agent_id", "execution_agency_name", "enable_restricted_credentials", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "storage_config", "lifecycle_config", "environment_variables", "tags"]
                     )
             ordered_data["agents"] = ordered_agents
 
@@ -778,7 +784,7 @@ class AgentArtsConfigList(BaseModel):
                 if "runtime" in ordered_agents[agent_name]:
                     ordered_agents[agent_name]["runtime"] = order_dict(
                         ordered_agents[agent_name]["runtime"],
-                        ["arch", "agent_gateway_id", "agent_id", "execution_agency_name", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "storage_config", "lifecycle_config", "environment_variables", "tags"]
+                        ["arch", "agent_gateway_id", "agent_id", "execution_agency_name", "enable_restricted_credentials", "invoke_config", "network_config", "identity_configuration", "observability", "artifact_source", "storage_config", "lifecycle_config", "environment_variables", "tags"]
                     )
             ordered_data["agents"] = ordered_agents
 

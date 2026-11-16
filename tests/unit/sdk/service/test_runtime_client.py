@@ -134,6 +134,68 @@ class TestRuntimeClientLifecycleConfig:
         assert mock_update.call_args.kwargs["lifecycle_config"] == lifecycle_config
 
 
+class TestRuntimeClientEnableRestrictedCredentials:
+    """The credential anti-theft switch is sent through every control-plane path."""
+
+    def test_create_agent_includes_enable_restricted_credentials_when_true(self):
+        client = RuntimeClient(control_endpoint="https://control.example.com")
+
+        with patch.object(client, "_control") as mock_control, patch.object(
+            client, "_check", return_value={"id": "agent-1"}
+        ):
+            client.create_agent(name="test-agent", enable_restricted_credentials=True)
+
+        assert mock_control.call_args.kwargs["json"]["enable_restricted_credentials"] is True
+
+    def test_create_agent_omits_enable_restricted_credentials_when_unset(self):
+        client = RuntimeClient(control_endpoint="https://control.example.com")
+
+        with patch.object(client, "_control") as mock_control, patch.object(
+            client, "_check", return_value={"id": "agent-1"}
+        ):
+            client.create_agent(name="test-agent")
+
+        assert "enable_restricted_credentials" not in mock_control.call_args.kwargs["json"]
+
+    def test_update_agent_includes_enable_restricted_credentials_when_false(self):
+        client = RuntimeClient(control_endpoint="https://control.example.com")
+
+        with patch.object(client, "_control") as mock_control, patch.object(
+            client, "_check", return_value={"id": "agent-1"}
+        ):
+            client.update_agent(agent_id="agent-1", enable_restricted_credentials=False)
+
+        assert mock_control.call_args.kwargs["json"]["enable_restricted_credentials"] is False
+
+    def test_upsert_forwards_enable_restricted_credentials_in_both_branches(self):
+        client = RuntimeClient(control_endpoint="https://control.example.com")
+
+        # Create branch: agent not found -> POST payload carries the switch.
+        with patch.object(client, "find_agent_by_name", return_value=None), patch.object(
+            client, "_control"
+        ) as mock_control, patch.object(client, "_check", return_value={"id": "agent-1"}):
+            client.create_or_update_agent(
+                agent_name="test-agent", enable_restricted_credentials=True
+            )
+
+        assert mock_control.call_args[0][0] == "POST"
+        assert mock_control.call_args.kwargs["json"]["enable_restricted_credentials"] is True
+
+        # Update branch: agent found -> PUT payload carries the switch.
+        with patch.object(
+            client, "find_agent_by_name", return_value={"id": "agent-1"}
+        ), patch.object(
+            client, "_control"
+        ) as mock_control, patch.object(client, "_check", return_value={"id": "agent-1"}):
+            client.create_or_update_agent(
+                agent_name="test-agent", enable_restricted_credentials=False
+            )
+
+        assert mock_control.call_args[0][0] == "PUT"
+        assert mock_control.call_args[0][1] == "/v1/core/runtimes/agent-1"
+        assert mock_control.call_args.kwargs["json"]["enable_restricted_credentials"] is False
+
+
 class TestRuntimeClientExecCommand:
     """Tests for RuntimeClient.exec_command method."""
 

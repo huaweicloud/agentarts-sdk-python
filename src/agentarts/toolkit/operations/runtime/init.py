@@ -323,6 +323,9 @@ agents:
       lifecycle_config:
         idle_session_timeout_sec: null  # 60-604800; service default: 900
         max_alive_time_sec: null  # 60-604800; service default: 86400
+      enable_restricted_credentials: Credential anti-theft switch.When True,runtime
+        credentials are bound to the current VPC and rejected outside it.Only supported
+        in private(VPC) network mode.Omit to keep the backend default (False).
 
       environment_variables:{env_vars_yaml}
 
