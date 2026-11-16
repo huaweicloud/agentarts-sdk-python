@@ -5,6 +5,7 @@
 // signing).
 
 import { DEFAULT_TIMEOUT_MS } from "./config.js";
+import type { MemoryKind, MemoryCategory } from "./search-filters.js";
 
 /** Error raised for non-2xx API responses or network failures. */
 export class MemoryApiError extends Error {
@@ -22,6 +23,8 @@ export class MemoryApiError extends Error {
 export interface SearchRequestBody {
   query: string;
   strategy_type?: string;
+  kind?: MemoryKind;
+  category?: MemoryCategory;
   top_k?: number;
   min_score?: number;
   actor_id?: string;

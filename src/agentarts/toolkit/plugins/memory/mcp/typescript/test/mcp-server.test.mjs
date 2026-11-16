@@ -21,6 +21,13 @@ const API_KEY = "test-key-xyz";
 const USER = "cc-user";
 const BASE = `/v1/core/spaces/${SPACE}`;
 
+// Public contract expectations, deliberately independent of implementation constants.
+const CATEGORIES_BY_KIND = {
+  observation: ["bugfix", "feature", "refactor", "change", "discovery", "decision", "security_alert", "security_note", "sensitive"],
+  experience: ["feature", "bugfix", "testing", "build-env"],
+};
+const ALL_CATEGORIES = ["bugfix", "feature", "refactor", "change", "discovery", "decision", "security_alert", "security_note", "sensitive", "testing", "build-env"];
+
 // ── mock AgentArts data plane ─────────────────────────────────────────
 
 let calls = [];
@@ -52,7 +59,12 @@ function mockHandler(req, res) {
 function startMcp(env) {
   const child = spawn("node", ["dist/index.mjs"], {
     stdio: ["pipe", "pipe", "ignore"],
-    env: { ...process.env, ...env },
+    env: {
+      ...process.env,
+      HUAWEICLOUD_SDK_MEMORY_API_KEY: "",
+      AGENTARTS_MEMORY_RERANK: "0",
+      ...env,
+    },
   });
   let nextId = 1;
   const pending = new Map();
@@ -139,8 +151,14 @@ describe("agentarts-memory MCP server (with credentials)", () => {
     assert.deepEqual(tools.find((t) => t.name === "search_memories").inputSchema.required, ["query"]);
     const props = tools.find((t) => t.name === "search_memories").inputSchema.properties;
     assert.deepEqual(Object.keys(props).sort(), [
-      "end_time", "min_score", "query", "start_time", "strategy_type", "top_k",
+      "category", "end_time", "kind", "min_score", "query", "start_time", "strategy_type", "top_k",
     ]);
+    assert.equal(props.kind.type, "string");
+    assert.deepEqual(props.kind.enum, ["observation", "experience"]);
+    assert.equal(props.category.type, "string");
+    assert.deepEqual(props.category.enum, ALL_CATEGORIES);
+    assert.ok(!Object.hasOwn(props.kind, "default"));
+    assert.ok(!Object.hasOwn(props.category, "default"));
   });
 
   test("search_memories: REST wire format (path, bearer auth, body defaults)", async () => {
@@ -179,6 +197,112 @@ describe("agentarts-memory MCP server (with credentials)", () => {
       rerank: false,
     });
   });
+
+  test("search_memories: all eight parameters reach the request body", async () => {
+    const args = {
+      query: "all eight parameters",
+      strategy_type: "procedural",
+      kind: "experience",
+      category: "build-env",
+      top_k: 12,
+      min_score: 0.3,
+      start_time: 1760000000000,
+      end_time: 1770000000000,
+    };
+    await mcp.callTool("search_memories", args);
+    const call = calls.find(c => c.body?.query === args.query);
+    assert.ok(call);
+    assert.deepEqual(call.body, { ...args, actor_id: USER, rerank: false });
+  });
+
+  for (const [kind, categories] of Object.entries(CATEGORIES_BY_KIND)) {
+    test(`search_memories: kind=${kind} omits category and selects procedural`, async () => {
+      const query = `kind only ${kind}`;
+      await mcp.callTool("search_memories", { query, kind });
+      const call = calls.find(c => c.body?.query === query);
+      assert.ok(call);
+      assert.deepEqual(call.body, {
+        query, kind, strategy_type: "procedural", top_k: 5, min_score: 0.7,
+        actor_id: USER, rerank: false,
+      });
+    });
+
+    for (const category of categories) {
+      test(`search_memories: forwards ${kind}/${category}`, async () => {
+        const query = `pair ${kind}/${category}`;
+        await mcp.callTool("search_memories", { query, kind, category });
+        const call = calls.find(c => c.body?.query === query);
+        assert.ok(call);
+        assert.deepEqual(call.body, {
+          query, kind, category, strategy_type: "procedural", top_k: 5, min_score: 0.7,
+          actor_id: USER, rerank: false,
+        });
+      });
+    }
+  }
+
+  for (const category of ALL_CATEGORIES) {
+    test(`search_memories: category=${category} alone leaves kind unrestricted`, async () => {
+      const query = `category only ${category}`;
+      await mcp.callTool("search_memories", { query, category });
+      const call = calls.find(c => c.body?.query === query);
+      assert.ok(call);
+      assert.deepEqual(call.body, {
+        query, category, strategy_type: "procedural", top_k: 5, min_score: 0.7,
+        actor_id: USER, rerank: false,
+      });
+    });
+  }
+
+  for (const filters of [
+    { kind: "observation" },
+    { category: "bugfix" },
+    { kind: "experience", category: "testing" },
+  ]) {
+    test(`search_memories: ${JSON.stringify(filters)} overrides an explicit non-procedural strategy`, async () => {
+      const query = `override ${JSON.stringify(filters)}`;
+      await mcp.callTool("search_memories", { query, strategy_type: "semantic", ...filters });
+      const call = calls.find(c => c.body?.query === query);
+      assert.ok(call);
+      assert.deepEqual(call.body, {
+        query, ...filters, strategy_type: "procedural", top_k: 5, min_score: 0.7,
+        actor_id: USER, rerank: false,
+      });
+    });
+  }
+
+  for (const field of ["kind", "category"]) {
+    for (const value of ["unknown", "", "all", null, 1, true, [], {}, " feature "]) {
+      test(`search_memories: rejects ${field}=${JSON.stringify(value)} without HTTP`, async () => {
+        const countBefore = calls.length;
+        const response = await mcp.rpc("tools/call", {
+          name: "search_memories",
+          arguments: { query: "invalid classification", [field]: value },
+        });
+        assert.ok(response.error || response.result?.isError, "invalid enum/type must produce an MCP error");
+        assert.match(JSON.stringify(response.error ?? response.result), new RegExp(field));
+        assert.equal(calls.length, countBefore, "invalid classification must not reach the backend");
+      });
+    }
+  }
+
+  for (const [kind, category] of [
+    ["observation", "testing"],
+    ["observation", "build-env"],
+    ["experience", "discovery"],
+    ["experience", "security_alert"],
+  ]) {
+    test(`search_memories: rejects mismatched ${kind}/${category} without HTTP`, async () => {
+      const countBefore = calls.length;
+      const out = await mcp.callTool("search_memories", { query: "mismatched classification", kind, category });
+      assert.match(out.error, /not valid for kind/);
+      assert.match(out.error, new RegExp(kind));
+      assert.match(out.error, new RegExp(category));
+      assert.deepEqual(out.results, []);
+      assert.equal(out.total, 0);
+      assert.equal(calls.length, countBefore, "mismatched category must not reach the backend");
+    });
+  }
 
   test("backend 5xx: tool returns an error payload, not a protocol error", async () => {
     const out = await mcp.callTool("search_memories", { query: "boom" });
