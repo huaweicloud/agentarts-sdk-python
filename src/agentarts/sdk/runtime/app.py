@@ -29,6 +29,7 @@ import subprocess
 import threading
 import time
 import uuid
+import re
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import (
@@ -43,8 +44,17 @@ from starlette.routing import Route, WebSocket, WebSocketRoute
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from .context import AgentArtsRuntimeContext, RequestContext
-from .model import ACCESS_TOKEN_HEADER, SESSION_HEADER, USER_ID_HEADER, PingStatus
-
+from .model import (
+    ACCESS_TOKEN_HEADER,
+    CONTENT_SHA256_HEADER, 
+    MCP_PROTOCOL_VERSION_HEADER, 
+    MCP_PROTOCOL_VERSIONS,
+    SESSION_HEADER, 
+    UNSIGNED_PAYLOAD,
+    USER_ID_HEADER, 
+    USER_ID_PATTERN,
+    PingStatus,
+)
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Generator, Sequence
 
@@ -228,6 +238,47 @@ class AgentArtsRuntimeApp(Starlette):
         return len(self._active_tasks) > 0
 
     # ------------------------------------------------------------------
+    # Validation of optional request header parameters
+    # ------------------------------------------------------------------
+    def _validate_contract_headers(self,request: Request | WebSocket) ->JSONResponse |None:
+        """
+        Validate value range of optional contract header.
+        Skip validation if not provided; the value must be valid when present, otherwise return 400.
+        Return None to indicate validation passed.  
+        """
+        mcp_version = request.headers.get(MCP_PROTOCOL_VERSION_HEADER)
+        if mcp_version is not None and mcp_version not in MCP_PROTOCOL_VERSIONS:
+            return self._contract_error(
+                MCP_PROTOCOL_VERSION_HEADER,
+                "取值范围：日期格式(YYYY-MM-DD),长度10字符。"
+                "支持如下版本:2025-03-26，2025-06-18,2025-11-25",
+            )
+        user_id =request.headers.get(USER_ID_HEADER)
+        if user_id is not None and not re.fullmatch(USER_ID_PATTERN,user_id):
+            return self._contract_error(
+                USER_ID_HEADER,
+                '取值范围: 由英文字母，数字，"-","_"组成,不超过129字符',
+            )
+        content_sha256 = request.headers.get(CONTENT_SHA256_HEADER)
+        if content_sha256 is not None and content_sha256 !=UNSIGNED_PAYLOAD:
+            return self._contract_error(
+                CONTENT_SHA256_HEADER,
+                '取值范围: UNSIGNED_PAYLOAD',
+            )
+
+        return None
+    
+    def _contract_error(self,header_name: str, range_text:str) ->JSONResponse:
+        """Return 400 response if contract header validation fails"""
+        return JSONResponse(
+            status_code=400,
+            content ={
+                "code":400,
+                "data":None,
+                "message":f"{header_name}{range_text}",
+            },
+    )
+    # ------------------------------------------------------------------
     # Request context helpers
     # ------------------------------------------------------------------
 
@@ -292,6 +343,10 @@ class AgentArtsRuntimeApp(Starlette):
 
     async def _handle_invocation(self, request: Request) -> Response:
         start_time = time.time()
+        
+        header_error = self._validate_contract_headers(request)
+        if header_error is not None:
+            return header_error
 
         try:
             payload = await request.json()

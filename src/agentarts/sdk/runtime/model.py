@@ -14,6 +14,13 @@ USER_ID_HEADER = "X-HW-AgentGateway-User-Id"
 
 CUSTOM_HEADER_PREFIX = "X-Hw-AgentArts-Runtime-Custom-"
 
+MCP_PROTOCOL_VERSION_HEADER ="Mcp-Protocal-Version"
+MCP_PROTOCOL_VERSIONS = frozenset({"2025-03-26","2025-06-18","2025-11-25"})
+
+CONTENT_SHA256_HEADER = "X-Sdk-Content-Sha256"
+UNSIGNED_PAYLOAD = "UNSIGNED-PAYLOAD"
+
+USER_ID_PATTERN = r"^[A-Za-z0-9_-]{1,128}$"
 
 class PingStatus(Enum):
     """
