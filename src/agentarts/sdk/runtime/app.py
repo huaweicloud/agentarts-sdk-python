@@ -46,11 +46,9 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 from .context import AgentArtsRuntimeContext, RequestContext
 from .model import (
     ACCESS_TOKEN_HEADER,
-    CONTENT_SHA256_HEADER, 
     MCP_PROTOCOL_VERSION_HEADER, 
     MCP_PROTOCOL_VERSIONS,
     SESSION_HEADER, 
-    UNSIGNED_PAYLOAD,
     USER_ID_HEADER, 
     USER_ID_PATTERN,
     PingStatus,
@@ -257,14 +255,9 @@ class AgentArtsRuntimeApp(Starlette):
         if user_id is not None and not re.fullmatch(USER_ID_PATTERN,user_id):
             return self._contract_error(
                 USER_ID_HEADER,
-                '取值范围: 由英文字母，数字，"-","_"组成,不超过129字符',
+                '取值范围: 由英文字母，数字，"-","_"组成,不超过128字符',
             )
-        content_sha256 = request.headers.get(CONTENT_SHA256_HEADER)
-        if content_sha256 is not None and content_sha256 !=UNSIGNED_PAYLOAD:
-            return self._contract_error(
-                CONTENT_SHA256_HEADER,
-                '取值范围: UNSIGNED_PAYLOAD',
-            )
+    
 
         return None
     
