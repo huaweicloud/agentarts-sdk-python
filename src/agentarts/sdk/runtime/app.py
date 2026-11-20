@@ -242,24 +242,23 @@ class AgentArtsRuntimeApp(Starlette):
         """
         Validate value range of optional contract header.
         Skip validation if not provided; the value must be valid when present, otherwise return 400.
-        Return None to indicate validation passed.  
+        Return None to indicate validation passed.
         """
         mcp_version = request.headers.get(MCP_PROTOCOL_VERSION_HEADER)
         if mcp_version is not None and mcp_version not in MCP_PROTOCOL_VERSIONS:
             return self._contract_error(
                 MCP_PROTOCOL_VERSION_HEADER,
-                "取值范围：日期格式(YYYY-MM-DD),长度10字符。"
-                "支持如下版本:2025-03-26，2025-06-18,2025-11-25",
+                f"must be a date in YYYY-MM-DD format (10 characters). Supported versions: {', '.join(MCP_PROTOCOL_VERSIONS)}",
             )
-        user_id =request.headers.get(USER_ID_HEADER)
-        if user_id is not None and not re.fullmatch(USER_ID_PATTERN,user_id):
+        user_id = request.headers.get(USER_ID_HEADER)
+        if user_id is not None and not re.fullmatch(USER_ID_PATTERN, user_id):
             return self._contract_error(
                 USER_ID_HEADER,
-                '取值范围: 由英文字母，数字，"-","_"组成,不超过128字符',
+                "may only contain letters, digits, hyphen and underscore, with a maximum length of 128 characters",
             )
-    
-
+        
         return None
+
     
     def _contract_error(self,header_name: str, range_text:str) ->JSONResponse:
         """Return 400 response if contract header validation fails"""
