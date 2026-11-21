@@ -99,6 +99,37 @@ def upload_content_type(
     return "application/x-tar" if is_tar_payload(local_file, content, filename) else "application/octet-stream"
 
 
+def _parse_sse_stream(line_iterator: Iterator[str]) -> Iterator[str]:
+    """
+    Parse decoded text lines into SSE event payloads.
+
+    Each yielded value is the content of a single ``data:`` line
+    (without the ``data: `` prefix).
+
+    The underlying streaming response is automatically closed after
+    the iterator is exhausted (handled by ``RequestResult.iter_lines``).
+
+    Module-level rather than a method so both ``RuntimeClient`` and
+    ``LocalRuntimeClient`` (which extends ``BaseHTTPClient``, not
+    ``RuntimeClient``) can use it.
+    """
+    buffer = ""
+    for line in line_iterator:
+        if line == "":
+            if buffer:
+                for event_line in buffer.splitlines():
+                    if event_line.startswith("data: "):
+                        payload = event_line[6:]
+                        if payload.strip() == "[DONE]":
+                            return
+                        yield payload
+                buffer = ""
+        else:
+            if buffer:
+                buffer += "\n"
+            buffer += line
+
+
 @dataclass
 class StreamDownloadResult:
     """Streaming download result."""
@@ -258,7 +289,7 @@ class RuntimeClient:
 
         if result.streaming:
             if self._is_stream_response(result):
-                return self._parse_sse_stream(result.iter_lines())
+                return _parse_sse_stream(result.iter_lines())
 
             body = b"".join(result.iter_bytes())
             result.close()
@@ -276,34 +307,6 @@ class RuntimeClient:
             except (json.JSONDecodeError, ValueError):
                 return {"raw": data}
         return {"data": data}
-
-    @staticmethod
-    def _parse_sse_stream(line_iterator: Iterator[str]) -> Iterator[str]:
-        """
-        Parse decoded text lines into SSE event payloads.
-
-        Each yielded value is the content of a single ``data:`` line
-        (without the ``data: `` prefix).
-
-        The underlying streaming response is automatically closed after
-        the iterator is exhausted (handled by ``RequestResult.iter_lines``).
-        """
-        buffer = ""
-        for line in line_iterator:
-            if line == "":
-                if buffer:
-                    for event_line in buffer.splitlines():
-                        if event_line.startswith("data: "):
-                            payload = event_line[6:]
-                            if payload.strip() == "[DONE]":
-                                return
-                            yield payload
-                    buffer = ""
-            else:
-                if buffer:
-                    buffer += "\n"
-                buffer += line
-
     def create_agent(
         self,
         name: str,
@@ -625,7 +628,7 @@ class RuntimeClient:
             True if the agent was deleted successfully.
         """
         existing = self.find_agent_by_name(agent_name)
-        agent_id = existing.get("id")
+        agent_id = existing.get("id") if existing else None
         if not agent_id:
             log.warning("Agent '%s' not found, nothing to delete", agent_name)
             return False
@@ -1184,7 +1187,7 @@ class RuntimeClient:
                     success=response.ok,
                     status_code=response.status_code,
                     data=None,
-                    headers=dict(response.headers),
+                    headers=response.headers,
                     streaming=True,
                     _raw_response=response,
                 )
@@ -1207,7 +1210,7 @@ class RuntimeClient:
                 status_code=response.status_code,
                 data=data,
                 error=error_msg,
-                headers=dict(response.headers),
+                headers=response.headers,
             )
 
         except Exception as e:
@@ -1409,7 +1412,7 @@ class LocalRuntimeClient(BaseHTTPClient):
         if result.streaming:
             content_type = result.headers.get("Content-Type", "")
             if "text/event-stream" in content_type:
-                return self._parse_sse_stream(result.iter_lines())
+                return _parse_sse_stream(result.iter_lines())
             body = b"".join(result.iter_bytes())
             result.close()
             try:
