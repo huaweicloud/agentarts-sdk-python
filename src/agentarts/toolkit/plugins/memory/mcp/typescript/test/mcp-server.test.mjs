@@ -222,7 +222,7 @@ describe("agentarts-memory MCP server (project scope configured via env)", () =>
       HUAWEICLOUD_SDK_MEMORY_API_KEY: API_KEY,
       AGENTARTS_MEMORY_SPACE_ID: SPACE,
       AGENTARTS_MEMORY_USER_ID: USER,
-      AGENTARTS_MEMORY_PROJECT_ID: PROJECT,
+      AGENTARTS_MEMORY_PROJECT_ID: `  ${PROJECT}\r`,
     });
     await mcp.rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "0.0.0" } });
   });
@@ -232,7 +232,7 @@ describe("agentarts-memory MCP server (project scope configured via env)", () =>
     httpServer.close();
   });
 
-  test("AGENTARTS_MEMORY_PROJECT_ID sends nested scope in the search body", async () => {
+  test("AGENTARTS_MEMORY_PROJECT_ID is trimmed and sent as nested scope", async () => {
     await mcp.callTool("search_memories", { query: "project scoped" });
     const call = calls.find((c) => c.body?.query === "project scoped");
     assert.ok(call, "search was called");

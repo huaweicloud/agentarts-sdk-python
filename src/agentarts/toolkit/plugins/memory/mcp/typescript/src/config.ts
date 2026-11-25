@@ -38,7 +38,7 @@ export function getBaseUrl(): string {
 }
 
 export function getProjectId(): string {
-  return process.env[ENV_PROJECT_ID] || "";
+  return (process.env[ENV_PROJECT_ID] || "").trim();
 }
 
 export function getApiKey(): string {
