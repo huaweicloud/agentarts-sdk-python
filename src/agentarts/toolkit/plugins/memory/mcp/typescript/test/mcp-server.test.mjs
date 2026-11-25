@@ -19,6 +19,7 @@ import { once } from "node:events";
 const SPACE = "sp-test-123";
 const API_KEY = "test-key-xyz";
 const USER = "cc-user";
+const PROJECT = "project-test-123";
 const BASE = `/v1/core/spaces/${SPACE}`;
 
 // ── mock AgentArts data plane ─────────────────────────────────────────
@@ -105,6 +106,7 @@ describe("agentarts-memory MCP server (with credentials)", () => {
       HUAWEICLOUD_SDK_MEMORY_API_KEY: API_KEY,
       AGENTARTS_MEMORY_SPACE_ID: SPACE,
       AGENTARTS_MEMORY_USER_ID: USER,
+      AGENTARTS_MEMORY_PROJECT_ID: "",
     });
     const init = await mcp.rpc("initialize", {
       protocolVersion: "2025-06-18",
@@ -139,8 +141,9 @@ describe("agentarts-memory MCP server (with credentials)", () => {
     assert.deepEqual(tools.find((t) => t.name === "search_memories").inputSchema.required, ["query"]);
     const props = tools.find((t) => t.name === "search_memories").inputSchema.properties;
     assert.deepEqual(Object.keys(props).sort(), [
-      "end_time", "min_score", "query", "start_time", "strategy_type", "top_k",
+      "end_time", "min_score", "query", "search_all_projects", "start_time", "strategy_type", "top_k",
     ]);
+    assert.equal(props.search_all_projects.default, false);
   });
 
   test("search_memories: REST wire format (path, bearer auth, body defaults)", async () => {
@@ -158,7 +161,14 @@ describe("agentarts-memory MCP server (with credentials)", () => {
     assert.equal(out.query, "hello world");
   });
 
-  test("search_memories: all six parameters are forwarded", async () => {
+  test("search_all_projects=true sends a wildcard without a configured project", async () => {
+    await mcp.callTool("search_memories", { query: "wildcard without env", search_all_projects: true });
+    const call = calls.find((c) => c.body?.query === "wildcard without env");
+    assert.ok(call, "search was called");
+    assert.deepEqual(call.body.scope, { project_id: "*" });
+  });
+
+  test("search_memories: query filters are forwarded", async () => {
     await mcp.callTool("search_memories", {
       query: "custom k",
       strategy_type: "episodic",
@@ -198,6 +208,51 @@ describe("agentarts-memory MCP server (with credentials)", () => {
   test("unknown tool: JSON-RPC level error, no crash", async () => {
     const r = await mcp.rpc("tools/call", { name: "add_messages", arguments: { messages: [] } });
     assert.ok(r.error || r.result?.isError, "unknown tool must produce an error");
+  });
+});
+
+describe("agentarts-memory MCP server (project scope configured via env)", () => {
+  let httpServer, mcp;
+
+  before(async () => {
+    httpServer = createServer(mockHandler);
+    await once(httpServer.listen(0, "127.0.0.1"), "listening");
+    mcp = startMcp({
+      AGENTARTS_MEMORY_DATA_ENDPOINT: `http://127.0.0.1:${httpServer.address().port}`,
+      HUAWEICLOUD_SDK_MEMORY_API_KEY: API_KEY,
+      AGENTARTS_MEMORY_SPACE_ID: SPACE,
+      AGENTARTS_MEMORY_USER_ID: USER,
+      AGENTARTS_MEMORY_PROJECT_ID: PROJECT,
+    });
+    await mcp.rpc("initialize", { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "0.0.0" } });
+  });
+
+  after(() => {
+    mcp.kill();
+    httpServer.close();
+  });
+
+  test("AGENTARTS_MEMORY_PROJECT_ID sends nested scope in the search body", async () => {
+    await mcp.callTool("search_memories", { query: "project scoped" });
+    const call = calls.find((c) => c.body?.query === "project scoped");
+    assert.ok(call, "search was called");
+    assert.deepEqual(call.body.scope, { project_id: PROJECT });
+  });
+
+  test("search_all_projects=true overrides the configured project with a wildcard", async () => {
+    await mcp.callTool("search_memories", { query: "all projects", strategy_type: "semantic", search_all_projects: true });
+    const call = calls.find((c) => c.body?.query === "all projects");
+    assert.ok(call, "search was called");
+    assert.equal(call.body.strategy_type, "semantic");
+    assert.deepEqual(call.body.scope, { project_id: "*" });
+  });
+
+  test("user_preference search omits the configured project scope", async () => {
+    await mcp.callTool("search_memories", { query: "user preferences", strategy_type: "user_preference" });
+    const call = calls.find((c) => c.body?.query === "user preferences");
+    assert.ok(call, "search was called");
+    assert.equal(call.body.strategy_type, "user_preference");
+    assert.ok(!("scope" in call.body), "user-level preference search must not be project scoped");
   });
 });
 
