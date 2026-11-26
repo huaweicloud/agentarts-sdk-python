@@ -369,6 +369,7 @@ class ToolCallMessage:
     name: str = ""
     arguments: str = ""
     meta: str | None = None
+    skip_extract: bool | None = None
 
     def __post_init__(self):
         if self.arguments is None:
@@ -389,6 +390,8 @@ class ToolCallMessage:
         }
         if self.meta:
             result["meta"] = self.meta
+        if self.skip_extract is not None:
+            result["skip_extract"] = self.skip_extract
         return result
 
 
@@ -400,6 +403,7 @@ class ToolResultMessage:
     content: str = ""
     asset_ref: AssetRef | None = None
     meta: str | None = None
+    skip_extract: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         tool_result = {
@@ -413,6 +417,8 @@ class ToolResultMessage:
         }
         if self.meta:
             result["meta"] = self.meta
+        if self.skip_extract is not None:
+            result["skip_extract"] = self.skip_extract
         return result
 
 
@@ -436,6 +442,7 @@ class MessageRequest:
     actor_id: str | None = None
     assistant_id: str | None = None
     meta: dict[str, Any] | None = None
+    skip_extract: bool | None = None
 
     def __post_init__(self):
         if not self.parts:
@@ -463,6 +470,8 @@ class MessageRequest:
             result["assistant_id"] = self.assistant_id
         if self.meta is not None:
             result["meta"] = self.meta
+        if self.skip_extract is not None:
+            result["skip_extract"] = self.skip_extract
         return result
 
 
@@ -767,6 +776,7 @@ class MessageInfo:
     meta: dict[str, Any] | None = None
     message_time: int | None = None
     created_at: str | None = None
+    skip_extract: bool | None = False
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "MessageInfo":
@@ -782,7 +792,8 @@ class MessageInfo:
             idempotency_key=data.get("idempotency_key"),
             meta=data.get("meta"),
             message_time=data.get("message_time"),
-            created_at=data.get("created_at")
+            created_at=data.get("created_at"),
+            skip_extract=data.get("skip_extract", False)
         )
 
 
@@ -909,6 +920,7 @@ class TextMessage:
     actor_id: str | None = None
     assistant_id: str | None = None
     meta: str | None = None
+    skip_extract: bool | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to OpenAPI format message request."""
@@ -926,6 +938,8 @@ class TextMessage:
             result["assistant_id"] = self.assistant_id
         if self.meta:
             result["meta"] = self.meta
+        if self.skip_extract is not None:
+            result["skip_extract"] = self.skip_extract
         return result
 
 
