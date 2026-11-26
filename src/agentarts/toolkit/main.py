@@ -17,6 +17,7 @@ from rich.logging import RichHandler
 
 from agentarts.toolkit.cli.gateway import gateway
 from agentarts.toolkit.cli.memory.commands import memory_app
+from agentarts.toolkit.cli.custom_model_provider import custom_model_provider
 from agentarts.toolkit.cli.runtime import deploy, dev, init
 from agentarts.toolkit.cli.runtime.commands import runtime_app
 from agentarts.toolkit.cli.runtime.config import config_app
@@ -34,6 +35,7 @@ _COMMAND_ORDER = [
     "runtime",
     "destroy",
     "gateway",
+    "custom-model-provider",
     "memory",
     "deploy",
     "configure",
@@ -165,6 +167,7 @@ app.command(name="launch", help="Deploy agent to Huawei Cloud or run locally. (a
 app.command(name="invoke", help="Invoke agent with JSON payload.")(invoke)
 app.command(name="destroy", help="Destroy agent from Huawei Cloud.")(destroy)
 app.add_typer(gateway, name="gateway")
+app.add_typer(custom_model_provider, name="custom-model-provider")
 app.add_typer(memory_app, name="memory")
 app.add_typer(runtime_app, name="runtime")
 

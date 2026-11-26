@@ -205,6 +205,13 @@ def gateway_client(cloud_credentials):
     return GatewayClient()
 
 
+@pytest.fixture
+def model_provider_client(cloud_credentials):
+    from agentarts.sdk import CustomModelProviderClient
+
+    return CustomModelProviderClient()
+
+
 @pytest.fixture(scope="session")
 def memory_control_client(cloud_credentials):
     """MemoryClient for control-plane ops (create/delete space). AK/SK from env."""
