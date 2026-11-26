@@ -79,7 +79,6 @@ server.registerTool(
       "or procedural — other values are rejected by the backend), " +
       "start_time/end_time (Unix milliseconds). " +
       "By default, results are limited to the server-configured project when one is set. " +
-      "Set search_all_projects=true to send scope.project_id='*' and search across all projects. " +
       "The project filter is always omitted for user_preference searches.",
     inputSchema: {
       query: z.string().describe("Natural-language search query."),
@@ -87,10 +86,6 @@ server.registerTool(
         .string()
         .optional()
         .describe("Filter by memory type: semantic, episodic, user_preference, summary or procedural."),
-      search_all_projects: z
-        .boolean()
-        .default(false)
-        .describe("Search all projects by sending scope.project_id='*'."),
       top_k: z
         .number()
         .int()
@@ -118,13 +113,12 @@ server.registerTool(
         .describe("Time range end, Unix timestamp in milliseconds."),
     },
   },
-  async ({ query, strategy_type, search_all_projects, top_k, min_score, start_time, end_time }) => {
+  async ({ query, strategy_type, top_k, min_score, start_time, end_time }) => {
     try {
       const projectId = getProjectId();
-      const projectScope = search_all_projects ? "*" : projectId;
       const scope =
-        strategy_type !== "user_preference" && projectScope
-          ? { project_id: projectScope }
+        strategy_type !== "user_preference" && projectId
+          ? { project_id: projectId }
           : undefined;
       const results = await getClient().searchMemories({
         query,

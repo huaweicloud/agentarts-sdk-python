@@ -13,15 +13,14 @@ AgentArts Memory（华为云）的 MCP 服务器，TypeScript 实现，**运行�
 
 | Tool | 参数 | 说明 |
 | --- | --- | --- |
-| `search_memories` | `query`, `strategy_type`, `search_all_projects=false`, `top_k=5`, `min_score=0.7`, `start_time`, `end_time` | 语义检索云端记忆，可按记忆类型和时间范围（Unix 毫秒）过滤；`search_all_projects=true` 时发送 `scope={project_id:"*"}` 搜索所有项目（该布尔参数本身不直接放进 REST 请求体）。`strategy_type` 支持：`semantic` / `episodic` / `user_preference` / `summary` / `procedural`（非法值会被后端拒绝：`Malformed request body`） |
+| `search_memories` | `query`, `strategy_type`, `top_k=5`, `min_score=0.7`, `start_time`, `end_time` | 语义检索云端记忆，可按记忆类型和时间范围（Unix 毫秒）过滤；可选参数未传时不进请求体。`strategy_type` 支持：`semantic` / `episodic` / `user_preference` / `summary` / `procedural`（非法值会被后端拒绝：`Malformed request body`） |
 
 `user_id` 不作为工具参数（模型不应控制身份），由服务端从环境变量解析（见下表）。
 `rerank`（搜索结果重排序）同样不暴露给模型：后端默认开启，本服务**默认关闭**，
 运维通过 `AGENTARTS_MEMORY_RERANK` 开启。
-`scope.project_id` 也不作为独立工具参数；配置 `AGENTARTS_MEMORY_PROJECT_ID` 后，搜索默认自动携带
-`scope: {project_id}`，未配置时省略该字段。工具参数 `search_all_projects=true` 可让单次调用发送 `scope: {project_id:"*"}`，
-主动搜索所有项目；默认 `false`，沿用环境变量的项目范围。`strategy_type=user_preference` 时始终省略
-`scope`，避免项目范围过滤影响用户级偏好召回；未指定 `strategy_type` 且未开启 `search_all_projects` 的搜索仍带项目范围。
+`scope.project_id` 不作为工具参数，项目范围完全由服务端环境变量控制：配置 `AGENTARTS_MEMORY_PROJECT_ID`
+为项目 ID 时搜索该项目，设置为 `"*"` 时搜索所有项目，未配置时省略 `scope`。`strategy_type=user_preference`
+时始终省略 `scope`，避免项目范围过滤影响用户级偏好召回；未指定 `strategy_type` 的其他搜索仍使用配置的项目范围。
 
 ## 快速开始
 
@@ -42,7 +41,7 @@ node dist/index.mjs        # stdio transport，进程由 MCP 宿主拉起
 | `AGENTARTS_MEMORY_SPACE_ID` | ✅ | Space ID | — |
 | `HUAWEICLOUD_SDK_REGION` | | 区域（也认 `HUAWEICLOUD_REGION` / `OS_REGION_NAME`） | `cn-southwest-2` |
 | `AGENTARTS_MEMORY_DATA_ENDPOINT` | | 数据面地址覆盖 | `https://memory.{region}.huaweicloud-agentarts.com` |
-| `AGENTARTS_MEMORY_PROJECT_ID` | | 默认项目范围；`search_all_projects=true` 时改为 `project_id="*"`，`user_preference` 搜索时省略 | 未设置且未开启 `search_all_projects` 时不传 `scope` |
+| `AGENTARTS_MEMORY_PROJECT_ID` | | 项目范围：项目 ID 表示当前项目，`"*"` 表示所有项目；`user_preference` 搜索时省略 | 未设置时不传 `scope` |
 | `AGENTARTS_MEMORY_USER_ID` | ⚠️ | 记忆 actor_id，**必须与写入侧一致**，否则检索静默返回空 | 按平台推断：`cc-user` / `codex-user` / `opencode-user` / `__default__` |
 | `AGENTARTS_MEMORY_RERANK` | | 搜索结果重排序（SDK 0.1.9 后端默认开启，本服务默认**关闭**） | `false`；设 `1` / `true` 开启 |
 | `AGENTARTS_MEMORY_PLATFORM` | | 平台标识 | 自动探测（`*_PLUGIN_ROOT` 环境变量） |
@@ -135,7 +134,7 @@ npm test
 
 | 操作 | 接口 | 请求体 |
 | --- | --- | --- |
-| 语义检索 | `POST /v1/core/spaces/{space_id}/memories/search` | `{query, strategy_type?, scope?: {project_id}, top_k, min_score, actor_id, start_time?, end_time?, rerank}`（可选字段未设时省略；`scope` 由 `AGENTARTS_MEMORY_PROJECT_ID` 和工具参数 `search_all_projects` 控制（`search_all_projects=true` 时 `project_id="*"`，`user_preference` 搜索时省略），`rerank` 由 `AGENTARTS_MEMORY_RERANK` 控制且非工具参数）→ `{records: [{record, score}]}` |
+| 语义检索 | `POST /v1/core/spaces/{space_id}/memories/search` | `{query, strategy_type?, scope?: {project_id}, top_k, min_score, actor_id, start_time?, end_time?, rerank}`（可选字段未设时省略；`scope` 由 `AGENTARTS_MEMORY_PROJECT_ID` 控制（`user_preference` 搜索时省略），`rerank` 由 `AGENTARTS_MEMORY_RERANK` 控制且非工具参数）→ `{records: [{record, score}]}` |
 
 错误处理：接口失败时工具返回 `{"error": "...", "results": [], "total": 0}` 而非抛协议错误，
 模型可以看到错误文本。
