@@ -20,6 +20,9 @@ Quick Start:
     # Gateway
     from agentarts.sdk import GatewayClient
 
+    # Custom Model Provider
+    from agentarts.sdk import CustomModelProviderClient
+
     # Identity
     from agentarts.sdk import require_access_token, require_api_key, IdentityClient
 """
@@ -44,6 +47,7 @@ from agentarts.sdk.identity import (
     require_sts_token,
 )
 from agentarts.sdk.memory import AsyncMemoryClient, MemoryClient
+from agentarts.sdk.custom_model_provider import CustomModelProviderClient
 from agentarts.sdk.runtime.app import AgentArtsRuntimeApp
 from agentarts.sdk.runtime.context import AgentArtsRuntimeContext, RequestContext
 from agentarts.sdk.runtime.model import PingStatus
@@ -55,6 +59,7 @@ __all__ = [
     "AsyncMemoryClient",
     "Browser",
     "CodeInterpreter",
+    "CustomModelProviderClient",
     "IdentityClient",
     "GatewayClient",
     "MemoryClient",
