@@ -516,7 +516,7 @@ class TestCodeInterpreterClient(unittest.TestCase):
         mock_start_session.assert_called_once_with(
             code_interpreter_name="test-code-interpreter-name",
             api_key="test-api-key",
-            request_params={"name": test_session_name, "session_timeout": 900},  # 默认值
+            request_params={"name": test_session_name, "session_timeout": 1500},  # 默认值
         )
         mock_getenv.assert_called_once_with("HUAWEICLOUD_SDK_CODE_INTERPRETER_API_KEY")
 

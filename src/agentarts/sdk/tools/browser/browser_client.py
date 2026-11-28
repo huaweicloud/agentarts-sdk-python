@@ -817,7 +817,7 @@ class Browser:
         session_name: str,
         session_id: str | None = None,
         viewport: dict | None = None,
-        profile_configuration: dict | None = None,
+        profile_id: str | None = None,
         allowed_domains: list[str] | None = None,
         blocked_domains: list[str] | None = None,
         proxy_configuration: dict | None = None,
@@ -874,8 +874,6 @@ class Browser:
         }
         if viewport:
             request_params["viewport"] = viewport
-        if profile_configuration:
-            request_params["profile_configuration"] = profile_configuration
         if allowed_domains:
             request_params["allowed_domains"] = allowed_domains
         if blocked_domains:
@@ -888,6 +886,7 @@ class Browser:
                 browser_name=browser_name,
                 request_params=request_params,
                 session_id=session_id,
+                profile_id=profile_id,
             )
         else:
             api_key = api_key or os.getenv("HUAWEICLOUD_SDK_BROWSER_API_KEY")
@@ -898,6 +897,7 @@ class Browser:
                 browser_name=browser_name,
                 request_params=request_params,
                 session_id=session_id,
+                profile_id=profile_id,
                 api_key=api_key,
             )
 
