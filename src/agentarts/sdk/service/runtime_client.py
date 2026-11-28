@@ -319,6 +319,7 @@ class RuntimeClient:
         storage_config: dict | None = None,
         tags_config: list[dict] | None = None,
         lifecycle_config: dict | None = None,
+        enable_restricted_credentials: bool | None = None,
         **extra: Any,
     ) -> dict[str, Any]:
         """
@@ -342,6 +343,9 @@ class RuntimeClient:
                   unset uses the default 900 seconds (15 minutes).
                 - "max_alive_time_sec": int, 60-604800 seconds; null or unset
                   uses the default 86400 seconds (24 hours).
+            enable_restricted_credentials: Credential anti-theft switch.When True,runtime
+                credentials are bound to the current VPC and rejected outside it.Only supported
+                in private(VPC) network mode.Omit to keep the backend default (False).
             **extra: Additional fields forwarded to the API.
 
         Returns:
@@ -375,6 +379,8 @@ class RuntimeClient:
             payload["lifecycle_config"] = lifecycle_config
         if tags_config is not None:
             payload["tags"] = tags_config
+        if enable_restricted_credentials is not None:
+            payload["enable_restricted_credentials"] = enable_restricted_credentials
 
         result = self._control("POST", "/v1/core/runtimes", json=payload)
         return self._check(result, "create_agent")
@@ -393,6 +399,7 @@ class RuntimeClient:
         storage_config: dict | None = None,
         tags_config: list[dict] | None = None,
         lifecycle_config: dict | None = None,
+        enable_restricted_credentials : bool | None = None,
         **extra: Any,
     ) -> dict[str, Any]:
         """
@@ -415,6 +422,9 @@ class RuntimeClient:
                   unset uses the default 900 seconds (15 minutes).
                 - "max_alive_time_sec": int, 60-604800 seconds; null or unset
                   uses the default 86400 seconds (24 hours).
+            enable_restricted_credentials: Credential anti-theft switch.When True,runtime
+                credentials are bound to the current VPC and rejected outside it.Only supported
+                in private(VPC) network mode.Omit to keep the backend default (False).
             **extra: Additional fields forwarded to the API.
 
         Returns:
@@ -446,6 +456,8 @@ class RuntimeClient:
             payload["lifecycle_config"] = lifecycle_config
         if tags_config is not None:
             payload["tags"] = tags_config
+        if enable_restricted_credentials is not None:
+            payload["enable_restricted_credentials"] = enable_restricted_credentials
 
         result = self._control("PUT", f"/v1/core/runtimes/{agent_id}", json=payload)
         return self._check(result, "update_agent")
@@ -465,6 +477,7 @@ class RuntimeClient:
         storage_config: dict | None = None,
         tags_config: list[dict] | None = None,
         lifecycle_config: dict | None = None,
+        enable_restricted_credentials: bool | None = None,
         **extra: Any,
     ) -> dict[str, Any]:
         """
@@ -492,6 +505,9 @@ class RuntimeClient:
                   unset uses the default 900 seconds (15 minutes).
                 - "max_alive_time_sec": int, 60-604800 seconds; null or unset
                   uses the default 86400 seconds (24 hours).
+            enable_restricted_credentials: Credential anti-theft switch.When True,runtime
+                credentials are bound to the current VPC and rejected outside it.Only supported
+                in private(VPC) network mode.Omit to keep the backend default (False).
             **extra: Additional fields forwarded to the API.
 
         Returns:
@@ -516,6 +532,7 @@ class RuntimeClient:
                 storage_config=storage_config,
                 lifecycle_config=lifecycle_config,
                 tags_config=tags_config,
+                enable_restricted_credentials=enable_restricted_credentials,
                 **extra,
             )
 
@@ -534,6 +551,7 @@ class RuntimeClient:
             storage_config=storage_config,
             lifecycle_config=lifecycle_config,
             tags_config=tags_config,
+            enable_restricted_credentials=enable_restricted_credentials,
             **extra,
         )
 
