@@ -7,6 +7,8 @@
 
 import { DEFAULT_MIN_SCORE, DEFAULT_TOP_K } from "./config.js";
 import { MemoryDataPlane, SearchRecord, SearchRequestBody } from "./api.js";
+import { memoryClassificationSchema } from "./search-filters.js";
+import type { MemoryKind, MemoryCategory } from "./search-filters.js";
 
 export interface SearchItem {
   content: string;
@@ -65,6 +67,8 @@ export interface SearchOptions {
    *  AGENTARTS_MEMORY_RERANK (default off) — same flow as userId. */
   rerank?: boolean;
   strategy_type?: string;
+  kind?: MemoryKind;
+  category?: MemoryCategory;
   top_k?: number;
   min_score?: number;
   start_time?: number;
@@ -78,6 +82,8 @@ export class MemoryClient {
    *  (same as the Python SDK's MemorySearchFilter.to_dict), except rerank,
    *  which is always sent explicitly — off by default. */
   async searchMemories(opts: SearchOptions): Promise<SearchItem[]> {
+    // Validate the pair before sending any request, including calls outside MCP.
+    const { kind, category } = memoryClassificationSchema.parse(opts);
     const body: SearchRequestBody = {
       query: opts.query,
       top_k: opts.top_k ?? DEFAULT_TOP_K,
@@ -86,6 +92,10 @@ export class MemoryClient {
       rerank: opts.rerank ?? false,
     };
     if (opts.strategy_type !== undefined) body.strategy_type = opts.strategy_type;
+    // Cloud mapping is intentionally localized here so its wire format can evolve.
+    if (kind !== undefined || category !== undefined) body.strategy_type = "procedural";
+    if (kind !== undefined) body.kind = kind;
+    if (category !== undefined) body.category = category;
     if (opts.start_time !== undefined) body.start_time = opts.start_time;
     if (opts.end_time !== undefined) body.end_time = opts.end_time;
     const resp = await this.api.searchMemories(body);
