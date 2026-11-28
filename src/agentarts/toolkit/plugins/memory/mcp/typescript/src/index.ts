@@ -23,6 +23,7 @@ import {
   DEFAULT_TOP_K,
   getApiKey,
   getBaseUrl,
+  getProjectId,
   getSpaceId,
   resolveRerank,
   resolveUserId,
@@ -68,10 +69,17 @@ server.registerTool(
   "search_memories",
   {
     description:
-      "Search cloud memories by semantic similarity. Optional filters: " +
+      "Use this tool proactively to search AgentArts cloud memories before answering questions or asking the user about " +
+      "preferences (with strategy_type=user_preference), prior conversations, project decisions, or earlier work; " +
+      "use relevant memories instead of asking again, and ask the user only when the answer is missing or unclear. " +
+      "When searching local memory or conversation history for prior context, also use this tool for cloud recall " +
+      "rather than relying on local results alone; run the searches in parallel when possible. " +
+      "Optional filters: " +
       "strategy_type (memory type: semantic, episodic, user_preference, summary " +
       "or procedural — other values are rejected by the backend), " +
-      "start_time/end_time (Unix milliseconds).",
+      "start_time/end_time (Unix milliseconds). " +
+      "By default, results are limited to the server-configured project when one is set. " +
+      "The project filter is always omitted for user_preference searches.",
     inputSchema: {
       query: z.string().describe("Natural-language search query."),
       strategy_type: z
@@ -107,11 +115,17 @@ server.registerTool(
   },
   async ({ query, strategy_type, top_k, min_score, start_time, end_time }) => {
     try {
+      const projectId = getProjectId();
+      const scope =
+        strategy_type !== "user_preference" && projectId
+          ? { project_id: projectId }
+          : undefined;
       const results = await getClient().searchMemories({
         query,
         userId: resolveUserId(),
         rerank: resolveRerank(),
         strategy_type,
+        scope,
         top_k,
         min_score,
         start_time,

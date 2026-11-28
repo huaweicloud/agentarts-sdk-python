@@ -19,9 +19,14 @@ export class MemoryApiError extends Error {
   }
 }
 
+export interface SearchScope {
+  project_id: string;
+}
+
 export interface SearchRequestBody {
   query: string;
   strategy_type?: string;
+  scope?: SearchScope;
   top_k?: number;
   min_score?: number;
   actor_id?: string;

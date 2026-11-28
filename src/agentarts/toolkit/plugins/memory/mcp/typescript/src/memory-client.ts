@@ -6,7 +6,7 @@
 // hooks/plugins, so this server needs no session management.
 
 import { DEFAULT_MIN_SCORE, DEFAULT_TOP_K } from "./config.js";
-import { MemoryDataPlane, SearchRecord, SearchRequestBody } from "./api.js";
+import { MemoryDataPlane, SearchRecord, SearchRequestBody, SearchScope } from "./api.js";
 
 export interface SearchItem {
   content: string;
@@ -65,6 +65,7 @@ export interface SearchOptions {
    *  AGENTARTS_MEMORY_RERANK (default off) — same flow as userId. */
   rerank?: boolean;
   strategy_type?: string;
+  scope?: SearchScope;
   top_k?: number;
   min_score?: number;
   start_time?: number;
@@ -86,6 +87,7 @@ export class MemoryClient {
       rerank: opts.rerank ?? false,
     };
     if (opts.strategy_type !== undefined) body.strategy_type = opts.strategy_type;
+    if (opts.scope !== undefined) body.scope = opts.scope;
     if (opts.start_time !== undefined) body.start_time = opts.start_time;
     if (opts.end_time !== undefined) body.end_time = opts.end_time;
     const resp = await this.api.searchMemories(body);

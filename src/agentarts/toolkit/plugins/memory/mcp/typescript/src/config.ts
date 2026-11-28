@@ -12,6 +12,7 @@ export const ENV_REGION_OS = "OS_REGION_NAME";
 export const ENV_DATA_ENDPOINT = "AGENTARTS_MEMORY_DATA_ENDPOINT";
 export const ENV_PLATFORM = "AGENTARTS_MEMORY_PLATFORM";
 export const ENV_USER_ID = "AGENTARTS_MEMORY_USER_ID";
+export const ENV_PROJECT_ID = "AGENTARTS_MEMORY_PROJECT_ID";
 export const ENV_RERANK = "AGENTARTS_MEMORY_RERANK";
 
 export const DEFAULT_REGION = "cn-southwest-2";
@@ -34,6 +35,10 @@ export function getBaseUrl(): string {
   const explicit = process.env[ENV_DATA_ENDPOINT];
   if (explicit) return explicit.replace(/\/+$/, "");
   return `https://memory.${getRegion()}.huaweicloud-agentarts.com`;
+}
+
+export function getProjectId(): string {
+  return (process.env[ENV_PROJECT_ID] || "").trim();
 }
 
 export function getApiKey(): string {
